@@ -1,0 +1,22 @@
+{
+  "name": "dspopulations-us-birth-certificates",
+  "version": "0.1.0",
+  "description": "Analysis of births of babies with Down syndrome recorded in US birth certificates.",
+  "homepage": "https://github.com/dspopulations/us-birth-certificates#readme",
+  "bugs": {
+    "url": "https://github.com/dspopulations/us-birth-certificates/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dspopulations/us-birth-certificates.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "Frank Buckley",
+  "private": true,
+  "devDependencies": {
+    "cspell": "9.7.0"
+  },
+  "scripts": {
+    "spellcheck": "cspell --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
+  }
+}
