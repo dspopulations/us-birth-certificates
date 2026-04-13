@@ -7,7 +7,7 @@ dependencies:
   - numba>=0.64.0
   - numpy>=2.4.3
   - nutpie>=0.16.8
-  - pymc>=5.28.2,<6.0
+  - pymc>=5.28.4,<6.0
   - pip
   - pip:
       - --extra-index-url https://download.pytorch.org/whl/cu130
@@ -41,7 +41,7 @@ dependencies:
       - pytest>=9.0.3
       - pyxlsb
       - rich
-      - ruff>=0.15.5
+      - ruff>=0.15.10
       - scikit-learn>=1.8.0
       - scipy-stubs
       - scipy>=1.17.1
