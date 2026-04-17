@@ -1,1 +1,4 @@
 /node_modules
+/previous/us-birth-certificates/output
+*.ipynb
+/data
