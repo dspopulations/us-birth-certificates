@@ -7,9 +7,8 @@ import lightgbm as lgb
 import numpy as np
 import optuna
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
 from experiment_config import ExperimentConfig
+from sklearn.model_selection import train_test_split
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 

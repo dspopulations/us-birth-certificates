@@ -1,6 +1,7 @@
 """Combine Parquet files."""
 
 import pathlib
+
 import polars as pl
 
 

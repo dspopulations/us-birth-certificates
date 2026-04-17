@@ -1,9 +1,9 @@
-from dspopulations_us_birth_certificates import chance
-import duckdb
-import os
 import pathlib
-import pandas as pd
 import shutil
+
+import duckdb
+import pandas as pd
+
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
@@ -212,11 +212,11 @@ def combine_all() -> None:
         add_column(vars.P_DS_LB_WT_MAGE_REDUC, "DOUBLE", con)
 
         print("Adding id column...")
-        
+
         con.execute("""
             ALTER TABLE us_births ADD COLUMN id BIGINT;
             """)
-        
+
         con.execute(
             """
             UPDATE us_births
@@ -230,7 +230,7 @@ def combine_all() -> None:
             WHERE us_births.rowid = s.rowid;
             """
         )
-        
+
         print("Setting year...")
 
         con.execute(
@@ -256,7 +256,7 @@ def combine_all() -> None:
                 WHEN {vars.DOWNS} = 2 THEN 'N'
                 WHEN {vars.DOWNS} = 9 THEN 'U' -- 8 (not on certificate) treated as unknown
                 ELSE NULL
-            END;          
+            END;
             """
         )
 

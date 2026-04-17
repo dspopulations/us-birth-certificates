@@ -1,7 +1,7 @@
 """Exports data to SPSS format and zips SPSS files."""
 
-from datetime import datetime
 import zipfile
+from datetime import datetime
 
 import pandas as pd
 import pyreadstat as stats

@@ -1,0 +1,18 @@
+---
+title: "Overview"
+---
+
+# Overview
+
+Composite report for the US birth certificates Down syndrome study.
+
+::: {.callout-note}
+This Quarto book is a placeholder. Individual model chapters are wired in
+during refactor step 7 (see `docs/refactor-plan.md`).
+:::
+
+## Model variants
+
+Model artefacts live under `output/models/<model_id>-<run_config>/` and
+are produced by `scripts/fit_model.py`. Per-model technical reports are
+rendered from `docs/models/<model_id>/index.qmd`.

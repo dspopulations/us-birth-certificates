@@ -294,7 +294,7 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
     arrays = []
     fields = []
 
-    for name, arr in zip(batch.schema.names, batch.columns):
+    for name, arr in zip(batch.schema.names, batch.columns, strict=True):
         if name in uint8_specs:
             print(f"Processing uint8 column: {name}")
             mn, mx = uint8_specs[name]

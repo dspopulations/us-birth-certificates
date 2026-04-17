@@ -1,8 +1,8 @@
 """Column utilities."""
 
-import pandas as pd
-
 from enum import StrEnum
+
+import pandas as pd
 
 
 class Variables(StrEnum):

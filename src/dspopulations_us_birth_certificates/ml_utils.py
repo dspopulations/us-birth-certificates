@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     average_precision_score,
-    roc_auc_score,
-    brier_score_loss,
     log_loss,
     precision_recall_fscore_support,
+    roc_auc_score,
     roc_curve,
 )
 
@@ -86,7 +85,7 @@ def precision_recall_at_k(y_true, p_valid, K: int = 10000):
     n_pos : int
         Total number of positive samples.
     K : int
-        Number of top predictions considered.    
+        Number of top predictions considered.
     """
     y = _as_binary_y(y_true)
     p = np.asarray(p_valid)

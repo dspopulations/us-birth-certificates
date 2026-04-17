@@ -1,8 +1,9 @@
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.cluster import hierarchy
-from typing import Any
 
 
 def plot_roc_curve(
