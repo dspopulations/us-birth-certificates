@@ -35,10 +35,10 @@ dev = [
 ]
 
 [tool.hatch.version]
-path = "src/dspopulations-us-birth-certificates/__init__.py"
+path = "src/dspopulations_us_birth_certificates/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dspopulations-us-birth-certificates"]
+packages = ["src/dspopulations_us_birth_certificates"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -59,4 +59,4 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["dspopulations-us-birth-certificates"]
+known-first-party = ["dspopulations_us_birth_certificates"]
