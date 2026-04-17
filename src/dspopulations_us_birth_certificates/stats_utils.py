@@ -4,8 +4,8 @@ import pandas as pd
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform
 from scipy.stats import kurtosis, shapiro, skew, spearmanr
-from sklearn.neighbors import KernelDensity
 from sklearn.feature_selection import mutual_info_regression
+from sklearn.neighbors import KernelDensity
 
 EPSILON = 1e-10
 

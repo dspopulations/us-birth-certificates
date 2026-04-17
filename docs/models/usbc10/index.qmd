@@ -1,0 +1,59 @@
+---
+title: "USBC-10: Predictors of recorded Down syndrome live births"
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm:ss Z"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+execute:
+  freeze: true
+  echo: false
+  warning: false
+---
+
+# Overview
+
+This template is rendered once per model run. It reads `config.json` and
+`metrics.json` from the run's output directory (the working directory
+during rendering) and embeds the pre-generated plots from `plots/`.
+
+::: {.callout-note}
+This template is a placeholder. The pipeline's `report()` step (refactor
+step 7) copies this file into `output/models/<model_id>-<run_config>/`
+before rendering, and populates the sections below from the run's
+artefacts.
+:::
+
+## Configuration
+
+```{python}
+#| label: load-config
+import json
+from pathlib import Path
+
+try:
+    config = json.loads(Path("config.json").read_text())
+    metrics = json.loads(Path("metrics.json").read_text())
+except FileNotFoundError:
+    config = {"model_id": "<not yet rendered from a run>"}
+    metrics = {}
+
+config
+```
+
+## Validation metrics
+
+```{python}
+#| label: metrics-table
+metrics
+```
+
+## Figures
+
+Plots produced by the pipeline live in `plots/` relative to this
+`index.qmd` after it is copied into the run directory. The concrete list
+of plots rendered here is expanded in refactor step 7.

@@ -58,5 +58,11 @@ ignore = [
     "E741",  # ambiguous variable name — mathematical names (l, X, y) are meaningful
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# DuckDB's Python API resolves DataFrame names from the enclosing scope when
+# they appear in SQL (e.g. ``SELECT * FROM prevalence_df``). Ruff can't see
+# those references and flags the assignments as F841 "local variable unused".
+"scripts/duckdb_prepare.py" = ["F841"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["dspopulations_us_birth_certificates"]

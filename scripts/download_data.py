@@ -5,6 +5,7 @@ Refer to terms at: https://www.cdc.gov/nchs/data_access/restrictions.htm
 
 import os
 import urllib.request
+
 import truststore
 
 truststore.inject_into_ssl()  # avoids SSL: CERTIFICATE_VERIFY_FAILED on MacOS

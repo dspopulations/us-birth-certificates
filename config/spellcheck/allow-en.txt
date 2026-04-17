@@ -1,0 +1,55 @@
+# Project dictionary for cspell.
+#
+# One word per line. Keep in alphabetical order to minimise merge conflicts.
+# British English (en-GB) is the preferred variant — add US spellings only
+# when the term is a proper noun (e.g. variable names from the NVSS schema).
+
+# Organisations and datasets
+CDC
+NBER
+NCHS
+NVSS
+
+# NVSS / birth-certificate variables and codings
+AIAN
+DOWNS
+MBRACE
+MHISP
+MHISPX
+MRACE
+MRACEHISP
+MRACEREC
+NHOPI
+ORRACEM
+UCA_DOWNS
+UMHISP
+USBC
+
+# Statistical / ML vocabulary
+beeswarm
+codings
+dataclasses
+iqr
+kfold
+lightgbm
+microdata
+multicollinearity
+pymc
+sklearn
+
+# Tooling
+hatchling
+jupytext
+Jupytext
+Matplotlib
+pytest
+ruff
+
+# Project / repo
+dspopulations
+
+# Refactor-document terms
+harmonisation
+rescore
+upserts
+writeback

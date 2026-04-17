@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Install ruff
+        run: uv tool install 'ruff>=0.15.10'
+      - name: Ruff check
+        run: ruff check src scripts tests
+
+  spellcheck:
+    name: Spellcheck (cspell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+      - run: npm ci
+      - run: npm run spellcheck
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Create venv
+        run: uv venv --python 3.14
+      - name: Install package without heavy deps
+        run: |
+          uv pip install --python .venv --no-deps -e .
+          uv pip install --python .venv 'pytest>=9.0.3'
+      - name: Run pytest
+        run: uv run --python .venv pytest

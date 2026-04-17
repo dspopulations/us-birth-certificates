@@ -1,7 +1,9 @@
 """Reads data files and saves to Parquet files."""
 import gc
 import pathlib
+
 import pandas as pd
+
 from dspopulations_us_birth_certificates import variables
 
 

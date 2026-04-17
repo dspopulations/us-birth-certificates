@@ -1,0 +1,24 @@
+project:
+  type: book
+  output-dir: ../../output/report
+
+book:
+  title: "Predictors of recorded Down syndrome live births in US birth certificates"
+  author: "DSE International"
+  date: last-modified
+  date-format: "YYYY-MM-DD"
+  chapters:
+    - index.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+
+execute:
+  freeze: true
+  echo: false
+  warning: false

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
+
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
@@ -24,7 +25,7 @@ def load_predictors_data(from_year: int = 1989, to_year: int = 9999, include_unk
                 WHEN uca_downs = 9 AND {include_unknown} THEN 0::UTINYINT
                 WHEN ca_down IS NULL AND ca_downs IS NULL AND uca_downs IS NULL AND {include_unknown} THEN 0::UTINYINT
                 ELSE NULL
-            END AS ca_down_c_p_n,        
+            END AS ca_down_c_p_n,
             -- ==================== date of birth ====================
             year,
             -- month of birth
