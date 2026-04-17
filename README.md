@@ -1,4 +1,4 @@
-# Birth of babies with Down syndrome: analyses of US birth certificates
+# Birth of babies with Down syndrome recorded in US birth certificate data
 
 > [!WARNING]
 > This is work in progress. All data and models are preliminary.

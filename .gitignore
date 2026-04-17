@@ -1,4 +1,8 @@
 /node_modules
 /previous/us-birth-certificates/output
+/notebooks/output
 *.ipynb
 /data
+__pycache__/
+*.pyc
+/.vscode
