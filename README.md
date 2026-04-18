@@ -1,9 +1,15 @@
-# Birth of babies with Down syndrome recorded in US birth certificate data
+# Characteristics of babies born with Down syndrome -- an exploratory data analysis of US birth certificate data
 
 > [!WARNING]
 > This is work in progress. All data and models are preliminary.
 
-This repository hosts an exploratory study of factors associated with recorded births of babies with Down syndrome in US birth certificate data.
+**This repository hosts an exploratory study of factors associated with recorded births of babies with Down syndrome in US birth certificate data.**
+
+Accurate assessments of the numbers and characteristics of babies born with Down syndrome is important for planning healthcare, education and social support services. They are also important for ascertaining the consequences of changing medical technologies and practices, social policies and attitudes, and individual behaviour over time, and for projecting future trends.
+
+This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing births and how they may be changing over time.
+
+- [Current plans](./plans/readme.md)
 
 ## Getting started
 

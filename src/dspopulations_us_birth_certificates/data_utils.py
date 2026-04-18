@@ -7,8 +7,13 @@ import pyarrow.compute as pc
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
-def load_predictors_data(from_year: int = 1989, to_year: int = 9999, include_unknown: bool = False) -> pd.DataFrame:
-    con = duckdb.connect("../data/us_births.db", read_only=True)
+def load_predictors_data(
+    from_year: int = 1989,
+    to_year: int = 9999,
+    include_unknown: bool = False,
+    db_path: str = "../data/us_births.db",
+) -> pd.DataFrame:
+    con = duckdb.connect(db_path, read_only=True)
 
     df = con.execute(
         f"""
