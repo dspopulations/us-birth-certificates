@@ -78,13 +78,35 @@ class ModelDefinition:
     def selection_history(cls) -> tuple[SelectionStep, ...]:
         """Return the concatenated selection history across this class's MRO.
 
-        Walks from the oldest ancestor to this class, concatenating each
-        class's ``selection_steps`` — so a variant inherits its parent's
-        decisions and then adds its own.
+        Walks from the oldest ``ModelDefinition`` ancestor to this class,
+        concatenating each class's own ``selection_steps`` — so a variant
+        inherits its parent's decisions and then adds its own, in order.
         """
-        raise NotImplementedError("populated in refactor step 3")
+        history: list[SelectionStep] = []
+        # reversed(mro) gives object → ModelDefinition → … → cls; skip object
+        # and ModelDefinition itself so only concrete classes contribute.
+        for klass in reversed(cls.__mro__):
+            if klass is object or klass is ModelDefinition:
+                continue
+            steps = klass.__dict__.get("selection_steps", ())
+            history.extend(steps)
+        return tuple(history)
 
     @classmethod
     def to_config(cls) -> ModelConfig:
-        """Return an immutable ``ModelConfig`` snapshot of this definition."""
-        raise NotImplementedError("populated in refactor step 3")
+        """Return a ``ModelConfig`` snapshot of this definition."""
+        return ModelConfig(
+            model_id=cls.model_id,
+            variant_of=cls.variant_of,
+            target_var=cls.target_var,
+            numeric_features=tuple(cls.numeric_features),
+            categorical_features=tuple(cls.categorical_features),
+            base_params=dict(cls.base_params),
+            params=dict(cls.params),
+            train_config=dict(cls.train_config),
+            year_range=tuple(cls.year_range),
+            include_unknown=cls.include_unknown,
+            selection_history=cls.selection_history(),
+            shap_scatter_specs=tuple(cls.shap_scatter_specs),
+            notes=cls.notes,
+        )
