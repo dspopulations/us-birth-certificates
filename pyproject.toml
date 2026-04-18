@@ -33,6 +33,14 @@ dev = [
   "pytest>=9.0.3",
   "ruff>=0.15.10",
 ]
+modelling = [
+  "lightgbm>=4.5.0",
+  "optuna>=4.1.0",
+  "shap>=0.46.0",
+  "scikit-learn>=1.5.0",
+  "joblib>=1.4.0",
+  "pyarrow>=18.0.0",
+]
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"

@@ -39,9 +39,20 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - name: Create venv
         run: uv venv --python 3.14
-      - name: Install package without heavy deps
+      - name: Install package with modelling + dev extras
+        # The modelling extra pulls in lightgbm / optuna / shap / sklearn /
+        # joblib / pyarrow which the pipeline, calibration, and reporting
+        # tests exercise. Skip pymc/jax etc. — they are dependencies of the
+        # main package but not exercised by tests, and they bloat CI install
+        # time. Drop --no-deps once the main deps no longer include heavy
+        # Bayesian libraries.
         run: |
           uv pip install --python .venv --no-deps -e .
-          uv pip install --python .venv 'pytest>=9.0.3'
+          uv pip install --python .venv \
+            'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.17.1' 'matplotlib>=3.10.8' \
+            'duckdb>=1.5.2' \
+            'lightgbm>=4.5.0' 'optuna>=4.1.0' 'shap>=0.46.0' \
+            'scikit-learn>=1.5.0' 'joblib>=1.4.0' 'pyarrow>=18.0.0' \
+            'pytest>=9.0.3'
       - name: Run pytest
         run: uv run --python .venv pytest
