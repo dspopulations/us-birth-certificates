@@ -7,7 +7,6 @@ import lightgbm as lgb
 import numpy as np
 import optuna
 import pandas as pd
-from experiment_config import ExperimentConfig
 from sklearn.model_selection import train_test_split
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -15,7 +14,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 def prepare_features(
     df: pd.DataFrame,
-    config: ExperimentConfig,
+    config,
     drop_features: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.Series, list[str], list[str]]:
     """Select features, encode categoricals, and build X/y arrays.
@@ -40,7 +39,7 @@ def create_datasets(
     X: pd.DataFrame,
     y: pd.Series,
     categorical: list[str],
-    config: ExperimentConfig,
+    config,
 ) -> tuple[
     pd.DataFrame,
     pd.DataFrame,
@@ -92,7 +91,7 @@ def print_balance(y_train: pd.Series, y_valid: pd.Series):
 def optimize_hyperparameters(
     train_data: lgb.Dataset,
     valid_data: lgb.Dataset,
-    config: ExperimentConfig,
+    config,
 ) -> dict:
     """Run Optuna hyperparameter search and return best parameters.
 
@@ -165,7 +164,7 @@ def train_model(
     train_data: lgb.Dataset,
     valid_data: lgb.Dataset,
     params: dict,
-    config: ExperimentConfig,
+    config,
     output_dir: str | None = None,
     model_idx: int = 0,
 ) -> lgb.Booster:

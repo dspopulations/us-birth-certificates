@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository hosts an exploratory study of factors associated with recorded births of babies with Down syndrome in US birth certificate data.
 
-Analysis of trends in live births of babies with Down syndrome in the US, using the CDC/NCHS National Vital Statistics System (NVSS) natality files (1989–2024). Source data is `.sas7bdat` published by NBER; Down syndrome is coded via `DOWNS` (1989–2002), `UCA_DOWNS` (2003), then `CA_DOWNS` (2004+).
+@plans/readme.md
 
 ## Environment and commands
 
