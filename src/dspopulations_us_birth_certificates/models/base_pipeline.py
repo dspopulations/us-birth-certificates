@@ -304,10 +304,10 @@ class EstimatorPipeline(ABC):
         self._save_plots(plots_dir)
 
     def write_manifest(self) -> None:
-        """Delegate to ``manifest.write_manifest`` — populated in step 8."""
-        logger.info(
-            "Manifest writing is a no-op until refactor step 8 lands."
-        )
+        """Delegate to ``manifest.write_manifest`` for this run."""
+        from dspopulations_us_birth_certificates import manifest
+
+        manifest.write_manifest(self.context, self.context.output_dir)
 
     def report(self, render: bool = False) -> None:
         """Copy the Quarto template into the run dir — populated in step 7."""
