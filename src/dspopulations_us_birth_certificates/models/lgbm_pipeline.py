@@ -104,3 +104,16 @@ class LGBMClassifierPipeline(EstimatorPipeline):
         return pd.DataFrame(
             {"feature": features, "importance_gain": importance}
         ).sort_values("importance_gain", ascending=False)
+
+    def load_final_model(self, path: str | Path) -> lgb.Booster:
+        """Load a previously saved LightGBM booster into the context.
+
+        Use this to regenerate diagnostics (metrics, SHAP, plots) without
+        retraining — e.g. via ``scripts/fit_model.py --load-model <path>``.
+        ``best_iteration`` is taken from the booster's tree count since
+        ``save_model(..., num_iteration=best)`` already truncates the file.
+        """
+        booster = lgb.Booster(model_file=str(path))
+        self.context.final_model = booster
+        self.context.best_iteration = booster.num_trees()
+        return booster

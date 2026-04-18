@@ -182,6 +182,7 @@ class FitConfig:
     write_predictions: bool = False
     duckdb_path: Path = Path("data/us_births.db")
     profile: str | None = None
+    load_model: Path | None = None
 
 
 def parse_args(argv: list[str] | None = None) -> FitConfig:
@@ -281,6 +282,17 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
     )
     p.add_argument("--duckdb-path", type=Path, default=Path("data/us_births.db"))
 
+    p.add_argument(
+        "--load-model",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a saved LightGBM model.txt. When set, skips Optuna and "
+            "training; re-runs metrics / permutation / SHAP / plots against "
+            "the loaded booster. Useful for regenerating diagnostics."
+        ),
+    )
+
     if profile_defaults:
         p.set_defaults(**profile_defaults)
 
@@ -311,6 +323,7 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         write_predictions=ns.write_predictions,
         duckdb_path=ns.duckdb_path,
         profile=ns.profile,
+        load_model=ns.load_model,
     )
 
 
@@ -512,8 +525,12 @@ def main(argv: list[str] | None = None) -> int:
     repl_utils.print_environment_info()
     print(f"\nOutput directory: {config.output_dir}\n")
 
-    # Tuning (still inline — moves to scripts/tune_model.py in step 6).
-    if config.select_hyperparameters:
+    # Tuning (still inline — moves to scripts/tune_model.py in step 6). Skip
+    # when --load-model is set: we're regenerating diagnostics, not fitting.
+    if config.load_model is not None:
+        print(f"Loading saved model from {config.load_model}; skipping tuning + fit.")
+        best_params = {}
+    elif config.select_hyperparameters:
         X, y, categorical = _load_xy_for_tuning(config)
         ad_hoc = _build_model_config(config, params={})
         best_params = optimize_hyperparameters(X, y, categorical, ad_hoc, config)
@@ -534,7 +551,12 @@ def main(argv: list[str] | None = None) -> int:
 
     df = pipeline.load_data(db_path=str(config.duckdb_path))
     pipeline.prepare_features(df)
-    pipeline.train_final()
+
+    if config.load_model is not None:
+        pipeline.load_final_model(config.load_model)
+    else:
+        pipeline.train_final()
+
     pipeline.compute_metrics()
     if config.run_permutation:
         pipeline.permutation_importance_analysis()
