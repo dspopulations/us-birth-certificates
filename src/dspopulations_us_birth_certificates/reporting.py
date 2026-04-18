@@ -2,31 +2,75 @@
 
 Generic enough to migrate upstream into ``dse_research_utils`` once stable.
 See ``docs/refactor-plan.md`` step 10 for the upstreaming plan.
-
-Implementation is populated in refactor step 7.
 """
 
 from __future__ import annotations
 
+import logging
+import shutil
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from dspopulations_us_birth_certificates.models.common import ModelFitContext
 
+logger = logging.getLogger(__name__)
 
-def copy_template(context: ModelFitContext, template_path: Path) -> Path:
+DEFAULT_TEMPLATE = Path("docs/models/usbc10/index.qmd")
+
+
+def copy_template(
+    context: ModelFitContext, template_path: Path = DEFAULT_TEMPLATE
+) -> Path:
     """Copy a Quarto template into the run's output dir.
 
-    Returns the path to the copied ``index.qmd``.
+    Returns the path to the copied ``index.qmd``. The template is copied
+    verbatim — the Quarto document itself is responsible for loading
+    artefacts from the run directory at render time, so copying leaves
+    a fully self-contained report bundle even if the original template
+    later changes.
     """
-    raise NotImplementedError("populated in refactor step 7")
+    src = Path(template_path)
+    if not src.is_file():
+        raise FileNotFoundError(f"Quarto template not found: {src}")
+    dst = Path(context.output_dir) / "index.qmd"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return dst
 
 
-def render_quarto_report(qmd_path: Path, output_format: str = "html") -> Path:
+def render_quarto_report(
+    qmd_path: Path, output_format: str = "html"
+) -> Path:
     """Subprocess-invoke ``quarto render`` for ``qmd_path``.
 
-    Returns the path to the rendered report. Raises ``subprocess.CalledProcessError``
-    on a non-zero exit.
+    Returns the rendered file's path. Raises ``subprocess.CalledProcessError``
+    on a non-zero exit and ``FileNotFoundError`` if the ``quarto`` binary
+    isn't on PATH.
     """
-    raise NotImplementedError("populated in refactor step 7")
+    qmd_path = Path(qmd_path)
+    if not qmd_path.is_file():
+        raise FileNotFoundError(f"Quarto source not found: {qmd_path}")
+
+    try:
+        subprocess.run(
+            ["quarto", "render", str(qmd_path), "--to", output_format],
+            check=True,
+        )
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            "`quarto` binary not found on PATH. Install Quarto CLI or pass "
+            "--no-render to skip the render step."
+        ) from exc
+
+    rendered = qmd_path.with_suffix(f".{output_format}")
+    if rendered.is_file():
+        return rendered
+    # Some output formats (pdf, docx) land in the same dir with different suffix
+    # — best-effort resolution:
+    logger.warning(
+        "Could not locate rendered file for %s; returning source path.",
+        qmd_path,
+    )
+    return qmd_path

@@ -185,6 +185,7 @@ class FitConfig:
     profile: str | None = None
     load_model: Path | None = None
     model_id: str | None = None
+    render: bool = False
 
 
 def parse_args(argv: list[str] | None = None) -> FitConfig:
@@ -308,6 +309,16 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         ),
     )
 
+    p.add_argument(
+        "--render",
+        action="store_true",
+        default=False,
+        help=(
+            "Invoke `quarto render` on the per-run index.qmd after fitting. "
+            "Without this flag the template is copied but not rendered."
+        ),
+    )
+
     if profile_defaults:
         p.set_defaults(**profile_defaults)
 
@@ -340,6 +351,7 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         profile=ns.profile,
         load_model=ns.load_model,
         model_id=ns.model_id,
+        render=ns.render,
     )
 
 
@@ -610,6 +622,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline.shap_analysis()
     pipeline.save_artefacts()
     pipeline.write_manifest()
+    pipeline.report(render=config.render)
 
     if config.write_predictions:
         gbm = pipeline.context.final_model
