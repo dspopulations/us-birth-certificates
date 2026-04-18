@@ -50,6 +50,7 @@ from sklearn.model_selection import train_test_split
 
 from dspopulations_us_birth_certificates import data_utils, repl_utils
 from dspopulations_us_birth_certificates.models import (
+    MODELS,
     ModelConfig,
     RunConfig,
 )
@@ -183,6 +184,7 @@ class FitConfig:
     duckdb_path: Path = Path("data/us_births.db")
     profile: str | None = None
     load_model: Path | None = None
+    model_id: str | None = None
 
 
 def parse_args(argv: list[str] | None = None) -> FitConfig:
@@ -205,6 +207,19 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         help=(
             "Configuration profile preset — sourced from RunConfig.from_name() "
             "in the package. Individual flags override profile defaults."
+        ),
+    )
+
+    p.add_argument(
+        "--model-id",
+        choices=sorted(MODELS.keys()) or None,
+        default=None,
+        help=(
+            "Named model variant from the registry (e.g. usbc10_m0, "
+            "usbc10_m1, usbc10_m2). When set, features, base_params, and "
+            "selection_history come from the definition; --drop-features, "
+            "--start-year, and --end-year are ignored. Omit to use the "
+            "CLI's ad-hoc feature set."
         ),
     )
 
@@ -324,10 +339,42 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         duckdb_path=ns.duckdb_path,
         profile=ns.profile,
         load_model=ns.load_model,
+        model_id=ns.model_id,
     )
 
 
 def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
+    """Build a ModelConfig from either a named variant or CLI ad-hoc args.
+
+    When ``config.model_id`` is set, the definition from ``MODELS`` supplies
+    features, base_params, and selection_history. Tuned ``params`` and the
+    CLI's ``training_split`` / ``num_threads`` still override the variant's
+    defaults because those are tuning-time knobs, not part of the variant's
+    identity.
+    """
+    if config.model_id is not None:
+        definition = MODELS[config.model_id]
+        base = definition.to_config()
+        train_config = dict(base.train_config)
+        train_config["training_split"] = config.training_split
+        if config.num_threads is not None:
+            train_config["num_threads"] = config.num_threads
+        return ModelConfig(
+            model_id=base.model_id,
+            variant_of=base.variant_of,
+            target_var=base.target_var,
+            numeric_features=base.numeric_features,
+            categorical_features=base.categorical_features,
+            base_params=dict(base.base_params),
+            params=dict(params) if params else dict(base.params),
+            train_config=train_config,
+            year_range=base.year_range,
+            include_unknown=base.include_unknown,
+            selection_history=base.selection_history,
+            shap_scatter_specs=base.shap_scatter_specs,
+            notes=base.notes,
+        )
+
     numeric = tuple(f for f in DEFAULT_NUMERIC if f not in config.drop_features)
     categorical = tuple(
         f for f in DEFAULT_CATEGORICAL if f not in config.drop_features
