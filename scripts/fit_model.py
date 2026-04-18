@@ -58,6 +58,7 @@ from dspopulations_us_birth_certificates import (
     repl_utils,
     stats_utils,
 )
+from dspopulations_us_birth_certificates.explain import calibration, shap_analysis
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -462,15 +463,23 @@ def evaluate(
     ).sort_values("importance_gain", ascending=False)
     df_imp_gain.to_csv(output_dir / "feature_importance_gain.csv", index=False)
 
+    # Precision@K / Recall@K curve
+    pr_at_k = calibration.precision_recall_at_k(np.asarray(y_valid), p_valid)
+    pr_at_k.to_csv(output_dir / "precision_recall_at_k.csv", index=False)
+
+    # Top-tail calibration (predicted vs observed rates in the top fraction)
+    tail = calibration.tail_calibration_table(np.asarray(y_valid), p_valid)
+    tail.to_csv(output_dir / "calibration_tail.csv", index=False)
+
     # Log-loss / Brier at raw probabilities
-    calibration = {
+    summary = {
         "best_iteration": int(gbm.best_iteration),
         "mean_predicted_prob": float(np.asarray(p_valid).mean()),
         "log_loss": float(log_loss(y_valid, p_valid, labels=[0, 1])),
         "brier_score": float(brier_score_loss(y_valid, p_valid)),
     }
     (output_dir / "calibration_summary.json").write_text(
-        json.dumps(calibration, indent=2)
+        json.dumps(summary, indent=2)
     )
 
     return p_valid, fpr, tpr
@@ -540,7 +549,6 @@ def run_diagnostics(
             )
 
     if config.run_shap:
-        import shap
         from scipy.cluster import hierarchy
         from scipy.spatial.distance import squareform
 
@@ -567,19 +575,29 @@ def run_diagnostics(
                 file_name="correlation_heatmap",
             )
 
-        explainer = shap.TreeExplainer(
-            gbm, feature_perturbation="tree_path_dependent", model_output="raw"
+        explanation = shap_analysis.compute_explanation(gbm, X_eval)
+        shap_analysis.shap_importance(explanation, X_eval.columns).to_csv(
+            config.output_dir / "shap_importance.csv", index=False
         )
-        explanation = explainer(X_eval)
-        shap_values = explanation.values
-
-        shap_df = pd.DataFrame(
-            {
-                "feature": X_eval.columns,
-                "mean_abs_shap": np.mean(np.abs(shap_values), axis=0),
-            }
-        ).sort_values("mean_abs_shap", ascending=False)
-        shap_df.to_csv(config.output_dir / "shap_importance.csv", index=False)
+        if config.save_plots:
+            shap_analysis.plot_bar(
+                explanation,
+                model_idx=model_idx,
+                max_display=40,
+                save=True,
+                output_dir=str(config.output_dir),
+                file_stem="shap_bar",
+                show=False,
+            )
+            shap_analysis.plot_beeswarm(
+                explanation,
+                model_idx=model_idx,
+                max_display=40,
+                save=True,
+                output_dir=str(config.output_dir),
+                file_stem="shap_beeswarm",
+                show=False,
+            )
 
 
 def write_predictions_to_duckdb(
