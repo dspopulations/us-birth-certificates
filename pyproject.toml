@@ -34,12 +34,16 @@ dev = [
   "ruff>=0.15.10",
 ]
 modelling = [
-  "lightgbm>=4.5.0",
-  "optuna>=4.1.0",
-  "shap>=0.46.0",
-  "scikit-learn>=1.5.0",
+  # Lower bounds track environment.yml (the canonical local env) and the
+  # CI workflow. Bumping here requires updating both to avoid
+  # "works locally, fails in CI" drift.
+  "lightgbm>=4.6.0",
+  "optuna>=4.8.0",
+  "shap>=0.51.0",
+  "scikit-learn>=1.8.0",
   "joblib>=1.4.0",
-  "pyarrow>=18.0.0",
+  "pyarrow>=23.0.1",
+  "dcor>=0.6",
 ]
 
 [tool.hatch.version]

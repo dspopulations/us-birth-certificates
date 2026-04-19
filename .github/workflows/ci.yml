@@ -39,20 +39,24 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - name: Create venv
         run: uv venv --python 3.14
-      - name: Install package with modelling + dev extras
-        # The modelling extra pulls in lightgbm / optuna / shap / sklearn /
-        # joblib / pyarrow which the pipeline, calibration, and reporting
-        # tests exercise. Skip pymc/jax etc. — they are dependencies of the
-        # main package but not exercised by tests, and they bloat CI install
-        # time. Drop --no-deps once the main deps no longer include heavy
-        # Bayesian libraries.
+      - name: Install package (editable) with pinned runtime deps for tests
+        # Installs the package editable with --no-deps, then pins the runtime
+        # deps the test suite actually exercises. We intentionally skip the
+        # heavy Bayesian stack (pymc/jaxlib/numpyro/arviz/nutpie/preliz)
+        # declared in pyproject's main [project.dependencies] — those aren't
+        # touched by tests and bloat install time. Drop --no-deps once the
+        # Bayesian deps move into a separate extra.
+        #
+        # Bounds here track environment.yml (the canonical local env) so CI
+        # and local runs resolve to the same major versions. Keep them in
+        # sync when bumping either file.
         run: |
           uv pip install --python .venv --no-deps -e .
           uv pip install --python .venv \
             'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.17.1' 'matplotlib>=3.10.8' \
-            'duckdb>=1.5.2' \
-            'lightgbm>=4.5.0' 'optuna>=4.1.0' 'shap>=0.46.0' \
-            'scikit-learn>=1.5.0' 'joblib>=1.4.0' 'pyarrow>=18.0.0' \
+            'duckdb>=1.5.2' 'dcor>=0.6' \
+            'lightgbm>=4.6.0' 'optuna>=4.8.0' 'shap>=0.51.0' \
+            'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
             'pytest>=9.0.3'
       - name: Run pytest
         run: uv run --python .venv pytest
