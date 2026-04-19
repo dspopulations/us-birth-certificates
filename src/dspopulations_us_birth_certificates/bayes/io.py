@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -11,6 +13,9 @@ from dspopulations_us_birth_certificates.bayes.config import BayesFitContext
 
 if TYPE_CHECKING:
     import arviz as az
+
+
+DOCS_TEMPLATE_ROOT = Path("docs/models")
 
 
 def save_artefacts(context: BayesFitContext, output_dir: Path) -> None:
@@ -53,3 +58,33 @@ def load_idata(output_dir: Path) -> az.InferenceData:
     import arviz as az
 
     return az.from_netcdf(str(output_dir / "idata.nc"))
+
+
+def copy_docs_template(
+    model_id: str,
+    output_dir: Path,
+    *,
+    docs_root: Path = DOCS_TEMPLATE_ROOT,
+) -> Path | None:
+    """Copy ``docs/models/<model_id>/index.qmd`` next to the fit artefacts.
+
+    Mirrors the sibling-repo pattern: the Quarto template lives in
+    version control and renders against whichever run directory it is
+    copied into. Returns the destination path, or ``None`` if no
+    template exists for this ``model_id``.
+    """
+    src = docs_root / model_id / "index.qmd"
+    if not src.exists():
+        return None
+    dst = output_dir / "index.qmd"
+    shutil.copy(src, dst)
+    return dst
+
+
+def render_quarto(qmd_path: Path) -> None:
+    """Invoke ``quarto render`` on a QMD file.
+
+    Raises ``FileNotFoundError`` if Quarto isn't on PATH, or
+    ``subprocess.CalledProcessError`` if the render fails.
+    """
+    subprocess.run(["quarto", "render", str(qmd_path)], check=True)

@@ -29,7 +29,12 @@ from dspopulations_us_birth_certificates.bayes.hsgp import (
     HSGPComponent,
     make_hsgp_component,
 )
-from dspopulations_us_birth_certificates.bayes.io import save_artefacts, save_summary
+from dspopulations_us_birth_certificates.bayes.io import (
+    copy_docs_template,
+    render_quarto,
+    save_artefacts,
+    save_summary,
+)
 from dspopulations_us_birth_certificates.bayes.outcomes import (
     OutcomeSpec,
     outcome_spec_from_name,
@@ -50,11 +55,13 @@ __all__ = [
     "BayesRunConfig",
     "HSGPComponent",
     "OutcomeSpec",
+    "copy_docs_template",
     "load_cells",
     "make_hsgp_component",
     "outcome_spec_from_name",
     "recorded_plus_predicted_spec",
     "recorded_spec",
+    "render_quarto",
     "sample",
     "save_artefacts",
     "save_summary",

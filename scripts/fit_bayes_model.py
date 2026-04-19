@@ -44,9 +44,11 @@ from dspopulations_us_birth_certificates.bayes import (
     MODELS,
     BayesFitContext,
     BayesRunConfig,
+    copy_docs_template,
     diagnostics,
     load_cells,
     plots,
+    render_quarto,
     sample,
     save_artefacts,
     save_summary,
@@ -65,6 +67,7 @@ class BayesFitCliConfig:
     output_dir: Path
     prior_only: bool
     drop_na_dims: bool
+    render: bool
     overrides: dict = field(default_factory=dict)
 
 
@@ -149,6 +152,15 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
         default=None,
         help="Override chain count from the profile.",
     )
+    p.add_argument(
+        "--render",
+        action="store_true",
+        help=(
+            "After the fit, render the Quarto template at "
+            "docs/models/<model-id>/index.qmd against the run's output "
+            "directory. Requires ``quarto`` on PATH."
+        ),
+    )
 
     ns = p.parse_args(argv)
     definition = MODELS[ns.model_id]
@@ -182,6 +194,7 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
         output_dir=out_dir,
         prior_only=ns.prior_only,
         drop_na_dims=not ns.keep_na_dims,
+        render=ns.render,
         overrides=overrides,
     )
 
@@ -254,6 +267,15 @@ def main(argv: list[str] | None = None) -> int:
     save_artefacts(context, cli.output_dir)
     cli_output.success(f"idata.nc, cells.parquet, config.json -> {cli.output_dir}")
 
+    qmd_path = copy_docs_template(cli.model_id, cli.output_dir)
+    if qmd_path is not None:
+        cli_output.success(f"index.qmd -> {qmd_path}")
+    else:
+        cli_output.info(
+            f"No Quarto template at docs/models/{cli.model_id}/index.qmd "
+            "— skipping template copy."
+        )
+
     if cli.prior_only:
         cli_output.info("Prior-only run - skipping summary / plots.")
         return 0
@@ -296,6 +318,22 @@ def main(argv: list[str] | None = None) -> int:
         cli_output.success(f"Plots -> {plots_dir}")
     except Exception as exc:  # noqa: BLE001 — diagnostics shouldn't fail the run
         cli_output.warning(f"Plot generation raised {type(exc).__name__}: {exc}")
+
+    if cli.render and qmd_path is not None:
+        cli_output.section("Render")
+        try:
+            render_quarto(qmd_path)
+            cli_output.success(f"Rendered {qmd_path.with_suffix('.html')}")
+        except FileNotFoundError:
+            cli_output.warning(
+                "`quarto` not found on PATH — install Quarto and retry, "
+                "or render manually: quarto render "
+                f"{qmd_path}"
+            )
+        except Exception as exc:  # noqa: BLE001 — rendering is optional
+            cli_output.warning(
+                f"Quarto render raised {type(exc).__name__}: {exc}"
+            )
 
     cli_output.section("Done")
     return 0
