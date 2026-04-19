@@ -37,6 +37,8 @@ Notebooks and scripts reference a shared external package (`dse_research_utils`)
 - Tests: `pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, `-q`). The `tests/` directory does not yet exist — create it when adding tests.
 - Spellcheck (markdown and `docs/**/*.qmd`): `npm run spellcheck`. Dictionary at `config/spellcheck/allow-en.txt`; language is **en-GB**.
 
+**Before creating a PR, always run both `ruff check src tests scripts` and `npm run spellcheck` and resolve any findings.** Fix real lint errors; for false-positive unknown-word flags from cspell, add the term to `config/spellcheck/allow-en.txt` rather than rewording the prose.
+
 ## Notebooks
 
 Jupytext pairing is configured: `formats = "ipynb,py:percent"`. `.ipynb` files are **gitignored** — only the paired `.py` percent-format files are committed. When creating or editing notebooks, keep the `.py` counterpart in sync.

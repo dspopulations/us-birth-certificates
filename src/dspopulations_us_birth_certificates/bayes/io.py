@@ -53,6 +53,17 @@ def save_summary(summary: Any, output_dir: Path, *, name: str = "summary.csv") -
     summary.to_csv(output_dir / name)
 
 
+def save_prior_predictive_summary(
+    summary: Any,
+    output_dir: Path,
+    *,
+    name: str = "prior_predictive_summary.csv",
+) -> None:
+    """Write a prior-predictive summary DataFrame to CSV next to the fit."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary.to_csv(output_dir / name)
+
+
 def load_idata(output_dir: Path) -> az.InferenceData:
     """Load a previously-saved InferenceData from an artefact directory."""
     import arviz as az

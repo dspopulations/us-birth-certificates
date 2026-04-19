@@ -42,6 +42,7 @@ sklearn
 vars
 
 # Tooling
+asis
 hatchling
 jupytext
 Jupytext

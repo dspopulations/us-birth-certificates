@@ -33,6 +33,7 @@ from dspopulations_us_birth_certificates.bayes.io import (
     copy_docs_template,
     render_quarto,
     save_artefacts,
+    save_prior_predictive_summary,
     save_summary,
 )
 from dspopulations_us_birth_certificates.bayes.outcomes import (
@@ -64,5 +65,6 @@ __all__ = [
     "render_quarto",
     "sample",
     "save_artefacts",
+    "save_prior_predictive_summary",
     "save_summary",
 ]

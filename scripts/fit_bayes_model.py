@@ -51,6 +51,7 @@ from dspopulations_us_birth_certificates.bayes import (
     render_quarto,
     sample,
     save_artefacts,
+    save_prior_predictive_summary,
     save_summary,
 )
 
@@ -153,6 +154,12 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
         help="Override chain count from the profile.",
     )
     p.add_argument(
+        "--prior-predictive-samples",
+        type=int,
+        default=None,
+        help="Override prior_predictive_samples from the profile.",
+    )
+    p.add_argument(
         "--render",
         action="store_true",
         help=(
@@ -179,6 +186,7 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
             "draws": ns.draws,
             "tune": ns.tune,
             "chains": ns.chains,
+            "prior_predictive_samples": ns.prior_predictive_samples,
         }.items()
         if v is not None
     }
@@ -263,6 +271,32 @@ def main(argv: list[str] | None = None) -> int:
         idata=idata,
     )
 
+    cli_output.section("Prior predictive")
+    plots_dir = cli.output_dir / "plots"
+    try:
+        prior_summary = diagnostics.prior_predictive_summary(idata, cells)
+        save_prior_predictive_summary(prior_summary, cli.output_dir)
+        cli_output.print_prior_predictive_summary(prior_summary)
+        for coord_name, smooth_name in (
+            ("year", "f_year"),
+            ("mage_c", "f_age"),
+        ):
+            if coord_name in cells.columns:
+                plots.plot_prior_draws(
+                    idata,
+                    cells,
+                    coord_name=coord_name,
+                    smooth_name=smooth_name,
+                    output_path=plots_dir / f"prior_{coord_name}_draws",
+                )
+        cli_output.success(
+            f"prior_predictive_summary.csv + prior draws -> {cli.output_dir}"
+        )
+    except Exception as exc:  # noqa: BLE001 — diagnostics shouldn't fail the run
+        cli_output.warning(
+            f"Prior predictive reporting raised {type(exc).__name__}: {exc}"
+        )
+
     cli_output.section("Save artefacts")
     save_artefacts(context, cli.output_dir)
     cli_output.success(f"idata.nc, cells.parquet, config.json -> {cli.output_dir}")
@@ -277,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if cli.prior_only:
-        cli_output.info("Prior-only run - skipping summary / plots.")
+        cli_output.info("Prior-only run - skipping posterior summary / plots.")
         return 0
 
     cli_output.section("Diagnostics")
@@ -299,7 +333,6 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     cli_output.section("Plots")
-    plots_dir = cli.output_dir / "plots"
     key_vars = tuple(
         v
         for v in ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
@@ -314,6 +347,11 @@ def main(argv: list[str] | None = None) -> int:
         if key_vars:
             plots.plot_trace(
                 idata, var_names=key_vars, output_path=plots_dir / "trace_key_rvs"
+            )
+            plots.plot_prior_posterior_overlay(
+                idata,
+                var_names=key_vars,
+                output_path=plots_dir / "prior_posterior_overlay",
             )
         cli_output.success(f"Plots -> {plots_dir}")
     except Exception as exc:  # noqa: BLE001 — diagnostics shouldn't fail the run

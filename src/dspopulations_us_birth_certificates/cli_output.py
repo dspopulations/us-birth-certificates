@@ -123,6 +123,42 @@ def print_kv(title: str, items: Iterable[tuple[str, Any]]) -> None:
     console.print(kv_table(title, items))
 
 
+def print_prior_predictive_summary(df: Any, *, title: str = "Prior predictive checks") -> None:
+    """Render a ``prior_predictive_summary`` DataFrame as a rich table.
+
+    Expects the schema from ``bayes.diagnostics.prior_predictive_summary``:
+    rows indexed by ``check`` with columns ``unit``, ``median``, ``hdi_lo``,
+    ``hdi_hi``. Missing rows or columns degrade gracefully.
+    """
+    if df is None or len(df) == 0:
+        warning("Prior predictive summary is empty.")
+        return
+
+    table = Table(
+        title=title,
+        title_style="bold",
+        box=SIMPLE_HEAVY,
+        show_header=True,
+        header_style="bold magenta",
+    )
+    table.add_column("Check", style="cyan", no_wrap=True)
+    table.add_column("Unit", style="dim")
+    table.add_column("Median", justify="right")
+    table.add_column("94% HDI", justify="right")
+    for check, row in df.iterrows():
+        unit = str(row.get("unit", ""))
+        median = row.get("median", float("nan"))
+        lo = row.get("hdi_lo", float("nan"))
+        hi = row.get("hdi_hi", float("nan"))
+        table.add_row(
+            str(check),
+            unit,
+            _fmt(median),
+            f"[{_fmt(lo)}, {_fmt(hi)}]",
+        )
+    console.print(table)
+
+
 # ---------------------------------------------------------------------------
 # Config / run setup
 # ---------------------------------------------------------------------------
