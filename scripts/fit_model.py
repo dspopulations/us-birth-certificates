@@ -539,7 +539,7 @@ def main(argv: list[str] | None = None) -> int:
     if config.run_permutation:
         pipeline.permutation_importance_analysis()
     pipeline.shap_analysis()
-    pipeline.save_artefacts()
+    pipeline.save_artefacts(save_plots=config.save_plots)
     pipeline.write_manifest()
 
     if config.write_predictions:
