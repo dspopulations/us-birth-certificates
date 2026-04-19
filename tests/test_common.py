@@ -52,8 +52,10 @@ def test_run_config_seed_override() -> None:
     assert rc.random_seed == 123
 
 
-def test_run_config_preset_names_sorted() -> None:
-    assert RunConfig.preset_names() == ("dev", "reporting", "test")
+def test_run_config_preset_names_semantic_order() -> None:
+    # Semantic progression dev → test → reporting matches the CLI docstring
+    # and argparse ``--help`` output.
+    assert RunConfig.preset_names() == ("dev", "test", "reporting")
 
 
 def test_run_config_is_frozen() -> None:
