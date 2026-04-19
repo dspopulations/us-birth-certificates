@@ -70,7 +70,7 @@ def plot_bar(
         fig = plt.figure(figsize=fig_size)
         ax = fig.subplots()
         ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        shap.plots.bar(explanation, max_display=max_display, ax=ax)
+        shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
         _maybe_save(output_dir, file_stem, save)
         if show:
             plt.show()
@@ -91,17 +91,19 @@ def plot_beeswarm(
 ) -> None:
     """SHAP beeswarm plot of per-row SHAP values."""
     with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure()
-        ax = fig.subplots()
-        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
         shap.plots.beeswarm(
-            explanation, max_display=max_display, plot_size=plot_size
+            explanation,
+            max_display=max_display,
+            plot_size=plot_size,
+            show=False,
         )
+        ax = plt.gca()
+        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
         _maybe_save(output_dir, file_stem, save)
         if show:
             plt.show()
         else:
-            plt.close(fig)
+            plt.close(ax.figure)
 
 
 def plot_scatter(

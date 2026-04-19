@@ -82,8 +82,12 @@ class RunConfig:
 
     @classmethod
     def preset_names(cls) -> tuple[str, ...]:
-        """Return the sorted tuple of valid preset names."""
-        return tuple(sorted(_PRESETS))
+        """Return valid preset names in semantic order (dev → test → reporting).
+
+        The order matches ``_PRESETS`` insertion order so argparse's ``--help``
+        output agrees with the documented progression in the CLI docstring.
+        """
+        return tuple(_PRESETS)
 
 
 @dataclass(frozen=True)
