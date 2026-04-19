@@ -31,23 +31,34 @@ from dspopulations_us_birth_certificates.bayes import (  # noqa: E402
 
 @pytest.fixture
 def synthetic_cells() -> pd.DataFrame:
-    """Year×age cells with a small, realistic-shape signal."""
+    """Year×month×age cells with a small, realistic-shape signal."""
     rng = np.random.default_rng(0)
     years = np.arange(2020, 2023)
+    months = np.arange(1, 13)
     ages = np.arange(20, 30)
     records = []
     for year in years:
-        for age in ages:
-            n = int(rng.integers(300, 600))
-            base_rate = 1e-4 * (age - 19)  # age 20 → 1e-4, age 29 → 1e-3
-            y = int(rng.binomial(n, base_rate))
-            records.append({"year": year, "mage_c": age, "n_cell": n, "y_cell": y})
+        for month in months:
+            for age in ages:
+                n = int(rng.integers(25, 60))
+                base_rate = 1e-4 * (age - 19)  # age 20 → 1e-4, age 29 → 1e-3
+                y = int(rng.binomial(n, base_rate))
+                records.append(
+                    {
+                        "year": year,
+                        "dob_mm": month,
+                        "mage_c": age,
+                        "n_cell": n,
+                        "y_cell": y,
+                    }
+                )
     return pd.DataFrame(records)
 
 
 def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) -> None:
     definition = MODELS["m1-year-age"]
-    model = definition.build(synthetic_cells)
+    cells = definition.prepare_cells(synthetic_cells)
+    model = definition.build(cells)
 
     # Minimal config: 50 draws/tune, 1 chain, default NUTS (avoid nutpie
     # compile overhead in CI).
@@ -72,14 +83,14 @@ def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) ->
     assert idata.posterior.sizes["chain"] == 1
     assert "alpha" in idata.posterior.data_vars
     assert "p" in idata.posterior.data_vars
-    assert idata.posterior["p"].sizes["cell"] == len(synthetic_cells)
+    assert idata.posterior["p"].sizes["cell"] == len(cells)
 
     # Artefacts.
     context = BayesFitContext(
         config=definition.to_config(outcome="recorded"),
         run_config=run_config,
         output_dir=tmp_path,
-        cells=synthetic_cells,
+        cells=cells,
         model=model,
         idata=idata,
     )
@@ -90,15 +101,15 @@ def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) ->
     assert (tmp_path / "run_config.json").is_file()
 
     # Prior predictive summary carries all the expected rows.
-    pps = diagnostics.prior_predictive_summary(idata, synthetic_cells)
+    pps = diagnostics.prior_predictive_summary(idata, cells)
     expected_rows = {
         "baseline_rate",
         "cell_rate_mean",
         "y_cell_min_exposure",
         "y_cell_max_exposure",
-        "year_trend_rate_ratio",
+        "time_trend_rate_ratio",
         "age_gradient_rate_ratio",
-        "ls_year_coord_units",
+        "ls_t_coord_units",
         "ls_age_coord_units",
     }
     assert expected_rows.issubset(set(pps.index))
@@ -115,26 +126,26 @@ def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) ->
     plots_dir = tmp_path / "plots"
     plots.plot_prior_draws(
         idata,
-        synthetic_cells,
-        coord_name="year",
-        smooth_name="f_year",
-        output_path=plots_dir / "prior_year_draws",
+        cells,
+        coord_name="t",
+        smooth_name="f_t",
+        output_path=plots_dir / "prior_t_draws",
         n_draws=10,
     )
     plots.plot_prior_draws(
         idata,
-        synthetic_cells,
-        coord_name="mage_c",
+        cells,
+        coord_name="age",
         smooth_name="f_age",
-        output_path=plots_dir / "prior_mage_c_draws",
+        output_path=plots_dir / "prior_age_draws",
         n_draws=10,
     )
     plots.plot_prior_posterior_overlay(
         idata,
-        var_names=("alpha", "ls_year", "eta_year"),
+        var_names=("alpha", "ls_t", "eta_t"),
         output_path=plots_dir / "prior_posterior_overlay",
     )
-    for stem in ("prior_year_draws", "prior_mage_c_draws", "prior_posterior_overlay"):
+    for stem in ("prior_t_draws", "prior_age_draws", "prior_posterior_overlay"):
         for ext in (".png", ".svg", ".csv"):
             assert (plots_dir / f"{stem}{ext}").is_file(), (
                 f"missing {stem}{ext}"
@@ -142,8 +153,8 @@ def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) ->
 
     # CSV companion for the prior-draws plot is long-format with the
     # right series labels and carries the coord column we asked for.
-    prior_draws_csv = pd.read_csv(plots_dir / "prior_year_draws.csv")
-    assert "year" in prior_draws_csv.columns
+    prior_draws_csv = pd.read_csv(plots_dir / "prior_t_draws.csv")
+    assert "t" in prior_draws_csv.columns
     assert "series" in prior_draws_csv.columns
     series = set(prior_draws_csv["series"].unique())
     assert {"hdi_lo", "hdi_hi", "median"}.issubset(series)
