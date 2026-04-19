@@ -59,4 +59,7 @@ jobs:
             'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
             'pytest>=9.0.3'
       - name: Run pytest
-        run: uv run --python .venv pytest
+        # --no-sync keeps the venv we just pinned. Without it, `uv run`
+        # re-resolves against pyproject.toml and drops the modelling pins
+        # (joblib, lightgbm, etc.) the tests need.
+        run: uv run --no-sync --python .venv pytest
