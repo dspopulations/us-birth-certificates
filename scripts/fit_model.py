@@ -164,6 +164,7 @@ def _profile_defaults(name: str) -> dict[str, object]:
         "plots": True,
         "permutation": rc.shap_mode != "skip",
         "shap": rc.shap_mode != "skip",
+        "shap_subsample_size": rc.shap_subsample_size,
     }
 
 
@@ -185,6 +186,7 @@ class FitConfig:
     save_plots: bool = True
     run_permutation: bool = True
     run_shap: bool = True
+    shap_subsample_size: int | None = None
     write_predictions: bool = False
     duckdb_path: Path = Path("data/us_births.db")
     profile: str | None = None
@@ -287,6 +289,18 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         default=True,
         help="Compute SHAP values and plots (slow).",
     )
+    p.add_argument(
+        "--shap-subsample-size",
+        type=int,
+        default=None,
+        help=(
+            "If set, restrict the SHAP explanation set to roughly this many "
+            "rows (all positives are kept; the negative budget is split "
+            "evenly between random and hard negatives). Defaults to the "
+            "profile's ``shap_subsample_size``; None means the full default "
+            "explanation set."
+        ),
+    )
 
     # DB writeback
     p.add_argument(
@@ -326,6 +340,7 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         save_plots=ns.plots,
         run_permutation=ns.permutation,
         run_shap=ns.shap,
+        shap_subsample_size=ns.shap_subsample_size,
         write_predictions=ns.write_predictions,
         duckdb_path=ns.duckdb_path,
         profile=ns.profile,
@@ -514,7 +529,21 @@ def run_diagnostics(
     if not (config.run_permutation or config.run_shap):
         return
 
-    X_eval, y_eval = ml_utils.build_explain_set(gbm, X_valid, y_valid, categorical)
+    explain_kwargs: dict[str, int] = {}
+    if config.shap_subsample_size is not None and config.shap_subsample_size > 0:
+        # Split the negative budget roughly evenly between random and hard
+        # negatives; all positives are always kept.
+        n_pos = int((np.asarray(y_valid) == 1).sum())
+        neg_budget = max(0, config.shap_subsample_size - n_pos)
+        half = neg_budget // 2
+        explain_kwargs = {
+            "n_neg_rand": half,
+            "n_neg_hard": neg_budget - half,
+        }
+
+    X_eval, y_eval = ml_utils.build_explain_set(
+        gbm, X_valid, y_valid, categorical, **explain_kwargs
+    )
     model_wrapped = ml_utils.LGBMEstimator(gbm)
 
     if config.run_permutation:
