@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -355,7 +356,10 @@ class EstimatorPipeline(ABC):
         if render:
             try:
                 reporting.render_quarto_report(qmd)
-            except (FileNotFoundError, Exception) as exc:  # noqa: BLE001
+            except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+                # Expected operational failures (missing CLI, non-zero exit)
+                # are logged but don't fail the run. Any other exception is
+                # programmer error and should surface.
                 logger.warning("Quarto render failed: %s", exc)
 
     # ---- convenience ---------------------------------------------------------
