@@ -33,6 +33,18 @@ dev = [
   "pytest>=9.0.3",
   "ruff>=0.15.10",
 ]
+modelling = [
+  # Lower bounds track environment.yml (the canonical local env) and the
+  # CI workflow. Bumping here requires updating both to avoid
+  # "works locally, fails in CI" drift.
+  "lightgbm>=4.6.0",
+  "optuna>=4.8.0",
+  "shap>=0.51.0",
+  "scikit-learn>=1.8.0",
+  "joblib>=1.4.0",
+  "pyarrow>=23.0.1",
+  "dcor>=0.6",
+]
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"
