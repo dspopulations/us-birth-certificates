@@ -1,7 +1,9 @@
 """Classification calibration and top-K evaluation helpers.
 
-Dependency-light (numpy + pandas only) so they can be reused from
-notebooks, scripts, or tests without pulling in LightGBM.
+The tabular helpers (``precision_recall_at_k``, ``tail_calibration_table``)
+stick to numpy + pandas. ``plot_precision_recall_at_k_curve`` additionally
+uses matplotlib. Nothing here imports LightGBM, so these are safe to reuse
+from notebooks, scripts, or tests.
 """
 
 from __future__ import annotations
@@ -46,9 +48,10 @@ def precision_recall_at_k(
     y_sorted = y_true_arr[order]
     ctp = np.cumsum(y_sorted)
 
+    effective_ks = sorted({int(min(max(int(K), 1), n)) for K in ks})
+
     rows = []
-    for K in ks:
-        k = int(min(max(K, 1), n))
+    for k in effective_ks:
         tp = int(ctp[k - 1])
         rows.append((k, tp, tp / k, tp / pos_total))
 
@@ -78,7 +81,11 @@ def tail_calibration_table(
     n = len(y)
     rows = []
     for f in fracs:
-        k = max(1, int(round(n * f)))
+        if not (0.0 < float(f) <= 1.0):
+            raise ValueError(
+                f"tail fraction must be in (0, 1]; got {f!r}."
+            )
+        k = min(n, max(1, int(round(n * float(f)))))
         y_top = y_sorted[:k]
         p_top = p_sorted[:k]
         obs_rate = float(y_top.mean())
