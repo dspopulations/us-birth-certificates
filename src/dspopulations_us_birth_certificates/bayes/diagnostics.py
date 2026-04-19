@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import arviz as az
 
 
-DEFAULT_SUMMARY_VAR_NAMES = ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
+DEFAULT_SUMMARY_VAR_NAMES = ("alpha", "ls_t", "eta_t", "ls_age", "eta_age")
 
 PRIOR_PREDICTIVE_COLUMNS = ("unit", "median", "hdi_lo", "hdi_hi")
 
@@ -87,8 +87,8 @@ def prior_predictive_summary(
     idata: az.InferenceData,
     cells: pd.DataFrame,
     *,
-    year_coord: str = "year",
-    age_coord: str = "mage_c",
+    time_coord: str = "t",
+    age_coord: str = "age",
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
     """Summarise prior-implied quantities on rate / ratio scales.
@@ -98,10 +98,10 @@ def prior_predictive_summary(
         - ``cell_rate_mean``: exposure-weighted mean prior rate across cells.
         - ``y_cell_min_exposure`` / ``y_cell_max_exposure``: prior-predictive
           counts for the smallest and largest cell.
-        - ``year_trend_rate_ratio``: ``exp(max(f_year) - min(f_year))`` — the
-          rate multiplier the prior admits across the year range.
+        - ``time_trend_rate_ratio``: ``exp(max(f_t) - min(f_t))`` — the rate
+          multiplier the prior admits across the time range.
         - ``age_gradient_rate_ratio``: same for ``f_age``.
-        - ``ls_year_coord_units`` / ``ls_age_coord_units``: HSGP length-scales
+        - ``ls_t_coord_units`` / ``ls_age_coord_units``: HSGP length-scales
           translated back to original coord units (years).
 
     Rows are skipped silently if the corresponding variable is absent from
@@ -111,7 +111,7 @@ def prior_predictive_summary(
     Args:
         idata: Must carry ``prior`` and ``prior_predictive`` groups.
         cells: Cell frame (must contain the coord columns).
-        year_coord / age_coord: Column names in ``cells`` for each coord.
+        time_coord / age_coord: Column names in ``cells`` for each coord.
         hdi_prob: Credible-interval width for the HDI columns.
 
     Returns:
@@ -168,7 +168,7 @@ def prior_predictive_summary(
                 )
 
     for smooth_name, label in (
-        ("f_year", "year_trend_rate_ratio"),
+        ("f_t", "time_trend_rate_ratio"),
         ("f_age", "age_gradient_rate_ratio"),
     ):
         if smooth_name in prior.data_vars:
@@ -187,7 +187,7 @@ def prior_predictive_summary(
                 )
 
     for var_name, coord_col, label in (
-        ("ls_year", year_coord, "ls_year_coord_units"),
+        ("ls_t", time_coord, "ls_t_coord_units"),
         ("ls_age", age_coord, "ls_age_coord_units"),
     ):
         if var_name in prior.data_vars and coord_col in cells.columns:

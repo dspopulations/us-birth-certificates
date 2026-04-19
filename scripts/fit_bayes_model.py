@@ -250,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
         db_path=cli.duckdb_path,
         drop_na_dims=cli.drop_na_dims,
     )
+    cells = definition.prepare_cells(cells)
+    smooth_coords = definition.smooth_coords or definition.dims
     cli_output.info(
         f"cells=[bold]{len(cells)}[/bold], "
         f"n_total=[bold]{int(cells['n_cell'].sum()):,}[/bold], "
@@ -277,16 +279,13 @@ def main(argv: list[str] | None = None) -> int:
         prior_summary = diagnostics.prior_predictive_summary(idata, cells)
         save_prior_predictive_summary(prior_summary, cli.output_dir)
         cli_output.print_prior_predictive_summary(prior_summary)
-        for coord_name, smooth_name in (
-            ("year", "f_year"),
-            ("mage_c", "f_age"),
-        ):
+        for coord_name in smooth_coords:
             if coord_name in cells.columns:
                 plots.plot_prior_draws(
                     idata,
                     cells,
                     coord_name=coord_name,
-                    smooth_name=smooth_name,
+                    smooth_name=f"f_{coord_name}",
                     output_path=plots_dir / f"prior_{coord_name}_draws",
                 )
         cli_output.success(
@@ -333,13 +332,16 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     cli_output.section("Plots")
+    candidate_key_vars = ("alpha",) + tuple(
+        name for c in smooth_coords for name in (f"ls_{c}", f"eta_{c}")
+    )
     key_vars = tuple(
-        v
-        for v in ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
-        if v in idata.posterior.data_vars
+        v for v in candidate_key_vars if v in idata.posterior.data_vars
     )
     try:
-        for dim in definition.dims:
+        for dim in smooth_coords:
+            if dim not in cells.columns:
+                continue
             plots.plot_trend_by_dim(
                 idata, cells, dim=dim, output_path=plots_dir / f"trend_{dim}"
             )

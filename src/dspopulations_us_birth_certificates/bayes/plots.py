@@ -219,7 +219,7 @@ def plot_prior_draws(
 ) -> None:
     """Prior draws of an HSGP smooth on its original coord axis.
 
-    Plots ``n_draws`` random prior samples of ``smooth_name`` (e.g. ``f_year``)
+    Plots ``n_draws`` random prior samples of ``smooth_name`` (e.g. ``f_t``)
     as thin lines, with a ``hdi_prob`` HDI band, against the unique values of
     ``coord_name`` taken from ``cells``. Useful for eyeballing whether the
     prior's smoothness and amplitude are plausible before fitting.
