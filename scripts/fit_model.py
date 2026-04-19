@@ -459,6 +459,31 @@ def load_prior_best_params(path: Path | None) -> dict:
         return json.load(f)
 
 
+def _recover_loaded_params(model_path: Path) -> dict:
+    """Return the hyperparameters used by a saved booster.
+
+    Prefers a sibling ``best_params.json`` (the per-run artefact fit_model
+    writes next to ``model.txt``), since that file captures tuned values
+    directly. Falls back to parsing ``booster.params`` from the saved
+    ``model.txt``; returns an empty dict if neither is available so the
+    caller can still proceed.
+    """
+    sibling = model_path.parent / "best_params.json"
+    if sibling.is_file():
+        try:
+            with sibling.open() as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    try:
+        booster = lgb.Booster(model_file=str(model_path))
+    except Exception:  # noqa: BLE001 - surface any LightGBM failure as empty
+        return {}
+    params = getattr(booster, "params", None) or {}
+    return dict(params)
+
+
 def _load_xy_for_tuning(
     config: FitConfig,
 ) -> tuple[pd.DataFrame, pd.Series, list[str]]:
@@ -529,7 +554,11 @@ def main(argv: list[str] | None = None) -> int:
     # when --load-model is set: we're regenerating diagnostics, not fitting.
     if config.load_model is not None:
         print(f"Loading saved model from {config.load_model}; skipping tuning + fit.")
-        best_params = {}
+        # Surface the hyperparameters actually used by the loaded booster so
+        # ``best_params.json``, ``config.json``, and the manifest describe the
+        # run faithfully. Prefer a sibling ``best_params.json`` if present
+        # (richer than whatever LightGBM echoes back via booster.params).
+        best_params = _recover_loaded_params(config.load_model)
     elif config.select_hyperparameters:
         X, y, categorical = _load_xy_for_tuning(config)
         ad_hoc = _build_model_config(config, params={})
