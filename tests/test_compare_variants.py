@@ -83,19 +83,22 @@ def test_compare_runs_tolerates_missing_manifest(tmp_path: Path) -> None:
 
 
 def test_latest_run_for_model_picks_newest(tmp_path: Path) -> None:
-    import time
+    import os
 
     root = tmp_path / "models"
     dir_a = root / "usbc10_m0-dev" / "20260101-120000"
     dir_b = root / "usbc10_m0-dev" / "20260101-130000"
     dir_c = root / "usbc10_m0-reporting" / "20260101-110000"
-    for d in (dir_a, dir_b, dir_c):
+    # Set mtimes explicitly so the test is deterministic across filesystems
+    # whose timestamp resolution would otherwise collapse time.sleep(0.01)
+    # intervals into identical mtimes.
+    for d, mtime in ((dir_a, 1_000.0), (dir_b, 2_000.0), (dir_c, 3_000.0)):
         d.mkdir(parents=True)
-        time.sleep(0.01)  # ensure distinct mtimes
+        os.utime(d, (mtime, mtime))
 
     picked = compare_variants._latest_run_for_model(root, "usbc10_m0")
-    # dir_c was created last, so it has the newest mtime regardless of
-    # the timestamp embedded in its path.
+    # dir_c has the newest mtime, so it's picked regardless of the
+    # timestamp embedded in its path.
     assert picked == dir_c
 
 

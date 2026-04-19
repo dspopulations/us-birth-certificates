@@ -42,12 +42,15 @@ def copy_template(
 
 def render_quarto_report(
     qmd_path: Path, output_format: str = "html"
-) -> Path:
+) -> Path | None:
     """Subprocess-invoke ``quarto render`` for ``qmd_path``.
 
-    Returns the rendered file's path. Raises ``subprocess.CalledProcessError``
-    on a non-zero exit and ``FileNotFoundError`` if the ``quarto`` binary
-    isn't on PATH.
+    Returns the rendered file's path on success, or ``None`` when the
+    render finished but the expected output file could not be located
+    (some formats land in sibling directories with non-obvious suffixes,
+    and callers should treat ``None`` as "rendered, but artefact path
+    unknown"). Raises ``subprocess.CalledProcessError`` on non-zero exit
+    and ``FileNotFoundError`` if the ``quarto`` binary isn't on PATH.
     """
     qmd_path = Path(qmd_path)
     if not qmd_path.is_file():
@@ -60,17 +63,17 @@ def render_quarto_report(
         )
     except FileNotFoundError as exc:
         raise FileNotFoundError(
-            "`quarto` binary not found on PATH. Install Quarto CLI or pass "
-            "--no-render to skip the render step."
+            "`quarto` binary not found on PATH. Install Quarto CLI or "
+            "omit --render to skip the render step."
         ) from exc
 
     rendered = qmd_path.with_suffix(f".{output_format}")
     if rendered.is_file():
         return rendered
-    # Some output formats (pdf, docx) land in the same dir with different suffix
-    # — best-effort resolution:
     logger.warning(
-        "Could not locate rendered file for %s; returning source path.",
+        "Could not locate rendered file for %s (format=%s); "
+        "render completed but output path is unknown.",
         qmd_path,
+        output_format,
     )
-    return qmd_path
+    return None
