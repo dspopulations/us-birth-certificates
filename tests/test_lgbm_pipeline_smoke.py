@@ -90,8 +90,19 @@ def test_fit_on_synthetic_fixture(
     assert (tmp_output_dir / "precision_recall_at_k.csv").is_file()
     assert (tmp_output_dir / "calibration_tail.csv").is_file()
     assert (tmp_output_dir / "feature_importance_gain.csv").is_file()
-    assert (tmp_output_dir / "plots" / "roc_curve.png").is_file()
-    assert (tmp_output_dir / "plots" / "precision_recall_curve.png").is_file()
+    for stem in ("roc_curve", "precision_recall_curve"):
+        for ext in (".png", ".svg", ".csv"):
+            assert (tmp_output_dir / "plots" / f"{stem}{ext}").is_file(), (
+                f"missing plots/{stem}{ext}"
+            )
+
+    # ROC CSV has the arrays actually plotted, sorted by fpr.
+    roc_data = pd.read_csv(tmp_output_dir / "plots" / "roc_curve.csv")
+    assert list(roc_data.columns) == ["fpr", "tpr"]
+    assert len(roc_data) > 1
+
+    pr_data = pd.read_csv(tmp_output_dir / "plots" / "precision_recall_curve.csv")
+    assert set(pr_data.columns) == {"recall", "precision"}
 
     # ---- model quality ----
     metrics = json.loads((tmp_output_dir / "metrics.json").read_text())

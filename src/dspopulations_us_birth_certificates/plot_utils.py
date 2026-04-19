@@ -7,10 +7,25 @@ from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
 
 
-def _save_fig(fig: Figure, output_dir: str, file_name: str, dpi: int = 300) -> None:
-    """Save a figure as PNG and SVG."""
+def _save_fig(
+    fig: Figure,
+    output_dir: str,
+    file_name: str,
+    *,
+    dpi: int = 300,
+    data: pd.DataFrame | None = None,
+) -> None:
+    """Save a figure as PNG + SVG, plus a companion CSV of the plotted data.
+
+    The CSV is written to ``{output_dir}/{file_name}.csv`` and carries the
+    arrays actually rendered on the plot. Keeping image and data at the
+    same stem lets readers re-plot or validate the figure without re-running
+    the upstream pipeline.
+    """
     fig.savefig(f"{output_dir}/{file_name}.png", dpi=dpi, bbox_inches="tight")
     fig.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
+    if data is not None:
+        data.to_csv(f"{output_dir}/{file_name}.csv", index=False)
 
 
 def plot_roc_curve(
@@ -31,7 +46,8 @@ def plot_roc_curve(
     ax.set_title(f"Model {model_idx}: Receiver Operating Characteristic (ROC) Curve")
     ax.legend(loc="lower right")
     if save:
-        _save_fig(fig, output_dir, file_name)
+        data = pd.DataFrame({"fpr": np.asarray(fpr), "tpr": np.asarray(tpr)})
+        _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -52,7 +68,12 @@ def plot_precision_recall_curve(
     ax.set_title(f"Model {model_idx}: Precision-Recall Curve")
     ax.legend(loc="lower right")
     if save:
-        _save_fig(fig, output_dir, file_name)
+        # Callers pass (recall, precision) as the positional args — keep the
+        # historical parameter names but label the CSV columns correctly.
+        data = pd.DataFrame(
+            {"recall": np.asarray(fpr), "precision": np.asarray(tpr)}
+        )
+        _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -79,7 +100,12 @@ def plot_permutation_importances(
 
     fig = ax.figure
     if save:
-        _save_fig(fig, output_dir, file_name)
+        # Long format so each (feature, repeat) pair is one row — reproduces
+        # the boxplot inputs exactly.
+        data = importances.melt(var_name="feature", value_name="importance")
+        data["repeat"] = data.groupby("feature").cumcount()
+        data = data[["feature", "repeat", "importance"]]
+        _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -114,7 +140,29 @@ def plot_dendrogram(
     ax.set_title(f"Model {model_idx}: Hierarchical clustering of predictors")
 
     if save:
-        _save_fig(fig, output_dir, file_name)
+        # Leaf order is the main thing a downstream reader wants; the full
+        # linkage matrix is also useful for reconstruction.
+        leaf_data = pd.DataFrame(
+            {
+                "position": np.arange(len(dendro["ivl"])),
+                "label": dendro["ivl"],
+                "leaf_index": dendro["leaves"],
+            }
+        )
+        linkage_arr = np.asarray(linkage)
+        linkage_frame = pd.DataFrame(
+            linkage_arr,
+            columns=["left", "right", "distance", "n_obs"][: linkage_arr.shape[1]],
+        )
+        linkage_frame.insert(0, "merge_index", np.arange(len(linkage_frame)))
+        data = pd.concat(
+            [
+                leaf_data.assign(kind="leaf"),
+                linkage_frame.assign(kind="merge"),
+            ],
+            ignore_index=True,
+        )
+        _save_fig(fig, output_dir, file_name, data=data)
     return fig, dendro
 
 
@@ -167,7 +215,12 @@ def plot_correlation_heatmap(
         fig.colorbar(im, ax=ax, fraction=0.03, pad=0.025)
 
         if save:
-            _save_fig(fig, output_dir, file_name)
+            # Wide CSV with the reordered correlation matrix — columns and
+            # rows in the order shown on the heatmap.
+            data = pd.DataFrame(C, index=labels, columns=labels)
+            data.index.name = "feature"
+            data = data.reset_index()
+            _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -187,7 +240,8 @@ def plot_shap_bar(
         ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
         shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
         if save:
-            _save_fig(fig, output_dir, file_name)
+            data = _shap_bar_data(explanation)
+            _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -210,7 +264,8 @@ def plot_shap_beeswarm(
         fig = plt.gcf()
         fig.suptitle(f"Model {model_idx}: SHAP values for predictor variables")
         if save:
-            _save_fig(fig, output_dir, file_name)
+            data = _shap_beeswarm_data(explanation)
+            _save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -231,5 +286,81 @@ def plot_shap_scatter(
     )
     fig = plt.gcf()
     if save:
-        _save_fig(fig, output_dir, file_name)
+        data = _shap_scatter_data(explanation, feature_x, feature_color)
+        _save_fig(fig, output_dir, file_name, data=data)
     return fig
+
+
+# ---------------------------------------------------------------------------
+# SHAP → DataFrame helpers
+# ---------------------------------------------------------------------------
+
+
+def _shap_feature_names(explanation) -> list[str]:
+    names = getattr(explanation, "feature_names", None)
+    if names is None:
+        values = np.asarray(explanation.values)
+        return [f"f_{i}" for i in range(values.shape[-1])]
+    return list(names)
+
+
+def _shap_bar_data(explanation) -> pd.DataFrame:
+    values = np.asarray(explanation.values)
+    if values.ndim != 2:  # collapse to (n, features) if shap returned 1-D
+        values = values.reshape(-1, values.shape[-1])
+    mean_abs = np.mean(np.abs(values), axis=0)
+    names = _shap_feature_names(explanation)
+    return (
+        pd.DataFrame({"feature": names, "mean_abs_shap": mean_abs})
+        .sort_values("mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
+def _shap_beeswarm_data(explanation) -> pd.DataFrame:
+    values = np.asarray(explanation.values)
+    data_vals = getattr(explanation, "data", None)
+    data_arr = np.asarray(data_vals) if data_vals is not None else None
+    names = _shap_feature_names(explanation)
+    if values.ndim != 2:
+        values = values.reshape(-1, values.shape[-1])
+    rows, cols = values.shape
+    sample_idx = np.repeat(np.arange(rows), cols)
+    feature_idx = np.tile(np.arange(cols), rows)
+    frame = pd.DataFrame(
+        {
+            "sample_index": sample_idx,
+            "feature": [names[k] for k in feature_idx],
+            "shap_value": values.ravel(),
+        }
+    )
+    if data_arr is not None and data_arr.shape == values.shape:
+        frame["feature_value"] = data_arr.ravel()
+    return frame
+
+
+def _shap_scatter_data(
+    explanation, feature_x: str, feature_color: str
+) -> pd.DataFrame:
+    names = _shap_feature_names(explanation)
+    values = np.asarray(explanation.values)
+    data_vals = getattr(explanation, "data", None)
+    data_arr = np.asarray(data_vals) if data_vals is not None else None
+    if feature_x not in names:
+        raise ValueError(f"feature_x {feature_x!r} not in explanation feature_names")
+    if feature_color not in names:
+        raise ValueError(
+            f"feature_color {feature_color!r} not in explanation feature_names"
+        )
+    ix = names.index(feature_x)
+    ic = names.index(feature_color)
+    frame = pd.DataFrame(
+        {
+            "sample_index": np.arange(values.shape[0]),
+            f"shap_{feature_x}": values[:, ix],
+        }
+    )
+    if data_arr is not None:
+        frame[feature_x] = data_arr[:, ix]
+        frame[feature_color] = data_arr[:, ic]
+    return frame

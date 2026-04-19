@@ -21,8 +21,11 @@ from dspopulations_us_birth_certificates.bayes import (  # noqa: E402
     MODELS,
     BayesFitContext,
     BayesRunConfig,
+    diagnostics,
+    plots,
     sample,
     save_artefacts,
+    save_prior_predictive_summary,
 )
 
 
@@ -85,3 +88,67 @@ def test_m1_builds_and_samples(synthetic_cells: pd.DataFrame, tmp_path: Path) ->
     assert (tmp_path / "cells.parquet").is_file()
     assert (tmp_path / "config.json").is_file()
     assert (tmp_path / "run_config.json").is_file()
+
+    # Prior predictive summary carries all the expected rows.
+    pps = diagnostics.prior_predictive_summary(idata, synthetic_cells)
+    expected_rows = {
+        "baseline_rate",
+        "cell_rate_mean",
+        "y_cell_min_exposure",
+        "y_cell_max_exposure",
+        "year_trend_rate_ratio",
+        "age_gradient_rate_ratio",
+        "ls_year_coord_units",
+        "ls_age_coord_units",
+    }
+    assert expected_rows.issubset(set(pps.index))
+    assert list(pps.columns) == ["unit", "median", "hdi_lo", "hdi_hi"]
+    assert pps["median"].notna().all()
+    assert (pps.loc["baseline_rate", "median"] > 0) and (
+        pps.loc["baseline_rate", "median"] < 1
+    )
+
+    save_prior_predictive_summary(pps, tmp_path)
+    assert (tmp_path / "prior_predictive_summary.csv").is_file()
+
+    # Prior-draws plot and prior/posterior overlay write artefacts.
+    plots_dir = tmp_path / "plots"
+    plots.plot_prior_draws(
+        idata,
+        synthetic_cells,
+        coord_name="year",
+        smooth_name="f_year",
+        output_path=plots_dir / "prior_year_draws",
+        n_draws=10,
+    )
+    plots.plot_prior_draws(
+        idata,
+        synthetic_cells,
+        coord_name="mage_c",
+        smooth_name="f_age",
+        output_path=plots_dir / "prior_mage_c_draws",
+        n_draws=10,
+    )
+    plots.plot_prior_posterior_overlay(
+        idata,
+        var_names=("alpha", "ls_year", "eta_year"),
+        output_path=plots_dir / "prior_posterior_overlay",
+    )
+    for stem in ("prior_year_draws", "prior_mage_c_draws", "prior_posterior_overlay"):
+        for ext in (".png", ".svg", ".csv"):
+            assert (plots_dir / f"{stem}{ext}").is_file(), (
+                f"missing {stem}{ext}"
+            )
+
+    # CSV companion for the prior-draws plot is long-format with the
+    # right series labels and carries the coord column we asked for.
+    prior_draws_csv = pd.read_csv(plots_dir / "prior_year_draws.csv")
+    assert "year" in prior_draws_csv.columns
+    assert "series" in prior_draws_csv.columns
+    series = set(prior_draws_csv["series"].unique())
+    assert {"hdi_lo", "hdi_hi", "median"}.issubset(series)
+    assert any(s.startswith("draw_") for s in series)
+
+    # Prior/posterior overlay CSV is tidy (variable, group, value).
+    overlay_csv = pd.read_csv(plots_dir / "prior_posterior_overlay.csv")
+    assert set(overlay_csv["group"].unique()) == {"prior", "posterior"}

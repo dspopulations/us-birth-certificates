@@ -38,10 +38,11 @@ from pathlib import Path
 
 import arviz as az
 import pandas as pd
-from IPython.display import Markdown
+from IPython.display import Image, Markdown
 
 config = json.loads(Path("config.json").read_text())
 run_config = json.loads(Path("run_config.json").read_text())
+has_posterior = Path("summary.csv").exists()
 ```
 
 ```{python}
@@ -144,54 +145,144 @@ pd.DataFrame(
 )
 ```
 
-## Diagnostics
+## Prior predictive check
 
-Summary table on key random variables — posterior mean, standard
-deviation, 94% highest density interval, bulk and tail effective sample
-size, and $\hat R$.
+Prior-implied quantities on the rate / ratio scale, computed from the
+`pm.sample_prior_predictive` draws before any data are used. A weakly
+informative prior should admit plausible baseline rates (~5 per 10 000
+for `recorded`, ~12 per 10 000 for `recorded_plus_predicted`) and allow
+reasonable year and age effects without concentrating mass on
+implausibly large swings.
 
 ```{python}
 # | echo: false
-summary = pd.read_csv("summary.csv", index_col=0)
-key_vars = [
-    v
-    for v in ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
-    if v in summary.index
-]
-key_summary = summary.loc[key_vars] if key_vars else summary.head(10)
-key_summary.round(4)
+pps_path = Path("prior_predictive_summary.csv")
+if pps_path.exists():
+    pps = pd.read_csv(pps_path, index_col="check")
+    display(pps.round(6))
+else:
+    Markdown("*(prior_predictive_summary.csv not found — re-run the fit with the current pipeline.)*")
+```
+
+How to read the rows:
+
+- `baseline_rate` / `cell_rate_mean` — prior-implied DS rates on the
+  probability scale. Sanity target: HDI well inside `[1e-5, 1e-2]`
+  (i.e. covers the population rate with a loose 100× factor either side).
+- `y_cell_min_exposure` / `y_cell_max_exposure` — prior-predictive
+  positive counts for the smallest and largest cell; the observed
+  `y_cell` values should sit inside the HDI.
+- `year_trend_rate_ratio` / `age_gradient_rate_ratio` — rate multipliers
+  the prior admits across the year range and across the observed age
+  range. Maternal-age gradient is known to be ~20–30× between age 20
+  and age 45; the prior should comfortably contain that without
+  concentrating mass there.
+- `ls_*_coord_units` — HSGP length-scales in original coord units
+  (years). Too short → prior allows implausibly wiggly smooths; too
+  long → prior effectively imposes a straight line.
+
+### Prior draws of the smooth components
+
+:::: {layout-ncol=2}
+
+![Prior draws — year](plots/prior_year_draws.png){#fig-prior-year .lightbox fig-align="left"}
+
+![Prior draws — age](plots/prior_mage_c_draws.png){#fig-prior-age .lightbox fig-align="left"}
+
+::::
+
+## Diagnostics
+
+```{python}
+# | echo: false
+if not has_posterior:
+    Markdown(
+        "*This was a prior-only run (`--prior-only`); posterior "
+        "diagnostics and plots are not available. See the prior "
+        "predictive section above for the prior sanity checks.*"
+    )
 ```
 
 ```{python}
 # | echo: false
-max_rhat = float(summary["r_hat"].max())
-min_ess = float(summary["ess_bulk"].min())
-Markdown(
-    f"- **max $\\hat R$**: {max_rhat:.4f} (target: < 1.01)\n"
-    f"- **min bulk ESS**: {min_ess:.0f} (target: ≥ 400)"
-)
+# | output: asis
+if has_posterior:
+    display(Markdown(
+        "Summary table on key random variables — posterior mean, "
+        "standard deviation, 94% highest density interval, bulk and "
+        "tail effective sample size, and $\\hat R$."
+    ))
+    summary = pd.read_csv("summary.csv", index_col=0)
+    key_vars = [
+        v
+        for v in ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
+        if v in summary.index
+    ]
+    key_summary = summary.loc[key_vars] if key_vars else summary.head(10)
+    display(key_summary.round(4))
+    max_rhat = float(summary["r_hat"].max())
+    min_ess = float(summary["ess_bulk"].min())
+    display(Markdown(
+        f"- **max $\\hat R$**: {max_rhat:.4f} (target: < 1.01)\n"
+        f"- **min bulk ESS**: {min_ess:.0f} (target: ≥ 400)"
+    ))
 ```
 
 ### Trace for key random variables
 
-![Trace plot](plots/trace_key_rvs.png){#fig-trace .lightbox fig-align="left"}
+```{python}
+# | echo: false
+trace_path = Path("plots/trace_key_rvs.png")
+if trace_path.exists():
+    display(Image(str(trace_path)))
+else:
+    Markdown("*(trace plot absent)*")
+```
+
+### Prior vs posterior for key random variables
+
+Where the posterior density departs from the prior, the data are
+informative. Where they overlap, the prior is doing the work — worth
+flagging if the prior was meant to be weakly informative on that
+quantity.
+
+```{python}
+# | echo: false
+overlay_path = Path("plots/prior_posterior_overlay.png")
+if overlay_path.exists():
+    display(Image(str(overlay_path)))
+else:
+    Markdown("*(overlay plot absent — prior-only run.)*")
+```
 
 ## Posterior predictive check
 
-![Posterior predictive check](plots/ppc.png){#fig-ppc .lightbox fig-align="left"}
+```{python}
+# | echo: false
+ppc_path = Path("plots/ppc.png")
+if ppc_path.exists():
+    display(Image(str(ppc_path)))
+else:
+    Markdown("*(posterior predictive plot absent — prior-only run.)*")
+```
 
 ## Posterior trend estimates
 
-### By calendar year
-
-Cell-weighted posterior expected rate, aggregated to one curve across
-all maternal ages, with the 94% HDI and observed rate overlaid.
-
-![Posterior year trend](plots/trend_year.png){#fig-trend-year .lightbox fig-align="left"}
-
-### By maternal age
-
-![Posterior age trend](plots/trend_mage_c.png){#fig-trend-age .lightbox fig-align="left"}
+```{python}
+# | echo: false
+# | output: asis
+if has_posterior:
+    display(Markdown("### By calendar year\n\nCell-weighted posterior expected rate, aggregated to one curve across all maternal ages, with the 94% HDI and observed rate overlaid.\n"))
+    year_path = Path("plots/trend_year.png")
+    if year_path.exists():
+        display(Image(str(year_path)))
+    display(Markdown("\n### By maternal age\n"))
+    age_path = Path("plots/trend_mage_c.png")
+    if age_path.exists():
+        display(Image(str(age_path)))
+else:
+    display(Markdown("*(trend plots absent — prior-only run.)*"))
+```
 
 ## Notes
 

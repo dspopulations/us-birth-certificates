@@ -74,7 +74,7 @@ def _sample_posterior(config: BayesRunConfig) -> az.InferenceData:
             nuts_sampler=sampler,
             progressbar=True,
         )
-    except ImportError, ModuleNotFoundError:
+    except ImportError:
         if sampler == "nutpie":
             return pm.sample(
                 draws=config.draws,

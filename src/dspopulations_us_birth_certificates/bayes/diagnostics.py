@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -11,6 +12,8 @@ if TYPE_CHECKING:
 
 
 DEFAULT_SUMMARY_VAR_NAMES = ("alpha", "ls_year", "eta_year", "ls_age", "eta_age")
+
+PRIOR_PREDICTIVE_COLUMNS = ("unit", "median", "hdi_lo", "hdi_hi")
 
 
 def summary_table(
@@ -65,6 +68,147 @@ def convergence_health(
         "ess_ok": ess_ok,
         "all_ok": rhat_ok and ess_ok,
     }
+
+
+def _hdi_of(flat: np.ndarray, hdi_prob: float) -> tuple[float, float, float]:
+    """Return (median, hdi_lo, hdi_hi) for a 1-D array of prior samples."""
+    import arviz as az
+
+    flat = np.asarray(flat).reshape(-1)
+    flat = flat[np.isfinite(flat)]
+    if flat.size == 0:
+        return float("nan"), float("nan"), float("nan")
+    interval = az.hdi(flat, hdi_prob=hdi_prob)
+    lo, hi = float(interval[0]), float(interval[1])
+    return float(np.median(flat)), lo, hi
+
+
+def prior_predictive_summary(
+    idata: az.InferenceData,
+    cells: pd.DataFrame,
+    *,
+    year_coord: str = "year",
+    age_coord: str = "mage_c",
+    hdi_prob: float = 0.94,
+) -> pd.DataFrame:
+    """Summarise prior-implied quantities on rate / ratio scales.
+
+    Rows (indexed by ``check``):
+        - ``baseline_rate``: ``sigmoid(alpha)`` — prior on the intercept rate.
+        - ``cell_rate_mean``: exposure-weighted mean prior rate across cells.
+        - ``y_cell_min_exposure`` / ``y_cell_max_exposure``: prior-predictive
+          counts for the smallest and largest cell.
+        - ``year_trend_rate_ratio``: ``exp(max(f_year) - min(f_year))`` — the
+          rate multiplier the prior admits across the year range.
+        - ``age_gradient_rate_ratio``: same for ``f_age``.
+        - ``ls_year_coord_units`` / ``ls_age_coord_units``: HSGP length-scales
+          translated back to original coord units (years).
+
+    Rows are skipped silently if the corresponding variable is absent from
+    the InferenceData — callers can rely on the returned DataFrame matching
+    whatever the model actually produced.
+
+    Args:
+        idata: Must carry ``prior`` and ``prior_predictive`` groups.
+        cells: Cell frame (must contain the coord columns).
+        year_coord / age_coord: Column names in ``cells`` for each coord.
+        hdi_prob: Credible-interval width for the HDI columns.
+
+    Returns:
+        DataFrame with columns ``unit, median, hdi_lo, hdi_hi``, indexed by
+        ``check``.
+    """
+    rows: list[dict[str, Any]] = []
+    prior = idata.prior  # type: ignore[attr-defined]
+    pp = getattr(idata, "prior_predictive", None)
+
+    if "alpha" in prior.data_vars:
+        alpha = np.asarray(prior["alpha"].values)
+        baseline = 1.0 / (1.0 + np.exp(-alpha))
+        med, lo, hi = _hdi_of(baseline, hdi_prob)
+        rows.append(
+            {"check": "baseline_rate", "unit": "rate", "median": med, "hdi_lo": lo, "hdi_hi": hi}
+        )
+
+    if "p" in prior.data_vars and "n_cell" in cells.columns:
+        p = np.asarray(prior["p"].values)  # (chain, draw, cell)
+        n = cells["n_cell"].to_numpy(dtype=float)
+        denom = float(n.sum()) or 1.0
+        weighted = (p * n[None, None, :]).sum(axis=-1) / denom
+        med, lo, hi = _hdi_of(weighted, hdi_prob)
+        rows.append(
+            {
+                "check": "cell_rate_mean",
+                "unit": "rate",
+                "median": med,
+                "hdi_lo": lo,
+                "hdi_hi": hi,
+            }
+        )
+
+    if pp is not None and "y_obs" in pp.data_vars and "n_cell" in cells.columns:
+        y = np.asarray(pp["y_obs"].values)  # (chain, draw, cell)
+        n = cells["n_cell"].to_numpy()
+        if n.size:
+            i_min = int(np.argmin(n))
+            i_max = int(np.argmax(n))
+            for label, idx in (
+                ("y_cell_min_exposure", i_min),
+                ("y_cell_max_exposure", i_max),
+            ):
+                med, lo, hi = _hdi_of(y[..., idx], hdi_prob)
+                rows.append(
+                    {
+                        "check": label,
+                        "unit": f"count (n_cell={int(n[idx])})",
+                        "median": med,
+                        "hdi_lo": lo,
+                        "hdi_hi": hi,
+                    }
+                )
+
+    for smooth_name, label in (
+        ("f_year", "year_trend_rate_ratio"),
+        ("f_age", "age_gradient_rate_ratio"),
+    ):
+        if smooth_name in prior.data_vars:
+            f = np.asarray(prior[smooth_name].values)  # (chain, draw, coord)
+            if f.ndim >= 3:
+                rng = np.exp(f.max(axis=-1) - f.min(axis=-1))
+                med, lo, hi = _hdi_of(rng, hdi_prob)
+                rows.append(
+                    {
+                        "check": label,
+                        "unit": "rate ratio",
+                        "median": med,
+                        "hdi_lo": lo,
+                        "hdi_hi": hi,
+                    }
+                )
+
+    for var_name, coord_col, label in (
+        ("ls_year", year_coord, "ls_year_coord_units"),
+        ("ls_age", age_coord, "ls_age_coord_units"),
+    ):
+        if var_name in prior.data_vars and coord_col in cells.columns:
+            coord = cells[coord_col].to_numpy(dtype=float)
+            std = float(coord.std())
+            scale = std if std > 0 else 1.0
+            ls_scaled = np.asarray(prior[var_name].values) * scale
+            med, lo, hi = _hdi_of(ls_scaled, hdi_prob)
+            rows.append(
+                {
+                    "check": label,
+                    "unit": f"{coord_col} units",
+                    "median": med,
+                    "hdi_lo": lo,
+                    "hdi_hi": hi,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=["check", *PRIOR_PREDICTIVE_COLUMNS]).set_index(
+        "check"
+    )
 
 
 def loo_table(idata: az.InferenceData) -> pd.DataFrame:
