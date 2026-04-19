@@ -152,7 +152,7 @@ def run_optuna_study(
 
     study = optuna.create_study(
         direction="maximize",
-        sampler=optuna.samplers.TPESampler(),
+        sampler=optuna.samplers.TPESampler(seed=run_config.random_seed),
         pruner=optuna.pruners.HyperbandPruner(),
     )
     study.optimize(

@@ -46,7 +46,8 @@ def _latest_run_for_model(models_root: Path, model_id: str) -> Path | None:
 
     Matches any subdirectory whose name starts with ``model_id-``
     (e.g. ``usbc10_m0-dev``, ``usbc10_m0-reporting``). Within those,
-    picks the one whose nested timestamp subdirectory is newest.
+    picks the one with the most recent filesystem mtime; the timestamp
+    encoded in the directory name is not parsed.
     """
     if not models_root.exists():
         return None
@@ -152,6 +153,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     df = compare_runs(run_dirs)
+    output_parent = ns.output.parent
+    if output_parent != Path(".") and str(output_parent) != "":
+        output_parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(ns.output, index=False)
     print(df.to_string(index=False))
     print(f"\nWritten to {ns.output}")
