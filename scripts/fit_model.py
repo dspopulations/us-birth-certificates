@@ -216,10 +216,12 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         default=None,
         help=(
             "Named model variant from the registry (e.g. usbc10_m0, "
-            "usbc10_m1, usbc10_m2). When set, features, base_params, and "
-            "selection_history come from the definition; --drop-features, "
-            "--start-year, and --end-year are ignored. Omit to use the "
-            "CLI's ad-hoc feature set."
+            "usbc10_m1, usbc10_m2). When set, the definition supplies "
+            "target_var, numeric/categorical features, base_params, "
+            "year_range, include_unknown, selection_history, "
+            "shap_scatter_specs, and notes; --drop-features, --start-year, "
+            "--end-year, and --include-unknown are therefore ignored. Omit "
+            "to use the CLI's ad-hoc feature set."
         ),
     )
 
@@ -346,11 +348,14 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
 def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
     """Build a ModelConfig from either a named variant or CLI ad-hoc args.
 
-    When ``config.model_id`` is set, the definition from ``MODELS`` supplies
-    features, base_params, and selection_history. Tuned ``params`` and the
-    CLI's ``training_split`` / ``num_threads`` still override the variant's
-    defaults because those are tuning-time knobs, not part of the variant's
-    identity.
+    When ``config.model_id`` is set, the definition from ``MODELS`` provides
+    the base model identity and metadata from ``definition.to_config()``,
+    including ``target_var``, numeric/categorical features, ``base_params``,
+    ``year_range``, ``include_unknown``, ``selection_history``,
+    ``shap_scatter_specs``, and ``notes``. Tuned ``params`` and the CLI's
+    ``training_split`` / ``num_threads`` still override the definition's
+    training defaults because those are tuning-time knobs, not part of the
+    variant's identity.
     """
     if config.model_id is not None:
         definition = MODELS[config.model_id]
@@ -506,6 +511,31 @@ def load_prior_best_params(path: Path | None) -> dict:
         return json.load(f)
 
 
+def _recover_loaded_params(model_path: Path) -> dict:
+    """Return the hyperparameters used by a saved booster.
+
+    Prefers a sibling ``best_params.json`` (the per-run artefact fit_model
+    writes next to ``model.txt``), since that file captures tuned values
+    directly. Falls back to parsing ``booster.params`` from the saved
+    ``model.txt``; returns an empty dict if neither is available so the
+    caller can still proceed.
+    """
+    sibling = model_path.parent / "best_params.json"
+    if sibling.is_file():
+        try:
+            with sibling.open() as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    try:
+        booster = lgb.Booster(model_file=str(model_path))
+    except Exception:  # noqa: BLE001 - surface any LightGBM failure as empty
+        return {}
+    params = getattr(booster, "params", None) or {}
+    return dict(params)
+
+
 def _load_xy_for_tuning(
     config: FitConfig,
 ) -> tuple[pd.DataFrame, pd.Series, list[str]]:
@@ -576,7 +606,11 @@ def main(argv: list[str] | None = None) -> int:
     # when --load-model is set: we're regenerating diagnostics, not fitting.
     if config.load_model is not None:
         print(f"Loading saved model from {config.load_model}; skipping tuning + fit.")
-        best_params = {}
+        # Surface the hyperparameters actually used by the loaded booster so
+        # ``best_params.json``, ``config.json``, and the manifest describe the
+        # run faithfully. Prefer a sibling ``best_params.json`` if present
+        # (richer than whatever LightGBM echoes back via booster.params).
+        best_params = _recover_loaded_params(config.load_model)
     elif config.select_hyperparameters:
         X, y, categorical = _load_xy_for_tuning(config)
         ad_hoc = _build_model_config(config, params={})
@@ -608,7 +642,7 @@ def main(argv: list[str] | None = None) -> int:
     if config.run_permutation:
         pipeline.permutation_importance_analysis()
     pipeline.shap_analysis()
-    pipeline.save_artefacts()
+    pipeline.save_artefacts(save_plots=config.save_plots)
     pipeline.write_manifest()
 
     if config.write_predictions:

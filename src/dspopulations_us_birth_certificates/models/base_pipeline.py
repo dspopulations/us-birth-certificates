@@ -183,13 +183,27 @@ class EstimatorPipeline(ABC):
             list(ctx.config.categorical_features),
         )
         model_wrapped = ml_utils.LGBMEstimator(ctx.final_model)
+        # Derive n_jobs from the model's train_config when set; otherwise let
+        # sklearn pick a default. This avoids hard-coded CPU oversubscription
+        # in CI/containers and honours the CLI --num-threads flag.
+        n_jobs: int | None = None
+        train_config = getattr(ctx.config, "train_config", None)
+        if isinstance(train_config, dict):
+            configured = train_config.get("num_threads")
+            try:
+                configured_int = int(configured) if configured is not None else None
+            except (TypeError, ValueError):
+                configured_int = None
+            if configured_int is not None and configured_int > 0:
+                n_jobs = configured_int
+
         result = permutation_importance(
             model_wrapped,
             X_eval,
             y_eval,
             scoring=ml_utils.ap_scorer,
             n_repeats=20,
-            n_jobs=8,
+            n_jobs=n_jobs,
             random_state=ctx.run_config.random_seed,
         )
         ctx.permutation_importance = {
@@ -201,6 +215,8 @@ class EstimatorPipeline(ABC):
     def shap_analysis(self) -> None:
         """Populate ``context.shap_explanation`` subject to ``run_config.shap_mode``."""
         ctx = self.context
+        if ctx.final_model is None:
+            raise RuntimeError("train_final() must run before shap_analysis().")
         if ctx.run_config.shap_mode == "skip":
             logger.info("SHAP skipped per run_config.shap_mode='skip'.")
             return
@@ -229,8 +245,13 @@ class EstimatorPipeline(ABC):
 
     # ---- outputs -------------------------------------------------------------
 
-    def save_artefacts(self) -> None:
-        """Write ``model.txt``, predictions, metrics, importances, plots."""
+    def save_artefacts(self, *, save_plots: bool = True) -> None:
+        """Write ``model.txt``, predictions, metrics, importances, plots.
+
+        ``save_plots=False`` skips the plot generation hook so callers that
+        just want the tabular artefacts (CLI ``--no-plots``, faster CI runs)
+        don't pay the matplotlib cost or trigger GUI rendering.
+        """
         ctx = self.context
         out = ctx.output_dir
 
@@ -290,8 +311,8 @@ class EstimatorPipeline(ABC):
             feature_names = (
                 X_eval.columns
                 if X_eval is not None
-                else list(ctx.config.numeric_features)
-                + list(ctx.config.categorical_features)
+                else list(ctx.config.categorical_features)
+                + list(ctx.config.numeric_features)
             )
             shap_df = shap_analysis.shap_importance(
                 ctx.shap_explanation, feature_names
@@ -299,9 +320,10 @@ class EstimatorPipeline(ABC):
             shap_df.to_csv(out / "shap_importance.csv", index=False)
 
         # Plots
-        plots_dir = out / "plots"
-        plots_dir.mkdir(exist_ok=True)
-        self._save_plots(plots_dir)
+        if save_plots:
+            plots_dir = out / "plots"
+            plots_dir.mkdir(exist_ok=True)
+            self._save_plots(plots_dir)
 
     def write_manifest(self) -> None:
         """Delegate to ``manifest.write_manifest`` for this run."""
@@ -317,15 +339,32 @@ class EstimatorPipeline(ABC):
 
     # ---- convenience ---------------------------------------------------------
 
-    def fit(self, render: bool = False, db_path: str | None = None) -> ModelFitContext:
-        """Run every step in order and return the populated context."""
+    def fit(
+        self,
+        render: bool = False,
+        db_path: str | None = None,
+        *,
+        run_permutation: bool | None = None,
+        save_plots: bool = True,
+    ) -> ModelFitContext:
+        """Run every step in order and return the populated context.
+
+        ``run_permutation`` defaults to ``True`` for ``test``/``reporting``
+        presets and ``False`` for ``dev`` (since permutation importance is
+        slow and the dev preset exists for the fast inner loop). Pass an
+        explicit value to override.
+        """
+        if run_permutation is None:
+            run_permutation = self.context.run_config.name != "dev"
+
         df = self.load_data(db_path=db_path)
         self.prepare_features(df)
         self.train_final()
         self.compute_metrics()
-        self.permutation_importance_analysis()
+        if run_permutation:
+            self.permutation_importance_analysis()
         self.shap_analysis()
-        self.save_artefacts()
+        self.save_artefacts(save_plots=save_plots)
         self.write_manifest()
         self.report(render=render)
         return self.context

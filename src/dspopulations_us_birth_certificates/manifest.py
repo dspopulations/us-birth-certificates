@@ -2,14 +2,15 @@
 
 Captures the provenance needed to reconstitute a result:
 
-- git SHA and whether the working tree was dirty
-- runtime environment (platform, CPU, RAM, Python version)
+- git SHA, branch, and whether the working tree was dirty
+- runtime environment (platform, Python version)
 - relevant package versions (lightgbm, optuna, shap, sklearn, numpy,
-  pandas, scipy)
+  pandas, scipy, plus the project distribution itself)
 - ``ModelConfig`` snapshot
 - ``RunConfig`` snapshot
 - input row count and positive count
-- random seeds (model seed and split seed)
+- ``random_seed`` (shared by the model and the split; widen this if we
+  decouple them in a follow-up)
 - final validation metrics
 """
 
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 # Packages whose versions are recorded in every manifest. Kept deliberately
 # short: only the dependencies whose behaviour would change the numbers.
 _TRACKED_PACKAGES: tuple[str, ...] = (
+    "dspopulations-us-birth-certificates",
     "lightgbm",
     "numpy",
     "optuna",
@@ -46,9 +48,22 @@ _TRACKED_PACKAGES: tuple[str, ...] = (
 )
 
 
+def _default_repo_root() -> Path:
+    """Best-guess location of the repo root from this file's path.
+
+    ``manifest.py`` lives at ``<repo>/src/<pkg>/manifest.py`` when installed
+    editable, so two ``parents`` hops land at the repo root. When installed
+    from a wheel this points inside site-packages, which is harmless —
+    ``_git_info`` will just return ``None`` because there's no .git there.
+    """
+    return Path(__file__).resolve().parents[2]
+
+
 def _git_info(repo_root: Path | None = None) -> dict[str, Any]:
     """Return git SHA and dirty flag. Silent fallback when git isn't available."""
-    cwd = str(repo_root) if repo_root else None
+    if repo_root is None:
+        repo_root = _default_repo_root()
+    cwd = str(repo_root)
     try:
         sha = (
             subprocess.check_output(
