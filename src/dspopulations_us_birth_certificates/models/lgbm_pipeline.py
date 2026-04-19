@@ -84,7 +84,9 @@ class LGBMClassifierPipeline(EstimatorPipeline):
             valid_names=["train", "valid"],
             callbacks=[
                 lgb.early_stopping(stopping_rounds=rc.early_stopping_rounds),
-                lgb.log_evaluation(period=ctx.config.train_config.get("log_period", 10)),
+                lgb.log_evaluation(
+                    period=ctx.config.train_config.get("log_period", 10)
+                ),
             ],
         )
 
@@ -97,17 +99,13 @@ class LGBMClassifierPipeline(EstimatorPipeline):
         for split, score_dict in best_scores.items():
             cli_output.info(
                 f"[cyan]{split}[/cyan] best: "
-                + ", ".join(
-                    f"{metric}={val:.6f}" for metric, val in score_dict.items()
-                )
+                + ", ".join(f"{metric}={val:.6f}" for metric, val in score_dict.items())
             )
         return gbm
 
     def _predict_valid(self) -> np.ndarray:
         ctx = self.context
-        return ctx.final_model.predict(
-            ctx.X_valid, num_iteration=ctx.best_iteration
-        )
+        return ctx.final_model.predict(ctx.X_valid, num_iteration=ctx.best_iteration)
 
     def _save_final_model(self, path: Path) -> None:
         self.context.final_model.save_model(

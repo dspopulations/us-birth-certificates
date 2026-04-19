@@ -227,7 +227,7 @@ class EstimatorPipeline(ABC):
             configured = train_config.get("num_threads")
             try:
                 configured_int = int(configured) if configured is not None else None
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 configured_int = None
             if configured_int is not None and configured_int > 0:
                 n_jobs = configured_int
@@ -299,9 +299,7 @@ class EstimatorPipeline(ABC):
         ctx.shap_explanation = shap_analysis.compute_explanation(
             ctx.final_model, X_eval
         )
-        shap_df = shap_analysis.shap_importance(
-            ctx.shap_explanation, X_eval.columns
-        )
+        shap_df = shap_analysis.shap_importance(ctx.shap_explanation, X_eval.columns)
         cli_output.print_shap_importance(shap_df)
 
     # ---- outputs -------------------------------------------------------------
@@ -378,9 +376,7 @@ class EstimatorPipeline(ABC):
                 else list(ctx.config.categorical_features)
                 + list(ctx.config.numeric_features)
             )
-            shap_df = shap_analysis.shap_importance(
-                ctx.shap_explanation, feature_names
-            )
+            shap_df = shap_analysis.shap_importance(ctx.shap_explanation, feature_names)
             shap_df.to_csv(out / "shap_importance.csv", index=False)
 
         # Plots
@@ -436,9 +432,7 @@ class EstimatorPipeline(ABC):
                 cli_output.warning(f"Quarto render failed: {exc}")
                 logger.warning("Quarto render failed: %s", exc)
         else:
-            cli_output.info(
-                f"To render: [blue]quarto render {qmd}[/blue]"
-            )
+            cli_output.info(f"To render: [blue]quarto render {qmd}[/blue]")
 
     # ---- convenience ---------------------------------------------------------
 

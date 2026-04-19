@@ -9,12 +9,14 @@ from sklearn.neighbors import KernelDensity
 
 EPSILON = 1e-10
 
+
 def standardize(x: np.ndarray) -> np.ndarray:
     mean_x = np.mean(x)
     std_x = np.std(x)
     if std_x < EPSILON:
         return x - mean_x
     return (x - mean_x) / std_x
+
 
 def logit(p: float) -> float:
     return np.log(p / (1 - p))

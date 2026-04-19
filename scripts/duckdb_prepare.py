@@ -292,7 +292,8 @@ def combine_all() -> None:
             """
             UPDATE us_births
             SET p_ds_lb_nt = 1 / (1 + exp(7.33 - 4.211 / (1 + exp(-0.2815 * (mage_c - 37.23)))));
-            """)
+            """
+        )
 
         prevalence_df = pd.DataFrame(
             {
@@ -529,7 +530,9 @@ def combine_all() -> None:
 
         print("Reading us-births-estimated-prevalence-ethnicity-2000-2018.csv")
 
-        prev_ethnicity_df = pd.read_csv("./us-births-estimated-prevalence-ethnicity-2000-2018.csv").convert_dtypes()
+        prev_ethnicity_df = pd.read_csv(
+            "./us-births-estimated-prevalence-ethnicity-2000-2018.csv"
+        ).convert_dtypes()
 
         print("Creating table us_births_est_prevalence_ethnicity")
 
@@ -541,7 +544,6 @@ def combine_all() -> None:
         )
 
     finally:
-
         print("Closing connection...")
 
         con.close()
@@ -568,6 +570,7 @@ def combine_all() -> None:
 
     # copy out_db file to out_db_temp overwriting
     shutil.copy2(out_db.as_posix(), out_db_temp.as_posix())
+
 
 if __name__ == "__main__":
     combine_all()

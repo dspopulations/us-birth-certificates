@@ -54,8 +54,14 @@ def _as_binary_y(y_true):
     if np.isnan(y).any():
         raise ValueError("y_true contains NaNs; binarize/impute first.")
     uniq = np.unique(y)
-    if not np.array_equal(uniq, [0, 1]) and not np.array_equal(uniq, [0]) and not np.array_equal(uniq, [1]):
-        raise ValueError(f"y_true must be 0/1 for these metrics. Found labels: {uniq[:20]}")
+    if (
+        not np.array_equal(uniq, [0, 1])
+        and not np.array_equal(uniq, [0])
+        and not np.array_equal(uniq, [1])
+    ):
+        raise ValueError(
+            f"y_true must be 0/1 for these metrics. Found labels: {uniq[:20]}"
+        )
     return y.astype(np.int8)
 
 
@@ -172,7 +178,9 @@ def get_metrics(y_true, p_valid, K: int = 10000, thr: float = 0.01):
         p_valid_thresholds,
     ) = score_metrics(y_true, p_valid)
 
-    precision_at_k, recall_at_k, tp, fp, n_pos, K = precision_recall_at_k(y_true, p_valid, K=K)
+    precision_at_k, recall_at_k, tp, fp, n_pos, K = precision_recall_at_k(
+        y_true, p_valid, K=K
+    )
 
     prec, rec, f1 = precision_recall_at_threshold(y_true, p_valid, thr=thr)
 

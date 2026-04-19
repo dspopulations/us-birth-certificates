@@ -83,9 +83,7 @@ def tail_calibration_table(
     rows = []
     for f in fracs:
         if not (0.0 < float(f) <= 1.0):
-            raise ValueError(
-                f"tail fraction must be in (0, 1]; got {f!r}."
-            )
+            raise ValueError(f"tail fraction must be in (0, 1]; got {f!r}.")
         k = min(n, max(1, int(round(n * float(f)))))
         y_top = y_sorted[:k]
         p_top = p_sorted[:k]
@@ -148,8 +146,6 @@ def plot_precision_recall_at_k_curve(
                 dpi=300,
                 bbox_inches="tight",
             )
-            fig.savefig(
-                f"{output_dir}/{file_stem}_{suffix}.svg", bbox_inches="tight"
-            )
+            fig.savefig(f"{output_dir}/{file_stem}_{suffix}.svg", bbox_inches="tight")
         figures.append(fig)
     return figures[0], figures[1]

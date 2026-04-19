@@ -75,8 +75,7 @@ class RunConfig:
         """
         if name not in _PRESETS:
             raise ValueError(
-                f"Unknown RunConfig preset {name!r}. "
-                f"Valid names: {sorted(_PRESETS)}"
+                f"Unknown RunConfig preset {name!r}. Valid names: {sorted(_PRESETS)}"
             )
         return cls(name=name, random_seed=random_seed, **_PRESETS[name])
 

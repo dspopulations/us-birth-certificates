@@ -45,9 +45,7 @@ def suggest_lgbm_params(trial: optuna.Trial) -> dict[str, Any]:
         "feature_pre_filter": False,
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.75, log=True),
         "num_leaves": trial.suggest_int("num_leaves", 32, 512, log=True),
-        "min_data_in_leaf": trial.suggest_int(
-            "min_data_in_leaf", 500, 10000, log=True
-        ),
+        "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 500, 10000, log=True),
         "min_gain_to_split": trial.suggest_float("min_gain_to_split", 0.0, 1.0),
         "feature_fraction": trial.suggest_float("feature_fraction", 0.6, 1.0),
         "bagging_fraction": trial.suggest_float("bagging_fraction", 0.6, 1.0),

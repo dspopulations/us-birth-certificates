@@ -360,7 +360,7 @@ def load_predictors_data(
             END AS wic
         FROM
             us_births
-        WHERE year >= {from_year} AND year <= {to_year} {'' if include_unknown else 'AND ca_down_c_p_n IS NOT NULL'}
+        WHERE year >= {from_year} AND year <= {to_year} {"" if include_unknown else "AND ca_down_c_p_n IS NOT NULL"}
         ORDER BY
             year, dob_mm, dob_wk, dob_tt
         """
