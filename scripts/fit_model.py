@@ -216,10 +216,12 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         default=None,
         help=(
             "Named model variant from the registry (e.g. usbc10_m0, "
-            "usbc10_m1, usbc10_m2). When set, features, base_params, and "
-            "selection_history come from the definition; --drop-features, "
-            "--start-year, and --end-year are ignored. Omit to use the "
-            "CLI's ad-hoc feature set."
+            "usbc10_m1, usbc10_m2). When set, the definition supplies "
+            "target_var, numeric/categorical features, base_params, "
+            "year_range, include_unknown, selection_history, "
+            "shap_scatter_specs, and notes; --drop-features, --start-year, "
+            "--end-year, and --include-unknown are therefore ignored. Omit "
+            "to use the CLI's ad-hoc feature set."
         ),
     )
 
@@ -346,11 +348,14 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
 def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
     """Build a ModelConfig from either a named variant or CLI ad-hoc args.
 
-    When ``config.model_id`` is set, the definition from ``MODELS`` supplies
-    features, base_params, and selection_history. Tuned ``params`` and the
-    CLI's ``training_split`` / ``num_threads`` still override the variant's
-    defaults because those are tuning-time knobs, not part of the variant's
-    identity.
+    When ``config.model_id`` is set, the definition from ``MODELS`` provides
+    the base model identity and metadata from ``definition.to_config()``,
+    including ``target_var``, numeric/categorical features, ``base_params``,
+    ``year_range``, ``include_unknown``, ``selection_history``,
+    ``shap_scatter_specs``, and ``notes``. Tuned ``params`` and the CLI's
+    ``training_split`` / ``num_threads`` still override the definition's
+    training defaults because those are tuning-time knobs, not part of the
+    variant's identity.
     """
     if config.model_id is not None:
         definition = MODELS[config.model_id]
