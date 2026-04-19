@@ -15,45 +15,180 @@ execute:
   warning: false
 ---
 
+```{python}
+#| label: load-artefacts
+import json
+from pathlib import Path
+
+import pandas as pd
+
+try:
+    config = json.loads(Path("config.json").read_text())
+except FileNotFoundError:
+    config = {"model_id": "<not yet rendered from a run>"}
+
+try:
+    metrics = json.loads(Path("metrics.json").read_text())
+except FileNotFoundError:
+    metrics = {}
+
+try:
+    manifest = json.loads(Path("manifest.json").read_text())
+except FileNotFoundError:
+    manifest = {}
+
+run_config = manifest.get("run_config", {})
+git = manifest.get("git", {}) or {}
+env = manifest.get("environment", {}) or {}
+```
+
 # Overview
 
-This template is rendered once per model run. It reads `config.json` and
-`metrics.json` from the run's output directory (the working directory
-during rendering) and embeds the pre-generated plots from `plots/`.
+**Model:** `{python} config.get("model_id", "<unknown>")`
+`{python} ("(variant of " + str(config.get("variant_of")) + ")") if config.get("variant_of") else ""`
 
-::: {.callout-note}
-This template is a placeholder. The pipeline's `report()` step (refactor
-step 7) copies this file into `output/models/<model_id>-<run_config>/`
-before rendering, and populates the sections below from the run's
-artefacts.
-:::
+**Run config:** `{python} run_config.get("name", "<unknown>")`
+(n_trials=`{python} run_config.get("n_trials", "?")`,
+num_boost_round=`{python} run_config.get("num_boost_round", "?")`,
+shap_mode=`{python} run_config.get("shap_mode", "?")`)
+
+**Year range:** `{python} config.get("year_range", "?")`
+
+**Git:** `{python} (git.get("sha") or "<no-git>")[:12]`
+`{python} "(dirty tree)" if git.get("dirty") else ""`
+— branch `{python} git.get("branch") or "<no-git>"`
+
+{{< fa circle-info >}} `{python} config.get("notes", "")`
 
 ## Configuration
 
 ```{python}
-#| label: load-config
-import json
-from pathlib import Path
-
-try:
-    config = json.loads(Path("config.json").read_text())
-    metrics = json.loads(Path("metrics.json").read_text())
-except FileNotFoundError:
-    config = {"model_id": "<not yet rendered from a run>"}
-    metrics = {}
-
-config
+#| label: config-summary
+pd.Series(
+    {
+        "model_id": config.get("model_id"),
+        "variant_of": config.get("variant_of"),
+        "year_range": str(config.get("year_range")),
+        "include_unknown": config.get("include_unknown"),
+        "n_numeric_features": len(config.get("numeric_features", [])),
+        "n_categorical_features": len(config.get("categorical_features", [])),
+        "training_split": (config.get("train_config") or {}).get("training_split"),
+    }
+).rename("value").to_frame()
 ```
 
-## Validation metrics
+## Selection history
+
+```{python}
+#| label: selection-history
+history = config.get("selection_history", [])
+rows = []
+for step in history:
+    rows.append(
+        {
+            "date": step.get("step_date"),
+            "features_added": len(step.get("features_added", [])),
+            "features_removed": len(step.get("features_removed", [])),
+            "rationale": step.get("rationale", ""),
+        }
+    )
+pd.DataFrame(rows) if rows else "No selection history recorded."
+```
+
+# Validation metrics
 
 ```{python}
 #| label: metrics-table
-metrics
+if metrics:
+    pd.Series(metrics).rename("value").to_frame()
+else:
+    "No metrics recorded."
 ```
 
-## Figures
+## Precision @ K
 
-Plots produced by the pipeline live in `plots/` relative to this
-`index.qmd` after it is copied into the run directory. The concrete list
-of plots rendered here is expanded in refactor step 7.
+```{python}
+#| label: pr-at-k
+path = Path("precision_recall_at_k.csv")
+pd.read_csv(path) if path.is_file() else "precision_recall_at_k.csv not present."
+```
+
+## Calibration (top tail)
+
+```{python}
+#| label: calibration-tail
+path = Path("calibration_tail.csv")
+pd.read_csv(path) if path.is_file() else "calibration_tail.csv not present."
+```
+
+# Feature importance
+
+## LightGBM gain importance
+
+```{python}
+#| label: gain-importance
+path = Path("feature_importance_gain.csv")
+pd.read_csv(path).head(25) if path.is_file() else "feature_importance_gain.csv not present."
+```
+
+## Permutation importance
+
+```{python}
+#| label: permutation-importance
+path = Path("permutation_importance.csv")
+pd.read_csv(path).head(25) if path.is_file() else "permutation_importance.csv not present."
+```
+
+## SHAP importance
+
+```{python}
+#| label: shap-importance
+path = Path("shap_importance.csv")
+pd.read_csv(path).head(25) if path.is_file() else "shap_importance.csv not present."
+```
+
+# Plots
+
+::: {.panel-tabset}
+
+## ROC curve
+
+![](plots/roc_curve.png)
+
+## Precision-recall curve
+
+![](plots/precision_recall_curve.png)
+
+## Permutation importances
+
+![](plots/permutation_importances.png)
+
+## Dendrogram
+
+![](plots/dendrogram.png)
+
+## Correlation heatmap
+
+![](plots/correlation_heatmap.png)
+
+## SHAP bar
+
+![](plots/shap_bar.png)
+
+## SHAP beeswarm
+
+![](plots/shap_beeswarm.png)
+
+:::
+
+# Environment
+
+```{python}
+#| label: environment
+env_display = {
+    "python": env.get("python"),
+    "platform": env.get("platform"),
+    **{f"pkg.{k}": v for k, v in (env.get("packages") or {}).items()},
+}
+pd.Series(env_display).rename("value").to_frame()
+```

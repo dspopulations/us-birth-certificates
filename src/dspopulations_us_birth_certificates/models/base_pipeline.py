@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -331,11 +332,35 @@ class EstimatorPipeline(ABC):
 
         manifest.write_manifest(self.context, self.context.output_dir)
 
-    def report(self, render: bool = False) -> None:
-        """Copy the Quarto template into the run dir — populated in step 7."""
-        logger.info(
-            "Quarto reporting is a no-op until refactor step 7 lands."
-        )
+    def report(
+        self,
+        render: bool = False,
+        template_path: Path | None = None,
+    ) -> None:
+        """Copy the Quarto template into the run dir; render it if requested.
+
+        Non-rendering is cheap and always safe — the ``index.qmd`` ends up
+        alongside the run's artefacts so the report can be rendered later.
+        ``render=True`` invokes the ``quarto`` CLI; misses the CLI are
+        logged rather than raised so the pipeline run still completes.
+        """
+        from dspopulations_us_birth_certificates import reporting
+
+        tpl = template_path or reporting.DEFAULT_TEMPLATE
+        try:
+            qmd = reporting.copy_template(self.context, tpl)
+        except FileNotFoundError as exc:
+            logger.warning("Skipping report: %s", exc)
+            return
+
+        if render:
+            try:
+                reporting.render_quarto_report(qmd)
+            except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+                # Expected operational failures (missing CLI, non-zero exit)
+                # are logged but don't fail the run. Any other exception is
+                # programmer error and should surface.
+                logger.warning("Quarto render failed: %s", exc)
 
     # ---- convenience ---------------------------------------------------------
 
