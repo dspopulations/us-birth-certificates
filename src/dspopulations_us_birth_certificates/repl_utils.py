@@ -44,7 +44,7 @@ def get_environment_info() -> dict[str, str | bool | Any]:
     }
 
 def print_environment_info():
-    info = get_environment_info()
-    print("-------------------- Environment Information --------------------")
-    for key, value in info.items():
-        print(f"{key}: {value}")
+    """Render ``get_environment_info()`` as a rich two-column table."""
+    from dspopulations_us_birth_certificates import cli_output
+
+    cli_output.print_environment_table(get_environment_info())

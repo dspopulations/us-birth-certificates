@@ -32,6 +32,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 from dspopulations_us_birth_certificates import (
+    cli_output,
     data_utils,
     ml_utils,
     plot_utils,
@@ -81,7 +82,14 @@ class EstimatorPipeline(ABC):
         db_path: str | None = None,
     ) -> pd.DataFrame:
         """Load the harmonised predictors frame for the configured year range."""
+        cli_output.section("Load data")
         cfg = self.context.config
+        cli_output.info(
+            f"Year range [bold]{cfg.year_range[0]}-{cfg.year_range[1]}[/bold], "
+            f"include_unknown=[bold]{cfg.include_unknown}[/bold]"
+        )
+        if db_path is not None:
+            cli_output.info(f"DuckDB: [blue]{db_path}[/blue]")
         kwargs: dict[str, Any] = dict(
             from_year=cfg.year_range[0],
             to_year=cfg.year_range[1],
@@ -89,10 +97,21 @@ class EstimatorPipeline(ABC):
         )
         if db_path is not None:
             kwargs["db_path"] = db_path
-        return data_utils.load_predictors_data(**kwargs)
+        df = data_utils.load_predictors_data(**kwargs)
+        target = cfg.target_var
+        positives = int(df[target].fillna(0).astype(int).sum())
+        cli_output.print_data_summary(
+            df_rows=len(df),
+            target_var=target,
+            positives=positives,
+            year_range=cfg.year_range,
+            include_unknown=cfg.include_unknown,
+        )
+        return df
 
     def prepare_features(self, df: pd.DataFrame) -> None:
         """Populate ``X_train/y_train/X_valid/y_valid`` on the context."""
+        cli_output.section("Prepare features")
         cfg = self.context.config
         numeric = list(cfg.numeric_features)
         categorical = list(cfg.categorical_features)
@@ -104,6 +123,16 @@ class EstimatorPipeline(ABC):
 
         training_split = cfg.train_config.get("training_split", 0.8)
         random_seed = self.context.run_config.random_seed
+
+        cli_output.info(
+            f"Features: [bold]{len(features)}[/bold] "
+            f"([cyan]{len(categorical)} categorical[/cyan], "
+            f"[cyan]{len(numeric)} numeric[/cyan])"
+        )
+        cli_output.info(
+            f"Stratified split {training_split:.0%}/{1 - training_split:.0%} "
+            f"(seed={random_seed})"
+        )
 
         X_train, X_valid, y_train, y_valid = train_test_split(
             X,
@@ -117,6 +146,8 @@ class EstimatorPipeline(ABC):
         self.context.y_train = y_train
         self.context.X_valid = X_valid
         self.context.y_valid = y_valid
+
+        cli_output.print_split_summary(X_train, X_valid, y_train, y_valid)
 
     # ---- training ------------------------------------------------------------
 
@@ -147,6 +178,7 @@ class EstimatorPipeline(ABC):
 
     def compute_metrics(self) -> None:
         """Compute AP, log-loss, Brier, ROC-AUC, P@K, tail calibration."""
+        cli_output.section("Compute metrics")
         ctx = self.context
         if ctx.final_model is None:
             raise RuntimeError("train_final() must run before compute_metrics().")
@@ -168,9 +200,11 @@ class EstimatorPipeline(ABC):
             "n_positive_valid": int(y_valid.sum()),
         }
         ctx.metrics = metrics
+        cli_output.print_metrics_table(metrics)
 
     def permutation_importance_analysis(self) -> None:
         """Populate ``context.permutation_importance``."""
+        cli_output.section("Permutation importance")
         ctx = self.context
         if ctx.final_model is None:
             raise RuntimeError(
@@ -198,6 +232,12 @@ class EstimatorPipeline(ABC):
             if configured_int is not None and configured_int > 0:
                 n_jobs = configured_int
 
+        cli_output.info(
+            f"Permuting {X_eval.shape[1]} features × 20 repeats "
+            f"on {len(X_eval):,} rows "
+            f"(n_jobs={n_jobs or 'auto'})"
+        )
+
         result = permutation_importance(
             model_wrapped,
             X_eval,
@@ -212,13 +252,23 @@ class EstimatorPipeline(ABC):
             "X_eval": X_eval,
             "y_eval": y_eval,
         }
+        perm_df = pd.DataFrame(
+            {
+                "feature": X_eval.columns,
+                "importance_mean": result.importances_mean,
+                "importance_std": result.importances_std,
+            }
+        ).sort_values("importance_mean", ascending=False)
+        cli_output.print_permutation_importance(perm_df)
 
     def shap_analysis(self) -> None:
         """Populate ``context.shap_explanation`` subject to ``run_config.shap_mode``."""
+        cli_output.section("SHAP analysis")
         ctx = self.context
         if ctx.final_model is None:
             raise RuntimeError("train_final() must run before shap_analysis().")
         if ctx.run_config.shap_mode == "skip":
+            cli_output.info("SHAP skipped per run_config.shap_mode='skip'.")
             logger.info("SHAP skipped per run_config.shap_mode='skip'.")
             return
 
@@ -240,9 +290,19 @@ class EstimatorPipeline(ABC):
                 sampled = rng.choice(len(X_eval), size=size, replace=False)
                 X_eval = X_eval.iloc[sampled]
 
+        cli_output.info(
+            f"Mode=[bold]{ctx.run_config.shap_mode}[/bold], "
+            f"evaluating SHAP on [bold]{len(X_eval):,}[/bold] rows × "
+            f"[bold]{X_eval.shape[1]}[/bold] features"
+        )
+
         ctx.shap_explanation = shap_analysis.compute_explanation(
             ctx.final_model, X_eval
         )
+        shap_df = shap_analysis.shap_importance(
+            ctx.shap_explanation, X_eval.columns
+        )
+        cli_output.print_shap_importance(shap_df)
 
     # ---- outputs -------------------------------------------------------------
 
@@ -253,8 +313,10 @@ class EstimatorPipeline(ABC):
         just want the tabular artefacts (CLI ``--no-plots``, faster CI runs)
         don't pay the matplotlib cost or trigger GUI rendering.
         """
+        cli_output.section("Save artefacts")
         ctx = self.context
         out = ctx.output_dir
+        cli_output.info(f"Writing to [blue]{out}[/blue] (plots={save_plots})")
 
         # Config + metrics
         (out / "config.json").write_text(json.dumps(ctx.config.to_dict(), indent=2))
@@ -277,6 +339,7 @@ class EstimatorPipeline(ABC):
         imp = self._gain_importance()
         if imp is not None:
             imp.to_csv(out / "feature_importance_gain.csv", index=False)
+            cli_output.print_gain_importance(imp)
 
         # Calibration tables
         if ctx.p_valid is not None:
@@ -326,11 +389,16 @@ class EstimatorPipeline(ABC):
             plots_dir.mkdir(exist_ok=True)
             self._save_plots(plots_dir)
 
+        cli_output.success(f"Artefacts written to {out}")
+        cli_output.print_artefact_summary(out)
+
     def write_manifest(self) -> None:
         """Delegate to ``manifest.write_manifest`` for this run."""
+        cli_output.section("Write manifest")
         from dspopulations_us_birth_certificates import manifest
 
-        manifest.write_manifest(self.context, self.context.output_dir)
+        path = manifest.write_manifest(self.context, self.context.output_dir)
+        cli_output.success(f"Manifest: {path}")
 
     def report(
         self,
@@ -344,23 +412,33 @@ class EstimatorPipeline(ABC):
         ``render=True`` invokes the ``quarto`` CLI; misses the CLI are
         logged rather than raised so the pipeline run still completes.
         """
+        cli_output.section("Report")
         from dspopulations_us_birth_certificates import reporting
 
         tpl = template_path or reporting.DEFAULT_TEMPLATE
         try:
             qmd = reporting.copy_template(self.context, tpl)
         except FileNotFoundError as exc:
+            cli_output.warning(f"Skipping report: {exc}")
             logger.warning("Skipping report: %s", exc)
             return
+
+        cli_output.success(f"Copied template to {qmd}")
 
         if render:
             try:
                 reporting.render_quarto_report(qmd)
+                cli_output.success("Quarto render complete")
             except (FileNotFoundError, subprocess.CalledProcessError) as exc:
                 # Expected operational failures (missing CLI, non-zero exit)
                 # are logged but don't fail the run. Any other exception is
                 # programmer error and should surface.
+                cli_output.warning(f"Quarto render failed: {exc}")
                 logger.warning("Quarto render failed: %s", exc)
+        else:
+            cli_output.info(
+                f"To render: [blue]quarto render {qmd}[/blue]"
+            )
 
     # ---- convenience ---------------------------------------------------------
 
@@ -409,12 +487,18 @@ class EstimatorPipeline(ABC):
         return None
 
     def _save_plots(self, plots_dir: Path) -> None:
-        """Overridable hook for standard ROC/PR/dendrogram/heatmap/SHAP plots."""
+        """Overridable hook for standard ROC/PR/dendrogram/heatmap/SHAP plots.
+
+        Plot helpers return ``Figure`` objects; this method saves them and
+        then closes each one so CLI runs don't accumulate figures in the
+        matplotlib registry.
+        """
+        import matplotlib.pyplot as plt
+
         ctx = self.context
         if ctx.p_valid is None:
             return
 
-        # ROC + PR curves
         from sklearn.metrics import precision_recall_curve, roc_curve
 
         fpr, tpr, _ = roc_curve(np.asarray(ctx.y_valid), np.asarray(ctx.p_valid))
@@ -422,40 +506,46 @@ class EstimatorPipeline(ABC):
             np.asarray(ctx.y_valid), np.asarray(ctx.p_valid)
         )
 
-        plot_utils.plot_roc_curve(
-            fpr,
-            tpr,
-            0,
-            save=True,
-            output_dir=str(plots_dir),
-            file_name="roc_curve",
-        )
-        plot_utils.plot_precision_recall_curve(
-            rec,
-            prec,
-            0,
-            save=True,
-            output_dir=str(plots_dir),
-            file_name="precision_recall_curve",
-        )
+        figs: list = []
 
-        # Permutation importance plot
-        if ctx.permutation_importance is not None:
-            plot_utils.plot_permutation_importances(
-                ctx.permutation_importance["result"],
-                ctx.permutation_importance["X_eval"],
+        figs.append(
+            plot_utils.plot_roc_curve(
+                fpr,
+                tpr,
                 0,
                 save=True,
                 output_dir=str(plots_dir),
-                file_name="permutation_importances",
+                file_name="roc_curve",
+            )
+        )
+        figs.append(
+            plot_utils.plot_precision_recall_curve(
+                rec,
+                prec,
+                0,
+                save=True,
+                output_dir=str(plots_dir),
+                file_name="precision_recall_curve",
+            )
+        )
+
+        if ctx.permutation_importance is not None:
+            figs.append(
+                plot_utils.plot_permutation_importances(
+                    ctx.permutation_importance["result"],
+                    ctx.permutation_importance["X_eval"],
+                    0,
+                    save=True,
+                    output_dir=str(plots_dir),
+                    file_name="permutation_importances",
+                )
             )
 
-            # Dendrogram + correlation heatmap
             X_eval = ctx.permutation_importance["X_eval"]
             distance, corr = stats_utils.distance_corr_dissimilarity(X_eval)
             condensed = squareform(distance, checks=True)
             linkage = hierarchy.linkage(condensed, method="average")
-            dendro = plot_utils.plot_dendrogram(
+            dendro_fig, dendro = plot_utils.plot_dendrogram(
                 linkage,
                 X_eval.columns.to_list(),
                 0,
@@ -463,46 +553,54 @@ class EstimatorPipeline(ABC):
                 output_dir=str(plots_dir),
                 file_name="dendrogram",
             )
-            plot_utils.plot_correlation_heatmap(
-                corr,
-                dendro,
-                label_threshold=0.3,
-                model_idx=0,
-                save=True,
-                output_dir=str(plots_dir),
-                file_name="correlation_heatmap",
-            )
-
-        # SHAP plots
-        if ctx.shap_explanation is not None:
-            shap_analysis.plot_bar(
-                ctx.shap_explanation,
-                save=True,
-                output_dir=str(plots_dir),
-                file_stem="shap_bar",
-                show=False,
-            )
-            shap_analysis.plot_beeswarm(
-                ctx.shap_explanation,
-                save=True,
-                output_dir=str(plots_dir),
-                file_stem="shap_beeswarm",
-                show=False,
-            )
-            for spec in ctx.config.shap_scatter_specs:
-                shap_analysis.plot_scatter(
-                    ctx.shap_explanation,
-                    x_feature=spec.x_feature,
-                    colour_feature=spec.colour_by_feature,
+            figs.append(dendro_fig)
+            figs.append(
+                plot_utils.plot_correlation_heatmap(
+                    corr,
+                    dendro,
+                    label_threshold=0.3,
+                    model_idx=0,
                     save=True,
                     output_dir=str(plots_dir),
-                    file_stem=(
-                        f"shap_{spec.x_feature}"
-                        + (
-                            f"_vs_{spec.colour_by_feature}"
-                            if spec.colour_by_feature
-                            else ""
-                        )
-                    ),
-                    show=False,
+                    file_name="correlation_heatmap",
                 )
+            )
+
+        if ctx.shap_explanation is not None:
+            figs.append(
+                shap_analysis.plot_bar(
+                    ctx.shap_explanation,
+                    save=True,
+                    output_dir=str(plots_dir),
+                    file_stem="shap_bar",
+                )
+            )
+            figs.append(
+                shap_analysis.plot_beeswarm(
+                    ctx.shap_explanation,
+                    save=True,
+                    output_dir=str(plots_dir),
+                    file_stem="shap_beeswarm",
+                )
+            )
+            for spec in ctx.config.shap_scatter_specs:
+                figs.append(
+                    shap_analysis.plot_scatter(
+                        ctx.shap_explanation,
+                        x_feature=spec.x_feature,
+                        colour_feature=spec.colour_by_feature,
+                        save=True,
+                        output_dir=str(plots_dir),
+                        file_stem=(
+                            f"shap_{spec.x_feature}"
+                            + (
+                                f"_vs_{spec.colour_by_feature}"
+                                if spec.colour_by_feature
+                                else ""
+                            )
+                        ),
+                    )
+                )
+
+        for fig in figs:
+            plt.close(fig)
