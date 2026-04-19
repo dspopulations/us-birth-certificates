@@ -85,7 +85,7 @@ def _git_info(repo_root: Path | None = None) -> dict[str, Any]:
             .strip()
         )
         return {"sha": sha, "branch": branch, "dirty": bool(status.strip())}
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return {"sha": None, "branch": None, "dirty": None}
 
 

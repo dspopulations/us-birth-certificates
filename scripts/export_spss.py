@@ -22,7 +22,7 @@ def export_spss():
         "data/us_births_2020.parquet",
         "data/us_births_2021.parquet",
         "data/us_births_2022.parquet",
-        "data/us_births_all.parquet"
+        "data/us_births_all.parquet",
     ]
 
     for source in sources:
@@ -39,7 +39,9 @@ def export_spss():
 
         print(f"Compressing to {zip_dest}...")
 
-        with zipfile.ZipFile(zip_dest, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as myzip:
+        with zipfile.ZipFile(
+            zip_dest, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+        ) as myzip:
             myzip.write(dest)
 
 

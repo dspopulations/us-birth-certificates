@@ -93,9 +93,7 @@ def _make_config() -> ModelConfig:
                 metrics_after={"ap": 0.418},
             ),
         ),
-        shap_scatter_specs=(
-            ShapScatterSpec("year", "mage_c", "age-year interaction"),
-        ),
+        shap_scatter_specs=(ShapScatterSpec("year", "mage_c", "age-year interaction"),),
         notes="Baseline model for smoke tests.",
     )
 

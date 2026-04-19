@@ -1,6 +1,7 @@
 """
 Create DuckDB database from combined Parquet file.
 """
+
 import pathlib
 
 import duckdb

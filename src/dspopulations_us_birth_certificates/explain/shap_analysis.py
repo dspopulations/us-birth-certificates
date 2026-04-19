@@ -94,9 +94,7 @@ def plot_beeswarm(
             show=False,
         )
         fig = plt.gcf()
-        fig.gca().set_title(
-            f"Model {model_idx}: SHAP values for predictor variables"
-        )
+        fig.gca().set_title(f"Model {model_idx}: SHAP values for predictor variables")
         if save:
             _save_fig(fig, output_dir, file_stem)
     return fig

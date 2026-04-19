@@ -57,6 +57,7 @@ jobs:
             'duckdb>=1.5.2' 'dcor>=0.6' \
             'lightgbm>=4.6.0' 'optuna>=4.8.0' 'shap>=0.51.0' \
             'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
+            'rich>=15.0.0' \
             'pytest>=9.0.3'
       - name: Run pytest
         # --no-sync keeps the venv we just pinned. Without it, `uv run`

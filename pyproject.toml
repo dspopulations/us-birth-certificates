@@ -44,6 +44,7 @@ modelling = [
   "joblib>=1.4.0",
   "pyarrow>=23.0.1",
   "dcor>=0.6",
+  "rich>=15.0.0",
 ]
 
 [tool.hatch.version]

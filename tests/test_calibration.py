@@ -69,9 +69,7 @@ def test_precision_recall_at_k_perfect_ranking() -> None:
     # Positives are the top 10 scores; recall@10 should be 1.0.
     rng = np.random.default_rng(0)
     y_true = np.concatenate([np.ones(10), np.zeros(90)]).astype(int)
-    y_score = np.concatenate(
-        [rng.uniform(0.9, 1.0, 10), rng.uniform(0.0, 0.1, 90)]
-    )
+    y_score = np.concatenate([rng.uniform(0.9, 1.0, 10), rng.uniform(0.0, 0.1, 90)])
 
     df = precision_recall_at_k(y_true, y_score, ks=[10, 50, 100])
 

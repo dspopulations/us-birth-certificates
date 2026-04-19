@@ -54,8 +54,9 @@ def constrain_and_cast_uint_robust(
 
         if stats is not None and stat_key is not None:
             stats.setdefault(stat_key, {})
-            stats[stat_key]["parse_invalid"] = stats[stat_key].get("parse_invalid", 0) + _count_true(
-                pc.invert(pc.fill_null(numeric_mask, False)))
+            stats[stat_key]["parse_invalid"] = stats[stat_key].get(
+                "parse_invalid", 0
+            ) + _count_true(pc.invert(pc.fill_null(numeric_mask, False)))
 
         f = pc.cast(s_num, pa.float64(), safe=False)
 
@@ -68,8 +69,11 @@ def constrain_and_cast_uint_robust(
         is_int = pc.equal(f, pc.floor(f))
         if stats is not None and stat_key is not None:
             stats.setdefault(stat_key, {})
-            stats[stat_key]["non_integer"] = stats[stat_key].get("non_integer", 0) + _count_true(
-                pc.and_(pc.is_valid(f), pc.invert(pc.fill_null(is_int, False))))
+            stats[stat_key]["non_integer"] = stats[stat_key].get(
+                "non_integer", 0
+            ) + _count_true(
+                pc.and_(pc.is_valid(f), pc.invert(pc.fill_null(is_int, False)))
+            )
         f = pc.if_else(is_int, f, pa.nulls(n, type=pa.float64()))
     elif non_integer == "truncate":
         pass
@@ -85,7 +89,9 @@ def constrain_and_cast_uint_robust(
         if range_invalid == "null":
             if stats is not None and stat_key is not None:
                 stats.setdefault(stat_key, {})
-                stats[stat_key]["range_invalid"] = stats[stat_key].get("range_invalid", 0) + _count_true(bad)
+                stats[stat_key]["range_invalid"] = stats[stat_key].get(
+                    "range_invalid", 0
+                ) + _count_true(bad)
             out = pc.if_else(bad, nulls_out, out)
         else:
             if _count_true(bad) > 0:
@@ -96,7 +102,9 @@ def constrain_and_cast_uint_robust(
         if range_invalid == "null":
             if stats is not None and stat_key is not None:
                 stats.setdefault(stat_key, {})
-                stats[stat_key]["range_invalid"] = stats[stat_key].get("range_invalid", 0) + _count_true(bad)
+                stats[stat_key]["range_invalid"] = stats[stat_key].get(
+                    "range_invalid", 0
+                ) + _count_true(bad)
             out = pc.if_else(bad, nulls_out, out)
         else:
             if _count_true(bad) > 0:
@@ -119,9 +127,7 @@ uint16_specs = {
     vars.BIRYR: (1989, None),
     vars.DOB_YY: (1989, None),
     vars.DOB_TT: (0, 9999),
-
     vars.DBWT: (0, 9999),
-
     vars.DWGT_R: (100, 999),
     vars.PWGT_R: (75, 999),
 }
@@ -129,9 +135,7 @@ uint16_specs = {
 uint8_specs = {
     vars.DOB_MM: (1, 12),
     vars.DOB_WK: (1, 7),
-
     vars.BFACIL3: (1, 3),
-
     vars.MAGER: (12, 50),
     vars.DMAGE: (None, None),
     vars.DMAGERPT: (None, None),
@@ -140,10 +144,8 @@ uint8_specs = {
     vars.MAGE36: (1, 41),
     vars.MAGER12: (1, 14),
     vars.MAGER8: (1, 9),
-
     vars.MBSTATE_REC: (1, 3),
     vars.RESTATUS: (1, 4),
-
     vars.MBRACE: (1, 24),
     vars.MRACE: (None, None),
     vars.MRACEREC: (None, None),
@@ -151,90 +153,66 @@ uint8_specs = {
     vars.MRACE6: (1, 6),
     vars.MRACE15: (1, 15),
     vars.MRACEIMP: (1, 2),
-
     vars.ORMOTH: (None, None),
     vars.ORRACEM: (None, None),
-
     vars.UMHISP: (None, None),
     vars.MHISPX: (0, 9),
     vars.MHISP_R: (0, 9),
     vars.MRACEHISP: (1, 8),
-
     vars.MAR: (None, None),
-
     vars.DMEDUC: (None, None),
     vars.MEDUC: (1, 9),
     vars.UMEDUC: (None, None),
     vars.MEDUC6: (None, None),
     vars.MEDUC_REC: (None, None),
     vars.MPLBIR: (None, None),
-
     vars.DFAGERPT: (None, None),
     vars.FAGE11: (None, None),
     vars.FAGERPT: (None, None),
     vars.UFAGECOMB: (None, None),
     vars.FAGECOMB: (0, 99),
     vars.FAGEREC11: (0, 11),
-
     vars.ORFATH: (None, None),
     vars.ORRACEF: (None, None),
-
     vars.FRACE: (None, None),
     vars.FRACEIMP: (None, None),
     vars.FRACEREC: (None, None),
-
     vars.UFHISP: (None, None),
     vars.FRACEHISP: (1, 9),
     vars.FRACE31: (1, 99),
     vars.FRACE6: (1, 9),
     vars.FRACE15: (1, 99),
-
     vars.FHISPX: (0, 9),
     vars.FHISP_R: (0, 9),
-
     vars.FEDUC: (1, 9),
-
     vars.PRIORLIVE: (0, 99),
     vars.PRIORDEAD: (0, 99),
     vars.PRIORTERM: (0, 99),
-
     vars.LBO_REC: (1, 9),
     vars.TBO_REC: (1, 9),
-
     vars.ILLB_R11: (0, 99),
     vars.ILOP_R11: (0, 99),
     vars.ILP_R11: (0, 99),
-
     vars.PRECARE: (0, 10),
-
     vars.PAY: (1, 9),
     vars.PAY_REC: (1, 9),
-
     vars.APGAR5: (0, 99),
     vars.APGAR5R: (1, 5),
     vars.APGAR10: (0, 99),
     vars.APGAR10R: (1, 5),
-
     vars.DPLURAL: (1, 4),
     vars.IMP_PLURAL: (1, 1),
     vars.SETORDER_R: (1, 9),
-
     vars.GESTREC10: (1, 99),
-
     vars.NO_ABNORM: (0, 9),
-
     vars.DOWNS: (0, 255),
     vars.UCA_DOWNS: (1, 9),
     vars.NO_CONGEN: (0, 1),
-
     vars.PREVIS: (0, 99),
     vars.PREVIS_REC: (1, 12),
-
     vars.M_HT_IN: (30, 99),
-
     vars.BMI_R: (1, 9),
     vars.WTGAIN: (0, 99),
-
     vars.ME_PRES: (1, 9),
     vars.RDMETH_REC: (1, 9),
     vars.DMETH_REC: (1, 9),
@@ -306,7 +284,8 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
                 non_integer="null",
                 range_invalid="null",
                 stats=stats,
-                stat_key=name, )
+                stat_key=name,
+            )
             arrays.append(arr)
             fields.append(pa.field(name, U8))
         elif name in uint16_specs:
@@ -320,7 +299,8 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
                 non_integer="null",
                 range_invalid="null",
                 stats=stats,
-                stat_key=name, )
+                stat_key=name,
+            )
             arrays.append(arr)
             fields.append(pa.field(name, U16))
         elif name in string_cols:

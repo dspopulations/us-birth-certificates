@@ -40,9 +40,7 @@ def copy_template(
     return dst
 
 
-def render_quarto_report(
-    qmd_path: Path, output_format: str = "html"
-) -> Path | None:
+def render_quarto_report(qmd_path: Path, output_format: str = "html") -> Path | None:
     """Subprocess-invoke ``quarto render`` for ``qmd_path``.
 
     Returns the rendered file's path on success, or ``None`` when the

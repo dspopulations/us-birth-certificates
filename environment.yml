@@ -54,4 +54,5 @@ dependencies:
       - tabulate
       - truststore
       - zarr
+      - -e ../../dseinternational/research/src/python
       - -e ./
