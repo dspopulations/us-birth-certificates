@@ -190,9 +190,7 @@ class FitConfig:
 
 def parse_args(argv: list[str] | None = None) -> FitConfig:
     pre = argparse.ArgumentParser(add_help=False)
-    pre.add_argument(
-        "--profile", choices=list(RunConfig.preset_names()), default=None
-    )
+    pre.add_argument("--profile", choices=list(RunConfig.preset_names()), default=None)
     pre_ns, _ = pre.parse_known_args(argv)
     profile_defaults = _profile_defaults(pre_ns.profile) if pre_ns.profile else {}
 
@@ -393,9 +391,7 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
         )
 
     numeric = tuple(f for f in DEFAULT_NUMERIC if f not in config.drop_features)
-    categorical = tuple(
-        f for f in DEFAULT_CATEGORICAL if f not in config.drop_features
-    )
+    categorical = tuple(f for f in DEFAULT_CATEGORICAL if f not in config.drop_features)
     train_config: dict = {
         "training_split": config.training_split,
         "verbosity": 1,
@@ -515,9 +511,7 @@ def optimize_hyperparameters(
         sampler=optuna.samplers.TPESampler(),
         pruner=optuna.pruners.HyperbandPruner(),
     )
-    study.optimize(
-        objective, n_trials=config.optimize_trials, show_progress_bar=True
-    )
+    study.optimize(objective, n_trials=config.optimize_trials, show_progress_bar=True)
     cli_output.section("Tuning complete")
     cli_output.print_optuna_summary(study)
     return study.best_params
@@ -544,7 +538,7 @@ def _recover_loaded_params(model_path: Path) -> dict:
         try:
             with sibling.open() as f:
                 return json.load(f)
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             pass
 
     try:
@@ -608,6 +602,57 @@ def write_predictions_to_duckdb(
             """
         )
         con.execute("DROP TABLE IF EXISTS ds_lb_pred_01")
+
+        # Flag likely missing DS cases as ``ds_pred_missing`` using a year×month
+        # quota of ceil(1.5 × recorded), picking the top non-recorded births by
+        # ``p_ds_lb_pred_01``. Multiplier 1.5 encodes the ~60% under-reporting
+        # rate observed across surveillance studies (recorded ≈ 40%, missed ≈ 60%
+        # → total ≈ recorded + 1.5×recorded = 2.5×recorded). Downstream analyses
+        # can then select R = down_ind=1, R' = down_ind=1 OR ds_pred_missing.
+        #
+        # TODO: revisit per-year multipliers calibrated against surveillance-based
+        # live-birth estimates — the 60% rate is close to constant but varies
+        # slightly by year. Uniform 1.5× is a sufficient v1 approximation.
+        con.execute(
+            "ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
+            "ds_pred_missing BOOLEAN DEFAULT FALSE"
+        )
+        con.execute("DROP TABLE IF EXISTS _ds_pred_missing_ids")
+        con.execute(
+            """
+            CREATE TABLE _ds_pred_missing_ids AS
+            WITH year_month_quota AS (
+                SELECT year, dob_mm,
+                       CAST(CEIL(COUNT(*) * 1.5) AS BIGINT) AS n_select
+                FROM us_births
+                WHERE down_ind = 1 AND p_ds_lb_pred_01 IS NOT NULL
+                GROUP BY year, dob_mm
+            ),
+            ranked AS (
+                SELECT b.id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY b.year, b.dob_mm
+                           ORDER BY b.p_ds_lb_pred_01 DESC
+                       ) AS rn,
+                       q.n_select
+                FROM us_births b
+                JOIN year_month_quota q
+                  ON q.year = b.year AND q.dob_mm = b.dob_mm
+                WHERE b.down_ind = 0 AND b.p_ds_lb_pred_01 IS NOT NULL
+            )
+            SELECT id FROM ranked WHERE rn <= n_select
+            """
+        )
+        con.execute("UPDATE us_births SET ds_pred_missing = FALSE")
+        con.execute(
+            """
+            UPDATE us_births b
+            SET ds_pred_missing = TRUE
+            FROM _ds_pred_missing_ids t
+            WHERE b.id = t.id
+            """
+        )
+        con.execute("DROP TABLE _ds_pred_missing_ids")
     finally:
         con.close()
 
