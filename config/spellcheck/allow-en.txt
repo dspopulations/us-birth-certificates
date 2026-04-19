@@ -34,8 +34,11 @@ hyperparameters
 iqr
 kfold
 lightgbm
+logit
 microdata
 multicollinearity
+nutpie
+parameterisation
 pymc
 rhat
 sklearn
