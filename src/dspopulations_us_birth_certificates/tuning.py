@@ -24,7 +24,7 @@ import optuna
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from dspopulations_us_birth_certificates import data_utils
+from dspopulations_us_birth_certificates import cli_output, data_utils
 from dspopulations_us_birth_certificates.models.base_model import ModelDefinition
 from dspopulations_us_birth_certificates.models.common import RunConfig
 
@@ -101,8 +101,29 @@ def run_optuna_study(
     out_dir.mkdir(parents=True, exist_ok=True)
     n_trials = n_trials if n_trials is not None else run_config.n_trials
 
+    cli_output.section("Optuna hyperparameter search")
+    cli_output.info(
+        f"Model: [bold]{definition.model_id}[/bold]; "
+        f"preset: [bold]{run_config.name}[/bold]"
+    )
+    cli_output.info(
+        f"Trials=[bold]{n_trials}[/bold], "
+        f"num_boost_round=[bold]{run_config.num_boost_round}[/bold], "
+        f"early_stopping_rounds=[bold]{run_config.early_stopping_rounds}[/bold]"
+        + (f", timeout={timeout}s" if timeout else "")
+    )
+    cli_output.info(f"Artefacts directory: [blue]{out_dir}[/blue]")
+
     X, y, categorical = _load_xy(definition, db_path=db_path)
     cfg = definition.to_config()
+
+    cli_output.print_data_summary(
+        df_rows=len(X),
+        target_var=cfg.target_var,
+        positives=int(y.sum()),
+        year_range=cfg.year_range,
+        include_unknown=cfg.include_unknown,
+    )
 
     training_split = cfg.train_config.get("training_split", 0.8)
     X_train, X_valid, y_train, y_valid = train_test_split(
@@ -112,6 +133,7 @@ def run_optuna_study(
         stratify=y,
         random_state=run_config.random_seed,
     )
+    cli_output.print_split_summary(X_train, X_valid, y_train, y_valid)
     train_data = lgb.Dataset(
         X_train, label=y_train, categorical_feature=categorical, free_raw_data=False
     )
@@ -155,6 +177,24 @@ def run_optuna_study(
         sampler=optuna.samplers.TPESampler(seed=run_config.random_seed),
         pruner=optuna.pruners.HyperbandPruner(),
     )
+
+    cli_output.subsection("Search space")
+    cli_output.print_params(
+        "LightGBM search (ranges as Optuna suggestions)",
+        {
+            "learning_rate": "LogUniform(0.005, 0.75)",
+            "num_leaves": "LogInt(32, 512)",
+            "min_data_in_leaf": "LogInt(500, 10000)",
+            "min_gain_to_split": "Uniform(0.0, 1.0)",
+            "feature_fraction": "Uniform(0.6, 1.0)",
+            "bagging_fraction": "Uniform(0.6, 1.0)",
+            "bagging_freq": "Int(1, 10)",
+            "lambda_l1": "LogUniform(1e-8, 10)",
+            "lambda_l2": "LogUniform(1e-8, 10)",
+        },
+    )
+
+    cli_output.subsection(f"Running {n_trials} trials")
     study.optimize(
         objective,
         n_trials=n_trials,
@@ -167,6 +207,10 @@ def run_optuna_study(
     study.trials_dataframe().to_csv(out_dir / "trials.csv", index=False)
     with (out_dir / "study.pkl").open("wb") as f:
         pickle.dump(study, f)
+
+    cli_output.section("Tuning complete")
+    cli_output.print_optuna_summary(study)
+    cli_output.success(f"Wrote best_params.json, trials.csv, study.pkl under {out_dir}")
 
     logger.info(
         "Tuning complete for %s: best AP=%.6f over %d trials",

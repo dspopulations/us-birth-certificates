@@ -444,7 +444,7 @@ def run_model_analysis(
     condensed = squareform(distance, checks=True)
     dist_linkage = hierarchy.linkage(condensed, method="average")
     dendro_labels = X_eval.columns.to_list()
-    dendro = plot_utils.plot_dendrogram(
+    _, dendro = plot_utils.plot_dendrogram(
         dist_linkage,
         dendro_labels,
         model_idx,

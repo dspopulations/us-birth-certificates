@@ -14,6 +14,7 @@ from collections.abc import Iterable
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.figure import Figure
 
 DEFAULT_KS: tuple[int, ...] = (100, 500, 1000, 5000, 10000, 20000, 50000)
 DEFAULT_TAIL_FRACS: tuple[float, ...] = (1e-2, 1e-3, 1e-4, 1e-5)
@@ -115,12 +116,11 @@ def plot_precision_recall_at_k_curve(
     save: bool = False,
     output_dir: str = ".",
     file_stem: str = "precision_recall_at_k",
-    show: bool = True,
-) -> None:
+) -> tuple[Figure, Figure]:
     """Plot Precision@K and Recall@K vs K (log x-axis).
 
-    Two figures are produced (precision, recall). When ``save`` is True,
-    writes PNG + SVG to ``output_dir`` using ``file_stem`` as a basename
+    Returns ``(fig_precision, fig_recall)``. When ``save`` is True, writes
+    PNG + SVG to ``output_dir`` using ``file_stem`` as a basename
     (``_precision`` / ``_recall`` suffixes).
     """
     ks = pr_df["K"].to_numpy()
@@ -130,27 +130,26 @@ def plot_precision_recall_at_k_curve(
     if save:
         os.makedirs(output_dir, exist_ok=True)
 
+    figures: list[Figure] = []
     for metric_name, values, suffix in (
         ("Precision@K", prec, "precision"),
         ("Recall@K", rec, "recall"),
     ):
-        plt.figure(figsize=(9, 5))
-        plt.plot(ks, values, marker="o")
-        plt.xscale("log")
-        plt.xlabel("K (top-K flagged; log scale)")
-        plt.ylabel(metric_name)
-        plt.title(f"{title_prefix}: {metric_name}")
-        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.plot(ks, values, marker="o")
+        ax.set_xscale("log")
+        ax.set_xlabel("K (top-K flagged; log scale)")
+        ax.set_ylabel(metric_name)
+        ax.set_title(f"{title_prefix}: {metric_name}")
+        ax.grid(True, which="both", linestyle="--", linewidth=0.5)
         if save:
-            plt.savefig(
+            fig.savefig(
                 f"{output_dir}/{file_stem}_{suffix}.png",
                 dpi=300,
                 bbox_inches="tight",
             )
-            plt.savefig(
+            fig.savefig(
                 f"{output_dir}/{file_stem}_{suffix}.svg", bbox_inches="tight"
             )
-        if show:
-            plt.show()
-        else:
-            plt.close()
+        figures.append(fig)
+    return figures[0], figures[1]

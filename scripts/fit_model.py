@@ -48,7 +48,7 @@ import optuna
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from dspopulations_us_birth_certificates import data_utils, repl_utils
+from dspopulations_us_birth_certificates import cli_output, data_utils, repl_utils
 from dspopulations_us_birth_certificates.models import (
     MODELS,
     ModelConfig,
@@ -444,6 +444,12 @@ def optimize_hyperparameters(
     config: FitConfig,
 ) -> dict:
     """Run an Optuna search against a stratified split. Returns best params."""
+    cli_output.section("Hyperparameter search (Optuna)")
+    cli_output.info(
+        f"Trials=[bold]{config.optimize_trials}[/bold], "
+        f"num_boost_round=[bold]{config.num_boost_round}[/bold], "
+        f"early_stopping_rounds=[bold]{config.early_stopping_rounds}[/bold]"
+    )
     X_train, X_valid, y_train, y_valid = train_test_split(
         X,
         y,
@@ -451,6 +457,7 @@ def optimize_hyperparameters(
         stratify=y,
         random_state=config.random_seed,
     )
+    cli_output.print_split_summary(X_train, X_valid, y_train, y_valid)
     train_data = lgb.Dataset(
         X_train, label=y_train, categorical_feature=categorical, free_raw_data=False
     )
@@ -511,8 +518,8 @@ def optimize_hyperparameters(
     study.optimize(
         objective, n_trials=config.optimize_trials, show_progress_bar=True
     )
-    print(f"Best AP: {study.best_value:.6f}")
-    print(f"Best params: {study.best_params}")
+    cli_output.section("Tuning complete")
+    cli_output.print_optuna_summary(study)
     return study.best_params
 
 
@@ -611,25 +618,40 @@ def main(argv: list[str] | None = None) -> int:
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
+    cli_output.print_run_header(
+        command="fit_model",
+        profile=config.profile,
+        output_dir=config.output_dir,
+        model_id=config.model_id,
+    )
+
+    cli_output.section("Environment")
     repl_utils.print_environment_info()
-    print(f"\nOutput directory: {config.output_dir}\n")
+
+    cli_output.section("Fit configuration")
+    cli_output.print_fit_config(config)
 
     # Tuning (still inline — moves to scripts/tune_model.py in step 6). Skip
     # when --load-model is set: we're regenerating diagnostics, not fitting.
     if config.load_model is not None:
-        print(f"Loading saved model from {config.load_model}; skipping tuning + fit.")
+        cli_output.section("Loading saved model")
+        cli_output.info(
+            f"Loading [blue]{config.load_model}[/blue]; skipping tuning + fit."
+        )
         # Surface the hyperparameters actually used by the loaded booster so
         # ``best_params.json``, ``config.json``, and the manifest describe the
         # run faithfully. Prefer a sibling ``best_params.json`` if present
         # (richer than whatever LightGBM echoes back via booster.params).
         best_params = _recover_loaded_params(config.load_model)
+        cli_output.print_params("Recovered params", best_params)
     elif config.select_hyperparameters:
         X, y, categorical = _load_xy_for_tuning(config)
         ad_hoc = _build_model_config(config, params={})
         best_params = optimize_hyperparameters(X, y, categorical, ad_hoc, config)
     else:
         best_params = load_prior_best_params(config.prior_best_params_path)
-        print(f"Using prior best params: {best_params}")
+        cli_output.section("Using prior best params")
+        cli_output.print_params("Prior best params", best_params)
 
     (config.output_dir / "best_params.json").write_text(
         json.dumps(best_params, indent=2)
@@ -637,6 +659,10 @@ def main(argv: list[str] | None = None) -> int:
 
     model_config = _build_model_config(config, params=best_params)
     run_config = _build_run_config(config)
+
+    cli_output.section("Resolved model + run configuration")
+    cli_output.print_model_config(model_config)
+    cli_output.print_run_config(run_config)
 
     pipeline = LGBMClassifierPipeline(
         config=model_config, run_config=run_config, output_dir=config.output_dir
@@ -659,6 +685,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline.report(render=config.render)
 
     if config.write_predictions:
+        cli_output.section("Write predictions to DuckDB")
         gbm = pipeline.context.final_model
         features = list(model_config.categorical_features) + list(
             model_config.numeric_features
@@ -669,6 +696,9 @@ def main(argv: list[str] | None = None) -> int:
             features,
             list(model_config.categorical_features),
             config.duckdb_path,
+        )
+        cli_output.success(
+            f"Wrote predictions to {config.duckdb_path} (column p_ds_lb_pred_01)"
         )
 
     # Persist the full resolved config alongside artefacts for reproducibility.
@@ -684,7 +714,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
 
-    print(f"\nDone. Artefacts in {config.output_dir}")
+    cli_output.section("Done")
+    cli_output.success(f"Artefacts in {config.output_dir}")
     return 0
 
 

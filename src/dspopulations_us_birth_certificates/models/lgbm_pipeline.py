@@ -15,6 +15,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.models.base_pipeline import (
     EstimatorPipeline,
 )
@@ -45,6 +46,7 @@ class LGBMClassifierPipeline(EstimatorPipeline):
         )
 
     def train_final(self) -> lgb.Booster:
+        cli_output.section("Train final model")
         ctx = self.context
         if ctx.X_train is None:
             raise RuntimeError("prepare_features() must run before train_final().")
@@ -68,6 +70,12 @@ class LGBMClassifierPipeline(EstimatorPipeline):
         params = self._full_params()
         params.setdefault("feature_pre_filter", True)
 
+        cli_output.print_params("LightGBM parameters", params)
+        cli_output.info(
+            f"num_boost_round=[bold]{rc.num_boost_round}[/bold], "
+            f"early_stopping_rounds=[bold]{rc.early_stopping_rounds}[/bold]"
+        )
+
         gbm = lgb.train(
             params,
             train_data,
@@ -82,6 +90,17 @@ class LGBMClassifierPipeline(EstimatorPipeline):
 
         ctx.final_model = gbm
         ctx.best_iteration = int(gbm.best_iteration)
+        best_scores = gbm.best_score or {}
+        cli_output.success(
+            f"Training complete. best_iteration=[bold]{ctx.best_iteration}[/bold]"
+        )
+        for split, score_dict in best_scores.items():
+            cli_output.info(
+                f"[cyan]{split}[/cyan] best: "
+                + ", ".join(
+                    f"{metric}={val:.6f}" for metric, val in score_dict.items()
+                )
+            )
         return gbm
 
     def _predict_valid(self) -> np.ndarray:

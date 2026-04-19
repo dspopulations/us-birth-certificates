@@ -24,7 +24,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from dspopulations_us_birth_certificates import repl_utils, tuning
+from dspopulations_us_birth_certificates import cli_output, repl_utils, tuning
 from dspopulations_us_birth_certificates.models import MODELS, RunConfig
 
 
@@ -81,6 +81,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     ns = parse_args(argv)
+
+    out_dir = ns.output_root / ns.model_id
+    cli_output.print_run_header(
+        command="tune_model",
+        profile=ns.profile,
+        output_dir=out_dir,
+        model_id=ns.model_id,
+    )
+
+    cli_output.section("Environment")
     repl_utils.print_environment_info()
 
     definition = MODELS[ns.model_id]
@@ -93,7 +103,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
 
-    study = tuning.run_optuna_study(
+    cli_output.print_run_config(run_config)
+
+    tuning.run_optuna_study(
         definition,
         run_config,
         n_trials=ns.n_trials,
@@ -102,9 +114,8 @@ def main(argv: list[str] | None = None) -> int:
         db_path=str(ns.duckdb_path),
     )
 
-    print(f"\nBest AP: {study.best_value:.6f}")
-    print(f"Best params: {study.best_params}")
-    print(f"\nArtefacts written to {ns.output_root / ns.model_id}")
+    cli_output.section("Done")
+    cli_output.success(f"Artefacts written to {out_dir}")
     return 0
 
 

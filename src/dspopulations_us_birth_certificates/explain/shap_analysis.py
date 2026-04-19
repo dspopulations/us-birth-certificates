@@ -4,8 +4,10 @@ Wraps the repetitive ``shap.TreeExplainer`` + ``shap.plots.bar /
 beeswarm / scatter`` calls from notebooks and scripts into reusable
 helpers with simple, explicit signatures (booster + X_eval).
 
-A thin ``ModelFitContext``-aware layer will be added in step 4 once the
-pipeline lands.
+Plot helpers return the ``matplotlib.figure.Figure`` they produced so
+that notebook callers can display, tweak, or save them and CLI callers
+can ``plt.close(fig)`` to prevent accumulation without relying on a
+display toggle.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
+from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     import lightgbm as lgb
@@ -45,12 +48,10 @@ def shap_importance(explanation: shap.Explanation, feature_names) -> pd.DataFram
     ).sort_values("mean_abs_shap", ascending=False)
 
 
-def _maybe_save(output_dir: str, file_stem: str, save: bool) -> None:
-    if not save:
-        return
+def _save_fig(fig: Figure, output_dir: str, file_stem: str) -> None:
     os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(f"{output_dir}/{file_stem}.png", dpi=300, bbox_inches="tight")
-    plt.savefig(f"{output_dir}/{file_stem}.svg", bbox_inches="tight")
+    fig.savefig(f"{output_dir}/{file_stem}.png", dpi=300, bbox_inches="tight")
+    fig.savefig(f"{output_dir}/{file_stem}.svg", bbox_inches="tight")
 
 
 def plot_bar(
@@ -61,21 +62,17 @@ def plot_bar(
     save: bool = False,
     output_dir: str = ".",
     file_stem: str = "shap_bar",
-    show: bool = True,
     figsize: tuple[float, float] | None = None,
-) -> None:
+) -> Figure:
     """SHAP bar plot of mean absolute values."""
     fig_size = figsize or (8, max(6, max_display * 0.28))
     with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure(figsize=fig_size)
-        ax = fig.subplots()
+        fig, ax = plt.subplots(figsize=fig_size)
         ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
         shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
-        _maybe_save(output_dir, file_stem, save)
-        if show:
-            plt.show()
-        else:
-            plt.close(fig)
+        if save:
+            _save_fig(fig, output_dir, file_stem)
+    return fig
 
 
 def plot_beeswarm(
@@ -86,9 +83,8 @@ def plot_beeswarm(
     save: bool = False,
     output_dir: str = ".",
     file_stem: str = "shap_beeswarm",
-    show: bool = True,
     plot_size: tuple[float, float] = (8, 9),
-) -> None:
+) -> Figure:
     """SHAP beeswarm plot of per-row SHAP values."""
     with plt.rc_context({"axes.titlesize": 12}):
         shap.plots.beeswarm(
@@ -97,13 +93,13 @@ def plot_beeswarm(
             plot_size=plot_size,
             show=False,
         )
-        ax = plt.gca()
-        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        _maybe_save(output_dir, file_stem, save)
-        if show:
-            plt.show()
-        else:
-            plt.close(ax.figure)
+        fig = plt.gcf()
+        fig.gca().set_title(
+            f"Model {model_idx}: SHAP values for predictor variables"
+        )
+        if save:
+            _save_fig(fig, output_dir, file_stem)
+    return fig
 
 
 def plot_scatter(
@@ -115,8 +111,7 @@ def plot_scatter(
     save: bool = False,
     output_dir: str = ".",
     file_stem: str | None = None,
-    show: bool = True,
-) -> None:
+) -> Figure:
     """SHAP scatter for ``x_feature``, optionally coloured by ``colour_feature``.
 
     ``file_stem`` defaults to ``shap_<x>_vs_<colour>`` (or ``shap_<x>`` when no
@@ -130,9 +125,8 @@ def plot_scatter(
         )
     colour = explanation[:, colour_feature] if colour_feature else None
     shap.plots.scatter(explanation[:, x_feature], color=colour, show=False)
-    plt.title(f"Model {model_idx}: SHAP scatter — {x_feature}")
-    _maybe_save(output_dir, file_stem, save)
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    fig = plt.gcf()
+    fig.gca().set_title(f"Model {model_idx}: SHAP scatter - {x_feature}")
+    if save:
+        _save_fig(fig, output_dir, file_stem)
+    return fig

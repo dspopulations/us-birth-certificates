@@ -6,8 +6,8 @@ import json
 import os
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.figure import Figure
 
 
 def find_latest_manifest(experiment_name: str, output_root: str = "output") -> str:
@@ -103,7 +103,7 @@ def plot_metric_comparison(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "experiment_comparison",
-):
+) -> Figure:
     """Bar chart comparing a metric across experiments and model variants."""
     if metric not in df.columns:
         available = [
@@ -126,11 +126,11 @@ def plot_metric_comparison(
     ax.set_title(title or f"{metric} by Experiment and Model Variant")
     ax.legend(title="Model", labels=[f"Model {i}" for i in pivot.columns])
 
+    fig = ax.figure
     if save:
-        plt.savefig(f"{output_dir}/{file_name}.png", dpi=300, bbox_inches="tight")
-        plt.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
-
-    plt.show()
+        fig.savefig(f"{output_dir}/{file_name}.png", dpi=300, bbox_inches="tight")
+        fig.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
+    return fig
 
 
 def compare_feature_importance(

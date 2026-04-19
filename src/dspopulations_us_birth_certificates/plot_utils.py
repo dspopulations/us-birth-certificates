@@ -3,7 +3,14 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
+
+
+def _save_fig(fig: Figure, output_dir: str, file_name: str, dpi: int = 300) -> None:
+    """Save a figure as PNG and SVG."""
+    fig.savefig(f"{output_dir}/{file_name}.png", dpi=dpi, bbox_inches="tight")
+    fig.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
 
 
 def plot_roc_curve(
@@ -13,27 +20,19 @@ def plot_roc_curve(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "roc_curve",
-):
-    plt.figure(figsize=(4, 4))
-    plt.plot(fpr, tpr, label="ROC curve")
-    plt.plot([0, 1.0], [0, 1], "--", color="#999999", label="Random classifier")
-    plt.xlim([-0.03, 1.03])
-    plt.ylim([0, 1.03])
-    plt.xlabel("False Positive Rate (FPR)")
-    plt.ylabel("True Positive Rate (TPR)")
-    plt.title(f"Model {model_idx}: Receiver Operating Characteristic (ROC) Curve")
-    plt.legend(loc="lower right")
+) -> Figure:
+    fig, ax = plt.subplots(figsize=(4, 4))
+    ax.plot(fpr, tpr, label="ROC curve")
+    ax.plot([0, 1.0], [0, 1], "--", color="#999999", label="Random classifier")
+    ax.set_xlim([-0.03, 1.03])
+    ax.set_ylim([0, 1.03])
+    ax.set_xlabel("False Positive Rate (FPR)")
+    ax.set_ylabel("True Positive Rate (TPR)")
+    ax.set_title(f"Model {model_idx}: Receiver Operating Characteristic (ROC) Curve")
+    ax.legend(loc="lower right")
     if save:
-        plt.savefig(
-            f"{output_dir}/{file_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.savefig(
-            f"{output_dir}/{file_name}.svg",
-            bbox_inches="tight",
-        )
-    plt.show()
+        _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_precision_recall_curve(
@@ -43,26 +42,18 @@ def plot_precision_recall_curve(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "precision_recall_curve",
-):
-    plt.figure(figsize=(4, 4))
-    plt.plot(fpr, tpr, label="Precision-Recall curve")
-    plt.xlim([-0.03, 1.03])
-    plt.ylim([0, 1.03])
-    plt.xlabel("Recall [TP / (TP + FN)]")
-    plt.ylabel("Precision [TP / (TP + FP)]")
-    plt.title(f"Model {model_idx}: Precision-Recall Curve")
-    plt.legend(loc="lower right")
+) -> Figure:
+    fig, ax = plt.subplots(figsize=(4, 4))
+    ax.plot(fpr, tpr, label="Precision-Recall curve")
+    ax.set_xlim([-0.03, 1.03])
+    ax.set_ylim([0, 1.03])
+    ax.set_xlabel("Recall [TP / (TP + FN)]")
+    ax.set_ylabel("Precision [TP / (TP + FP)]")
+    ax.set_title(f"Model {model_idx}: Precision-Recall Curve")
+    ax.legend(loc="lower right")
     if save:
-        plt.savefig(
-            f"{output_dir}/{file_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.savefig(
-            f"{output_dir}/{file_name}.svg",
-            bbox_inches="tight",
-        )
-    plt.show()
+        _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_permutation_importances(
@@ -72,7 +63,7 @@ def plot_permutation_importances(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "permutation_importances",
-):
+) -> Figure:
     sorted_importances_idx = result.importances_mean.argsort()
 
     importances = pd.DataFrame(
@@ -86,17 +77,10 @@ def plot_permutation_importances(
     ax.set_xlabel("Decrease in average precision")
     ax.set_ylabel("Predictor variable")
 
+    fig = ax.figure
     if save:
-        plt.savefig(
-            f"{output_dir}/{file_name}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.savefig(
-            f"{output_dir}/{file_name}.svg",
-            bbox_inches="tight",
-        )
-    plt.show()
+        _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_dendrogram(
@@ -106,26 +90,32 @@ def plot_dendrogram(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "dendrogram",
-):
+) -> tuple[Figure, dict]:
+    """Draw a right-oriented dendrogram.
+
+    Returns both the figure and the scipy ``dendrogram`` dict (needed by
+    ``plot_correlation_heatmap`` for its leaf ordering).
+    """
     xsize = 6
     ysize = max(6, min(15, 0.25 * len(labels)))
 
-    plt.figure(figsize=(xsize, ysize))
+    fig, ax = plt.subplots(figsize=(xsize, ysize))
 
     dendro = hierarchy.dendrogram(
         linkage,
         labels=labels,
         orientation="right",
-        ax=plt.axes(),
+        ax=ax,
     )
 
-    plt.vlines(0.5, 0, 500, linestyle="--", color="#b2b4549f", linewidth=2)
-    plt.xlabel("Linkage distance (increase in within-cluster variance)")
-    plt.ylabel("Predictors")
-    plt.title(f"Model {model_idx}: Hierarchical clustering of predictors")
-    plt.show()
+    ax.vlines(0.5, 0, 500, linestyle="--", color="#b2b4549f", linewidth=2)
+    ax.set_xlabel("Linkage distance (increase in within-cluster variance)")
+    ax.set_ylabel("Predictors")
+    ax.set_title(f"Model {model_idx}: Hierarchical clustering of predictors")
 
-    return dendro
+    if save:
+        _save_fig(fig, output_dir, file_name)
+    return fig, dendro
 
 
 def plot_correlation_heatmap(
@@ -136,7 +126,7 @@ def plot_correlation_heatmap(
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "correlation_heatmap",
-):
+) -> Figure:
     C = corr[dendro["leaves"], :][:, dendro["leaves"]]
     labels = dendro["ivl"]
     dendro_idx = np.arange(len(labels))
@@ -160,7 +150,7 @@ def plot_correlation_heatmap(
         for i in range(n):
             for j in range(n):
                 if i == j:
-                    continue  # skip diagonal
+                    continue
                 if abs(C[i, j]) < label_threshold:
                     continue
 
@@ -174,19 +164,11 @@ def plot_correlation_heatmap(
                     color="white" if abs(C[i, j]) < 0.6 else "black",
                 )
 
-        plt.colorbar(im, ax=ax, fraction=0.03, pad=0.025)
+        fig.colorbar(im, ax=ax, fraction=0.03, pad=0.025)
 
         if save:
-            plt.savefig(f"{output_dir}/{file_name}.png", dpi=300, bbox_inches="tight")
-            plt.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
-
-        plt.show()
-
-
-def _save_fig(output_dir: str, file_name: str, dpi: int = 300):
-    """Save current figure as PNG and SVG."""
-    plt.savefig(f"{output_dir}/{file_name}.png", dpi=dpi, bbox_inches="tight")
-    plt.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
+            _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_shap_bar(
@@ -196,18 +178,17 @@ def plot_shap_bar(
     save: bool = False,
     output_dir: str = ".",
     file_name: str | None = None,
-):
+) -> Figure:
     import shap
 
     file_name = file_name or f"model_{model_idx}_shap_bar"
     with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure(figsize=(8, 12))
-        ax = fig.subplots()
+        fig, ax = plt.subplots(figsize=(8, 12))
         ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        shap.plots.bar(explanation, max_display=max_display, ax=ax)
+        shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
         if save:
-            _save_fig(output_dir, file_name)
-        plt.show()
+            _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_shap_beeswarm(
@@ -218,18 +199,19 @@ def plot_shap_beeswarm(
     save: bool = False,
     output_dir: str = ".",
     file_name: str | None = None,
-):
+) -> Figure:
     import shap
 
     file_name = file_name or f"model_{model_idx}_shap_beeswarm"
     with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure()
-        ax = fig.subplots()
-        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        shap.plots.beeswarm(explanation, max_display=max_display, plot_size=plot_size)
+        shap.plots.beeswarm(
+            explanation, max_display=max_display, plot_size=plot_size, show=False
+        )
+        fig = plt.gcf()
+        fig.suptitle(f"Model {model_idx}: SHAP values for predictor variables")
         if save:
-            _save_fig(output_dir, file_name)
-        plt.show()
+            _save_fig(fig, output_dir, file_name)
+    return fig
 
 
 def plot_shap_scatter(
@@ -240,11 +222,14 @@ def plot_shap_scatter(
     save: bool = False,
     output_dir: str = ".",
     file_name: str | None = None,
-):
+) -> Figure:
     import shap
 
     file_name = file_name or f"model_{model_idx}_shap_{feature_x}_vs_{feature_color}"
-    shap.plots.scatter(explanation[:, feature_x], color=explanation[:, feature_color])
+    shap.plots.scatter(
+        explanation[:, feature_x], color=explanation[:, feature_color], show=False
+    )
+    fig = plt.gcf()
     if save:
-        _save_fig(output_dir, file_name)
-    plt.show()
+        _save_fig(fig, output_dir, file_name)
+    return fig
