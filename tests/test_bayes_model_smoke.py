@@ -15,7 +15,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from dspopulations_us_birth_certificates.bayes import (
+pytest.importorskip("pymc")
+
+from dspopulations_us_birth_certificates.bayes import (  # noqa: E402
     MODELS,
     BayesFitContext,
     BayesRunConfig,
