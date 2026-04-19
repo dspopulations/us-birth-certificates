@@ -6,19 +6,50 @@ Public API:
     - ShapScatterSpec — declarative spec for a SHAP scatter plot.
     - ModelConfig — serialisable snapshot of a ``ModelDefinition``.
     - ModelFitContext — mutable state threaded through pipeline steps.
-
-Implementations are intentionally omitted in this scaffolding PR. Follow-up
-work in step 3 of ``docs/refactor-plan.md`` populates the fields and methods.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
 RunConfigName = Literal["dev", "test", "reporting"]
+
+ShapMode = Literal["skip", "subsample", "full"]
+
+
+# Preset values for each named run configuration. See docs/refactor-plan.md
+# for the rationale behind the specific numbers. Adjustments to these presets
+# are a deliberate commit by the author — they are load-bearing for
+# reproducibility of tuned hyperparameters.
+_PRESETS: dict[str, dict[str, Any]] = {
+    "dev": {
+        "n_trials": 10,
+        "num_boost_round": 500,
+        "early_stopping_rounds": 50,
+        "cv_splits": 3,
+        "shap_mode": "skip",
+        "shap_subsample_size": None,
+    },
+    "test": {
+        "n_trials": 50,
+        "num_boost_round": 10_000,
+        "early_stopping_rounds": 200,
+        "cv_splits": 5,
+        "shap_mode": "subsample",
+        "shap_subsample_size": 5_000,
+    },
+    "reporting": {
+        "n_trials": 200,
+        "num_boost_round": 50_000,
+        "early_stopping_rounds": 200,
+        "cv_splits": 5,
+        "shap_mode": "full",
+        "shap_subsample_size": None,
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -30,14 +61,33 @@ class RunConfig:
     num_boost_round: int
     early_stopping_rounds: int
     cv_splits: int
-    shap_mode: Literal["skip", "subsample", "full"]
+    shap_mode: ShapMode
     shap_subsample_size: int | None = None
     random_seed: int = 47
 
     @classmethod
-    def from_name(cls, name: RunConfigName) -> RunConfig:
-        """Return the preset configuration for ``name``."""
-        raise NotImplementedError("populated in refactor step 3")
+    def from_name(cls, name: RunConfigName, *, random_seed: int = 47) -> RunConfig:
+        """Return the preset configuration for ``name``.
+
+        ``random_seed`` overrides the default for the returned instance,
+        since determinism is usually controlled at the CLI layer rather
+        than baked into the preset.
+        """
+        if name not in _PRESETS:
+            raise ValueError(
+                f"Unknown RunConfig preset {name!r}. "
+                f"Valid names: {sorted(_PRESETS)}"
+            )
+        return cls(name=name, random_seed=random_seed, **_PRESETS[name])
+
+    @classmethod
+    def preset_names(cls) -> tuple[str, ...]:
+        """Return valid preset names in semantic order (dev → test → reporting).
+
+        The order matches ``_PRESETS`` insertion order so argparse's ``--help``
+        output agrees with the documented progression in the CLI docstring.
+        """
+        return tuple(_PRESETS)
 
 
 @dataclass(frozen=True)
@@ -80,8 +130,34 @@ class ModelConfig:
     notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serialisable dict representation."""
-        raise NotImplementedError("populated in refactor step 3")
+        """Return a JSON-serialisable dict representation.
+
+        Tuples become lists; ``date`` values become ISO strings so the
+        result can be written straight to ``json.dumps``.
+        """
+        return {
+            "model_id": self.model_id,
+            "variant_of": self.variant_of,
+            "target_var": self.target_var,
+            "numeric_features": list(self.numeric_features),
+            "categorical_features": list(self.categorical_features),
+            "base_params": dict(self.base_params),
+            "params": dict(self.params),
+            "train_config": dict(self.train_config),
+            "year_range": list(self.year_range),
+            "include_unknown": self.include_unknown,
+            "selection_history": [
+                {
+                    **asdict(step),
+                    "step_date": step.step_date.isoformat(),
+                    "features_removed": list(step.features_removed),
+                    "features_added": list(step.features_added),
+                }
+                for step in self.selection_history
+            ],
+            "shap_scatter_specs": [asdict(s) for s in self.shap_scatter_specs],
+            "notes": self.notes,
+        }
 
 
 @dataclass

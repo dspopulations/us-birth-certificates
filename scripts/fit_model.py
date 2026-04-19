@@ -8,28 +8,31 @@ SHAP / correlation diagnostics.
 
 Configuration profiles
 ----------------------
-Pick a profile with ``--profile {test,dev,reporting}``:
+Pick a profile with ``--profile {dev,test,reporting}``. Presets are
+sourced from ``RunConfig.from_name()`` in the package so the CLI and
+the library agree on what each name means.
 
-- ``test``: smoke test — tiny year slice, no Optuna, no expensive
-  diagnostics. Seconds-to-minutes. Use to verify the pipeline runs.
-- ``dev``: quick iteration — 5-year slice, few Optuna trials, skip
-  SHAP. Use while developing feature sets.
-- ``reporting``: full run — all configured years, 200 Optuna trials,
-  full permutation + SHAP diagnostics. Use for publication-quality
-  numbers.
+- ``dev``: fast inner loop — 2-year slice, 10 Optuna trials, 500 boost
+  rounds, SHAP off. Use while developing feature sets.
+- ``test``: moderate fidelity — 5-year slice, 50 Optuna trials, 10 000
+  boost rounds, SHAP on a 5 000-row subsample. Use for pre-PR
+  validation.
+- ``reporting``: full run — 2016–2024, 200 Optuna trials, 50 000 boost
+  rounds, full permutation + SHAP. Use for publication-quality numbers.
 
-Individual flags always override profile defaults.
+Individual flags always override profile defaults. For a true smoke
+test, combine ``--profile dev`` with ``--no-optimize`` and a small
+``--num-boost-round``.
 
 Examples
 --------
-    # Reporting-grade run
+    python scripts/fit_model.py --profile dev
+    python scripts/fit_model.py --profile test
     python scripts/fit_model.py --profile reporting
 
-    # Dev run but with a longer year slice
-    python scripts/fit_model.py --profile dev --start-year 2010
-
-    # Smoke test without any flags
-    python scripts/fit_model.py --profile test
+    # Smoke test — seconds rather than minutes
+    python scripts/fit_model.py --profile dev --no-optimize \\
+        --num-boost-round 200 --no-permutation --no-shap
 """
 
 from __future__ import annotations
@@ -59,6 +62,7 @@ from dspopulations_us_birth_certificates import (
     stats_utils,
 )
 from dspopulations_us_birth_certificates.explain import calibration, shap_analysis
+from dspopulations_us_birth_certificates.models import RunConfig
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -131,44 +135,37 @@ DEFAULT_PRIOR_BEST_PARAMS: dict = {
 }
 
 
-# Built-in configuration profiles. Each profile is a dict of defaults that
-# override the built-in argparse defaults when --profile is supplied.
-# Any individual CLI flag still takes precedence over the profile default.
-PROFILES: dict[str, dict] = {
-    "test": {
-        "start_year": 2023,
-        "end_year": 2024,
-        "optimize": False,
-        "optimize_trials": 1,
-        "num_boost_round": 500,
-        "early_stopping_rounds": 20,
-        "plots": False,
-        "permutation": False,
-        "shap": False,
-    },
-    "dev": {
-        "start_year": 2023,
-        "end_year": 2024,
-        "optimize": True,
-        "optimize_trials": 5,
-        "num_boost_round": 2_000,
-        "early_stopping_rounds": 30,
-        "plots": True,
-        "permutation": False,
-        "shap": False,
-    },
-    "reporting": {
-        "start_year": 2016,
-        "end_year": 2024,
-        "optimize": True,
-        "optimize_trials": 200,
-        "num_boost_round": 50_000,
-        "early_stopping_rounds": 200,
-        "plots": True,
-        "permutation": True,
-        "shap": True,
-    },
+# Built-in configuration profiles are sourced from the package's RunConfig
+# presets (see src/.../models/common.py), so the CLI and the library agree on
+# what each name means. Year range is profile-specific to the CLI (RunConfig
+# is data-agnostic) and lives in this mapping.
+_CLI_PROFILE_YEAR_RANGES: dict[str, tuple[int, int]] = {
+    "dev": (2023, 2024),
+    "test": (2020, 2024),
+    "reporting": (2016, 2024),
 }
+
+
+def _profile_defaults(name: str) -> dict[str, object]:
+    """Translate a RunConfig preset into argparse defaults for fit_model.
+
+    Keeps the CLI a thin view of the shared presets: only the runtime knobs
+    that ``fit_model.py`` actually exposes are returned.
+    """
+    rc = RunConfig.from_name(name)
+    start_year, end_year = _CLI_PROFILE_YEAR_RANGES[name]
+    return {
+        "start_year": start_year,
+        "end_year": end_year,
+        "optimize": rc.n_trials > 0,
+        "optimize_trials": rc.n_trials,
+        "num_boost_round": rc.num_boost_round,
+        "early_stopping_rounds": rc.early_stopping_rounds,
+        "plots": True,
+        "permutation": rc.shap_mode != "skip",
+        "shap": rc.shap_mode != "skip",
+        "shap_subsample_size": rc.shap_subsample_size,
+    }
 
 
 @dataclass
@@ -189,6 +186,7 @@ class FitConfig:
     save_plots: bool = True
     run_permutation: bool = True
     run_shap: bool = True
+    shap_subsample_size: int | None = None
     write_predictions: bool = False
     duckdb_path: Path = Path("data/us_births.db")
     profile: str | None = None
@@ -199,9 +197,11 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
     # applied to the main parser before it runs. Any explicit CLI flag
     # still wins because argparse gives CLI values priority over defaults.
     pre = argparse.ArgumentParser(add_help=False)
-    pre.add_argument("--profile", choices=sorted(PROFILES.keys()), default=None)
+    pre.add_argument(
+        "--profile", choices=list(RunConfig.preset_names()), default=None
+    )
     pre_ns, _ = pre.parse_known_args(argv)
-    profile_defaults = PROFILES.get(pre_ns.profile, {}) if pre_ns.profile else {}
+    profile_defaults = _profile_defaults(pre_ns.profile) if pre_ns.profile else {}
 
     p = argparse.ArgumentParser(
         description="Fit a LightGBM model for Down syndrome live-birth prediction.",
@@ -211,11 +211,11 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
     # Profile selector (re-declared on the main parser so it shows in --help)
     p.add_argument(
         "--profile",
-        choices=sorted(PROFILES.keys()),
+        choices=list(RunConfig.preset_names()),
         default=None,
         help=(
-            "Configuration profile preset. Individual flags override profile "
-            "defaults. See module docstring for what each profile sets."
+            "Configuration profile preset — sourced from RunConfig.from_name() "
+            "in the package. Individual flags override profile defaults."
         ),
     )
 
@@ -289,6 +289,18 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         default=True,
         help="Compute SHAP values and plots (slow).",
     )
+    p.add_argument(
+        "--shap-subsample-size",
+        type=int,
+        default=None,
+        help=(
+            "If set, restrict the SHAP explanation set to roughly this many "
+            "rows (all positives are kept; the negative budget is split "
+            "evenly between random and hard negatives). Defaults to the "
+            "profile's ``shap_subsample_size``; None means the full default "
+            "explanation set."
+        ),
+    )
 
     # DB writeback
     p.add_argument(
@@ -328,6 +340,7 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         save_plots=ns.plots,
         run_permutation=ns.permutation,
         run_shap=ns.shap,
+        shap_subsample_size=ns.shap_subsample_size,
         write_predictions=ns.write_predictions,
         duckdb_path=ns.duckdb_path,
         profile=ns.profile,
@@ -516,7 +529,21 @@ def run_diagnostics(
     if not (config.run_permutation or config.run_shap):
         return
 
-    X_eval, y_eval = ml_utils.build_explain_set(gbm, X_valid, y_valid, categorical)
+    explain_kwargs: dict[str, int] = {}
+    if config.shap_subsample_size is not None and config.shap_subsample_size > 0:
+        # Split the negative budget roughly evenly between random and hard
+        # negatives; all positives are always kept.
+        n_pos = int((np.asarray(y_valid) == 1).sum())
+        neg_budget = max(0, config.shap_subsample_size - n_pos)
+        half = neg_budget // 2
+        explain_kwargs = {
+            "n_neg_rand": half,
+            "n_neg_hard": neg_budget - half,
+        }
+
+    X_eval, y_eval = ml_utils.build_explain_set(
+        gbm, X_valid, y_valid, categorical, **explain_kwargs
+    )
     model_wrapped = ml_utils.LGBMEstimator(gbm)
 
     if config.run_permutation:
