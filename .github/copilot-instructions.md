@@ -21,6 +21,17 @@ conda activate dspop-us-birth-certificates
 
 The package itself is installed editable (`-e ./`) as part of `environment.yml`. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
 
+## Shared utilities (`dse_research_utils`)
+
+Notebooks and scripts reference a shared external package (`dse_research_utils`) from the sibling [`research`](https://github.com/dseinternational/research) repository for environment setup, plot styling, and metadata reporting. Import paths start with `dse_research_utils.*`.
+
+- `environment.yml` installs it editable from a relative path: `-e ../../dseinternational/research/src/python` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`). The sibling repo must be cloned alongside this one.
+- Scripts call `dse_research_utils.environment.setup.init_script()` at the top of `main()` to apply the default matplotlib style.
+- Notebooks call `dse_research_utils.environment.setup.init_workbook()` (style + environment summary) followed by `dse_research_utils.metadata.packages.report_package_versions(PACKAGE_LIST)` for reproducibility.
+- Plotting code imports `dse_research_utils.plot.styles` and uses its `FIGSIZE_*`, `COLOUR_*`, `DPI_*` constants instead of hardcoded literals.
+- The project-wide `PACKAGE_LIST` (used for version reporting) is re-exported from `dspopulations_us_birth_certificates`.
+- `src/.../repl_utils.py` is a thin compatibility shim that delegates to the shared library — new code should import from `dse_research_utils` directly.
+
 - Lint: `ruff check`
 - Format: `ruff format`
 - Tests: `pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, `-q`). The `tests/` directory does not yet exist — create it when adding tests.

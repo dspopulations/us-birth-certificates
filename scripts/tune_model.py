@@ -24,7 +24,10 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from dspopulations_us_birth_certificates import cli_output, repl_utils, tuning
+import dse_research_utils.environment.setup as setup
+import dse_research_utils.metadata.packages as package_metadata
+
+from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output, tuning
 from dspopulations_us_birth_certificates.models import MODELS, RunConfig
 
 
@@ -81,6 +84,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     ns = parse_args(argv)
+    setup.init_script()
 
     out_dir = ns.output_root / ns.model_id
     cli_output.print_run_header(
@@ -91,16 +95,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cli_output.section("Environment")
-    repl_utils.print_environment_info()
+    package_metadata.report_package_versions(list(PACKAGE_LIST))
 
     definition = MODELS[ns.model_id]
     base = RunConfig.from_name(ns.profile, random_seed=ns.random_seed)
     run_config = replace(
         base,
         num_boost_round=ns.num_boost_round or base.num_boost_round,
-        early_stopping_rounds=(
-            ns.early_stopping_rounds or base.early_stopping_rounds
-        ),
+        early_stopping_rounds=(ns.early_stopping_rounds or base.early_stopping_rounds),
     )
 
     cli_output.print_run_config(run_config)

@@ -35,9 +35,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+import dse_research_utils.environment.setup as setup
+import dse_research_utils.metadata.packages as package_metadata
 import numpy as np
 
-from dspopulations_us_birth_certificates import cli_output, repl_utils
+from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
 from dspopulations_us_birth_certificates.bayes import (
     MODELS,
     BayesFitContext,
@@ -195,6 +197,7 @@ def _build_run_config(cli: BayesFitCliConfig) -> BayesRunConfig:
 
 def main(argv: list[str] | None = None) -> int:
     cli = parse_args(argv)
+    setup.init_script()
     np.random.seed(cli.random_seed)
     cli.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -204,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cli_output.section("Environment")
-    repl_utils.print_environment_info()
+    package_metadata.report_package_versions(list(PACKAGE_LIST))
 
     cli_output.section("Run configuration")
     run_config = _build_run_config(cli)

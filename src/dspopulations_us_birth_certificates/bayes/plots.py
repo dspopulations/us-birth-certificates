@@ -1,10 +1,15 @@
-"""Posterior plots for Bayesian cell models."""
+"""Posterior plots for Bayesian cell models.
+
+Uses shared plot style constants from ``dse_research_utils.plot.styles``
+so figures match the conventions of sibling DSE research repos.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import dse_research_utils.plot.styles as plot_styles
 import numpy as np
 import pandas as pd
 
@@ -14,7 +19,7 @@ if TYPE_CHECKING:
 
 def _save(fig, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path.with_suffix(".png"), dpi=300, bbox_inches="tight")
+    fig.savefig(path.with_suffix(".png"), dpi=plot_styles.DPI_FILE, bbox_inches="tight")
     fig.savefig(path.with_suffix(".svg"), bbox_inches="tight")
 
 
@@ -58,10 +63,24 @@ def plot_trend_by_dim(
     lo = hdi[..., 0]
     hi = hdi[..., 1]
 
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.fill_between(unique, lo, hi, alpha=0.3, label=f"{int(hdi_prob * 100)}% HDI")
-    ax.plot(unique, mean, lw=2, label="Posterior mean")
-    ax.plot(unique, observed_rate, "o", color="black", label="Observed", markersize=4)
+    fig, ax = plt.subplots(figsize=plot_styles.FIGSIZE_MD)
+    ax.fill_between(
+        unique,
+        lo,
+        hi,
+        alpha=0.3,
+        color=plot_styles.COLOUR_BLUE,
+        label=f"{int(hdi_prob * 100)}% HDI",
+    )
+    ax.plot(unique, mean, lw=2, color=plot_styles.COLOUR_BLUE, label="Posterior mean")
+    ax.plot(
+        unique,
+        observed_rate,
+        "o",
+        color=plot_styles.TEXT_COLOUR,
+        label="Observed",
+        markersize=4,
+    )
     ax.set_xlabel(dim)
     ax.set_ylabel("DS rate per birth")
     ax.set_title(f"Posterior cell-weighted rate by {dim}")
@@ -79,7 +98,7 @@ def plot_ppc(
     import arviz as az
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(7, 4))
+    fig, ax = plt.subplots(figsize=plot_styles.FIGSIZE_MD)
     az.plot_ppc(idata, num_pp_samples=100, ax=ax)
     _save(fig, output_path)
     plt.close(fig)
@@ -97,6 +116,7 @@ def plot_trace(
 
     axes = az.plot_trace(idata, var_names=list(var_names))
     fig = axes.ravel()[0].figure
-    fig.set_size_inches(10, max(2, 1.5 * len(var_names)))
+    width, _ = plot_styles.FIGSIZE_LG
+    fig.set_size_inches(width, max(2, 1.5 * len(var_names)))
     _save(fig, output_path)
     plt.close(fig)

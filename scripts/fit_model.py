@@ -41,6 +41,8 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 
+import dse_research_utils.environment.setup as setup
+import dse_research_utils.metadata.packages as package_metadata
 import joblib
 import lightgbm as lgb
 import numpy as np
@@ -48,7 +50,7 @@ import optuna
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from dspopulations_us_birth_certificates import cli_output, data_utils, repl_utils
+from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output, data_utils
 from dspopulations_us_birth_certificates.models import (
     MODELS,
     ModelConfig,
@@ -659,6 +661,7 @@ def write_predictions_to_duckdb(
 
 def main(argv: list[str] | None = None) -> int:
     config = parse_args(argv)
+    setup.init_script()
     np.random.seed(config.random_seed)
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -671,7 +674,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cli_output.section("Environment")
-    repl_utils.print_environment_info()
+    package_metadata.report_package_versions(list(PACKAGE_LIST))
 
     cli_output.section("Fit configuration")
     cli_output.print_fit_config(config)

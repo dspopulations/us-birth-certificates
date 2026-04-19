@@ -124,48 +124,6 @@ def print_kv(title: str, items: Iterable[tuple[str, Any]]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Environment
-# ---------------------------------------------------------------------------
-
-
-def print_environment_table(info_dict: Mapping[str, Any]) -> None:
-    """Render ``repl_utils.get_environment_info`` output as a two-column table."""
-    ordering = (
-        "date",
-        "platform",
-        "platform_version",
-        "cpu",
-        "cores",
-        "physical_cores",
-        "ram",
-        "ram_available",
-        "cuda",
-        "cuda_device_count",
-        "cuda_device_0",
-        "python",
-        "numpy",
-        "pandas",
-        "scipy",
-        "sklearn",
-        "lightgbm",
-        "pytorch",
-        "pymc",
-        "pytensor",
-        "arviz",
-    )
-    items: list[tuple[str, Any]] = []
-    seen: set[str] = set()
-    for k in ordering:
-        if k in info_dict:
-            items.append((k, info_dict[k]))
-            seen.add(k)
-    for k, v in info_dict.items():
-        if k not in seen:
-            items.append((k, v))
-    console.print(kv_table("Environment", items, key_header="Item"))
-
-
-# ---------------------------------------------------------------------------
 # Config / run setup
 # ---------------------------------------------------------------------------
 
@@ -252,9 +210,7 @@ def print_run_config(run_config: Any) -> None:
     console.print(kv_table("Run configuration", rows))
 
 
-def print_params(
-    title: str, params: Mapping[str, Any], *, style: str = "cyan"
-) -> None:
+def print_params(title: str, params: Mapping[str, Any], *, style: str = "cyan") -> None:
     """Pretty-print a parameter dict (e.g. best Optuna params)."""
     if not params:
         console.print(f"[dim]{title}: (none)[/dim]")
@@ -378,7 +334,9 @@ def print_gain_importance(df, *, n: int = 15) -> None:
     if df is None or len(df) == 0:
         warning("No gain-importance frame available.")
         return
-    console.print(_importance_table("Gain importance", df, "feature", "importance_gain", n=n))
+    console.print(
+        _importance_table("Gain importance", df, "feature", "importance_gain", n=n)
+    )
 
 
 def print_permutation_importance(df, *, n: int = 15) -> None:
@@ -459,9 +417,9 @@ def print_optuna_summary(study: Any, *, n_top: int = 10) -> None:
         table.add_column("min_data", justify="right")
         table.add_column("feat_frac", justify="right")
         table.add_column("bag_frac", justify="right")
-        ranked = sorted(
-            completed, key=lambda t: (t.value is None, -(t.value or 0.0))
-        )[:n_top]
+        ranked = sorted(completed, key=lambda t: (t.value is None, -(t.value or 0.0)))[
+            :n_top
+        ]
         for t in ranked:
             p = t.params
             table.add_row(
