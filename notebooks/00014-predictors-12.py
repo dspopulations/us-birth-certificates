@@ -34,7 +34,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optuna
 import pandas as pd
-import shap
 from lightgbm import early_stopping, log_evaluation
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform
@@ -49,6 +48,7 @@ from dspopulations_us_birth_certificates import (
     repl_utils,
     stats_utils,
 )
+from dspopulations_us_birth_certificates.explain import calibration, shap_analysis
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
@@ -296,92 +296,10 @@ for k, v in params.items():
 # %% [markdown]
 # ## Per-model analysis helper
 #
-
-# %%
-def precision_recall_at_k(
-    y_true: np.ndarray,
-    y_score: np.ndarray,
-    ks=KS,
-) -> pd.DataFrame:
-    """Precision@K / Recall@K over a range of cutoffs."""
-    y_true = np.asarray(y_true).astype(int)
-    y_score = np.asarray(y_score, dtype=float)
-
-    if y_true.ndim != 1 or y_score.ndim != 1 or y_true.shape[0] != y_score.shape[0]:
-        raise ValueError("y_true and y_score must be 1D arrays of the same length.")
-
-    n = y_true.shape[0]
-    pos_total = int(y_true.sum())
-    if pos_total == 0:
-        raise ValueError("y_true contains no positives; recall is undefined.")
-
-    order = np.argsort(-y_score, kind="mergesort")
-    y_sorted = y_true[order]
-    ctp = np.cumsum(y_sorted)
-
-    rows = []
-    for K in ks:
-        k = int(min(max(K, 1), n))
-        tp = int(ctp[k - 1])
-        rows.append((k, tp, tp / k, tp / pos_total))
-
-    return pd.DataFrame(rows, columns=["K", "tp", "precision_at_k", "recall_at_k"])
-
-
-def plot_precision_recall_at_k(pr_df: pd.DataFrame, title_prefix: str = "Validation"):
-    ks = pr_df["K"].to_numpy()
-    prec = pr_df["precision_at_k"].to_numpy()
-    rec = pr_df["recall_at_k"].to_numpy()
-
-    plt.figure(figsize=(9, 5))
-    plt.plot(ks, prec, marker="o")
-    plt.xscale("log")
-    plt.xlabel("K (top-K flagged; log scale)")
-    plt.ylabel("Precision@K")
-    plt.title(f"{title_prefix}: Precision@K")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
-    plt.show()
-
-    plt.figure(figsize=(9, 5))
-    plt.plot(ks, rec, marker="o")
-    plt.xscale("log")
-    plt.xlabel("K (top-K flagged; log scale)")
-    plt.ylabel("Recall@K")
-    plt.title(f"{title_prefix}: Recall@K")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
-    plt.show()
-
-
-def tail_calibration_table(y, p, fracs=(1e-2, 1e-3, 1e-4, 1e-5)):
-    y = np.asarray(y).astype(int)
-    p = np.asarray(p).astype(float)
-    order = np.argsort(-p)
-    y_sorted = y[order]
-    p_sorted = p[order]
-    N = len(y)
-    rows = []
-    for f in fracs:
-        k = max(1, int(round(N * f)))
-        y_top = y_sorted[:k]
-        p_top = p_sorted[:k]
-        obs_rate = y_top.mean()
-        pred_rate = p_top.mean()
-        tp = int(y_top.sum())
-        fp = int(k - tp)
-        rows.append(
-            {
-                "top_frac": f,
-                "k": k,
-                "pred_rate_mean": pred_rate,
-                "obs_rate": obs_rate,
-                "tp": tp,
-                "fp": fp,
-                "pred_minus_obs": pred_rate - obs_rate,
-                "ratio_pred_to_obs": (pred_rate / obs_rate) if obs_rate > 0 else np.nan,
-            }
-        )
-    return pd.DataFrame(rows)
-
+# Helpers for precision/recall at K, tail calibration, and SHAP plots live in
+# `dspopulations_us_birth_certificates.explain` (see
+# `explain/calibration.py` and `explain/shap_analysis.py`).
+#
 
 # %%
 def run_model_analysis(
@@ -463,12 +381,20 @@ def run_model_analysis(
     )
 
     if show_pr_at_k:
-        pr_valid = precision_recall_at_k(y_valid.to_numpy(), p_valid, ks=KS)
+        pr_valid = calibration.precision_recall_at_k(
+            y_valid.to_numpy(), p_valid, ks=KS
+        )
         pr_valid.to_csv(
             f"{OUTPUT_DIR}/model_{model_idx}_precision_recall_at_k.csv", index=False
         )
         print(pr_valid)
-        plot_precision_recall_at_k(pr_valid, title_prefix=f"Model {model_idx} validation")
+        calibration.plot_precision_recall_at_k_curve(
+            pr_valid,
+            title_prefix=f"Model {model_idx} validation",
+            save=SAVE_PLOTS,
+            output_dir=OUTPUT_DIR,
+            file_stem=f"model_{model_idx}_precision_recall_at_k",
+        )
 
     # Built-in gain importance
     df_imp_gain = pd.DataFrame(
@@ -537,72 +463,42 @@ def run_model_analysis(
     )
 
     # SHAP
-    explainer = shap.TreeExplainer(
-        gbm, feature_perturbation="tree_path_dependent", model_output="raw"
-    )
-    explanation = explainer(X_eval)
-    shap_values = explanation.values
-
-    shap_importance = pd.DataFrame(
-        {
-            "feature": X_eval.columns,
-            "mean_abs_shap": np.mean(np.abs(shap_values), axis=0),
-        }
-    ).sort_values("mean_abs_shap", ascending=False)
+    explanation = shap_analysis.compute_explanation(gbm, X_eval)
+    shap_importance = shap_analysis.shap_importance(explanation, X_eval.columns)
     shap_importance.to_csv(
         f"{OUTPUT_DIR}/model_{model_idx}_shap_importance.csv", index=False
     )
     print(shap_importance)
 
-    with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure(figsize=(8, max(6, shap_bar_max * 0.28)))
-        ax = fig.subplots()
-        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        shap.plots.bar(explanation, max_display=shap_bar_max, ax=ax)
-        if SAVE_PLOTS:
-            plt.savefig(
-                f"{OUTPUT_DIR}/model_{model_idx}_shap_bar.png",
-                dpi=300,
-                bbox_inches="tight",
-            )
-            plt.savefig(
-                f"{OUTPUT_DIR}/model_{model_idx}_shap_bar.svg", bbox_inches="tight"
-            )
-        plt.show()
-
-    with plt.rc_context({"axes.titlesize": 12}):
-        fig = plt.figure()
-        ax = fig.subplots()
-        ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-        shap.plots.beeswarm(
-            explanation, max_display=shap_beeswarm_max, plot_size=(8, 9)
-        )
-        if SAVE_PLOTS:
-            plt.savefig(
-                f"{OUTPUT_DIR}/model_{model_idx}_shap_beeswarm.png",
-                dpi=300,
-                bbox_inches="tight",
-            )
-            plt.savefig(
-                f"{OUTPUT_DIR}/model_{model_idx}_shap_beeswarm.svg", bbox_inches="tight"
-            )
-        plt.show()
+    shap_analysis.plot_bar(
+        explanation,
+        model_idx=model_idx,
+        max_display=shap_bar_max,
+        save=SAVE_PLOTS,
+        output_dir=OUTPUT_DIR,
+        file_stem=f"model_{model_idx}_shap_bar",
+    )
+    shap_analysis.plot_beeswarm(
+        explanation,
+        model_idx=model_idx,
+        max_display=shap_beeswarm_max,
+        save=SAVE_PLOTS,
+        output_dir=OUTPUT_DIR,
+        file_stem=f"model_{model_idx}_shap_beeswarm",
+    )
 
     if extra_scatter_pairs:
         for target, colour in extra_scatter_pairs:
             if target in X_eval.columns and colour in X_eval.columns:
-                shap.plots.scatter(explanation[:, target], color=explanation[:, colour])
-                if SAVE_PLOTS:
-                    plt.savefig(
-                        f"{OUTPUT_DIR}/model_{model_idx}_shap_{target}_vs_{colour}.png",
-                        dpi=300,
-                        bbox_inches="tight",
-                    )
-                    plt.savefig(
-                        f"{OUTPUT_DIR}/model_{model_idx}_shap_{target}_vs_{colour}.svg",
-                        bbox_inches="tight",
-                    )
-                plt.show()
+                shap_analysis.plot_scatter(
+                    explanation,
+                    x_feature=target,
+                    colour_feature=colour,
+                    model_idx=model_idx,
+                    save=SAVE_PLOTS,
+                    output_dir=OUTPUT_DIR,
+                    file_stem=f"model_{model_idx}_shap_{target}_vs_{colour}",
+                )
 
     return gbm, p_valid
 
@@ -728,7 +624,7 @@ print("Raw brier:  ", brier_score_loss(y_valid, p_valid))
 
 # %%
 fracs = (1e-2, 1e-3, 1e-4, 1e-5)
-calibration_table = tail_calibration_table(y_valid, p_valid, fracs=fracs)
+calibration_table = calibration.tail_calibration_table(y_valid, p_valid, fracs=fracs)
 calibration_table["model"] = "raw"
 calibration_table.to_csv(
     f"{OUTPUT_DIR}/model_2_tail_calibration_table.csv", index=False
