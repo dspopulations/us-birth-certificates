@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" font-family="Helvetica, Arial, sans-serif" font-size="13">
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2a2a2a"/>
+    </marker>
+    <marker id="arrow-clin" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8a4a33"/>
+    </marker>
+
+    <style><![CDATA[
+      .stage-band    { fill: #fafafc; stroke: #c5c5cc; stroke-width: 1; }
+      .stage-label   { font-size: 11.5px; fill: #444; font-weight: 700; letter-spacing: 0.8px; }
+      .stage-note    { font-size: 10.5px; fill: #888; font-style: italic; }
+
+      .param         { fill: #ffffff; stroke: #2a2a2a; stroke-width: 1.4; }
+      .param-title   { font-size: 14px; fill: #111; font-weight: 700; }
+      .param-desc    { font-size: 11px; fill: #555; }
+      .covar-tag     { font-size: 10.5px; fill: #1e3a5f; }
+      .covar-tag-clin{ font-size: 10.5px; fill: #66251a; }
+
+      .latent        { fill: #fff4c9; stroke: #c99b1a; stroke-width: 1.7; stroke-dasharray: 6 3; }
+      .latent-text   { font-size: 15px; fill: #6e5108; font-weight: 700; }
+      .latent-sub    { font-size: 10.5px; fill: #7a5c0a; }
+
+      .observed      { fill: #cfe8cf; stroke: #2d7a2d; stroke-width: 2.4; }
+      .observed-text { font-size: 16px; fill: #1c4a1c; font-weight: 800; }
+      .observed-sub  { font-size: 10.5px; fill: #1c4a1c; }
+
+      .clin          { fill: #f5e8e3; stroke: #a85638; stroke-width: 1.3; }
+      .clin-text     { font-size: 11.5px; fill: #66251a; font-weight: 600; }
+
+      .edge          { stroke: #2a2a2a; stroke-width: 1.6; fill: none; }
+      .edge-clin     { stroke: #8a4a33; stroke-width: 1.3; fill: none; }
+
+      .title         { font-size: 17px; font-weight: 700; fill: #111; }
+      .subtitle      { font-size: 12px; fill: #555; }
+      .legend-text   { font-size: 11.5px; fill: #222; }
+      .formula       { font-size: 13px; fill: #222; }
+      .formula-label { font-size: 10.5px; fill: #777; font-style: italic; }
+    ]]></style>
+  </defs>
+
+  <!-- TITLE -->
+  <text x="500" y="26" text-anchor="middle" class="title">Three-stage Bayesian selection model for Down syndrome livebirth ascertainment</text>
+  <text x="500" y="44" text-anchor="middle" class="subtitle">Baseline livebirth rate (Morris) → screening &amp; termination → birth-certificate record</text>
+
+  <!-- STAGE 1 -->
+  <rect x="20" y="65" width="960" height="110" rx="6" class="stage-band"/>
+  <text x="35" y="85" class="stage-label">STAGE 1 · BASELINE LIVEBIRTH RATE</text>
+  <text x="300" y="85" class="stage-note">latent — what would occur in the absence of screening</text>
+
+  <rect x="240" y="100" width="320" height="58" rx="4" class="param"/>
+  <text x="400" y="122" text-anchor="middle" class="param-title">θ_LB &#x2003; P(DS livebirth | no screening)</text>
+  <text x="400" y="142" text-anchor="middle" class="covar-tag">inputs: maternal age  (Morris / de Graaf)</text>
+
+  <ellipse cx="720" cy="129" rx="90" ry="34" class="latent"/>
+  <text x="720" y="126" text-anchor="middle" class="latent-text">L<tspan dy="4" font-size="11">0</tspan></text>
+  <text x="720" y="144" text-anchor="middle" class="latent-sub">DS livebirth (no screening)</text>
+
+  <line x1="560" y1="129" x2="630" y2="129" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- STAGE 2 -->
+  <rect x="20" y="195" width="960" height="220" rx="6" class="stage-band"/>
+  <text x="35" y="215" class="stage-label">STAGE 2 · SCREENING &amp; TERMINATION</text>
+  <text x="310" y="215" class="stage-note">partly latent — L observed only when recorded</text>
+
+  <rect x="65" y="280" width="255" height="80" rx="4" class="param"/>
+  <text x="192" y="302" text-anchor="middle" class="param-title">η_detect</text>
+  <text x="192" y="320" text-anchor="middle" class="param-desc">P(prenatal detection)</text>
+  <text x="192" y="338" text-anchor="middle" class="covar-tag">inputs: year (NIPT rollout), age,</text>
+  <text x="192" y="352" text-anchor="middle" class="covar-tag">race, education, payer, region</text>
+
+  <rect x="365" y="280" width="255" height="80" rx="4" class="param"/>
+  <text x="492" y="302" text-anchor="middle" class="param-title">η_term</text>
+  <text x="492" y="320" text-anchor="middle" class="param-desc">P(termination | detection)</text>
+  <text x="492" y="338" text-anchor="middle" class="covar-tag">inputs: race, education, region,</text>
+  <text x="492" y="352" text-anchor="middle" class="covar-tag">year (Dobbs 2022 shock)</text>
+
+  <rect x="665" y="232" width="280" height="48" rx="4" fill="#fffdf4" stroke="#c5b572" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="805" y="252" text-anchor="middle" class="formula-label">pass-through fraction</text>
+  <text x="805" y="270" text-anchor="middle" class="formula">η = 1 − η_detect · η_term</text>
+
+  <ellipse cx="805" cy="320" rx="75" ry="40" class="latent"/>
+  <text x="805" y="316" text-anchor="middle" class="latent-text">L</text>
+  <text x="805" y="336" text-anchor="middle" class="latent-sub">DS livebirth</text>
+
+  <path d="M 720 163 C 550 210, 350 250, 192 280" class="edge" marker-end="url(#arrow)"/>
+  <line x1="320" y1="320" x2="365" y2="320" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 620 320 C 680 320, 720 320, 730 320" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 810 163 C 870 200, 870 260, 830 285" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- STAGE 3 -->
+  <rect x="20" y="475" width="960" height="210" rx="6" class="stage-band"/>
+  <text x="35" y="495" class="stage-label">STAGE 3 · RECORDING</text>
+  <text x="200" y="495" class="stage-note">observed — down_ind on the birth certificate</text>
+
+  <rect x="85"  y="515" width="130" height="30" rx="4" class="clin"/>
+  <text x="150" y="534" text-anchor="middle" class="clin-text">CCHD</text>
+
+  <rect x="85"  y="555" width="130" height="30" rx="4" class="clin"/>
+  <text x="150" y="574" text-anchor="middle" class="clin-text">NICU admission</text>
+
+  <rect x="230" y="515" width="150" height="30" rx="4" class="clin"/>
+  <text x="305" y="534" text-anchor="middle" class="clin-text">Assisted ventilation</text>
+
+  <rect x="230" y="555" width="150" height="30" rx="4" class="clin"/>
+  <text x="305" y="574" text-anchor="middle" class="clin-text">Preterm (&lt;37 wk)</text>
+
+  <text x="232" y="608" class="stage-note">clinical markers observed at birth</text>
+  <text x="232" y="622" class="stage-note">— downstream of L, upstream of s</text>
+
+  <rect x="500" y="520" width="280" height="90" rx="4" class="param"/>
+  <text x="640" y="542" text-anchor="middle" class="param-title">s &#x2003; P(record | DS livebirth)</text>
+  <text x="640" y="560" text-anchor="middle" class="param-desc">birth-certificate sensitivity</text>
+  <text x="640" y="580" text-anchor="middle" class="covar-tag">inputs: race, education, preterm,</text>
+  <text x="640" y="594" text-anchor="middle" class="covar-tag-clin">CCHD, NICU admission, ventilation</text>
+
+  <rect x="850" y="540" width="110" height="58" rx="4" class="observed"/>
+  <text x="905" y="566" text-anchor="middle" class="observed-text">R</text>
+  <text x="905" y="585" text-anchor="middle" class="observed-sub">down_ind on BC</text>
+
+  <path d="M 760 358 C 500 420, 280 470, 150 515" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 775 360 C 530 440, 350 490, 150 555" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 790 360 C 620 440, 430 480, 305 515" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 805 360 C 650 450, 500 500, 305 555" class="edge-clin" marker-end="url(#arrow-clin)"/>
+
+  <path d="M 215 530 C 380 530, 470 545, 500 555" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 215 570 C 380 570, 470 575, 500 575" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 380 530 C 440 540, 480 555, 500 560" class="edge-clin" marker-end="url(#arrow-clin)"/>
+  <path d="M 380 570 C 440 570, 480 575, 500 580" class="edge-clin" marker-end="url(#arrow-clin)"/>
+
+  <path d="M 820 358 C 820 420, 790 490, 770 520" class="edge" marker-end="url(#arrow)"/>
+  <line x1="780" y1="565" x2="850" y2="565" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- LEGEND -->
+  <g transform="translate(30, 706)">
+    <rect x="0" y="-11" width="14" height="14" rx="2" class="latent"/>
+    <text x="20" y="0" class="legend-text">latent variable</text>
+
+    <rect x="130" y="-11" width="14" height="14" rx="2" class="observed"/>
+    <text x="150" y="0" class="legend-text">observed variable</text>
+
+    <rect x="290" y="-11" width="14" height="14" rx="2" class="param"/>
+    <text x="310" y="0" class="legend-text">parameter (Bernoulli rate)</text>
+
+    <rect x="490" y="-11" width="14" height="14" rx="2" class="clin"/>
+    <text x="510" y="0" class="legend-text">clinical marker</text>
+
+    <line x1="620" y1="-4" x2="650" y2="-4" class="edge" marker-end="url(#arrow)"/>
+    <text x="656" y="0" class="legend-text">causal (main)</text>
+
+    <line x1="760" y1="-4" x2="790" y2="-4" class="edge-clin" marker-end="url(#arrow-clin)"/>
+    <text x="796" y="0" class="legend-text">causal (clinical)</text>
+  </g>
+
+</svg>
