@@ -187,8 +187,9 @@ be read:
 ## Maternal age (`mage_c`)
 
 Banded into eight groups: under 20, 20–24, 25–29, 30–34, 35–39, 40–44,
-45–49, and 50+. Totals per group are computed over the same
-prediction-coverage scope as the other sections.
+45–49, and 50+. Totals per group are computed over the report's
+default 2016–2024 window (matching the gradient-boosting model's
+training scope).
 
 ![Recorded vs. predicted missing DS births by maternal age](mage_c_recorded_vs_predicted.png){#fig-mage-c .lightbox fig-align="center"}
 
@@ -200,15 +201,17 @@ _render_summary_table(_load_summary("mage_c"))
 ::: {.callout-note title="Literature contrast — maternal age"}
 
 Predicted-missing heavily over-represents older mothers (especially
-40–44), mirroring the classifier's reliance on maternal age — the
-strongest demographic predictor of DS. Recorded cases are concentrated
-at 30–34, i.e. younger than predicted. Bishop et al. (AJPH 2000)
-warned that age-specific reporting bias can distort maternal-age risk
-estimates; the shape of the shift we see here is consistent with
-*under-recording at older maternal ages* (whose true DS rates are much
-higher than at 30–34), although it also reflects the classifier
-mechanically re-ranking by age. The two mechanisms are not separable
-from this plot alone — see § "Follow-up investigations".
+40–44, where it almost doubles the recorded share), mirroring the
+classifier's reliance on maternal age — the strongest demographic
+predictor of DS. Recorded cases are concentrated at 35–39 (≈ 30 %)
+followed by 30–34 (≈ 21 %); predicted-missing peaks two bands later
+at 40–44 (≈ 39 %). Bishop et al. (AJPH 2000) warned that age-specific
+reporting bias can distort maternal-age risk estimates; the shape of
+the shift we see here is consistent with *under-recording at older
+maternal ages* (whose true DS rates are much higher than at 30–34),
+although it also reflects the classifier mechanically re-ranking by
+age. The two mechanisms are not separable from this plot alone —
+see § "Follow-up investigations".
 
 :::
 
@@ -239,17 +242,28 @@ Boulet et al. (2011) and the Atlanta MACDP comparison find that
 "predicted missing" pool should therefore **over-represent** those
 groups relative to "recorded".
 
-The shifts visible above should be read against that expectation:
-under-representation of NH Black, NH AIAN, or Hispanic in the predicted
-column would indicate the classifier is **not** picking up the
-racial/ethnic under-reporting signal the literature identifies — it is
-instead selecting cases by clinical severity, which likely correlates
-with demographic groups whose babies are already more likely to have
-recorded DS via hospital workflow.
+The shifts visible above are **mixed** against that expectation:
+
+- **Hispanic mothers** are *over*-represented in predicted (≈ 31 %)
+  vs recorded (≈ 28 %) — the direction Boulet would predict for an
+  under-recorded group.
+- **Non-Hispanic Black** mothers are *under*-represented in predicted
+  (≈ 9 %) vs recorded (≈ 11 %) — the **opposite** of the Boulet
+  expectation. Same direction, smaller magnitude, for **NH Asian**
+  (≈ 2.5 % vs ≈ 3.5 %).
+- **NH White** is approximately flat (≈ 53 % in both columns).
+
+The Black-and-Asian inversion is the headline concern: the classifier
+is **not picking up the racial under-reporting signal the literature
+identifies for those groups**. The Hispanic over-representation is
+encouraging but plausibly an indirect effect (Hispanic ethnicity
+correlates with maternal age / payer / parity in ways the classifier
+keys on) rather than the classifier having learned the
+recording-sensitivity gradient directly.
 
 **Implication:** any group-level inference from `R'` that compares
-racial/ethnic DS rates is **still subject to the Boulet-type bias**
-and should be explicitly flagged as such. This is the single most
+racial/ethnic DS rates is **still subject to the Boulet-type bias**,
+and especially so for NH Black and NH Asian. This is the single most
 important caveat on the downstream Bayesian modelling.
 
 :::
@@ -376,12 +390,18 @@ recording sensitivity via the same karyotype/submission-window
 mechanism described for NICU. Expected pattern: predicted-missing
 should over-represent preterm births.
 
-What we see is a **modest** over-representation of very preterm
-(< 28 weeks) and a mild shift at 37–38 weeks, but the overall gestational
-distribution is similar between predicted and recorded. The `ab_nicu`
-section captures the preterm-associated mechanism more cleanly; the
-predictive model appears to have absorbed that signal via NICU rather
-than gestational age directly.
+What we see does **not** match that expectation. Across every preterm
+band (< 20, 20–27, 28–31, 32–33, 34–36 weeks) the predicted-missing
+share is at or below the recorded share — very preterm < 28 weeks is
+*under*-represented in predicted (≈ 1 % vs ≈ 1.4 %), and the same
+direction holds for 28–33 weeks. The single visible over-representation
+is at **37–38 weeks** (predicted ≈ 46 % vs recorded ≈ 40 %), which is
+early term rather than preterm — consistent with elective Cesareans
+in higher-risk pregnancies (older mothers, infertility treatment) being
+the cohort the classifier preferentially flags. The preterm /
+karyotype-window mechanism the literature predicts is therefore not
+being picked up via gestational age directly; the `ab_nicu` section
+captures it more cleanly via NICU admission instead.
 
 :::
 
@@ -414,10 +434,8 @@ _render_summary_table(_load_summary("wtgain"))
 
 ## Birth year (`year`)
 
-Distribution across the 20 years for which the predictive model
-scored rows (2005–2024). Shifts across years point to changes in
-recording practice, state-level coverage, or demographic composition
-over time.
+Distribution across the nine years the report covers (2016–2024,
+matching the gradient-boosting model's training window).
 
 ![Recorded vs. predicted missing DS births by birth year](year_recorded_vs_predicted.png){#fig-year .lightbox fig-align="center"}
 
@@ -431,11 +449,21 @@ _render_summary_table(_load_summary("year"))
 Boulet et al. (2011) found essentially no improvement in sensitivity
 across 1995–2005, and Salemi et al. (2017) found no improvement after
 the 2003 form redesign in Florida — the bias is structural, not tied
-to form design. A uniform year×month quota is consistent with that
-view, but this stacked view does not test it directly.
+to form design.
 
-See § "Follow-up investigations" for the direct test: plot
-`recorded / R'` ratio year-by-year and check for trend or break-points.
+This stacked view cannot test that claim. The classifier writes
+`ds_pred_missing` via a year×month quota of `ceil(1.5 × recorded)`,
+so the *recorded* and *predicted* shares per year are tied to each
+other by construction (each year's predicted share is exactly
+`1.5 ×` its recorded share, modulo the `ceil`); the two columns will
+look essentially identical year-over-year regardless of any actual
+trend in recording sensitivity. Pre-2014 years are also absent from
+this report (the model was not fit on them).
+
+See § "Follow-up investigations" for a direct test: plot
+`recorded / R'` ratio year-by-year against an external surveillance
+benchmark — the structural-stability question can only be answered
+with that comparator.
 
 :::
 
