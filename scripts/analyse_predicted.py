@@ -69,8 +69,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument(
         "--years",
-        default=None,
-        help="Year range as 'YYYY-YYYY'. Defaults to the full prediction range.",
+        default="2016-2024",
+        help=(
+            "Year range as 'YYYY-YYYY'. Defaults to the model training "
+            "window (2016-2024) so the report's row scope matches the "
+            "scope the gradient-boosting models were fit against. Pass an "
+            "explicit range to override."
+        ),
     )
     p.add_argument(
         "--output-dir",

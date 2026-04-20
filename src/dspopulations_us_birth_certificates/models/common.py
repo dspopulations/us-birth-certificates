@@ -127,6 +127,12 @@ class ModelConfig:
     selection_history: tuple[SelectionStep, ...]
     shap_scatter_specs: tuple[ShapScatterSpec, ...]
     notes: str = ""
+    # Names of the DuckDB columns that receive this model's predictions
+    # and derived year×month predicted-missing flag. Each model variant
+    # owns its own column pair so diagnostic re-runs don't overwrite a
+    # previous model's predictions. Defaults reflect the usbc10 family.
+    predictions_column: str = "p_ds_lb_pred_01"
+    missing_flag_column: str = "ds_pred_missing"
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict representation.
@@ -156,6 +162,8 @@ class ModelConfig:
             ],
             "shap_scatter_specs": [asdict(s) for s in self.shap_scatter_specs],
             "notes": self.notes,
+            "predictions_column": self.predictions_column,
+            "missing_flag_column": self.missing_flag_column,
         }
 
 
