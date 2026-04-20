@@ -80,9 +80,11 @@ multicollinearity
 nonnegative
 nutpie
 parameterisation
+docstrings
 pred
 pymc
 pyproject
+pytensor
 reparameterise
 rhat
 sigmoidal
