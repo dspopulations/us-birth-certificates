@@ -9,3 +9,4 @@ __pycache__/
 /output
 /.claude
 .DS_Store
+/notes/__*
