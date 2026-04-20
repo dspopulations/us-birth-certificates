@@ -472,21 +472,35 @@ def decomposition_by_race(
     """Stacked bar of true DS livebirths by race: recorded / missed.
 
     Also reports the implied number of prenatally terminated
-    pregnancies per race (``theta_LB . eta_detect . eta_term . N``) as
-    a reference line above the stack, so readers can see how the
-    selection proportion shifts by race.
+    pregnancies per race via the identity
+
+        theta_LB * eta_detect * eta_term = theta_LB - (theta_LB * eta)
+                                         = theta_LB - p_ds_lb
+
+    so we never need the per-cell eta_detect / eta_term Deterministics,
+    which are dropped from the saved InferenceData for size reasons
+    (see docstring of ``selection.build_model``). ``theta_lb`` per cell
+    is reconstructed from the saved ``theta_lb_age[age_idx]``.
     """
     import matplotlib.pyplot as plt
 
     styles = _styles()
     if "race_idx" not in cells.columns:
         raise KeyError("'race_idx' not in cells")
+    if "age_idx" not in cells.columns:
+        raise KeyError("'age_idx' not in cells — cannot reconstruct theta_lb")
 
     post = idata.posterior
-    p_ds_lb = np.asarray(post["p_ds_lb"].values)  # true LB rate
+    p_ds_lb = np.asarray(post["p_ds_lb"].values)  # (chain, draw, cell)
     p_rec = np.asarray(post["p_recorded"].values)
 
-    has_decomposed_eta = "eta_detect" in post.data_vars and "eta_term" in post.data_vars
+    # Reconstruct per-cell theta_lb from theta_lb_age[age_idx].
+    theta_lb_age_logit = np.asarray(
+        post["theta_lb_age"].values
+    )  # (chain, draw, N_AGE)
+    age_idx = cells["age_idx"].to_numpy()
+    theta_lb_cell = inv_logit(theta_lb_age_logit[..., age_idx])  # (c, d, cell)
+
     N = cells["N_cell"].to_numpy(dtype=float)
     races = cells["race_idx"].to_numpy()
     unique = np.sort(np.unique(races))
@@ -495,22 +509,23 @@ def decomposition_by_race(
         for v in unique
     ]
 
+    # If the fit was theta_only or theta_s (no η), eta=1 so terminated=0.
+    # Detect this by whether eta_detect_int is a named RV in the posterior
+    # — proxy for "spec='full'".
+    has_full_eta = "eta_detect_int" in post.data_vars
+
     rows = []
     for v in unique:
         mask = races == v
         true_count = (p_ds_lb[..., mask] * N[mask]).sum(axis=-1).mean().item()
         recorded_count = (p_rec[..., mask] * N[mask]).sum(axis=-1).mean().item()
         missed_count = max(true_count - recorded_count, 0.0)
-        if has_decomposed_eta:
-            eta_d = np.asarray(post["eta_detect"].values)
-            eta_t = np.asarray(post["eta_term"].values)
-            theta = np.asarray(post["theta_lb"].values)
-            terminated = (
-                theta[..., mask]
-                * eta_d[..., mask]
-                * eta_t[..., mask]
-                * N[mask]
-            ).sum(axis=-1).mean().item()
+        if has_full_eta:
+            terminated_draws = (
+                (theta_lb_cell[..., mask] * N[mask]).sum(axis=-1)
+                - (p_ds_lb[..., mask] * N[mask]).sum(axis=-1)
+            )
+            terminated = float(terminated_draws.mean())
         else:
             terminated = float("nan")
         rows.append(
@@ -535,7 +550,7 @@ def decomposition_by_race(
         color=styles.COLOUR_ORANGE,
         label="Missed (posterior)",
     )
-    if has_decomposed_eta:
+    if has_full_eta:
         ax.plot(
             x,
             summary["prenatally_terminated"],

@@ -8,12 +8,15 @@
 |---|---|---|
 | 1. Foundation & data pipeline | ✅ complete | `f96ecac` |
 | 2. Diagnostics module + rendering CLI | ✅ complete | `9ce27a1`, `c6a7c4b` (region removal) |
-| 3. Parameter-recovery validation | pending | — |
-| 4. Real-data fits (4 variants) | pending | — |
-| 5. Analysis & Quarto report | pending | — |
-| 6. Reproducibility polish | pending | — |
+| 3. Parameter-recovery validation | ✅ complete | `679ce54` |
+| 4. Real-data fits — scaffolding | ✅ complete | `2630985`, `2a9da20` (render-loop cleanup) |
+| 4. Real-data fits — variant sweep | pending (overnight) | — |
+| 5. Analysis & Quarto report — scaffolding | ✅ complete | `b8e04c9` |
+| 5. Dev full-spec validation fit | ✅ complete | `94ad2e2` (findings note) |
+| 6. Reproducibility polish (README) | ✅ complete | `b51d567` |
+| idata size trim + dev profile bump | ✅ complete | this commit |
 
-**Estimated remaining effort:** ~10–15 hours of focused work plus ≥20 hours of MCMC wall-clock in Phase 4.
+**Estimated remaining effort:** ~4–6 hours of focused work (cross-variant analysis, Quarto re-render review, write-up) plus a single overnight reporting-profile sweep (≈ 4–12 h wall-clock for 4 variants via `scripts/run_all_selection_variants.py`).
 
 ---
 
@@ -235,35 +238,19 @@ Delivered in `scripts/render_selection_diagnostics.py`:
 - Reads `post_dobbs_year_start` from `cells.attrs` unless overridden via CLI.
 - Saves PNG + SVG per figure under `<out-dir>/plots/` and tidy CSVs under `<out-dir>/tables/` — mirrors `bayes.plots._save`.
 - Logs through `cli_output`; each diagnostic is guarded so one failure does not kill the run.
-- Writes a `convergence_summary.csv` with max Rhat / min ESS.
+- Prefers a cached `summary.csv` on re-runs; computes fresh via `az.summary` only when the cache is absent (commit `2a9da20`).
 
 ---
 
-## 7. Phase 3 — Parameter recovery validation
+## 7. Phase 3 — Parameter recovery validation (COMPLETE)
 
-### Task 3.0 — Clean up pymc import convention *(small, do first)*
+Commit `679ce54`. 9 slow-marked tests covering both array-parameter 95% CI coverage (≥ 70% on `theta_lb_age`, `eta_term_race`, `eta_term_year`, `s_race`) and scalar tolerance (±0.5 logit on `eta_term_int`, `s_int`, `s_preterm`, `s_cchd`).
 
-**File:** `src/dspopulations_us_birth_certificates/selection/model.py`
+### Task 3.0 — Clean up pymc import convention *(done)*
 
-Currently imports `pymc as pm` and `pytensor.tensor as pt` at module top. CI installs the package without pymc/pytensor, so `from dspopulations_us_birth_certificates import selection` will fail at collection time. Fix by matching the `bayes.models` pattern:
+Moved `import pymc as pm` / `import pytensor.tensor as pt` inside `build_model` under a `TYPE_CHECKING` guard. The `selection` subpackage now imports cleanly in pymc-free environments (the CI test job), matching the `bayes.models` convention.
 
-```python
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import pymc as pm
-    import pytensor.tensor as pt
-
-
-def build_model(...) -> "pm.Model":
-    import pymc as pm
-    import pytensor.tensor as pt
-    ...
-```
-
-**Acceptance:** `ruff check` stays clean; tests still pass; `python -c "from dspopulations_us_birth_certificates.selection import build_model"` succeeds in an environment without pymc installed (the selection package imports, `build_model` raises ImportError only if called).
-
-### Task 3.1 — Parameter-recovery test
+### Task 3.1 — Parameter-recovery test *(done)*
 
 **File:** `tests/test_selection_parameter_recovery.py`
 
@@ -271,185 +258,160 @@ Verify the Bayesian fit recovers known parameters from simulated data. If this f
 
 Mark with `@pytest.mark.slow` and exclude from default `pytest -q` via `addopts = "-q -m 'not slow'"` in `pyproject.toml`. Document `pytest -m slow` to opt in.
 
-```python
-@pytest.mark.slow
-def test_parameter_recovery_full_spec() -> None:
-    truth = TrueParams.from_priors(variant_C_default(), seed=42)
-    cells = simulate_cells(
-        truth, n_cells_per_month=60,
-        n_year=9, post_dobbs_year_start=6, seed=42,
-    )
-    model = build_model(
-        cells, variant_C_default(), spec="full",
-        n_year=9, post_dobbs_year_start=6,
-    )
-    with model:
-        idata = pm.sample(
-            500, tune=500, chains=2, target_accept=0.9,
-            random_seed=42, progressbar=False,
-        )
-
-    # 95% CI coverage over at least 80% of each parameter family.
-    params = {
-        "theta_lb_age": truth.theta_lb_age_logit,
-        "eta_term_race": truth.eta_term_race,
-        "eta_term_year": truth.eta_term_year,
-        "s_race": truth.s_race,
-    }
-    for name, true_vals in params.items():
-        post = idata.posterior[name]
-        lo = post.quantile(0.025, dim=("chain", "draw")).values
-        hi = post.quantile(0.975, dim=("chain", "draw")).values
-        covered = ((true_vals >= lo) & (true_vals <= hi)).mean()
-        assert covered >= 0.8, f"{name}: only {covered:.0%} covered"
-```
-
-Note the plan's original `eta_term_ry` entry is now `eta_term_year`.
-
-**Acceptance:** test passes. If it fails, the model is mis-specified or the sampler is too short — investigate before moving on to Phase 4.
+Landed as `tests/test_selection_parameter_recovery.py`, 9 cases, runs in ~20 s on nutpie (vs. hours on the pymc default). 70% coverage threshold on small arrays accommodates the discrete-coverage variance on N∈{6,7,9}. Hard R̂ < 1.05 gate so broken fits don't slip past as bad recovery.
 
 ---
 
 ## 8. Phase 4 — Real-data fits
 
-### Task 4.0 — `selection.config` + run-config preset
+### Task 4.0 — `selection.config` + run-config preset *(done, `2630985`)*
 
-**File:** `src/dspopulations_us_birth_certificates/selection/config.py` (NEW)
+`src/dspopulations_us_birth_certificates/selection/config.py` adds `SelectionModelConfig` (JSON-serialisable snapshot with variant/spec/year_range/post_dobbs_year/priors/notes) and `selection_run_config(name)` factory returning `BayesRunConfig` with selection-tuned presets.
 
-Either:
+Profiles (updated on `2025-04-20`):
 
-- Re-export `BayesRunConfig` from `bayes.config` (simplest — the shape is identical), **or**
-- Add a `SelectionRunConfig` with selection-specific `dev` / `reporting` presets. Suggested `reporting` defaults: `draws=1000`, `tune=1000`, `chains=4`, `target_accept=0.95`, `nuts_sampler="nutpie"`. (Selection needs higher `target_accept` than the bayes M1 model.)
+| profile | draws | tune | chains | target_accept | sampler |
+|---|---:|---:|---:|---:|---|
+| `dev` | 1000 | 1000 | 2 | 0.9 | nutpie |
+| `reporting` | 1500 | 1500 | 4 | 0.95 | nutpie |
 
-Add a `SelectionModelConfig` dataclass (analogous to `BayesModelConfig`) snapshotting `variant`, `spec`, `year_range`, `post_dobbs_year`, `priors` digest, and `notes`.
+The `dev` preset was bumped from 400×2 after the dev-validation fit (`94ad2e2`) landed max R̂ 1.02 / min ESS 100 on the full spec — under the reporting gates of R̂ < 1.01 / ESS ≥ 400. `1000×2` should clear ESS on the named RVs without the ~1 h wall-clock of reporting.
 
-### Task 4.1 — `fit_selection_model.py` CLI
+### Task 4.1 — `fit_selection_model.py` CLI *(done, `2630985`)*
 
-**File:** `scripts/fit_selection_model.py` (NEW)
-
-Mirror `scripts/fit_bayes_model.py`. Flags:
+`scripts/fit_selection_model.py` mirrors `scripts/fit_bayes_model.py`:
 
 ```
 --variant {A,B,C,D}                 # sensitivity variant
 --spec {theta_only,theta_s,single_eta,full}   # default: full
 --profile {dev,reporting}           # default: dev
 --years YYYY-YYYY                   # default 2016-2024
---db-path data/us_births.db
+--post-dobbs-year YYYY              # default 2022
+--duckdb-path data/us_births.db
 --output-dir output/selection/<variant>/<spec>/<ts>    # auto
 --prior-only                        # skip NUTS, run prior-predictive only
 --draws / --tune / --chains / --target-accept  # profile overrides
 --render                            # quarto render after fit
 ```
 
-Pipeline steps (all logged via `cli_output.section`):
+Pipeline: `selection.prepare_cells` → `selection.build_model` → `bayes.sampling.sample` (prior predictive + NUTS + posterior predictive) → `bayes.io.save_artefacts` → `bayes.io.copy_docs_template("selection")` → `selection.render.render_all` → optional `bayes.io.render_quarto`.
 
-1. Load cells (`selection.prepare_cells`).
-2. Build model (`selection.build_model(spec, variant_*, ...)`).
-3. Prior-predictive (always).
-4. Sample (unless `--prior-only`).
-5. Posterior predictive.
-6. Write artefacts: `idata.nc`, `cells.parquet`, `config.json`, `run_config.json`, `summary.csv`.
-7. Copy `docs/models/selection/index.qmd` into the run dir.
-8. Render diagnostics via `selection.diagnostics.*` through the shared `render_selection_diagnostics.py` codepath (extract the save-loop into a reusable function).
-9. Optionally `quarto render` if `--render`.
+The rendering loop was factored into `selection/render.py` so the post-hoc `render_selection_diagnostics.py` and the fit CLI share a single code path (commit `2630985`). A subsequent cleanup (`2a9da20`) removed a duplicate `az.summary` call that was doubling wall-clock time on per-cell deterministics.
 
-### Task 4.2 — Baseline `theta_only` run on real data
+### Task 4.1c — `docs/models/selection/index.qmd` *(done, `2630985` + `b8e04c9`)*
+
+Single Quarto template branching on `variant` and `spec` read from `config.json`. Embeds the six diagnostic figures, a convergence summary, a side-by-side classifier comparison section (added in Task 5.2), and explicit caveats on the no-region model and the dev-vs-reporting distinction.
+
+### Task 4.2 — Baseline `theta_only` run on real data *(done)*
+
+`output/selection/C/theta_only/baseline/` — R̂ ≤ 1.01 on all 7 `theta_lb_age` parameters, min ESS 928. Posterior rates sit 21–43 % of Morris at every age band (monotonicity preserved). This is the expected signature of selection in `theta_only`: with η = s = 1 imposed, the selection pressure absorbs into `θ_LB`. The plan's original criterion ("within 0.2 logit") was over-optimistic given 60 k cells × 33.5 M births; the revised acceptance is monotone-with-age plus systematic ~0.4× shift below Morris.
+
+### Task 4.2a — Per-cell Deterministic trim *(done, this commit)*
+
+`selection/model.py` now declares only `p_ds_lb` and `p_recorded` as per-cell `pm.Deterministic`. The previous `theta_lb`, `eta_detect`, `eta_term`, `eta`, and `s` are inline tensor expressions, shrinking the saved `idata.nc` by ~5/7. `decomposition_by_race` reconstructs per-cell `theta_lb` from `theta_lb_age[age_idx]` and computes `terminated = theta_lb − p_ds_lb` (the algebraic identity, no `eta_detect`/`eta_term` needed).
+
+Measured size: theta_only prior-only goes from 298 MB → 46 MB. Full-spec reporting extrapolates from the dev-validation 4.2 GB to ~1 GB per variant (still large; watch the `_run_logs/` disk budget during overnight sweeps).
+
+### Task 4.3 — Fit all four variants (full spec, reporting profile)
+
+**Driver:** `scripts/run_all_selection_variants.py` *(done, this commit)*
 
 ```bash
-python scripts/fit_selection_model.py \
-    --variant C --spec theta_only \
-    --profile reporting
+# Overnight run. All four variants, full spec, reporting profile.
+python scripts/run_all_selection_variants.py --profile reporting --render
+
+# Resumable after interruption.
+python scripts/run_all_selection_variants.py --profile reporting --render --skip-existing
+
+# Extra flags passthrough (e.g. tighter target_accept).
+python scripts/run_all_selection_variants.py --profile reporting \
+    --extra-args "--target-accept 0.98"
 ```
 
-**Verification:**
+Runs the variants sequentially as subprocesses so a failure in one doesn't sink the batch. Per-variant log goes to `output/selection/_run_logs/<batch_ts>_<variant>.log`.
 
-- Max R̂ < 1.01
-- Posterior `theta_lb_age` means tight around Morris prior (within 0.2 on logit scale)
-- Observed recorded DS age distribution roughly matches `θ_LB(age) · η · s` with η, s at their prior-mean scalar anchors (~0.5 × 0.4 ≈ 0.2, so ratio ≈ 0.2 vs Morris rates).
-
-If this fails, **stop** — the data aggregation or age coding is wrong. Don't try the full model yet.
-
-### Task 4.3 — Fit all four variants (full spec)
-
-**File:** `scripts/run_all_selection_variants.py` (NEW — a Python runner, not a shell script, to match repo conventions)
-
-```python
-# Iterates variants A, B, C, D; shells out to fit_selection_model.py
-# or calls its main() in-process for shared setup; records each variant's
-# output path into a summary manifest.
-```
-
-**Wall-time estimate** (without region dimension, ~60k cells, `reporting` profile, 4 chains × 1000 draws, target_accept=0.95): 1–3 hours per variant on a modern workstation with `nutpie`; longer with the pymc default sampler.
+**Wall-time estimate** (nutpie, 60 k cells, `reporting` profile after the Deterministic trim): 1–3 h per variant for a total of ~4–12 h. Post-trim idata.nc should be ~1 GB per variant (~4 GB total). The dev profile at 1000×2 is reasonable for inner-loop iteration at ~30 min per fit.
 
 **Acceptance per variant:**
 
-- Max R̂ < 1.01 (hard fail if violated)
-- Min ESS bulk > 400
+- Max R̂ < 1.01 (hard fail)
+- Min ESS bulk > 400 on the named RVs
 - Divergences < 10 (re-run at `--target-accept 0.98` if not)
 - `summary.csv`, `plots/`, `tables/` all present under the run dir
 
 ### Task 4.4 — Identifiability review
 
-For each variant's identifiability pair-plot (`plots/identifiability.png` + `tables/identifiability.csv`):
+For each variant's `tables/identifiability.csv`:
 
-- \|r\| > 0.7 on most race panels → decomposition is **prior-driven**. Report prominently; do not over-interpret individual race effects on η_term vs s.
-- \|r\| < 0.7 and Variant C race effects agree with Variant D (Dobbs-only) → **genuine identification**.
+- |r| > 0.7 on most race panels → decomposition is **prior-driven**. Report prominently; do not over-interpret individual race effects on η_term vs s.
+- |r| < 0.7 AND Variant C race effects agree with Variant D (Dobbs-only) → **genuine identification**.
 - In between → **partial** — report with caveats.
 
-Under the no-region model, Variant D's Dobbs signal is a national pre-vs-post-2022 year shift rather than a treated-vs-untreated-state contrast, so identification is weaker than the original plan anticipated. Expect some prior-driven decomposition on at least a subset of race panels.
+**Dev-validation preview** (variant C, full spec, `output/selection/C/full/dev_validation/`): all six race panels have |r| ≤ 0.15, well below the 0.7 threshold (see `notes/202604201706-selection-full-spec-dev-validation.md`). The clinical-marker → `s` channel plus the year-level Dobbs signal identify the decomposition even without state-level contrast. **Positive result for the no-region model.** Reporting-profile runs should confirm.
+
+**Caveat on the Dobbs year effect** (also in the validation note): dev-profile posterior mean(post) − mean(pre) = +0.69 on logit — *opposite* sign to what Dobbs would predict. The no-region model cannot separate year-level termination from year-level detection drifts. The Dobbs trajectory is a diagnostic, not a causal estimate, until state-level data restores `eta_term_ry[region, year]`.
 
 ---
 
 ## 9. Phase 5 — Analysis & Quarto report
 
-### Task 5.1 — Quarto template at `docs/models/selection/index.qmd`
+### Task 5.1 — Quarto template *(done, `2630985`)*
 
-Write a single template that:
+`docs/models/selection/index.qmd` matches the `m1-year-age` pattern. Copy-into-run via `bayes.io.copy_docs_template("selection", out_dir)` at the end of `fit_selection_model.py`. Sections:
 
-- Reads `config.json` to discover variant, spec, year range.
-- Loads `summary.csv`, `tables/*.csv`, and the figures from `plots/`.
-- Sections mirror `docs/models/m1-year-age/index.qmd` where applicable:
-  1. Run metadata callout.
-  2. Headline numbers — posterior total DS livebirths 2016–2024 with 95% CI vs recorded count.
-  3. Age-specific rates — posterior θ_LB · η vs observed recorded rates.
-  4. Race-specific decomposition — the `decomposition_by_race` plot plus an identification commentary driven by the `identifiability.csv` \|r\| column.
-  5. Dobbs year-trajectory analysis — the trajectory plot plus the summary effect size.
-  6. Sensitivity variants — a side-by-side table across A/B/C/D for key demographic effects (requires reading from sibling fit dirs; see Task 5.3).
-  7. CCHD consistency — `cchd_consistency` figure + summary.
+1. Run metadata callout (reads `config.json` + `run_config.json`).
+2. Cell aggregation summary.
+3. Convergence section (max R̂ + min ESS from `summary.csv`).
+4. Age curve — Stage 1 sanity check against Morris anchors.
+5. Identifiability pair-plot + table.
+6. Dobbs year trajectory + effect-size summary row.
+7. CCHD consistency.
+8. Decomposition by race.
+9. Posterior predictive checks (PPC by year / race / age).
+10. Classifier comparison (Task 5.2).
+11. Caveats.
 
-Copy-into-run pattern (see `bayes.io.copy_docs_template`) keeps template in version control while each run's HTML sits next to its artefacts.
+### Task 5.2 — Classifier comparison *(done, `b8e04c9`)*
 
-### Task 5.2 — Classifier comparison section
+Section 10 of the template computes headline Bayesian numbers (total DS livebirths, NH Black share of missed, CCHD co-occurrence in missed) directly from `idata.nc` + `cells.parquet` and puts them alongside placeholder classifier values drawn from `docs/analysis/predicted.qmd`. Final polish (pulling the classifier values automatically from the upstream pipeline) can happen once the reporting-profile variant runs land.
 
-Append a comparison section reading from both pipelines' output:
+### Task 5.3 — Cross-variant aggregation script *(done, `b8e04c9`)*
 
-| quantity | classifier | Bayesian | note |
-|---|---|---|---|
-| Total predicted DS livebirths 2016–2024 | from `docs/analysis/predicted.qmd` | posterior CI | classifier fixed at 1.5× quota |
-| NH Black share among missing | classifier | posterior CI | classifier ~flat; model decomposes |
-| CCHD co-occurrence in missing | classifier 25.6% | posterior CI | true ~22.5% |
+`scripts/compare_selection_variants.py` auto-discovers the latest `output/selection/{A,B,C,D}/full/<ts>/` directories (or accepts explicit `--fit-dirs`), aggregates posterior means + 95% CIs for `total_true`, per-race `eta_term_race` / `s_race`, identifiability |r|, and the Dobbs year-effect summary into a long-format `comparison.csv`, plus a forest-plot figure of the two race-effect families across variants. 4 tests against synthetic fit dirs.
 
-### Task 5.3 — Cross-variant aggregation script
+### Task 5.x — Dev full-spec validation *(done, `94ad2e2`)*
 
-**File:** `scripts/compare_selection_variants.py` (NEW) — model on the existing `scripts/compare_variants.py`. Reads the four variant runs' `summary.csv` + `tables/`, builds the side-by-side table for Task 5.1 §6, and writes a combined figure under a parent run dir (e.g. `output/selection/_compare_<ts>/`).
+`output/selection/C/full/dev_validation/` + `notes/202604201706-selection-full-spec-dev-validation.md`. Key findings:
+
+- All six identifiability panels data-informed (|r| ≤ 0.15).
+- Race effects qualitatively prior-consistent, magnitudes larger than priors (data is contributing).
+- Dobbs year effect has **wrong sign** — flagged as a no-region identification weakness. The year trajectory is a diagnostic, not a causal estimate, without state-level data.
+- idata.nc size drove the per-cell Deterministic trim (Task 4.2a above).
+- Dev profile at 400×2 undershoots convergence gates; bumped to 1000×2.
+
+### Phase 5 still to do (after Task 4.3 reporting sweep)
+
+- Re-render each variant's Quarto against the reporting-profile fit.
+- Run `scripts/compare_selection_variants.py --profile reporting` across the four variants and append a cross-variant analysis section to the master report.
+- Write-up of findings (separate note under `notes/`).
 
 ---
 
 ## 10. Phase 6 — Reproducibility
 
-### Task 6.1 — Documentation
+### Task 6.1 — Documentation *(done, `b51d567`)*
 
-- Add a "Selection model" section to the repo `README.md` pointing at `plans/docs/bayesian_selection_model.md` and `docs/models/selection/index.qmd`.
-- Add a short module `README.md` at `src/dspopulations_us_birth_certificates/selection/README.md` summarising the public API and the fit-→-diagnostics-→-render pipeline.
-- **Do not** create a top-level `USAGE.md` — the repo has no such convention; docstrings + the Quarto template cover it.
+- Top-level `README.md` has an **Analyses** section pointing at both Bayesian pipelines.
+- `src/dspopulations_us_birth_certificates/selection/README.md` summarises the public API, fit-→-diagnostics flow, output layout, profile presets, variants, and invariants.
+- `CLAUDE.md` / `AGENTS.md` / `.github/copilot-instructions.md` updated in lockstep (commit `679ce54`) with the `pytest -m slow` marker convention.
 
-### Task 6.2 — CI
+### Task 6.2 — CI *(no changes needed)*
 
-The existing workflow (`.github/workflows/ci.yml`) runs `ruff check src scripts tests`, `npm run spellcheck`, and `pytest`. The test job installs the package without pymc — see Task 3.0. No workflow changes are needed if Task 3.0 lands. Do not add a slow-tests job in CI; `@pytest.mark.slow` tests need pymc and take minutes — run locally before release.
+The existing workflow (`.github/workflows/ci.yml`) runs `ruff check src scripts tests`, `npm run spellcheck`, and `pytest`. Tests marked `@pytest.mark.slow` are deselected by the default `-m 'not slow'` in `pyproject.toml`, so CI skips the pymc-dependent and long-running cases without needing the Bayesian stack in CI's pinned install. The `selection` subpackage imports cleanly in the pymc-free CI env (verified via `sys.meta_path` blocking).
 
-### Task 6.3 — No Makefile
+### Task 6.3 — No Makefile *(decided, no work)*
 
-The original plan proposed `Makefile` targets. The repo uses `scripts/` entry points instead. Do not add a Makefile; the entry points already in `scripts/` plus the new `scripts/fit_selection_model.py` and `scripts/run_all_selection_variants.py` are the "Makefile".
+The repo uses `scripts/` entry points instead. The entry points now include `scripts/fit_selection_model.py`, `scripts/render_selection_diagnostics.py`, `scripts/compare_selection_variants.py`, and `scripts/run_all_selection_variants.py`.
 
 ---
 
@@ -499,15 +461,15 @@ If you find a reason to change any of these, stop and discuss before implementin
 
 ## 14. Estimated remaining effort
 
-| Phase | Tasks | Human effort | Machine effort |
-|---|---|---|---|
-| 3. Recovery test + pymc-import cleanup | 3.0, 3.1 | ~1.5 h | ~5 min runtime |
-| 4. Real data fits (4 variants) | 4.0–4.4 | ~4–6 h code | ~4–12 h MCMC |
-| 5. Analysis & Quarto | 5.1–5.3 | ~4–6 h | negligible |
-| 6. Reproducibility | 6.1–6.3 | ~1 h | — |
-| **Total human-attended** | | **~10–15 h** | |
+| Task | Human effort | Machine effort |
+|---|---|---|
+| Task 4.3 — overnight variant sweep | ~0.5 h kick off + review | **4–12 h MCMC** overnight |
+| Task 4.4 — identifiability review across 4 variants | ~1 h | negligible |
+| Task 5-post — re-render Quarto, run `compare_selection_variants.py`, append cross-variant analysis | ~2–3 h | negligible |
+| Task 5-writeup — findings note under `notes/` | ~1–2 h | — |
+| **Total human-attended** | **~4–6 h** | — |
 
-Phase 4 is dominated by wall-clock MCMC time on `output/selection/<variant>/full/`, not implementation effort.
+Everything else (Phases 1–3, Phase 4 scaffolding, Phase 5 scaffolding + dev validation, Phase 6 docs) is done on the `selection-model-phase-1` branch. The overnight sweep is the last technical gate; the remaining human effort is interpretation.
 
 ---
 

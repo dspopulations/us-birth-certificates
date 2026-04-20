@@ -4,8 +4,10 @@ Parallels ``dspopulations_us_birth_certificates.bayes.config`` and reuses
 its :class:`BayesRunConfig` dataclass — the shape (draws / tune / chains
 / target_accept / sampler / seed) is identical. The presets diverge:
 
-- ``dev`` — 400 draws, 2 chains, target_accept 0.9. Runs in tens of
-  seconds on nutpie for iteration.
+- ``dev`` — 1000 tune + 1000 draws × 2 chains, target_accept 0.9.
+  Enough posterior support to land ESS above 400 on the named RVs on
+  the full spec; a few minutes on nutpie for theta_only, ~30 min for
+  full.
 - ``reporting`` — 1500 draws, 4 chains, target_accept 0.95. Higher than
   the bayes ``reporting`` preset (0.9) because the selection model has
   the known η/s identification challenge and needs tighter stepping.
@@ -37,11 +39,11 @@ MODEL_ID = "selection"
 
 _SELECTION_PRESETS: dict[str, dict[str, Any]] = {
     "dev": {
-        "draws": 400,
-        "tune": 400,
+        "draws": 1000,
+        "tune": 1000,
         "chains": 2,
         "target_accept": 0.9,
-        "prior_predictive_samples": 400,
+        "prior_predictive_samples": 500,
         "posterior_predictive": True,
         "nuts_sampler": "nutpie",
     },

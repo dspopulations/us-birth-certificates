@@ -21,7 +21,8 @@ def test_preset_names() -> None:
 def test_run_config_dev_defaults() -> None:
     rc = selection_run_config("dev")
     assert rc.name == "dev"
-    assert rc.draws == 400
+    assert rc.draws == 1000
+    assert rc.tune == 1000
     assert rc.chains == 2
     assert rc.target_accept == 0.9
     assert rc.nuts_sampler == "nutpie"

@@ -75,8 +75,9 @@ output/selection/<variant>/<spec>/<timestamp>/
 
 ## Run profiles
 
-- **`dev`** — 400 tune + 400 draws × 2 chains, target_accept=0.9, nutpie.
-  Inner-loop iteration.
+- **`dev`** — 1000 tune + 1000 draws × 2 chains, target_accept=0.9,
+  nutpie. Enough posterior mass to clear ESS gates on the named RVs
+  even for the full spec.
 - **`reporting`** — 1500 tune + 1500 draws × 4 chains, target_accept=0.95,
   nutpie. Publication-quality posteriors; ≥ 1 h wall-clock per variant
   at full spec.

@@ -106,19 +106,22 @@ def build_model(
 
     with pm.Model(coords=coords) as model:
         # --- Stage 1: theta_LB ----------------------------------------- #
+        # Note: per-cell theta_lb is NOT saved as a Deterministic — a full
+        # idata for 60k cells × 6000 draws × 4 chains would exceed 30 GB.
+        # Downstream diagnostics that need theta_lb per cell reconstruct it
+        # from theta_lb_age[age_idx]; see selection.diagnostics.
         theta_lb_age = pm.Normal(
             "theta_lb_age",
             mu=priors.theta_lb_logit,
             sigma=priors.theta_lb_sigma,
             dims="age",
         )
-        theta_lb = pm.Deterministic(
-            "theta_lb",
-            pm.math.invlogit(theta_lb_age[age_idx]),
-            dims="cell",
-        )
+        theta_lb = pm.math.invlogit(theta_lb_age[age_idx])
 
         # --- Stage 2: eta (screening + termination) -------------------- #
+        # Same size-discipline: only the scalar/low-dim RVs named below go
+        # into idata; per-cell eta_detect / eta_term / eta are inline
+        # tensors.
         if spec in ("single_eta", "full"):
             if spec == "single_eta":
                 eta_int = pm.Normal(
@@ -138,12 +141,8 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
-                eta = pm.Deterministic(
-                    "eta",
-                    pm.math.invlogit(
-                        eta_int + eta_race[race_idx] + eta_edu[edu_idx]
-                    ),
-                    dims="cell",
+                eta = pm.math.invlogit(
+                    eta_int + eta_race[race_idx] + eta_edu[edu_idx]
                 )
             else:
                 eta_det_int = pm.Normal(
@@ -181,17 +180,13 @@ def build_model(
                     sigma=priors.eta_detect_payer_sigma,
                     dims="payer",
                 )
-                eta_detect = pm.Deterministic(
-                    "eta_detect",
-                    pm.math.invlogit(
-                        eta_det_int
-                        + eta_det_year[year_idx]
-                        + eta_det_age[age_idx]
-                        + eta_det_race[race_idx]
-                        + eta_det_edu[edu_idx]
-                        + eta_det_payer[payer_idx]
-                    ),
-                    dims="cell",
+                eta_detect = pm.math.invlogit(
+                    eta_det_int
+                    + eta_det_year[year_idx]
+                    + eta_det_age[age_idx]
+                    + eta_det_race[race_idx]
+                    + eta_det_edu[edu_idx]
+                    + eta_det_payer[payer_idx]
                 )
 
                 eta_term_int = pm.Normal(
@@ -222,21 +217,13 @@ def build_model(
                     sigma=sigma_year,
                     dims="year",
                 )
-                eta_term = pm.Deterministic(
-                    "eta_term",
-                    pm.math.invlogit(
-                        eta_term_int
-                        + eta_term_race[race_idx]
-                        + eta_term_edu[edu_idx]
-                        + eta_term_year[year_idx]
-                    ),
-                    dims="cell",
+                eta_term = pm.math.invlogit(
+                    eta_term_int
+                    + eta_term_race[race_idx]
+                    + eta_term_edu[edu_idx]
+                    + eta_term_year[year_idx]
                 )
-                eta = pm.Deterministic(
-                    "eta",
-                    1.0 - eta_detect * eta_term,
-                    dims="cell",
-                )
+                eta = 1.0 - eta_detect * eta_term
         else:
             eta = pt.ones_like(theta_lb)
 
@@ -269,18 +256,14 @@ def build_model(
             s_aven = pm.Normal(
                 "s_aven", mu=priors.s_aven_mu, sigma=priors.s_aven_sigma
             )
-            s = pm.Deterministic(
-                "s",
-                pm.math.invlogit(
-                    s_int
-                    + s_race[race_idx]
-                    + s_edu[edu_idx]
-                    + s_preterm * preterm
-                    + s_cchd * cchd
-                    + s_nicu * nicu
-                    + s_aven * aven
-                ),
-                dims="cell",
+            s = pm.math.invlogit(
+                s_int
+                + s_race[race_idx]
+                + s_edu[edu_idx]
+                + s_preterm * preterm
+                + s_cchd * cchd
+                + s_nicu * nicu
+                + s_aven * aven
             )
         else:
             s = pt.ones_like(theta_lb)
