@@ -6,10 +6,12 @@
 
 # Organisations and datasets
 CDC
+EUROCAT
 MACDP
 NBDPN
 NBER
 NCHS
+NDSCR
 NVSS
 
 # NVSS / birth-certificate variables and codings
@@ -55,24 +57,35 @@ USBC
 WTGAIN
 
 # Statistical / ML vocabulary
+ADVI
+allclose
 beeswarm
 codings
 dataclasses
+downweight
 dtypes
 HSGP
 hyperparameters
 iqr
+isclose
 kfold
 lightgbm
+livebirth
+livebirths
 logit
+MCMC
 microdata
 missingness
 multicollinearity
+nonnegative
 nutpie
 parameterisation
 pred
 pymc
+pyproject
+reparameterise
 rhat
+sigmoidal
 sklearn
 vars
 
@@ -91,8 +104,28 @@ dspopulations
 rprime
 
 # Literature / authors
+Alberman
 Boulet
+Chaiken
+Graaf
+Heinke
+Kuppermann
+Natoli
 Salemi
+Skotko
+graaf
+
+# Literature / journals and terms
+Diagn
+EJHG
+Epidemiol
+Gynecol
+Netw
+NIPT
+Obstet
+Paediatr
+Perinat
+Prenat
 
 # Refactor-document terms
 harmonisation
