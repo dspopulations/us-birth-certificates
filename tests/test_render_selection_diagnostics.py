@@ -137,7 +137,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
         assert csv.is_file(), f"missing {stem}.csv"
         assert len(pd.read_csv(csv)) >= 1
 
-    assert (tables / "convergence_summary.csv").is_file()
+    assert (out_dir / "convergence_summary.csv").is_file()
 
 
 def test_cli_rejects_missing_paths(tmp_path: Path) -> None:

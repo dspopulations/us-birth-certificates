@@ -21,6 +21,12 @@ Public surface
 from __future__ import annotations
 
 from dspopulations_us_birth_certificates.selection import diagnostics
+from dspopulations_us_birth_certificates.selection.config import (
+    MODEL_ID,
+    SelectionModelConfig,
+    preset_names,
+    selection_run_config,
+)
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_DB_PATH,
     DEFAULT_POST_DOBBS_YEAR,
@@ -63,6 +69,7 @@ __all__ = [
     "DEFAULT_POST_DOBBS_YEAR",
     "DEFAULT_YEAR_RANGE",
     "EDU_LEVELS",
+    "MODEL_ID",
     "ModelPriors",
     "N_AGE",
     "N_EDU",
@@ -71,6 +78,7 @@ __all__ = [
     "PAYER_LEVELS",
     "RACE_LEVELS",
     "SPECS",
+    "SelectionModelConfig",
     "TrueParams",
     "VARIANTS",
     "build_model",
@@ -80,6 +88,8 @@ __all__ = [
     "logit",
     "posterior_subgroup_rate",
     "prepare_cells",
+    "preset_names",
+    "selection_run_config",
     "simulate_cells",
     "summarise_cells",
     "variant_A_tight_s",

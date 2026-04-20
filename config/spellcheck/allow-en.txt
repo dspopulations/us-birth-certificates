@@ -93,6 +93,7 @@ vars
 
 # Tooling
 asis
+elif
 hatchling
 iloc
 jupytext

@@ -1,0 +1,254 @@
+---
+title: "Selection model: Bayesian decomposition of recorded DS livebirths"
+
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm:ss Z"
+
+format:
+  html:
+    code-fold: true
+    theme: cosmo
+    number-sections: true
+    toc: true
+    toc-depth: 2
+    code-links:
+      - repo
+---
+
+::: {.callout-warning title="Preliminary model output"}
+
+This output is preliminary and will change as the model evolves and as
+further data are incorporated. If the fit used the `dev` profile rather
+than `reporting`, convergence diagnostics and posterior uncertainty
+bands are more approximate than a full run would give.
+
+:::
+
+This report summarises a fit of the three-stage Bayesian selection
+model for recorded Down-syndrome livebirth ascertainment in U.S. birth
+certificate data (2016–2024). The model decomposes observed recording
+into:
+
+$$
+P(R = 1 \mid X) = \theta_\text{LB}(\text{age}) \cdot \eta(X) \cdot s(X)
+\;+\; (1 - \theta_\text{LB}\cdot \eta) \cdot f
+$$
+
+where $\theta_\text{LB}$ is the baseline DS livebirth rate in the
+absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
+\eta_\text{detect} \cdot \eta_\text{term}$ is the screening/termination
+pass-through (Kuppermann / Natoli / Chaiken), $s$ is birth-certificate
+sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
+is a fixed false-positive rate (Ohio/NY validation). See
+`plans/docs/bayesian_selection_model.md` for the full design.
+
+```{python}
+# | echo: false
+import json
+from pathlib import Path
+
+import pandas as pd
+from IPython.display import Image, Markdown
+
+config = json.loads(Path("config.json").read_text())
+run_config = json.loads(Path("run_config.json").read_text())
+```
+
+```{python}
+# | echo: false
+variant = config["variant"]
+spec = config["spec"]
+year_range = config["year_range"]
+post_dobbs_year = config["post_dobbs_year"]
+profile = run_config["name"]
+sampler = run_config["nuts_sampler"]
+
+Markdown(
+    f"- **variant**: `{variant}` "
+    f"({'tight s' if variant == 'A' else 'tight η_term' if variant == 'B' else 'default' if variant == 'C' else 'Dobbs-only'})\n"
+    f"- **spec**: `{spec}`\n"
+    f"- **year range**: {year_range[0]}–{year_range[1]}\n"
+    f"- **post-Dobbs year**: {post_dobbs_year} "
+    f"(year_idx ≥ {post_dobbs_year - year_range[0]} uses the wider sigma)\n"
+    f"- **sampling profile**: `{profile}` "
+    f"({run_config['chains']} chains × {run_config['draws']} draws, "
+    f"tune={run_config['tune']}, "
+    f"target_accept={run_config['target_accept']}, sampler={sampler})"
+)
+```
+
+## Cell aggregation
+
+Births within the year range with known `down_ind`, `mage_c`, and the
+required covariates are aggregated into cells keyed on year × age band
+× race × education × payer × preterm × CCHD × NICU × assisted-
+ventilation. A state/region column is not available in the project
+DuckDB, so the Dobbs shock is captured as a national year effect
+(`eta_term_year`) rather than a state-level contrast.
+
+```{python}
+# | echo: false
+cells = pd.read_parquet("cells.parquet")
+n_total = int(cells["N_cell"].sum())
+r_total = int(cells["R_cell"].sum())
+pd.DataFrame(
+    {
+        "value": [
+            len(cells),
+            f"{n_total:,}",
+            f"{r_total:,}",
+            f"{r_total / max(n_total, 1):.3e}",
+            f"{year_range[0]}–{year_range[1]}",
+        ],
+    },
+    index=[
+        "cells",
+        "total livebirths (N)",
+        "recorded DS (R)",
+        "overall recorded rate",
+        "year range",
+    ],
+)
+```
+
+## Convergence
+
+```{python}
+# | echo: false
+summary_path = Path("summary.csv")
+convergence_path = Path("convergence_summary.csv")
+if summary_path.exists():
+    summary = pd.read_csv(summary_path, index_col=0)
+    rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
+    max_rhat = summary[rhat_col].max() if rhat_col in summary.columns else float("nan")
+    ess_cols = [c for c in ("ess_bulk", "ess_tail") if c in summary.columns]
+    min_ess = summary[ess_cols].min().min() if ess_cols else float("nan")
+    Markdown(
+        f"- **max R̂**: {max_rhat:.4f} (target < 1.01)\n"
+        f"- **min ESS**: {min_ess:.0f} (target ≥ 400)"
+    )
+elif convergence_path.exists():
+    Markdown("*(see `convergence_summary.csv`)*")
+else:
+    Markdown("*(prior-only run — no posterior convergence summary available)*")
+```
+
+## Age curve — Stage 1 sanity check
+
+Posterior baseline DS livebirth rate $\theta_\text{LB}$ per 1,000
+livebirths, by maternal age band, against the Morris / de Graaf prior
+means. The Morris prior is tight ($\sigma = 0.10$ on logit) so
+posterior means should track the anchors closely — large deviations
+indicate the age coding or cell aggregation has drifted.
+
+```{python}
+# | echo: false
+age_plot = Path("plots/age_curve.png")
+if age_plot.exists():
+    display(Image(str(age_plot)))
+age_table = Path("tables/age_curve.csv")
+if age_table.exists():
+    display(pd.read_csv(age_table).round(3))
+```
+
+## Identifiability: η_term vs s race effects
+
+Per-race posterior scatter of the $\eta_\text{term}$ race effect
+against the $s$ race effect. A posterior correlation $|r| > 0.7$ on a
+race panel indicates the decomposition is prior-driven — the data
+cannot distinguish lower termination from lower birth-certificate
+sensitivity. $|r| < 0.7$ suggests meaningful identification from the
+data.
+
+```{python}
+# | echo: false
+id_plot = Path("plots/identifiability.png")
+if id_plot.exists():
+    display(Image(str(id_plot)))
+id_table = Path("tables/identifiability.csv")
+if id_table.exists():
+    id_df = pd.read_csv(id_table)
+    display(id_df.assign(correlation=id_df["correlation"].round(3),
+                         abs_correlation=id_df["abs_correlation"].round(3)))
+```
+
+## Dobbs year trajectory
+
+Posterior $\eta_\text{term,year}$ trajectory with pre/post-Dobbs
+colouring. The summary row in the table (`year_idx = -1`) carries
+`mean(post) − mean(pre)` with its 95% credible interval — the headline
+Dobbs effect under the no-region model.
+
+```{python}
+# | echo: false
+dobbs_plot = Path("plots/dobbs_year_trajectory.png")
+if dobbs_plot.exists():
+    display(Image(str(dobbs_plot)))
+dobbs_table = Path("tables/dobbs_year_trajectory.csv")
+if dobbs_table.exists():
+    display(pd.read_csv(dobbs_table).round(3))
+```
+
+## CCHD consistency
+
+Posterior CCHD prevalence among true DS livebirths vs the EUROCAT
+target (~22.5%). A posterior mean landing inside the target's plausible
+range is evidence that the clinical-marker effects on $s$ are
+well-calibrated; a systematic offset suggests the
+"workup-not-complete-at-certificate-submission" mechanism differs in
+magnitude from what Boulet found.
+
+```{python}
+# | echo: false
+cchd_plot = Path("plots/cchd_consistency.png")
+if cchd_plot.exists():
+    display(Image(str(cchd_plot)))
+cchd_table = Path("tables/cchd_consistency.csv")
+if cchd_table.exists():
+    display(pd.read_csv(cchd_table).round(4))
+```
+
+## Decomposition by race
+
+Posterior estimate of true DS livebirths per race (stacked into
+recorded vs missed), with the implied number of prenatal terminations
+shown as a reference line above each bar. This is the model's
+selection story in a single figure: how much of the population-level
+decomposition sits in $\eta_\text{term}$ vs $s$ vs baseline.
+
+```{python}
+# | echo: false
+decomposition_plot = Path("plots/decomposition_by_race.png")
+if decomposition_plot.exists():
+    display(Image(str(decomposition_plot)))
+decomposition_table = Path("tables/decomposition_by_race.csv")
+if decomposition_table.exists():
+    display(pd.read_csv(decomposition_table).round(1))
+```
+
+## Posterior predictive checks
+
+Observed vs predicted recorded DS counts aggregated by stratum. The
+posterior predictive bars should bracket the observed points (orange
+markers); systematic misses in any stratum indicate missing structure.
+
+```{python}
+# | echo: false
+for stratum in ("year_idx", "race_idx", "age_idx"):
+    p = Path(f"plots/ppc_{stratum}.png")
+    if p.exists():
+        display(Image(str(p)))
+```
+
+## Caveats
+
+- The project DuckDB has no state-level column. `eta_term_year` is a
+  national year effect; Variant D's Dobbs identification is therefore a
+  pre-vs-post-2022 national shift, weaker than the treated-vs-untreated
+  state contrast the original design called for. Revisit when
+  state-level data becomes available.
+- The `dev` profile is for iteration, not reporting. Publication-
+  quality posteriors require `--profile reporting`.
+- The false-positive rate $f$ is fixed at 7.8e-5 (Ohio/NY) and not
+  estimated. Sensitivity to $f$ requires re-fitting at a different
+  constant; see `plans/docs/bayesian_selection_model.md` §8.
