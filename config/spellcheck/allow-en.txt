@@ -59,11 +59,15 @@ WTGAIN
 # Statistical / ML vocabulary
 ADVI
 allclose
+arviz
+asarray
 beeswarm
 codings
 dataclasses
 downweight
+dtype
 dtypes
+numpy
 HSGP
 hyperparameters
 iqr

@@ -240,6 +240,117 @@ for stratum in ("year_idx", "race_idx", "age_idx"):
         display(Image(str(p)))
 ```
 
+## Comparison with the LightGBM classifier
+
+Side-by-side headline numbers for this fit vs the LightGBM classifier's
+``recorded_plus_predicted`` dataset (see ``docs/analysis/predicted.qmd``).
+The classifier uses a fixed year×month quota of
+``ceil(1.5 × recorded)`` top non-recorded births by ``p_ds_lb_pred_01``;
+the Bayesian posterior places probabilistic CIs on the same quantities.
+
+```{python}
+# | echo: false
+import numpy as np
+import arviz as az
+
+idata = az.from_netcdf("idata.nc")
+cells_full = pd.read_parquet("cells.parquet")
+
+N = cells_full["N_cell"].to_numpy(dtype=float)
+R = cells_full["R_cell"].to_numpy(dtype=float)
+
+# Posterior total true DS livebirths across cells (θ_LB · η · N).
+# p_ds_lb = θ_LB · η is always on the InferenceData regardless of spec.
+p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (chain, draw, cell)
+true_counts_draws = (p_ds_lb * N[None, None, :]).sum(axis=-1)
+total_recorded = int(R.sum())
+total_true_mean = float(true_counts_draws.mean())
+total_true_lo = float(np.quantile(true_counts_draws, 0.025))
+total_true_hi = float(np.quantile(true_counts_draws, 0.975))
+
+# Missed = true − recorded, per cell, sampled from the posterior.
+missed_draws = p_ds_lb * N[None, None, :] - R[None, None, :]
+# Posterior NH Black share of missed (race_idx == 1).
+races = cells_full["race_idx"].to_numpy()
+nhb_mask = races == 1
+nhb_share_draws = (
+    missed_draws[..., nhb_mask].sum(axis=-1)
+    / np.clip(missed_draws.sum(axis=-1), 1.0, None)
+)
+nhb_share_mean = float(nhb_share_draws.mean())
+nhb_share_lo = float(np.quantile(nhb_share_draws, 0.025))
+nhb_share_hi = float(np.quantile(nhb_share_draws, 0.975))
+
+# Posterior CCHD co-occurrence among missed DS.
+cchd = cells_full["cchd"].to_numpy(dtype=float)
+cchd_missed_share_draws = (
+    (missed_draws * cchd[None, None, :]).sum(axis=-1)
+    / np.clip(missed_draws.sum(axis=-1), 1.0, None)
+)
+cchd_missed_mean = float(cchd_missed_share_draws.mean())
+cchd_missed_lo = float(np.quantile(cchd_missed_share_draws, 0.025))
+cchd_missed_hi = float(np.quantile(cchd_missed_share_draws, 0.975))
+```
+
+```{python}
+# | echo: false
+def _ci(mean, lo, hi, fmt="{:.1%}"):
+    return f"{fmt.format(mean)} [{fmt.format(lo)}, {fmt.format(hi)}]"
+
+
+def _ci_count(mean, lo, hi):
+    return f"{mean:,.0f} [{lo:,.0f}, {hi:,.0f}]"
+
+
+comparison = pd.DataFrame(
+    {
+        "Classifier (1.5× quota)": [
+            f"{total_recorded:,} recorded; classifier adds ~1.5× more",
+            "See predicted.qmd — classifier NH Black share is ~flat",
+            "≈ 25.6% (from predicted.qmd)",
+        ],
+        "Bayesian posterior (this fit)": [
+            _ci_count(total_true_mean, total_true_lo, total_true_hi),
+            _ci(nhb_share_mean, nhb_share_lo, nhb_share_hi),
+            _ci(cchd_missed_mean, cchd_missed_lo, cchd_missed_hi),
+        ],
+        "Note": [
+            "Bayesian is total true livebirths (recorded + implied missed).",
+            "Classifier inherits BC demographic bias; Bayesian decomposes η_term vs s.",
+            "EUROCAT target ≈ 22.5%; see CCHD consistency plot above.",
+        ],
+    },
+    index=[
+        "Total DS livebirths 2016–2024",
+        "NH Black share of missed",
+        "CCHD co-occurrence in missed",
+    ],
+)
+comparison
+```
+
+Interpretation notes:
+
+- Disagreement on **NH Black share of missed** is diagnostic. The
+  classifier picks missed cases almost entirely from clinical-severity
+  signals, so its NH Black share tracks the recorded distribution
+  rather than the epidemiological under-reporting gradient. The
+  Bayesian posterior separates η_term (termination rate variation,
+  which differs by race per Kuppermann) from s (birth-certificate
+  sensitivity, which differs by race per Boulet) — so its missed-share
+  by race should skew higher for NH Black if the priors are
+  data-supported.
+- Disagreement on **CCHD co-occurrence in missed** is expected by
+  construction. The classifier up-weights CCHD-positive non-recorded
+  births (hence ≈ 25.6%), which is higher than the EUROCAT-published
+  22.5% prevalence among true DS livebirths. The Bayesian model
+  constrains CCHD through the `s_cchd` prior, so its posterior should
+  sit closer to 22.5% if the prior is well-calibrated.
+- The total estimate is where the methods agree or disagree most
+  transparently: both estimate roughly recorded ÷ ~0.4 = ~2.5× recorded
+  as the true livebirth count. CI width is the Bayesian's honest cost
+  of uncertainty.
+
 ## Caveats
 
 - The project DuckDB has no state-level column. `eta_term_year` is a
