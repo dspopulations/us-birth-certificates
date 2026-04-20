@@ -90,10 +90,12 @@ def _render_summary_table(summary: pd.DataFrame) -> pd.DataFrame:
 year_range = "all years"
 if config.get("start_year") is not None and config.get("end_year") is not None:
     year_range = f"{config['start_year']}–{config['end_year']}"
+flag_column = config.get("flag_column", "ds_pred_missing")
+predictions_column = config.get("predictions_column", "p_ds_lb_pred_01")
 restrict = config.get("restrict_to_prediction_coverage", True)
 scope = (
-    "rows with non-null `p_ds_lb_pred_01` (i.e. within the prediction "
-    "model's coverage)"
+    f"rows with non-null `{predictions_column}` (i.e. within the "
+    "prediction model's coverage)"
     if restrict
     else "all rows, regardless of prediction coverage"
 )
@@ -104,6 +106,8 @@ headline = _load_summary("mracehisp").iloc[-1]
 
 Markdown(
     f"- **DuckDB**: `{config['duckdb_path']}`\n"
+    f"- **predicted-missing flag**: `{flag_column}`\n"
+    f"- **predictions column**: `{predictions_column}`\n"
     f"- **year range**: {year_range}\n"
     f"- **scope**: {scope}\n"
     f"- **recorded total**: {int(headline['recorded_n']):,}\n"
