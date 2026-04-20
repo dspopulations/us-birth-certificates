@@ -2,12 +2,13 @@
 
 - ``recorded``: the observed positive indicator ``down_ind = 1``.
 - ``recorded_plus_predicted``: recorded cases topped up with predicted-
-  missing cases, flagged via the ``ds_pred_missing`` column in
-  ``us_births``. That column is populated by the prediction step in
-  ``scripts/fit_model.py`` using a year×month quota of
-  ``ceil(1.5 × recorded)`` top non-recorded births by
-  ``p_ds_lb_pred_01``. See that script for the multiplier rationale
-  (~60% under-reporting) and the surveillance-matching TODO.
+  missing cases, flagged via a BOOLEAN column on ``us_births`` (default
+  ``ds_pred_missing`` from the usbc10 family; override with
+  ``flag_column`` to read usbc11's ``ds_pred_missing_02`` instead). The
+  flag is populated by the prediction step in ``scripts/fit_model.py``
+  using a year×month quota of ``ceil(1.5 × recorded)`` top non-recorded
+  births by the matching predictions column. See that script for the
+  multiplier rationale (~60% under-reporting).
 
 Every builder returns a SQL expression that yields one row per birth in
 scope with a binary ``is_case`` column alongside the dim columns.
@@ -22,8 +23,19 @@ identified.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
+
+DEFAULT_FLAG_COLUMN = "ds_pred_missing"
+
+_SAFE_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _check_ident(name: str, kind: str) -> None:
+    """Column names are interpolated into SQL, so reject exotic chars."""
+    if not _SAFE_IDENT.match(name):
+        raise ValueError(f"Invalid {kind} column name: {name!r}")
 
 
 @dataclass(frozen=True)
@@ -39,15 +51,24 @@ def recorded_spec() -> OutcomeSpec:
     return OutcomeSpec(name="recorded", params={})
 
 
-def recorded_plus_predicted_spec() -> OutcomeSpec:
+def recorded_plus_predicted_spec(
+    flag_column: str = DEFAULT_FLAG_COLUMN,
+) -> OutcomeSpec:
     """Outcome = recorded DS births plus predicted-missing.
 
-    Reads the persisted ``ds_pred_missing`` flag from ``us_births``, which
-    the prediction pipeline populates using a year×month quota at a fixed
-    multiplier of 1.5 (~60% under-reporting). For sensitivity runs at
-    other multipliers, regenerate the column from ``fit_model.py``.
+    Reads the persisted ``flag_column`` from ``us_births``, which the
+    prediction pipeline populates using a year×month quota at a fixed
+    multiplier of 1.5 (~60% under-reporting). The default reads the
+    usbc10 family column (``ds_pred_missing``). Pass a different column
+    (e.g. ``ds_pred_missing_02``) to sample against another variant's
+    predicted-missing flag. For sensitivity runs at other multipliers,
+    regenerate the column from ``fit_model.py``.
     """
-    return OutcomeSpec(name="recorded_plus_predicted", params={})
+    _check_ident(flag_column, "flag")
+    return OutcomeSpec(
+        name="recorded_plus_predicted",
+        params={"flag_column": flag_column},
+    )
 
 
 def build_outcome_sql(
@@ -76,7 +97,11 @@ def build_outcome_sql(
     if spec.name == "recorded":
         case_expr = "CAST(b.down_ind AS INTEGER)"
     elif spec.name == "recorded_plus_predicted":
-        case_expr = "CASE WHEN b.down_ind = 1 OR b.ds_pred_missing THEN 1 ELSE 0 END"
+        flag_column = spec.params.get("flag_column", DEFAULT_FLAG_COLUMN)
+        _check_ident(flag_column, "flag")
+        case_expr = (
+            f"CASE WHEN b.down_ind = 1 OR b.{flag_column} THEN 1 ELSE 0 END"
+        )
     else:
         raise ValueError(f"Unknown outcome spec: {spec.name!r}")
 

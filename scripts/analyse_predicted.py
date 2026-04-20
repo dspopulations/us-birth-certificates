@@ -7,15 +7,23 @@ proportion plot plus a wide summary CSV. All artefacts land in a
 timestamped run directory so the Quarto template at
 ``docs/analysis/predicted.qmd`` can render against it.
 
-The prediction flag ``ds_pred_missing`` must already be present on the
-``us_births`` table — that column is written by ``scripts/fit_model.py``
-(``write_predictions_to_duckdb``). If it is missing, run fit_model with
-``--write-predictions`` first.
+The analysis keys off two DuckDB columns: a BOOLEAN predicted-missing
+flag (``--flag-column``, default ``ds_pred_missing`` from usbc10) and
+the matching prediction probability column used for the coverage
+filter (``--predictions-column``, default ``p_ds_lb_pred_01``). Point
+both at a different model's columns (e.g. ``ds_pred_missing_02`` +
+``p_ds_lb_pred_02`` for usbc11) to compare two predicted pools
+side-by-side. Both columns must already exist on ``us_births`` —
+populate them with ``scripts/fit_model.py --model-id <variant>
+--write-predictions`` first.
 
 Example
 -------
-    python scripts/analyse_predicted.py
-    python scripts/analyse_predicted.py --years 2016-2024 --render
+    python scripts/analyse_predicted.py --render
+    python scripts/analyse_predicted.py --render \\
+        --flag-column ds_pred_missing_02 \\
+        --predictions-column p_ds_lb_pred_02 \\
+        --output-dir output/analyse_predicted_usbc11
 """
 
 from __future__ import annotations
@@ -31,6 +39,8 @@ import matplotlib.pyplot as plt
 from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.predicted_analyses import (
     CATEGORY_GROUPINGS,
+    DEFAULT_FLAG_COLUMN,
+    DEFAULT_PREDICTIONS_COLUMN,
     CategoryGrouping,
     copy_analysis_template,
     load_category_counts,
@@ -88,8 +98,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help=(
             "Count across all years, not just those with prediction coverage. "
-            "Default is to restrict to rows where p_ds_lb_pred_01 is non-null "
-            "so `recorded` and `predicted` describe the same underlying years."
+            "Default is to restrict to rows where the predictions column is "
+            "non-null so `recorded` and `predicted` describe the same "
+            "underlying years."
+        ),
+    )
+    p.add_argument(
+        "--flag-column",
+        default=DEFAULT_FLAG_COLUMN,
+        help=(
+            "DuckDB BOOLEAN column marking predicted-missing rows. "
+            "Default is the usbc10 family column; use "
+            "`ds_pred_missing_02` for usbc11."
+        ),
+    )
+    p.add_argument(
+        "--predictions-column",
+        default=DEFAULT_PREDICTIONS_COLUMN,
+        help=(
+            "DuckDB DOUBLE column holding the model's predicted "
+            "probabilities — used for the prediction-coverage filter. "
+            "Default is the usbc10 family column; use "
+            "`p_ds_lb_pred_02` for usbc11."
         ),
     )
     p.add_argument(
@@ -113,6 +143,8 @@ def _run_grouping(
     restrict: bool,
     output_dir: Path,
     year_suffix: str,
+    flag_column: str,
+    predictions_column: str,
 ) -> None:
     cli_output.section(f"{grouping.variable}: load + plot")
     counts = load_category_counts(
@@ -121,6 +153,8 @@ def _run_grouping(
         start_year=start_year,
         end_year=end_year,
         restrict_to_prediction_coverage=restrict,
+        flag_column=flag_column,
+        predictions_column=predictions_column,
     )
     cli_output.info(
         f"recorded = {int(counts['recorded'].sum()):,}, "
@@ -158,6 +192,10 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("analyse_predicted")
     cli_output.info(f"DuckDB: [blue]{ns.duckdb_path}[/blue]")
     cli_output.info(f"Output: [blue]{output_dir}[/blue]")
+    cli_output.info(
+        f"Flag column: [bold]{ns.flag_column}[/bold]; "
+        f"predictions column: [bold]{ns.predictions_column}[/bold]"
+    )
     if start_year is not None or end_year is not None:
         cli_output.info(
             f"Years : {start_year if start_year is not None else '*'}"
@@ -171,6 +209,8 @@ def main(argv: list[str] | None = None) -> int:
             "start_year": start_year,
             "end_year": end_year,
             "restrict_to_prediction_coverage": not ns.all_years,
+            "flag_column": ns.flag_column,
+            "predictions_column": ns.predictions_column,
             "groupings": list(CATEGORY_GROUPINGS.keys()),
         },
     )
@@ -189,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
             restrict=not ns.all_years,
             output_dir=output_dir,
             year_suffix=year_suffix,
+            flag_column=ns.flag_column,
+            predictions_column=ns.predictions_column,
         )
 
     cli_output.section("Report template")

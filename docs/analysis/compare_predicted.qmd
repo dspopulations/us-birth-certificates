@@ -1,0 +1,352 @@
+---
+title: "Compare predicted-missing pools across models"
+
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm:ss Z"
+
+format:
+  html:
+    code-fold: true
+    theme: cosmo
+    number-sections: true
+    toc: true
+    toc-depth: 2
+    code-links:
+      - repo
+---
+
+::: {.callout-warning title="Preliminary output"}
+
+This comparison is a diagnostic. It reads two previously-rendered
+`analyse_predicted` runs — one per model variant — and shows how the
+demographic / clinical distribution of the predicted-missing cohort
+shifts when the underlying classifier changes. Interpretations should
+be read alongside `docs/analysis/predicted.qmd`'s "Literature context"
+and "Interpretation summary" sections.
+
+:::
+
+The two input runs are typically:
+
+- **Left** — the usbc10 family (full feature set, including
+  sociodemographic features).
+- **Right** — the usbc11 family (clinical + maternal age only;
+  sociodemographic features removed to probe selection bias on the
+  `down_ind` training target).
+
+Shifts that move *into* the literature-predicted direction — e.g.
+Boulet's NH Black / NH Asian / low-education under-reporting — are
+evidence that the left-hand model was leaning on demographic features
+for reasons other than DS biology, and that the right-hand model
+recovers the hidden signal.
+
+```{python}
+# | echo: false
+import json
+from pathlib import Path
+
+import pandas as pd
+from IPython.display import Markdown
+
+config = json.loads(Path("compare_config.json").read_text())
+
+left_label = config.get("left_label", "left")
+right_label = config.get("right_label", "right")
+
+
+def _load(side: str, variable: str) -> pd.DataFrame:
+    return pd.read_csv(f"{variable}_summary_{side}.csv")
+
+
+def _side_meta() -> str:
+    lines = []
+    for side, label in (("left", left_label), ("right", right_label)):
+        cfg = config.get(f"{side}_config", {})
+        flag = cfg.get("flag_column", "?")
+        pred = cfg.get("predictions_column", "?")
+        src = config.get(f"{side}_source", "?")
+        lines.append(
+            f"- **{label}** — flag `{flag}`, predictions `{pred}` "
+            f"(`{src}`)"
+        )
+    return "\n".join(lines)
+
+
+def _render_compare_table(variable: str) -> pd.DataFrame:
+    left = _load("left", variable)
+    right = _load("right", variable)
+    merged = left.merge(right, on=["code", "label"], suffixes=("_l", "_r"))
+
+    display_df = pd.DataFrame({
+        "Category": merged["label"],
+        f"{left_label} (n)": merged["predicted_n_l"].astype(int),
+        f"{left_label} (%)": merged["predicted_pct_l"].astype(float),
+        f"{right_label} (n)": merged["predicted_n_r"].astype(int),
+        f"{right_label} (%)": merged["predicted_pct_r"].astype(float),
+        "Δ (%)": (
+            merged["predicted_pct_r"].astype(float)
+            - merged["predicted_pct_l"].astype(float)
+        ).round(2),
+        "Recorded (%)": merged["recorded_pct_l"].astype(float),
+    })
+
+    # Format for display.
+    for c in display_df.columns:
+        if c.endswith("(n)"):
+            display_df[c] = display_df[c].map(lambda v: f"{int(v):,}")
+        elif c.endswith("(%)") or c == "Δ (%)":
+            display_df[c] = display_df[c].map(lambda v: f"{float(v):+.2f}" if c == "Δ (%)" else f"{float(v):.2f}")
+
+    return display_df.set_index("Category")
+```
+
+## Run metadata
+
+```{python}
+# | echo: false
+Markdown(_side_meta())
+```
+
+```{python}
+# | echo: false
+Markdown(
+    "Both runs share the same recorded-cases set and exposure "
+    "denominator (they differ only in which predicted-missing pool "
+    "is compared against the same recorded cases). The `Δ (%)` "
+    "column is the **right-minus-left** share change per category "
+    "— positive values mean the right-hand model over-represents "
+    "that category in its predicted-missing pool compared with the "
+    "left. `Recorded (%)` is the corresponding share in recorded "
+    "DS births, shown as a reference anchor."
+)
+```
+
+## Maternal age (`mage_c`)
+
+```{python}
+# | echo: false
+_render_compare_table("mage_c")
+```
+
+## Maternal race / Hispanic origin (`mracehisp`)
+
+::: {.callout-warning title="Headline comparison"}
+
+Boulet et al. (2011) predict that infants of non-Hispanic Black
+mothers are under-recorded ~5× more than infants of non-Hispanic White
+mothers; Hispanic and "other non-Hispanic" groups show a similar but
+weaker gradient. A predicted-missing pool that correctly identifies
+the demographic under-ascertainment should therefore show **higher**
+shares for those groups. A rightward shift (positive Δ) for NH Black,
+NH Asian, and Hispanic under the clinical-only model is evidence that
+the full-feature model was leaning on demographic features in ways
+that suppressed recovery of those groups.
+
+:::
+
+```{python}
+# | echo: false
+_render_compare_table("mracehisp")
+```
+
+## Maternal education (`meduc`)
+
+```{python}
+# | echo: false
+_render_compare_table("meduc")
+```
+
+## Principal source of payment (`pay_rec`)
+
+```{python}
+# | echo: false
+_render_compare_table("pay_rec")
+```
+
+## NICU admission (`ab_nicu`)
+
+```{python}
+# | echo: false
+_render_compare_table("ab_nicu")
+```
+
+## Birth weight (`dbwt`)
+
+```{python}
+# | echo: false
+_render_compare_table("dbwt")
+```
+
+## Gestational age at delivery (`gestrec10`)
+
+```{python}
+# | echo: false
+_render_compare_table("gestrec10")
+```
+
+## Assisted ventilation immediately following delivery (`ab_aven1`)
+
+```{python}
+# | echo: false
+_render_compare_table("ab_aven1")
+```
+
+## Maternal weight gain during pregnancy (`wtgain`)
+
+```{python}
+# | echo: false
+_render_compare_table("wtgain")
+```
+
+## Birth year (`year`)
+
+```{python}
+# | echo: false
+_render_compare_table("year")
+```
+
+## Cyanotic congenital heart disease (`ca_cchd`)
+
+```{python}
+# | echo: false
+_render_compare_table("ca_cchd")
+```
+
+## Delivery method (`dmeth_rec`)
+
+```{python}
+# | echo: false
+_render_compare_table("dmeth_rec")
+```
+
+## Month prenatal care began (`precare`)
+
+```{python}
+# | echo: false
+_render_compare_table("precare")
+```
+
+## Chromosomal disorder flag (`ca_disor`)
+
+```{python}
+# | echo: false
+_render_compare_table("ca_disor")
+```
+
+## Assisted ventilation for more than 6 hours (`ab_aven6`)
+
+```{python}
+# | echo: false
+_render_compare_table("ab_aven6")
+```
+
+## Gestational hypertension (`rf_ghype`)
+
+```{python}
+# | echo: false
+_render_compare_table("rf_ghype")
+```
+
+## Maternal pre-pregnancy BMI (`bmi`)
+
+```{python}
+# | echo: false
+_render_compare_table("bmi")
+```
+
+## Paternal race / Hispanic origin (`fracehisp`)
+
+```{python}
+# | echo: false
+_render_compare_table("fracehisp")
+```
+
+## Fetal presentation at delivery (`me_pres`)
+
+```{python}
+# | echo: false
+_render_compare_table("me_pres")
+```
+
+## Paternal education (`feduc`)
+
+```{python}
+# | echo: false
+_render_compare_table("feduc")
+```
+
+## Antibiotics received by the newborn (`ab_anti`)
+
+```{python}
+# | echo: false
+_render_compare_table("ab_anti")
+```
+
+## Paternal age (`fagecomb`)
+
+```{python}
+# | echo: false
+_render_compare_table("fagecomb")
+```
+
+## Birth facility type (`bfacil3`)
+
+```{python}
+# | echo: false
+_render_compare_table("bfacil3")
+```
+
+## Augmentation of labour (`ld_augm`)
+
+```{python}
+# | echo: false
+_render_compare_table("ld_augm")
+```
+
+## Infertility treatment used (`rf_inftr`)
+
+```{python}
+# | echo: false
+_render_compare_table("rf_inftr")
+```
+
+## Fertility-enhancing drugs (`rf_fedrg`)
+
+```{python}
+# | echo: false
+_render_compare_table("rf_fedrg")
+```
+
+## Pre-pregnancy hypertension (`rf_phype`)
+
+```{python}
+# | echo: false
+_render_compare_table("rf_phype")
+```
+
+## Apgar score at 5 minutes (`apgar5`)
+
+```{python}
+# | echo: false
+_render_compare_table("apgar5")
+```
+
+## Induction of labour (`ld_indl`)
+
+```{python}
+# | echo: false
+_render_compare_table("ld_indl")
+```
+
+## Sex of baby (`sex`)
+
+```{python}
+# | echo: false
+_render_compare_table("sex")
+```
+
+---
+
+*Generated from the template at
+`docs/analysis/compare_predicted.qmd`, copied into this run's output
+directory by `scripts/compare_predicted.py`.*

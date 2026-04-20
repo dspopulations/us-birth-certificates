@@ -20,6 +20,7 @@ of groupings the analyse_predicted script iterates over.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -35,6 +36,20 @@ from matplotlib.figure import Figure
 from dspopulations_us_birth_certificates.plot_utils import _save_fig
 
 DOCS_TEMPLATE_ROOT = Path("docs/analysis")
+
+# Default DuckDB column names populated by the usbc10 family. Callers can
+# override to target a different model variant's columns (e.g.
+# ``ds_pred_missing_02`` + ``p_ds_lb_pred_02`` for usbc11).
+DEFAULT_FLAG_COLUMN = "ds_pred_missing"
+DEFAULT_PREDICTIONS_COLUMN = "p_ds_lb_pred_01"
+
+_SAFE_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _check_ident(name: str, kind: str) -> None:
+    """Column names are interpolated into SQL, so reject exotic chars."""
+    if not _SAFE_IDENT.match(name):
+        raise ValueError(f"Invalid {kind} column name: {name!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -672,6 +687,8 @@ def load_category_counts(
     start_year: int | None = None,
     end_year: int | None = None,
     restrict_to_prediction_coverage: bool = True,
+    flag_column: str = DEFAULT_FLAG_COLUMN,
+    predictions_column: str = DEFAULT_PREDICTIONS_COLUMN,
 ) -> pd.DataFrame:
     """Count births by ``grouping`` for each of the three populations.
 
@@ -681,16 +698,26 @@ def load_category_counts(
     and a ``label`` column the human-readable name.
 
     By default the query is restricted to rows with a non-null
-    ``p_ds_lb_pred_01``, so ``recorded`` and ``predicted`` describe the
-    same underlying year range (the model's training years). Pass
+    ``predictions_column``, so ``recorded`` and ``predicted`` describe
+    the same underlying year range (the model's training years). Pass
     ``restrict_to_prediction_coverage=False`` to count all years.
+
+    ``flag_column`` names the BOOLEAN column that marks predicted-
+    missing rows (default ``ds_pred_missing`` for usbc10). Pair it with
+    the matching ``predictions_column`` (default ``p_ds_lb_pred_01``).
+    Point both at a different model's columns (e.g. ``ds_pred_missing_02``
+    + ``p_ds_lb_pred_02`` for usbc11) to compare predicted pools from
+    different model variants side by side.
     """
+    _check_ident(flag_column, "flag")
+    _check_ident(predictions_column, "predictions")
+
     where: list[str] = []
     params: list[int] = []
     if grouping.not_null_filter:
         where.append(grouping.not_null_filter)
     if restrict_to_prediction_coverage:
-        where.append("p_ds_lb_pred_01 IS NOT NULL")
+        where.append(f"{predictions_column} IS NOT NULL")
     if start_year is not None:
         where.append("year >= ?")
         params.append(start_year)
@@ -701,9 +728,9 @@ def load_category_counts(
 
     sql = f"""
         SELECT ({grouping.group_sql}) AS code,
-               SUM(CASE WHEN ds_pred_missing THEN 1 ELSE 0 END)       AS predicted,
+               SUM(CASE WHEN {flag_column} THEN 1 ELSE 0 END)         AS predicted,
                SUM(CASE WHEN down_ind = 1 THEN 1 ELSE 0 END)          AS recorded,
-               SUM(CASE WHEN down_ind = 1 OR ds_pred_missing THEN 1
+               SUM(CASE WHEN down_ind = 1 OR {flag_column} THEN 1
                         ELSE 0 END)                                   AS rprime
         FROM us_births
         WHERE {where_sql}
@@ -990,3 +1017,61 @@ def copy_analysis_template(
 def render_quarto(qmd_path: Path) -> None:
     """Invoke ``quarto render`` on a QMD file."""
     subprocess.run(["quarto", "render", str(qmd_path)], check=True)
+
+
+# ---------------------------------------------------------------------------
+# Cross-run comparison (usbc10 vs usbc11 etc.)
+# ---------------------------------------------------------------------------
+
+def stage_compare_artefacts(
+    *,
+    left_dir: Path,
+    right_dir: Path,
+    output_dir: Path,
+    left_label: str,
+    right_label: str,
+) -> dict:
+    """Copy `<var>_summary.csv` from two source runs into ``output_dir``.
+
+    Both runs must have been produced by ``scripts/analyse_predicted.py``
+    — i.e. contain a ``config.json`` plus one
+    ``<variable>_summary.csv`` per registered grouping. Files from
+    ``left_dir`` are suffixed ``_left`` in the output, files from
+    ``right_dir`` are suffixed ``_right``; the Quarto compare template
+    keys off those suffixes.
+
+    Returns the compare config (also written as
+    ``compare_config.json`` inside ``output_dir``).
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    left_config: dict = {}
+    right_config: dict = {}
+    try:
+        left_config = json.loads((left_dir / "config.json").read_text())
+    except FileNotFoundError:
+        pass
+    try:
+        right_config = json.loads((right_dir / "config.json").read_text())
+    except FileNotFoundError:
+        pass
+
+    for variable in CATEGORY_GROUPINGS:
+        for side, src_dir in (("left", left_dir), ("right", right_dir)):
+            src = src_dir / f"{variable}_summary.csv"
+            if not src.exists():
+                continue
+            shutil.copy(src, output_dir / f"{variable}_summary_{side}.csv")
+
+    compare_config = {
+        "left_label": left_label,
+        "right_label": right_label,
+        "left_source": str(left_dir),
+        "right_source": str(right_dir),
+        "left_config": left_config,
+        "right_config": right_config,
+    }
+    (output_dir / "compare_config.json").write_text(
+        json.dumps(compare_config, indent=2, default=str), encoding="utf-8"
+    )
+    return compare_config
