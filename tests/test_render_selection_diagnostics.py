@@ -137,7 +137,8 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
         assert csv.is_file(), f"missing {stem}.csv"
         assert len(pd.read_csv(csv)) >= 1
 
-    assert (out_dir / "convergence_summary.csv").is_file()
+    # CLI computes summary.csv on the fly when one isn't already present.
+    assert (out_dir / "summary.csv").is_file()
 
 
 def test_cli_rejects_missing_paths(tmp_path: Path) -> None:

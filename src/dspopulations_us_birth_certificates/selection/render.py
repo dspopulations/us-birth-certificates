@@ -10,8 +10,11 @@ Layout
 ``out_dir/``
     ``plots/<stem>.png`` + ``<stem>.svg``
     ``tables/<stem>.csv`` (where a diagnostic has a tidy table companion)
-    ``convergence_summary.csv`` — written to ``out_dir`` root next to
-    the model artefacts so it sits alongside ``summary.csv``.
+
+Convergence summarisation is **not** done here — ``az.summary`` is
+expensive on per-cell deterministics and would double the wall-clock
+time if both callers recomputed it. The fit CLI computes and writes
+``summary.csv`` as a separate step; the post-hoc CLI reads it.
 
 Each diagnostic is guarded: one failure is logged via ``cli_output`` and
 the rest still render.
@@ -102,10 +105,7 @@ def render_all(
     *,
     options: RenderOptions,
 ) -> None:
-    """Render the six diagnostic figures + their CSV companions.
-
-    Also writes ``convergence_summary.csv`` to ``out_dir`` root.
-    """
+    """Render the six diagnostic figures + their CSV companions."""
     plots_dir = out_dir / "plots"
     tables_dir = out_dir / "tables"
 
@@ -190,35 +190,6 @@ def render_all(
             plots_dir,
             tables_dir,
             f"ppc_{stratum}",
-        )
-
-    _render_convergence_summary(idata, out_dir)
-
-
-def _render_convergence_summary(
-    idata: az.InferenceData, out_dir: Path
-) -> None:
-    """Write the convergence summary + log max R-hat / min ESS."""
-    try:
-        summary = diagnostics.summary_table(idata)
-        health = diagnostics.convergence_health(summary)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        summary.to_csv(out_dir / "convergence_summary.csv")
-        cli_output.info(
-            f"max Rhat=[bold]{health['max_rhat']:.4f}[/bold] "
-            f"(target <{health['rhat_threshold']}), "
-            f"min ESS=[bold]{health['min_ess']:.0f}[/bold] "
-            f"(target >={health['ess_threshold']:.0f})"
-        )
-        if health["all_ok"]:
-            cli_output.success("Convergence checks passed.")
-        else:
-            cli_output.warning(
-                "Convergence flags — inspect convergence_summary.csv."
-            )
-    except Exception as exc:  # noqa: BLE001
-        cli_output.warning(
-            f"Convergence summary failed: {type(exc).__name__}: {exc}"
         )
 
 

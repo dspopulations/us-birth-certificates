@@ -30,6 +30,7 @@ import dse_research_utils.environment.setup as setup
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.selection import diagnostics
 from dspopulations_us_birth_certificates.selection.render import (
     DEFAULT_STRATA,
     RenderOptions,
@@ -180,6 +181,31 @@ def main(argv: list[str] | None = None) -> int:
             strata=cli.strata,
         ),
     )
+
+    # Read summary.csv if the fit CLI saved one; otherwise compute afresh.
+    # az.summary on per-cell deterministics is slow, so we prefer the cache.
+    cli_output.section("Convergence")
+    summary_path = cli.out_dir / "summary.csv"
+    if summary_path.exists():
+        summary = pd.read_csv(summary_path, index_col=0)
+        cli_output.info(f"Loaded cached summary from {summary_path}")
+    else:
+        cli_output.info("Computing posterior summary (no cached summary.csv)...")
+        summary = diagnostics.summary_table(idata)
+        summary.to_csv(summary_path)
+    health = diagnostics.convergence_health(summary)
+    cli_output.info(
+        f"max Rhat=[bold]{health['max_rhat']:.4f}[/bold] "
+        f"(target <{health['rhat_threshold']}), "
+        f"min ESS=[bold]{health['min_ess']:.0f}[/bold] "
+        f"(target >={health['ess_threshold']:.0f})"
+    )
+    if health["all_ok"]:
+        cli_output.success("Convergence checks passed.")
+    else:
+        cli_output.warning(
+            "Convergence flags — inspect summary.csv."
+        )
 
     cli_output.section("Done")
     cli_output.info(f"plots -> [blue]{cli.out_dir / 'plots'}[/blue]")
