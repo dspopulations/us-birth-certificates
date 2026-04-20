@@ -41,6 +41,12 @@ DOCS_TEMPLATE_ROOT = Path("docs/analysis")
 # Category groupings
 # ---------------------------------------------------------------------------
 
+# 2014+ NCHS coding for the raw `mracehisp` column. The same integer
+# codes follow a different ORRACEM-style scheme pre-2014, so this label
+# set is only correct for rows from the 2014 certificate revision
+# onward. The analyse_predicted CLI defaults to year >= 2016 (matching
+# the model training window), so the regimes never collide here — see
+# notes/202604201112-mracehisp-error.md.
 MRACEHISP_LABELS: dict[int, str] = {
     1: "Non-Hispanic White",
     2: "Non-Hispanic Black",
@@ -50,6 +56,22 @@ MRACEHISP_LABELS: dict[int, str] = {
     6: "Non-Hispanic more than one race",
     7: "Hispanic",
     8: "Origin unknown or not stated",
+}
+
+# fracehisp shares codes 1–8 with mracehisp from 2014 on and adds a 9
+# bucket for records where paternal ethnicity is unclassified (commonly
+# when the father is not on the birth certificate). Same regime caveat
+# as MRACEHISP_LABELS.
+FRACEHISP_LABELS: dict[int, str] = {
+    1: "Non-Hispanic White",
+    2: "Non-Hispanic Black",
+    3: "Non-Hispanic AIAN",
+    4: "Non-Hispanic Asian",
+    5: "Non-Hispanic NHOPI",
+    6: "Non-Hispanic more than one race",
+    7: "Hispanic",
+    8: "Origin unknown or not stated",
+    9: "Unknown or not classified",
 }
 
 MAGE_C_LABELS: dict[int, str] = {
@@ -201,21 +223,6 @@ APGAR5_LABELS: dict[int, str] = {
 SEX_LABELS: dict[int, str] = {
     0: "Female",
     1: "Male",
-}
-
-# fracehisp shares codes 1–8 with mracehisp and adds a 9 bucket for
-# records where paternal ethnicity is unclassified (commonly when the
-# father is not on the birth certificate).
-FRACEHISP_LABELS: dict[int, str] = {
-    1: "Non-Hispanic White",
-    2: "Non-Hispanic Black",
-    3: "Non-Hispanic AIAN",
-    4: "Non-Hispanic Asian",
-    5: "Non-Hispanic NHOPI",
-    6: "Non-Hispanic more than one race",
-    7: "Hispanic",
-    8: "Origin unknown or not stated",
-    9: "Unknown or not classified",
 }
 
 # Maternal pre-pregnancy BMI banded into WHO clinical categories, with

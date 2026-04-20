@@ -214,6 +214,15 @@ from this plot alone — see § "Follow-up investigations".
 
 ## Maternal race / Hispanic origin (`mracehisp`)
 
+`mracehisp` is the NCHS combined race/Hispanic-origin recode for the
+mother. The integer codes here follow the 2014-revision scheme
+(1 = NH White only, 2 = NH Black only, 3 = NH AIAN only, 4 = NH Asian
+only, 5 = NH NHOPI only, 6 = NH more than one race, 7 = Hispanic,
+8 = Origin unknown or not stated). The raw column carries a different
+ORRACEM-style coding pre-2014, but this report restricts to the model
+training window (2016–2024) so the schema is consistent — see
+`notes/202604201112-mracehisp-error.md`.
+
 ![Recorded vs. predicted missing DS births by maternal race/Hispanic origin](mracehisp_recorded_vs_predicted.png){#fig-mracehisp .lightbox fig-align="center"}
 
 ```{python}
@@ -230,14 +239,13 @@ Boulet et al. (2011) and the Atlanta MACDP comparison find that
 "predicted missing" pool should therefore **over-represent** those
 groups relative to "recorded".
 
-What we see here is the **opposite direction**: predicted-missing
-under-represents NH Black, Hispanic, and NH Asian shares relative to
-recorded, and over-represents "NH more than one race". This strongly
-suggests the classifier is **not picking up the racial/ethnic
-under-reporting signal the literature identifies** — it is selecting
-cases by clinical severity, which likely correlates with demographic
-groups whose babies are already more likely to have recorded DS via
-hospital workflow.
+The shifts visible above should be read against that expectation:
+under-representation of NH Black, NH AIAN, or Hispanic in the predicted
+column would indicate the classifier is **not** picking up the
+racial/ethnic under-reporting signal the literature identifies — it is
+instead selecting cases by clinical severity, which likely correlates
+with demographic groups whose babies are already more likely to have
+recorded DS via hospital workflow.
 
 **Implication:** any group-level inference from `R'` that compares
 racial/ethnic DS rates is **still subject to the Boulet-type bias**
@@ -562,9 +570,11 @@ _render_summary_table(_load_summary("bmi"))
 
 ## Paternal race / Hispanic origin (`fracehisp`)
 
-Mirrors `mracehisp` for the father. Adds a code 9 for records where
-paternal ethnicity cannot be classified (commonly absent on the
-certificate).
+Mirrors `mracehisp` for the father, with one extra bucket — code 9 for
+records where paternal ethnicity cannot be classified (commonly when
+the father is not on the birth certificate). Same 2014-revision
+coding caveat applies; restricting the report to 2016–2024 keeps the
+schema consistent.
 
 ![Recorded vs. predicted missing DS births by paternal race/Hispanic origin](fracehisp_recorded_vs_predicted.png){#fig-fracehisp .lightbox fig-align="center"}
 

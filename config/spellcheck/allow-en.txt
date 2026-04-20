@@ -26,6 +26,10 @@ DOWNS
 FAGECOMB
 FEDRG
 FEDUC
+fhisp
+FHISP
+frace
+FRACE
 FRACEHISP
 GESTREC
 GHYPE
@@ -40,6 +44,7 @@ MRACEHISP
 MRACEREC
 NHOPI
 NICU
+ORRACEF
 ORRACEM
 PHYPE
 PRECARE
@@ -53,6 +58,7 @@ WTGAIN
 beeswarm
 codings
 dataclasses
+dtypes
 HSGP
 hyperparameters
 iqr
@@ -60,9 +66,11 @@ kfold
 lightgbm
 logit
 microdata
+missingness
 multicollinearity
 nutpie
 parameterisation
+pred
 pymc
 rhat
 sklearn
