@@ -51,7 +51,6 @@ def fit_dir(tmp_path_factory) -> Path:
     truth = TrueParams.from_priors(
         variant_C_default(),
         n_year=9,
-        n_region=2,
         post_dobbs_year_start=6,
         seed=0,
     )
@@ -59,22 +58,18 @@ def fit_dir(tmp_path_factory) -> Path:
         truth,
         n_cells_per_month=2,
         n_year=9,
-        n_region=2,
         post_dobbs_year_start=6,
         n_cells_mean=1000,
         seed=0,
     )
-    # Persist the attrs so the CLI can auto-resolve post_dobbs_year_start.
     cells.attrs["post_dobbs_year_start"] = 6
     cells.attrs["n_year"] = 9
-    cells.attrs["n_region"] = 2
 
     model = build_model(
         cells,
         variant_C_default(),
         spec="full",
         n_year=9,
-        n_region=2,
         post_dobbs_year_start=6,
     )
     with model:
@@ -119,7 +114,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     tables = out_dir / "tables"
     expected = {
         "identifiability",
-        "dobbs_forest",
+        "dobbs_year_trajectory",
         "cchd_consistency",
         "age_curve",
         "decomposition_by_race",
@@ -133,7 +128,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     # The non-PPC diagnostics all produce a CSV companion.
     for stem in (
         "identifiability",
-        "dobbs_forest",
+        "dobbs_year_trajectory",
         "cchd_consistency",
         "age_curve",
         "decomposition_by_race",

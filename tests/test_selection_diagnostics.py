@@ -27,7 +27,6 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 N_YEAR = 9
-N_REGION = 3
 POST_DOBBS = 6
 
 
@@ -39,7 +38,6 @@ def fitted() -> tuple[pd.DataFrame, object]:
     truth = TrueParams.from_priors(
         variant_C_default(),
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
         seed=0,
     )
@@ -47,7 +45,6 @@ def fitted() -> tuple[pd.DataFrame, object]:
         truth,
         n_cells_per_month=3,
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
         n_cells_mean=2000,
         seed=0,
@@ -57,7 +54,6 @@ def fitted() -> tuple[pd.DataFrame, object]:
         variant_C_default(),
         spec="full",
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
     )
     with model:
@@ -92,26 +88,31 @@ def test_identifiability_pairplot(fitted) -> None:
     assert (table["abs_correlation"] <= 1).all()
 
 
-def test_dobbs_forest_plot(fitted) -> None:
+def test_dobbs_year_trajectory_plot(fitted) -> None:
     _, idata = fitted
-    fig = diagnostics.dobbs_forest_plot(
+    fig = diagnostics.dobbs_year_trajectory_plot(
         idata, post_dobbs_year_start=POST_DOBBS
     )
     _assert_has_axes(fig)
 
-    table = diagnostics.dobbs_forest_table(
+    table = diagnostics.dobbs_year_trajectory_table(
         idata, post_dobbs_year_start=POST_DOBBS
     )
-    assert len(table) == N_REGION
-    assert {"region_idx", "post_minus_pre_mean", "lo", "hi"}.issubset(
+    # n_year rows + 1 summary row.
+    assert len(table) == N_YEAR + 1
+    assert {"year_idx", "is_post_dobbs", "posterior_mean", "lo", "hi"}.issubset(
         table.columns
     )
+    # Summary row is tagged with year_idx == -1.
+    assert (table["year_idx"] == -1).sum() == 1
 
 
-def test_dobbs_forest_plot_rejects_bad_year(fitted) -> None:
+def test_dobbs_trajectory_rejects_bad_year(fitted) -> None:
     _, idata = fitted
     with pytest.raises(ValueError, match="post_dobbs_year_start"):
-        diagnostics.dobbs_forest_plot(idata, post_dobbs_year_start=N_YEAR + 5)
+        diagnostics.dobbs_year_trajectory_plot(
+            idata, post_dobbs_year_start=N_YEAR + 5
+        )
 
 
 def test_cchd_consistency_check(fitted) -> None:

@@ -231,14 +231,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     _run_diagnostic(
-        "Dobbs forest plot",
+        "Dobbs year trajectory",
         lambda: (
-            diagnostics.dobbs_forest_plot(
+            diagnostics.dobbs_year_trajectory_plot(
                 idata,
                 post_dobbs_year_start=dobbs,
                 hdi_prob=cli.hdi_prob,
             ),
-            diagnostics.dobbs_forest_table(
+            diagnostics.dobbs_year_trajectory_table(
                 idata,
                 post_dobbs_year_start=dobbs,
                 hdi_prob=cli.hdi_prob,
@@ -246,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         plots_dir,
         tables_dir,
-        "dobbs_forest",
+        "dobbs_year_trajectory",
     )
 
     _run_diagnostic(

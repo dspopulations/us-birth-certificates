@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from dspopulations_us_birth_certificates.selection import (
     TrueParams,
@@ -24,7 +23,6 @@ REQUIRED_COLS = (
     "race_idx",
     "edu_idx",
     "payer_idx",
-    "region_idx",
     "preterm",
     "cchd",
     "nicu",
@@ -48,7 +46,6 @@ def _make_cells(seed: int = 0, n_cells_per_month: int = 30) -> pd.DataFrame:
     truth = TrueParams.from_priors(
         variant_C_default(),
         n_year=9,
-        n_region=4,
         post_dobbs_year_start=6,
         seed=seed,
     )
@@ -56,7 +53,6 @@ def _make_cells(seed: int = 0, n_cells_per_month: int = 30) -> pd.DataFrame:
         truth,
         n_cells_per_month=n_cells_per_month,
         n_year=9,
-        n_region=4,
         post_dobbs_year_start=6,
         seed=seed,
     )
@@ -136,21 +132,20 @@ def test_simulate_cell_dimensions() -> None:
     assert len(cells) == 10 * 12 * 9
 
 
-@pytest.mark.parametrize("n_region", [1, 4, 10])
-def test_region_idx_respects_n_region(n_region: int) -> None:
+def test_eta_term_year_shape_matches_n_year() -> None:
     truth = TrueParams.from_priors(
         variant_C_default(),
-        n_year=9,
-        n_region=n_region,
-        post_dobbs_year_start=6,
+        n_year=7,
+        post_dobbs_year_start=4,
         seed=0,
     )
+    assert truth.eta_term_year.shape == (7,)
     cells = simulate_cells(
         truth,
         n_cells_per_month=5,
-        n_year=9,
-        n_region=n_region,
-        post_dobbs_year_start=6,
+        n_year=7,
+        post_dobbs_year_start=4,
         seed=0,
     )
-    assert cells["region_idx"].between(0, n_region - 1).all()
+    assert "region_idx" not in cells.columns
+    assert cells["year_idx"].between(0, 6).all()

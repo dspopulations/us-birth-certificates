@@ -17,8 +17,8 @@ Input is a pandas DataFrame with one row per cell containing integer
 index columns matching the vocabularies in :mod:`priors`:
 
     ``year_idx``, ``age_idx``, ``race_idx``, ``edu_idx``, ``payer_idx``,
-    ``region_idx``, ``preterm``, ``cchd``, ``nicu``, ``aven``, ``N_cell``
-    (total livebirths) and ``R_cell`` (recorded DS count).
+    ``preterm``, ``cchd``, ``nicu``, ``aven``, ``N_cell`` (total
+    livebirths) and ``R_cell`` (recorded DS count).
 
 Use :func:`dspopulations_us_birth_certificates.selection.data.prepare_cells`
 to build this frame from the project's DuckDB.
@@ -61,7 +61,6 @@ def build_model(
     *,
     spec: Spec = "full",
     n_year: int,
-    n_region: int,
     post_dobbs_year_start: int,
 ) -> pm.Model:
     """Build the PyMC model for a given spec.
@@ -72,11 +71,10 @@ def build_model(
             :mod:`priors`.
         spec: Which stages to enable.
         n_year: Number of year levels in the data (e.g. 9 for 2016-2024).
-        n_region: Number of region levels; pass ``1`` if state-level coding
-            is unavailable (collapses Dobbs interaction to a pure year
-            effect).
         post_dobbs_year_start: ``year_idx`` at which the post-Dobbs sigma
-            kicks in (e.g. 6 for 2022 given year_start=2016).
+            kicks in (e.g. 6 for 2022 given year_start=2016). Originally
+            a region×year interaction; with no state-level data available
+            this is a year-only effect on termination.
     """
     if spec not in SPECS:
         raise ValueError(f"Unknown spec: {spec!r}. Valid: {SPECS}")
@@ -85,7 +83,6 @@ def build_model(
     race_idx = cells["race_idx"].to_numpy()
     edu_idx = cells["edu_idx"].to_numpy()
     payer_idx = cells["payer_idx"].to_numpy()
-    region_idx = cells["region_idx"].to_numpy()
     year_idx = cells["year_idx"].to_numpy()
     preterm = cells["preterm"].to_numpy().astype(float)
     cchd = cells["cchd"].to_numpy().astype(float)
@@ -99,7 +96,6 @@ def build_model(
         "race": np.arange(N_RACE),
         "edu": np.arange(N_EDU),
         "payer": np.arange(N_PAYER),
-        "region": np.arange(n_region),
         "year": np.arange(n_year),
         "cell": np.arange(len(cells)),
     }
@@ -211,19 +207,16 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
-                sigma_ry = np.where(
+                sigma_year = np.where(
                     np.arange(n_year) >= post_dobbs_year_start,
-                    priors.eta_term_ry_sigma_post_dobbs,
-                    priors.eta_term_ry_sigma_pre_dobbs,
+                    priors.eta_term_year_sigma_post_dobbs,
+                    priors.eta_term_year_sigma_pre_dobbs,
                 )
-                sigma_ry_2d = np.broadcast_to(
-                    sigma_ry[None, :], (n_region, n_year)
-                )
-                eta_term_ry = pm.Normal(
-                    "eta_term_ry",
+                eta_term_year = pm.Normal(
+                    "eta_term_year",
                     mu=0.0,
-                    sigma=sigma_ry_2d,
-                    dims=("region", "year"),
+                    sigma=sigma_year,
+                    dims="year",
                 )
                 eta_term = pm.Deterministic(
                     "eta_term",
@@ -231,7 +224,7 @@ def build_model(
                         eta_term_int
                         + eta_term_race[race_idx]
                         + eta_term_edu[edu_idx]
-                        + eta_term_ry[region_idx, year_idx]
+                        + eta_term_year[year_idx]
                     ),
                     dims="cell",
                 )
@@ -336,7 +329,6 @@ def extract_true_counts(idata, cells: pd.DataFrame) -> pd.DataFrame:
         "race_idx",
         "edu_idx",
         "payer_idx",
-        "region_idx",
     ):
         if col in cells.columns:
             summary[col] = cells[col].to_numpy()

@@ -15,11 +15,11 @@ Example
     truth = TrueParams.from_priors(variant_C_default(), seed=0)
     cells = simulate_cells(
         truth, n_cells_per_month=400,
-        n_year=9, n_region=4, post_dobbs_year_start=6, seed=0,
+        n_year=9, post_dobbs_year_start=6, seed=0,
     )
     model = build_model(
         cells, variant_C_default(), spec="full",
-        n_year=9, n_region=4, post_dobbs_year_start=6,
+        n_year=9, post_dobbs_year_start=6,
     )
     with model:
         idata = pm.sample(1000, tune=1000, chains=4)
@@ -58,7 +58,7 @@ class TrueParams:
     eta_term_int: float
     eta_term_race: np.ndarray  # (N_RACE,)
     eta_term_edu: np.ndarray  # (N_EDU,)
-    eta_term_ry: np.ndarray  # (n_region, n_year)
+    eta_term_year: np.ndarray  # (n_year,)
 
     s_int: float
     s_race: np.ndarray  # (N_RACE,)
@@ -76,7 +76,6 @@ class TrueParams:
         priors: ModelPriors,
         *,
         n_year: int = 9,
-        n_region: int = 4,
         post_dobbs_year_start: int = 6,
         seed: int | None = None,
     ) -> TrueParams:
@@ -88,15 +87,12 @@ class TrueParams:
 
         year_offsets = priors.eta_detect_year_offsets[:n_year]
 
-        sigma_ry = np.where(
+        sigma_year = np.where(
             np.arange(n_year) >= post_dobbs_year_start,
-            priors.eta_term_ry_sigma_post_dobbs,
-            priors.eta_term_ry_sigma_pre_dobbs,
+            priors.eta_term_year_sigma_post_dobbs,
+            priors.eta_term_year_sigma_pre_dobbs,
         )
-        eta_term_ry = rng.normal(
-            0.0,
-            np.broadcast_to(sigma_ry[None, :], (n_region, n_year)),
-        )
+        eta_term_year = rng.normal(0.0, sigma_year)
 
         return cls(
             theta_lb_age_logit=draw(
@@ -121,7 +117,7 @@ class TrueParams:
                 priors.eta_term_race, priors.eta_term_race_sigma
             ),
             eta_term_edu=draw(priors.eta_term_edu, priors.eta_term_edu_sigma),
-            eta_term_ry=eta_term_ry,
+            eta_term_year=eta_term_year,
             s_int=draw(priors.s_logit, priors.s_sigma),
             s_race=draw(priors.s_race, priors.s_race_sigma),
             s_edu=draw(priors.s_edu, priors.s_edu_sigma),
@@ -138,7 +134,6 @@ def simulate_cells(
     *,
     n_cells_per_month: int = 400,
     n_year: int,
-    n_region: int,
     post_dobbs_year_start: int,  # noqa: ARG001 — kept for CLI symmetry
     n_cells_mean: int = 12_000,
     seed: int | None = None,
@@ -150,9 +145,8 @@ def simulate_cells(
         n_cells_per_month: Cells per (year, month). Covariate profiles are
             sampled uniformly at random.
         n_year: Number of years (must match ``build_model``).
-        n_region: Number of regions (must match ``build_model``).
         post_dobbs_year_start: Retained for CLI symmetry with ``build_model``
-            — the Dobbs sigma is baked into ``truth.eta_term_ry`` already.
+            — the Dobbs sigma is baked into ``truth.eta_term_year`` already.
         n_cells_mean: Mean of the Poisson cell-size distribution.
         seed: RNG seed.
 
@@ -169,7 +163,6 @@ def simulate_cells(
     race_idx = rng.integers(0, N_RACE, size=n_cells)
     edu_idx = rng.integers(0, N_EDU, size=n_cells)
     payer_idx = rng.integers(0, N_PAYER, size=n_cells)
-    region_idx = rng.integers(0, n_region, size=n_cells)
     year_idx = rng.integers(0, n_year, size=n_cells)
     preterm = rng.integers(0, 2, size=n_cells)
     cchd = rng.integers(0, 2, size=n_cells)
@@ -193,7 +186,7 @@ def simulate_cells(
         truth.eta_term_int
         + truth.eta_term_race[race_idx]
         + truth.eta_term_edu[edu_idx]
-        + truth.eta_term_ry[region_idx, year_idx]
+        + truth.eta_term_year[year_idx]
     )
     eta = 1.0 - eta_detect * eta_term
 
@@ -220,7 +213,6 @@ def simulate_cells(
             "race_idx": race_idx,
             "edu_idx": edu_idx,
             "payer_idx": payer_idx,
-            "region_idx": region_idx,
             "year_idx": year_idx,
             "preterm": preterm,
             "cchd": cchd,

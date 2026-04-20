@@ -66,10 +66,12 @@ def test_sensitivity_variants_differ_as_expected() -> None:
     assert b.s_race_sigma > c.s_race_sigma
 
     # Variant D: informative race priors on eta_term shrunk to zero with
-    # wide sigma; post-Dobbs region-year sigma widened.
+    # wide sigma; post-Dobbs year sigma widened.
     assert np.allclose(d.eta_term_race, 0.0)
     assert d.eta_term_race_sigma > c.eta_term_race_sigma
-    assert d.eta_term_ry_sigma_post_dobbs > c.eta_term_ry_sigma_post_dobbs
+    assert (
+        d.eta_term_year_sigma_post_dobbs > c.eta_term_year_sigma_post_dobbs
+    )
 
 
 def test_logit_round_trip() -> None:
@@ -98,4 +100,6 @@ def test_variants_registry_contains_abcd() -> None:
 def test_post_dobbs_sigma_wider_than_pre() -> None:
     """The pre/post-Dobbs asymmetry is load-bearing for identification."""
     c = P.variant_C_default()
-    assert c.eta_term_ry_sigma_post_dobbs > c.eta_term_ry_sigma_pre_dobbs
+    assert (
+        c.eta_term_year_sigma_post_dobbs > c.eta_term_year_sigma_pre_dobbs
+    )

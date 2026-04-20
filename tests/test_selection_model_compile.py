@@ -22,7 +22,6 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 N_YEAR = 9
-N_REGION = 2
 POST_DOBBS = 6
 
 
@@ -31,7 +30,6 @@ def tiny_cells() -> pd.DataFrame:
     truth = TrueParams.from_priors(
         variant_C_default(),
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
         seed=0,
     )
@@ -39,7 +37,6 @@ def tiny_cells() -> pd.DataFrame:
         truth,
         n_cells_per_month=2,
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
         n_cells_mean=500,
         seed=0,
@@ -60,7 +57,6 @@ def test_build_model_and_prior_predict(
         variant_C_default(),
         spec=spec,
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
     )
     with model:
@@ -82,7 +78,6 @@ def test_build_model_rejects_unknown_spec(tiny_cells: pd.DataFrame) -> None:
             variant_C_default(),
             spec="bogus",  # type: ignore[arg-type]
             n_year=N_YEAR,
-            n_region=N_REGION,
             post_dobbs_year_start=POST_DOBBS,
         )
 
@@ -94,13 +89,13 @@ def test_full_spec_has_detect_and_term(tiny_cells: pd.DataFrame) -> None:
         variant_C_default(),
         spec="full",
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
     )
     named = {rv.name for rv in model.free_RVs}
     assert "eta_detect_int" in named
     assert "eta_term_int" in named
-    assert "eta_term_ry" in named
+    assert "eta_term_year" in named
+    assert "eta_term_ry" not in named
 
 
 def test_theta_only_omits_eta_and_s(tiny_cells: pd.DataFrame) -> None:
@@ -109,7 +104,6 @@ def test_theta_only_omits_eta_and_s(tiny_cells: pd.DataFrame) -> None:
         variant_C_default(),
         spec="theta_only",
         n_year=N_YEAR,
-        n_region=N_REGION,
         post_dobbs_year_start=POST_DOBBS,
     )
     named = {rv.name for rv in model.free_RVs}

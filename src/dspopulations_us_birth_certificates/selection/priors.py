@@ -192,9 +192,14 @@ ETA_TERM_EDU = np.array(
 )
 ETA_TERM_EDU_SIGMA = 0.20
 
-# Region-year effects: pre-Dobbs tight, post-Dobbs (mid-2022+) wider.
-ETA_TERM_REGION_YEAR_SIGMA_PRE_DOBBS = 0.15
-ETA_TERM_REGION_YEAR_SIGMA_POST_DOBBS = 0.40
+# Year effects on termination: pre-Dobbs tight, post-Dobbs (mid-2022+)
+# wider. Originally specified as a region×year interaction, but the
+# project DuckDB has no state-level column so the model uses a year-only
+# term. Dobbs identification is weaker as a result — the contrast is
+# between the post-2022 national mean and the pre-2022 national mean
+# rather than treated-vs-untreated-state differential.
+ETA_TERM_YEAR_SIGMA_PRE_DOBBS = 0.15
+ETA_TERM_YEAR_SIGMA_POST_DOBBS = 0.40
 
 
 # --------------------------------------------------------------------------- #
@@ -296,8 +301,8 @@ class ModelPriors:
         default_factory=lambda: ETA_TERM_EDU.copy()
     )
     eta_term_edu_sigma: float = ETA_TERM_EDU_SIGMA
-    eta_term_ry_sigma_pre_dobbs: float = ETA_TERM_REGION_YEAR_SIGMA_PRE_DOBBS
-    eta_term_ry_sigma_post_dobbs: float = ETA_TERM_REGION_YEAR_SIGMA_POST_DOBBS
+    eta_term_year_sigma_pre_dobbs: float = ETA_TERM_YEAR_SIGMA_PRE_DOBBS
+    eta_term_year_sigma_post_dobbs: float = ETA_TERM_YEAR_SIGMA_POST_DOBBS
 
     # Stage 3
     s_logit: float = S_LOGIT
@@ -352,16 +357,19 @@ def variant_C_default() -> ModelPriors:
 def variant_D_dobbs_only() -> ModelPriors:
     """Uninformative race/education priors on termination.
 
-    Termination effects are identified through the Dobbs region×year
-    interaction alone. Agreement with Variant C is evidence of genuine
-    data-driven identification rather than prior-driven decomposition.
+    Termination race/education effects get shrunk to zero with wide
+    sigma; Dobbs identification rests on the pre/post-2022 national
+    year shift alone. Agreement with Variant C is evidence of
+    data-driven identification rather than prior-driven decomposition
+    — though without state-level contrast the test is weaker than in
+    the original plan (§4.3, §10 #5).
     """
     p = ModelPriors()
     p.eta_term_race = np.zeros_like(p.eta_term_race)
     p.eta_term_race_sigma = 1.0
     p.eta_term_edu = np.zeros_like(p.eta_term_edu)
     p.eta_term_edu_sigma = 1.0
-    p.eta_term_ry_sigma_post_dobbs = 0.60
+    p.eta_term_year_sigma_post_dobbs = 0.60
     return p
 
 

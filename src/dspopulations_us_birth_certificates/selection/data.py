@@ -19,10 +19,10 @@ The current ``data/us_births.db`` has these relevant columns (DuckDB
     unknown), ``ca_cchd`` / ``ab_nicu`` / ``ab_aven1`` (VARCHAR Y/N/U),
     ``down_ind`` (UTINYINT 0/1/NULL).
 
-The DB does not carry a state/region column — ``region_idx`` is emitted
-as a constant 0 and ``n_region = 1``. The Dobbs interaction therefore
-collapses to a pure year effect; see ``plans/20260420-selection-model.md``
-§10 for the identification implications.
+The DB does not carry a state/region column, so the model has no
+region dimension — the Dobbs interaction is a year-only effect on
+termination. See ``plans/20260420-selection-model.md`` §10 for the
+identification implications.
 """
 
 from __future__ import annotations
@@ -162,7 +162,6 @@ def _build_sql(
                 {race_case}   AS race_idx,
                 {edu_case}    AS edu_idx,
                 {payer_case}  AS payer_idx,
-                0             AS region_idx,
                 {preterm_case} AS preterm,
                 {cchd_case}    AS cchd,
                 {nicu_case}    AS nicu,
@@ -174,7 +173,7 @@ def _build_sql(
               AND {c['down_ind']} IS NOT NULL
         )
         SELECT
-            year_idx, age_idx, race_idx, edu_idx, payer_idx, region_idx,
+            year_idx, age_idx, race_idx, edu_idx, payer_idx,
             preterm, cchd, nicu, aven,
             COUNT(*) AS N_cell,
             SUM(down_ind) AS R_cell
@@ -183,7 +182,7 @@ def _build_sql(
           AND cchd IS NOT NULL
           AND nicu IS NOT NULL
           AND aven IS NOT NULL
-        GROUP BY year_idx, age_idx, race_idx, edu_idx, payer_idx, region_idx,
+        GROUP BY year_idx, age_idx, race_idx, edu_idx, payer_idx,
                  preterm, cchd, nicu, aven
     """
 
@@ -225,7 +224,6 @@ def prepare_cells(
         "race_idx",
         "edu_idx",
         "payer_idx",
-        "region_idx",
         "preterm",
         "cchd",
         "nicu",
@@ -238,7 +236,6 @@ def prepare_cells(
     cells.attrs.update(
         {
             "n_year": n_year,
-            "n_region": 1,
             "post_dobbs_year_start": int(post_dobbs_year - from_year),
             "year_range": year_range,
             "N_total": int(cells["N_cell"].sum()),

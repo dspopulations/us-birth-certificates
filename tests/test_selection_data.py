@@ -119,7 +119,6 @@ def test_prepare_cells_column_schema(tiny_db: Path) -> None:
         "race_idx",
         "edu_idx",
         "payer_idx",
-        "region_idx",
         "preterm",
         "cchd",
         "nicu",
@@ -128,12 +127,11 @@ def test_prepare_cells_column_schema(tiny_db: Path) -> None:
         "R_cell",
     }
     assert expected.issubset(cells.columns)
+    assert "region_idx" not in cells.columns
+    assert "n_region" not in cells.attrs
     assert cells.attrs["n_year"] == 9
-    assert cells.attrs["n_region"] == 1
     assert cells.attrs["post_dobbs_year_start"] == 6
     assert cells.attrs["year_range"] == (2016, 2024)
-    # Only one region is emitted.
-    assert set(cells["region_idx"].unique()) == {0}
 
 
 def test_prepare_cells_year_filter(tiny_db: Path) -> None:
