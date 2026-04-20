@@ -20,6 +20,7 @@ Public surface
 
 from __future__ import annotations
 
+from dspopulations_us_birth_certificates.selection import diagnostics
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_DB_PATH,
     DEFAULT_POST_DOBBS_YEAR,
@@ -73,6 +74,7 @@ __all__ = [
     "TrueParams",
     "VARIANTS",
     "build_model",
+    "diagnostics",
     "extract_true_counts",
     "inv_logit",
     "logit",
