@@ -6,24 +6,48 @@
 
 # Organisations and datasets
 CDC
+MACDP
+NBDPN
 NBER
 NCHS
 NVSS
 
 # NVSS / birth-certificate variables and codings
 AIAN
+APGAR
+AUGM
+AVEN
+BFACIL
+CCHD
+DBWT
+DISOR
+DMETH
 DOWNS
+FAGECOMB
+FEDRG
+FEDUC
+FRACEHISP
+GESTREC
+GHYPE
+INDL
+INFTR
 MBRACE
+MEDUC
 MHISP
 MHISPX
 MRACE
 MRACEHISP
 MRACEREC
 NHOPI
+NICU
 ORRACEM
+PHYPE
+PRECARE
+PRES
 UCA_DOWNS
 UMHISP
 USBC
+WTGAIN
 
 # Statistical / ML vocabulary
 beeswarm
@@ -47,6 +71,7 @@ vars
 # Tooling
 asis
 hatchling
+iloc
 jupytext
 Jupytext
 Matplotlib
@@ -55,6 +80,11 @@ ruff
 
 # Project / repo
 dspopulations
+rprime
+
+# Literature / authors
+Boulet
+Salemi
 
 # Refactor-document terms
 harmonisation
