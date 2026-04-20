@@ -63,6 +63,12 @@ class ModelDefinition:
     selection_steps: ClassVar[tuple[SelectionStep, ...]] = ()
     shap_scatter_specs: ClassVar[tuple[ShapScatterSpec, ...]] = ()
     notes: ClassVar[str] = ""
+    # DuckDB column names for this model's predictions and
+    # derived predicted-missing flag. Override on variants that write
+    # to a different column so diagnostic runs don't overwrite
+    # predictions from another model family.
+    predictions_column: ClassVar[str] = "p_ds_lb_pred_01"
+    missing_flag_column: ClassVar[str] = "ds_pred_missing"
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -109,4 +115,6 @@ class ModelDefinition:
             selection_history=cls.selection_history(),
             shap_scatter_specs=tuple(cls.shap_scatter_specs),
             notes=cls.notes,
+            predictions_column=cls.predictions_column,
+            missing_flag_column=cls.missing_flag_column,
         )

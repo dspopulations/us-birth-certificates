@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -390,6 +391,8 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
             selection_history=base.selection_history,
             shap_scatter_specs=base.shap_scatter_specs,
             notes=base.notes,
+            predictions_column=base.predictions_column,
+            missing_flag_column=base.missing_flag_column,
         )
 
     numeric = tuple(f for f in DEFAULT_NUMERIC if f not in config.drop_features)
@@ -570,91 +573,113 @@ def _load_xy_for_tuning(
     return X, y, categorical
 
 
+_SAFE_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _check_ident(name: str, kind: str) -> None:
+    """Guard: column names are interpolated into SQL, so reject exotic chars."""
+    if not _SAFE_IDENT.match(name):
+        raise ValueError(f"Invalid {kind} column name: {name!r}")
+
+
 def write_predictions_to_duckdb(
     df: pd.DataFrame,
     gbm: lgb.Booster,
     features: list[str],
     categorical: list[str],
     duckdb_path: Path,
+    *,
+    predictions_column: str,
+    missing_flag_column: str,
 ) -> None:
     import duckdb
+
+    _check_ident(predictions_column, "predictions")
+    _check_ident(missing_flag_column, "missing flag")
 
     X_full = df[features].copy()
     X_full[categorical] = X_full[categorical].astype("category")
     df = df.copy()
-    df["p_ds_lb_pred_01"] = gbm.predict(X_full, num_iteration=gbm.best_iteration)
+    df[predictions_column] = gbm.predict(X_full, num_iteration=gbm.best_iteration)
+
+    tmp_pred = f"_{predictions_column}_tmp"
+    tmp_flag = "_ds_pred_missing_ids"
+    _check_ident(tmp_pred, "temp prediction")
 
     con = duckdb.connect(str(duckdb_path))
     try:
         con.execute(
-            "ALTER TABLE us_births ADD COLUMN IF NOT EXISTS p_ds_lb_pred_01 DOUBLE;"
+            f"ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
+            f"{predictions_column} DOUBLE;"
         )
-        con.execute("DROP TABLE IF EXISTS ds_lb_pred_01")
-        con.execute("CREATE TABLE ds_lb_pred_01 (id BIGINT, p_ds_lb_pred DOUBLE)")
+        con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
+        con.execute(f"CREATE TABLE {tmp_pred} (id BIGINT, p_ds_lb_pred DOUBLE)")
         con.execute(
-            "INSERT INTO ds_lb_pred_01 (id, p_ds_lb_pred) "
-            "SELECT id, p_ds_lb_pred_01 FROM df"
+            f"INSERT INTO {tmp_pred} (id, p_ds_lb_pred) "
+            f"SELECT id, {predictions_column} FROM df"
         )
         con.execute(
-            """
+            f"""
             UPDATE us_births b
-            SET p_ds_lb_pred_01 = p.p_ds_lb_pred
-            FROM ds_lb_pred_01 p
+            SET {predictions_column} = p.p_ds_lb_pred
+            FROM {tmp_pred} p
             WHERE b.id = p.id;
             """
         )
-        con.execute("DROP TABLE IF EXISTS ds_lb_pred_01")
+        con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
 
-        # Flag likely missing DS cases as ``ds_pred_missing`` using a year×month
-        # quota of ceil(1.5 × recorded), picking the top non-recorded births by
-        # ``p_ds_lb_pred_01``. Multiplier 1.5 encodes the ~60% under-reporting
-        # rate observed across surveillance studies (recorded ≈ 40%, missed ≈ 60%
-        # → total ≈ recorded + 1.5×recorded = 2.5×recorded). Downstream analyses
-        # can then select R = down_ind=1, R' = down_ind=1 OR ds_pred_missing.
+        # Flag likely missing DS cases as ``<missing_flag_column>`` using a
+        # year×month quota of ceil(1.5 × recorded), picking the top
+        # non-recorded births by ``<predictions_column>``. Multiplier 1.5
+        # encodes the ~60% under-reporting rate observed across surveillance
+        # studies (recorded ≈ 40%, missed ≈ 60% → total ≈ recorded + 1.5 ×
+        # recorded = 2.5 × recorded). Downstream analyses can then select
+        # R = down_ind=1, R' = down_ind=1 OR <missing_flag_column>.
         #
-        # TODO: revisit per-year multipliers calibrated against surveillance-based
-        # live-birth estimates — the 60% rate is close to constant but varies
-        # slightly by year. Uniform 1.5× is a sufficient v1 approximation.
+        # TODO: revisit per-year multipliers calibrated against
+        # surveillance-based live-birth estimates — the 60% rate is close to
+        # constant but varies slightly by year. Uniform 1.5× is a sufficient
+        # v1 approximation.
         con.execute(
-            "ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
-            "ds_pred_missing BOOLEAN DEFAULT FALSE"
+            f"ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
+            f"{missing_flag_column} BOOLEAN DEFAULT FALSE"
         )
-        con.execute("DROP TABLE IF EXISTS _ds_pred_missing_ids")
+        con.execute(f"DROP TABLE IF EXISTS {tmp_flag}")
         con.execute(
-            """
-            CREATE TABLE _ds_pred_missing_ids AS
+            f"""
+            CREATE TABLE {tmp_flag} AS
             WITH year_month_quota AS (
                 SELECT year, dob_mm,
                        CAST(CEIL(COUNT(*) * 1.5) AS BIGINT) AS n_select
                 FROM us_births
-                WHERE down_ind = 1 AND p_ds_lb_pred_01 IS NOT NULL
+                WHERE down_ind = 1 AND {predictions_column} IS NOT NULL
                 GROUP BY year, dob_mm
             ),
             ranked AS (
                 SELECT b.id,
                        ROW_NUMBER() OVER (
                            PARTITION BY b.year, b.dob_mm
-                           ORDER BY b.p_ds_lb_pred_01 DESC
+                           ORDER BY b.{predictions_column} DESC
                        ) AS rn,
                        q.n_select
                 FROM us_births b
                 JOIN year_month_quota q
                   ON q.year = b.year AND q.dob_mm = b.dob_mm
-                WHERE b.down_ind = 0 AND b.p_ds_lb_pred_01 IS NOT NULL
+                WHERE b.down_ind = 0 AND b.{predictions_column} IS NOT NULL
             )
             SELECT id FROM ranked WHERE rn <= n_select
             """
         )
-        con.execute("UPDATE us_births SET ds_pred_missing = FALSE")
+        con.execute(f"UPDATE us_births SET {missing_flag_column} = FALSE")
         con.execute(
-            """
+            f"""
             UPDATE us_births b
-            SET ds_pred_missing = TRUE
-            FROM _ds_pred_missing_ids t
+            SET {missing_flag_column} = TRUE
+            FROM {tmp_flag} t
             WHERE b.id = t.id
             """
         )
-        con.execute("DROP TABLE _ds_pred_missing_ids")
+        con.execute(f"DROP TABLE {tmp_flag}")
     finally:
         con.close()
 
@@ -744,9 +769,13 @@ def main(argv: list[str] | None = None) -> int:
             features,
             list(model_config.categorical_features),
             config.duckdb_path,
+            predictions_column=model_config.predictions_column,
+            missing_flag_column=model_config.missing_flag_column,
         )
         cli_output.success(
-            f"Wrote predictions to {config.duckdb_path} (column p_ds_lb_pred_01)"
+            f"Wrote predictions to {config.duckdb_path} "
+            f"(columns {model_config.predictions_column}, "
+            f"{model_config.missing_flag_column})"
         )
 
     # Persist the full resolved config alongside artefacts for reproducibility.
