@@ -35,12 +35,10 @@ Staged builds
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
-import pymc as pm
-import pytensor.tensor as pt
 
 from dspopulations_us_birth_certificates.selection.priors import (
     N_AGE,
@@ -49,6 +47,9 @@ from dspopulations_us_birth_certificates.selection.priors import (
     N_RACE,
     ModelPriors,
 )
+
+if TYPE_CHECKING:
+    import pymc as pm
 
 Spec = Literal["theta_only", "theta_s", "single_eta", "full"]
 
@@ -76,6 +77,9 @@ def build_model(
             a region×year interaction; with no state-level data available
             this is a year-only effect on termination.
     """
+    import pymc as pm
+    import pytensor.tensor as pt
+
     if spec not in SPECS:
         raise ValueError(f"Unknown spec: {spec!r}. Valid: {SPECS}")
 

@@ -34,7 +34,7 @@ Notebooks and scripts reference a shared external package (`dse_research_utils`)
 
 - Lint: `ruff check`
 - Format: `ruff format`
-- Tests: `pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, `-q`). The `tests/` directory does not yet exist — create it when adding tests.
+- Tests: `pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, default `-q -m 'not slow'`). Tests marked `@pytest.mark.slow` fit real Bayesian models with enough draws to support posterior-quality assertions — invoke with `pytest -m slow` when you need to run them (locally, not in CI).
 - Spellcheck (markdown and `docs/**/*.qmd`): `npm run spellcheck`. Dictionary at `config/spellcheck/allow-en.txt`; language is **en-GB**.
 
 **Before creating a PR, always run both `ruff check src tests scripts` and `npm run spellcheck` and resolve any findings.** Fix real lint errors; for false-positive unknown-word flags from cspell, add the term to `config/spellcheck/allow-en.txt` rather than rewording the prose.

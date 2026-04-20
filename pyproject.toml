@@ -55,7 +55,10 @@ packages = ["src/dspopulations_us_birth_certificates"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -m 'not slow'"
+markers = [
+  "slow: tests that fit a Bayesian model with enough draws to evaluate posterior quality (run explicitly with `pytest -m slow`)",
+]
 
 [tool.jupytext]
 formats = "ipynb,py:percent"
