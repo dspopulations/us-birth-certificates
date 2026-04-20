@@ -62,6 +62,7 @@ allclose
 arviz
 asarray
 beeswarm
+sociodemographic
 codings
 dataclasses
 downweight

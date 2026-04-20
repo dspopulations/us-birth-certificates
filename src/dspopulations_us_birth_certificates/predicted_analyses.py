@@ -1017,3 +1017,61 @@ def copy_analysis_template(
 def render_quarto(qmd_path: Path) -> None:
     """Invoke ``quarto render`` on a QMD file."""
     subprocess.run(["quarto", "render", str(qmd_path)], check=True)
+
+
+# ---------------------------------------------------------------------------
+# Cross-run comparison (usbc10 vs usbc11 etc.)
+# ---------------------------------------------------------------------------
+
+def stage_compare_artefacts(
+    *,
+    left_dir: Path,
+    right_dir: Path,
+    output_dir: Path,
+    left_label: str,
+    right_label: str,
+) -> dict:
+    """Copy `<var>_summary.csv` from two source runs into ``output_dir``.
+
+    Both runs must have been produced by ``scripts/analyse_predicted.py``
+    — i.e. contain a ``config.json`` plus one
+    ``<variable>_summary.csv`` per registered grouping. Files from
+    ``left_dir`` are suffixed ``_left`` in the output, files from
+    ``right_dir`` are suffixed ``_right``; the Quarto compare template
+    keys off those suffixes.
+
+    Returns the compare config (also written as
+    ``compare_config.json`` inside ``output_dir``).
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    left_config: dict = {}
+    right_config: dict = {}
+    try:
+        left_config = json.loads((left_dir / "config.json").read_text())
+    except FileNotFoundError:
+        pass
+    try:
+        right_config = json.loads((right_dir / "config.json").read_text())
+    except FileNotFoundError:
+        pass
+
+    for variable in CATEGORY_GROUPINGS:
+        for side, src_dir in (("left", left_dir), ("right", right_dir)):
+            src = src_dir / f"{variable}_summary.csv"
+            if not src.exists():
+                continue
+            shutil.copy(src, output_dir / f"{variable}_summary_{side}.csv")
+
+    compare_config = {
+        "left_label": left_label,
+        "right_label": right_label,
+        "left_source": str(left_dir),
+        "right_source": str(right_dir),
+        "left_config": left_config,
+        "right_config": right_config,
+    }
+    (output_dir / "compare_config.json").write_text(
+        json.dumps(compare_config, indent=2, default=str), encoding="utf-8"
+    )
+    return compare_config

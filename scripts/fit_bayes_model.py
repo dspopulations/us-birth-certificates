@@ -69,6 +69,7 @@ class BayesFitCliConfig:
     prior_only: bool
     drop_na_dims: bool
     render: bool
+    flag_column: str = "ds_pred_missing"
     overrides: dict = field(default_factory=dict)
 
 
@@ -160,6 +161,16 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
         help="Override prior_predictive_samples from the profile.",
     )
     p.add_argument(
+        "--flag-column",
+        default="ds_pred_missing",
+        help=(
+            "DuckDB BOOLEAN column holding the predicted-missing flag "
+            "for recorded_plus_predicted outcomes. Default is the "
+            "usbc10 family column; use `ds_pred_missing_02` to sample "
+            "against usbc11's predicted-missing pool."
+        ),
+    )
+    p.add_argument(
         "--render",
         action="store_true",
         help=(
@@ -203,6 +214,7 @@ def parse_args(argv: list[str] | None = None) -> BayesFitCliConfig:
         prior_only=ns.prior_only,
         drop_na_dims=not ns.keep_na_dims,
         render=ns.render,
+        flag_column=ns.flag_column,
         overrides=overrides,
     )
 
@@ -243,12 +255,16 @@ def main(argv: list[str] | None = None) -> int:
 
     cli_output.section("Load cells")
     definition = MODELS[cli.model_id]
+    outcome_params: dict = {}
+    if cli.outcome == "recorded_plus_predicted":
+        outcome_params["flag_column"] = cli.flag_column
     cells = load_cells(
         outcome=cli.outcome,
         dims=definition.dims,
         year_range=(cli.start_year, cli.end_year),
         db_path=cli.duckdb_path,
         drop_na_dims=cli.drop_na_dims,
+        outcome_params=outcome_params or None,
     )
     cells = definition.prepare_cells(cells)
     smooth_coords = definition.smooth_coords or definition.dims
@@ -265,7 +281,9 @@ def main(argv: list[str] | None = None) -> int:
     idata = sample(model, config=run_config, prior_only=cli.prior_only)
 
     context = BayesFitContext(
-        config=definition.to_config(outcome=cli.outcome),
+        config=definition.to_config(
+            outcome=cli.outcome, outcome_params=outcome_params or None
+        ),
         run_config=run_config,
         output_dir=cli.output_dir,
         cells=cells,
