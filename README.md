@@ -13,11 +13,8 @@ This study aims to provide updated estimates of the numbers of babies born with 
 
 ## Analyses
 
-Two Bayesian pipelines sit alongside the LightGBM classifier:
+A Bayesian selection model sits alongside the LightGBM classifier:
 
-- **`dspopulations_us_birth_certificates.bayes`** — HSGP cell-model
-  pipeline (time + maternal age smooths). Driver: `scripts/fit_bayes_model.py`.
-  Template: `docs/models/m1-year-age/index.qmd`.
 - **`dspopulations_us_birth_certificates.selection`** — three-stage
   selection model decomposing observed recording into baseline
   livebirth rate × screening/termination pass-through × birth-

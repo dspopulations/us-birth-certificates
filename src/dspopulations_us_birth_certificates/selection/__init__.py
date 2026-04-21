@@ -1,9 +1,7 @@
 """Three-stage Bayesian selection model for DS livebirth ascertainment.
 
-Sits alongside ``dspopulations_us_birth_certificates.bayes`` (the
-year/age/HSGP pipeline) and serves a different question: decomposing
-observed recording into baseline livebirth rate × screening-and-
-termination pass-through × birth-certificate sensitivity. See
+Decomposes observed recording into baseline livebirth rate × screening-
+and-termination pass-through × birth-certificate sensitivity. See
 ``plans/20260420-selection-model.md`` and
 ``plans/docs/bayesian_selection_model.md`` for the design rationale.
 
@@ -23,6 +21,8 @@ from __future__ import annotations
 from dspopulations_us_birth_certificates.selection import diagnostics
 from dspopulations_us_birth_certificates.selection.config import (
     MODEL_ID,
+    FitContext,
+    RunConfig,
     SelectionModelConfig,
     preset_names,
     selection_run_config,
@@ -32,6 +32,12 @@ from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_YEAR_RANGE,
     prepare_cells,
     summarise_cells,
+)
+from dspopulations_us_birth_certificates.selection.io import (
+    copy_docs_template,
+    render_quarto,
+    save_artefacts,
+    save_summary,
 )
 from dspopulations_us_birth_certificates.selection.model import (
     SPECS,
@@ -56,6 +62,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
     variant_B_tight_eta_term,
     variant_C_default,
 )
+from dspopulations_us_birth_certificates.selection.sampling import sample
 from dspopulations_us_birth_certificates.selection.simulate import (
     TrueParams,
     simulate_cells,
@@ -67,6 +74,7 @@ __all__ = [
     "DEFAULT_YEAR_RANGE",
     "EDU_LEVELS",
     "MODEL_ID",
+    "FitContext",
     "ModelPriors",
     "N_AGE",
     "N_EDU",
@@ -74,11 +82,13 @@ __all__ = [
     "N_RACE",
     "PAYER_LEVELS",
     "RACE_LEVELS",
+    "RunConfig",
     "SPECS",
     "SelectionModelConfig",
     "TrueParams",
     "VARIANTS",
     "build_model",
+    "copy_docs_template",
     "diagnostics",
     "extract_true_counts",
     "inv_logit",
@@ -86,6 +96,10 @@ __all__ = [
     "posterior_subgroup_rate",
     "prepare_cells",
     "preset_names",
+    "render_quarto",
+    "sample",
+    "save_artefacts",
+    "save_summary",
     "selection_run_config",
     "simulate_cells",
     "summarise_cells",

@@ -8,7 +8,7 @@ run profile, this script:
        ``selection.prepare_cells``.
     2. Builds the PyMC model via ``selection.build_model``.
     3. Runs prior-predictive + NUTS + posterior-predictive sampling
-       (reuses ``bayes.sampling.sample``).
+       via ``selection.sample``.
     4. Writes ``idata.nc``, ``cells.parquet``, ``config.json``,
        ``run_config.json``, ``summary.csv``, diagnostic plots/tables,
        and copies the Quarto template at
@@ -47,23 +47,21 @@ import duckdb
 import numpy as np
 
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
-from dspopulations_us_birth_certificates.bayes import (
-    BayesFitContext,
-    copy_docs_template,
-    render_quarto,
-    sample,
-    save_artefacts,
-    save_summary,
-)
 from dspopulations_us_birth_certificates.selection import (
     MODEL_ID,
     SPECS,
     VARIANTS,
+    FitContext,
     SelectionModelConfig,
     build_model,
+    copy_docs_template,
     diagnostics,
     prepare_cells,
     preset_names,
+    render_quarto,
+    sample,
+    save_artefacts,
+    save_summary,
     selection_run_config,
     summarise_cells,
 )
@@ -263,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
         priors_obj=priors,
         notes=f"profile={cli.profile}",
     )
-    context = BayesFitContext(
+    context = FitContext(
         config=model_config,
         run_config=run_config,
         output_dir=cli.output_dir,
