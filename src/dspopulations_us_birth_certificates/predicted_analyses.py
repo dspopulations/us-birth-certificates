@@ -165,9 +165,6 @@ WTGAIN_LABELS: dict[int, str] = {
     6: "Not stated",
 }
 
-# Year labels span the observed prediction coverage (2005–2024).
-YEAR_LABELS: dict[int, str] = {y: str(y) for y in range(2005, 2025)}
-
 DMETH_REC_LABELS: dict[int, str] = {
     1: "Vaginal",
     2: "Cesarean",
@@ -392,15 +389,6 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=WTGAIN_LABELS,
         not_null_filter="wtgain IS NOT NULL",
-        colormap="viridis",
-    ),
-    "year": CategoryGrouping(
-        variable="year",
-        title="Birth year",
-        legend_title="year",
-        group_sql="year",
-        labels=YEAR_LABELS,
-        not_null_filter="year IS NOT NULL",
         colormap="viridis",
     ),
     "ca_cchd": CategoryGrouping(
