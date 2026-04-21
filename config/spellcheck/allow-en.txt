@@ -92,6 +92,7 @@ pyproject
 pytensor
 reparameterise
 rhat
+sigmas
 sigmoidal
 sklearn
 vars
