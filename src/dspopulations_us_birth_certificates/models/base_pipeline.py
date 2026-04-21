@@ -86,7 +86,8 @@ class EstimatorPipeline(ABC):
         cfg = self.context.config
         cli_output.info(
             f"Year range [bold]{cfg.year_range[0]}-{cfg.year_range[1]}[/bold], "
-            f"include_unknown=[bold]{cfg.include_unknown}[/bold]"
+            f"include_unknown=[bold]{cfg.include_unknown}[/bold], "
+            f"confirmed_only=[bold]{cfg.confirmed_only}[/bold]"
         )
         if db_path is not None:
             cli_output.info(f"DuckDB: [blue]{db_path}[/blue]")
@@ -94,6 +95,7 @@ class EstimatorPipeline(ABC):
             from_year=cfg.year_range[0],
             to_year=cfg.year_range[1],
             include_unknown=cfg.include_unknown,
+            confirmed_only=cfg.confirmed_only,
         )
         if db_path is not None:
             kwargs["db_path"] = db_path

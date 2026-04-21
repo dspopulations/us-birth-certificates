@@ -43,6 +43,9 @@ class ModelDefinition:
         year_range: ``(from_year, to_year)`` inclusive.
         include_unknown: Whether to include rows where ``ca_down_c_p_n``
             is missing / unknown.
+        confirmed_only: When ``True``, restrict positives to ``ca_down = 'C'``
+            and drop ``'P'`` (pending) rows from the training set. Emits the
+            ``ca_down_c_n`` target column from ``load_predictors_data``.
         selection_steps: Feature-selection decisions introduced by *this*
             class. The full history across ancestors is reconstructed by
             ``selection_history``.
@@ -60,6 +63,7 @@ class ModelDefinition:
     train_config: ClassVar[dict[str, Any]] = {}
     year_range: ClassVar[tuple[int, int]] = (2016, 2024)
     include_unknown: ClassVar[bool] = True
+    confirmed_only: ClassVar[bool] = False
     selection_steps: ClassVar[tuple[SelectionStep, ...]] = ()
     shap_scatter_specs: ClassVar[tuple[ShapScatterSpec, ...]] = ()
     notes: ClassVar[str] = ""
@@ -112,6 +116,7 @@ class ModelDefinition:
             train_config=dict(cls.train_config),
             year_range=tuple(cls.year_range),
             include_unknown=cls.include_unknown,
+            confirmed_only=cls.confirmed_only,
             selection_history=cls.selection_history(),
             shap_scatter_specs=tuple(cls.shap_scatter_specs),
             notes=cls.notes,

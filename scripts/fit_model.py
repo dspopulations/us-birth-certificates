@@ -388,6 +388,7 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
             train_config=train_config,
             year_range=base.year_range,
             include_unknown=base.include_unknown,
+            confirmed_only=base.confirmed_only,
             selection_history=base.selection_history,
             shap_scatter_specs=base.shap_scatter_specs,
             notes=base.notes,
@@ -557,18 +558,43 @@ def _recover_loaded_params(model_path: Path) -> dict:
 def _load_xy_for_tuning(
     config: FitConfig,
 ) -> tuple[pd.DataFrame, pd.Series, list[str]]:
-    """Load the predictors frame once for tuning (outside the pipeline)."""
+    """Load the predictors frame once for tuning (outside the pipeline).
+
+    Resolves ``target_var`` / ``confirmed_only`` / feature lists from the
+    named ``--model-id`` definition when set, so tuning operates on the
+    same data the pipeline will see. Falls back to ``DEFAULT_NUMERIC`` /
+    ``DEFAULT_CATEGORICAL`` and the ``ca_down_c_p_n`` target for ad-hoc
+    runs (``--model-id`` omitted).
+    """
+    if config.model_id is not None:
+        definition = MODELS[config.model_id]
+        target_var = definition.target_var
+        confirmed_only = definition.confirmed_only
+        start_year, end_year = definition.year_range
+        include_unknown = definition.include_unknown
+        # --drop-features is ignored under --model-id (see CLI help), so the
+        # feature lists come straight from the definition.
+        numeric = list(definition.numeric_features)
+        categorical = list(definition.categorical_features)
+    else:
+        target_var = "ca_down_c_p_n"
+        confirmed_only = False
+        start_year = config.start_year
+        end_year = config.end_year
+        include_unknown = config.include_unknown
+        numeric = [f for f in DEFAULT_NUMERIC if f not in config.drop_features]
+        categorical = [f for f in DEFAULT_CATEGORICAL if f not in config.drop_features]
+
     df = data_utils.load_predictors_data(
-        from_year=config.start_year,
-        to_year=config.end_year,
-        include_unknown=config.include_unknown,
+        from_year=start_year,
+        to_year=end_year,
+        include_unknown=include_unknown,
+        confirmed_only=confirmed_only,
         db_path=str(config.duckdb_path),
     )
-    numeric = [f for f in DEFAULT_NUMERIC if f not in config.drop_features]
-    categorical = [f for f in DEFAULT_CATEGORICAL if f not in config.drop_features]
     features = categorical + numeric
     X = df[features].copy()
-    y = df["ca_down_c_p_n"].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
+    y = df[target_var].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
     X[categorical] = X[categorical].astype("category")
     return X, y, categorical
 

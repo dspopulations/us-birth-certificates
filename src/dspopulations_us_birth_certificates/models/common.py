@@ -126,6 +126,7 @@ class ModelConfig:
     include_unknown: bool
     selection_history: tuple[SelectionStep, ...]
     shap_scatter_specs: tuple[ShapScatterSpec, ...]
+    confirmed_only: bool = False
     notes: str = ""
     # Names of the DuckDB columns that receive this model's predictions
     # and derived year×month predicted-missing flag. Each model variant
@@ -151,6 +152,7 @@ class ModelConfig:
             "train_config": dict(self.train_config),
             "year_range": list(self.year_range),
             "include_unknown": self.include_unknown,
+            "confirmed_only": self.confirmed_only,
             "selection_history": [
                 {
                     **asdict(step),
