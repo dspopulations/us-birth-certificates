@@ -69,6 +69,8 @@ downweight
 dtype
 dtypes
 numpy
+heteroscedastic
+homoscedastic
 HSGP
 hyperparameters
 iqr
@@ -115,7 +117,6 @@ rprime
 # Literature / authors
 Alberman
 Boulet
-Chaiken
 Graaf
 Heinke
 Kuppermann

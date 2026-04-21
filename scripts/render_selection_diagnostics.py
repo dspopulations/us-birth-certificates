@@ -43,7 +43,6 @@ class RenderCliConfig:
     idata_path: Path
     cells_path: Path
     out_dir: Path
-    post_dobbs_year_start: int
     cchd_target: float
     hdi_prob: float
     strata: tuple[str, ...]
@@ -70,15 +69,6 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
         type=Path,
         default=None,
         help="Directory to write plots/ and tables/ subdirectories into.",
-    )
-    p.add_argument(
-        "--post-dobbs-year-start",
-        type=int,
-        default=None,
-        help=(
-            "year_idx at which the post-Dobbs sigma kicks in. Read from "
-            "cells.attrs when omitted."
-        ),
     )
     p.add_argument(
         "--cchd-target",
@@ -118,26 +108,10 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
         idata_path=idata,
         cells_path=cells,
         out_dir=out_dir,
-        post_dobbs_year_start=(
-            ns.post_dobbs_year_start if ns.post_dobbs_year_start is not None else -1
-        ),
         cchd_target=ns.cchd_target,
         hdi_prob=ns.hdi_prob,
         strata=tuple(ns.strata),
     )
-
-
-def _resolve_dobbs(cells: pd.DataFrame, cli_value: int) -> int:
-    if cli_value >= 0:
-        return cli_value
-    attr = cells.attrs.get("post_dobbs_year_start")
-    if attr is not None:
-        return int(attr)
-    cli_output.warning(
-        "post_dobbs_year_start not supplied and not on cells.attrs; "
-        "falling back to 6 (2022 given year_start=2016)."
-    )
-    return 6
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -154,7 +128,6 @@ def main(argv: list[str] | None = None) -> int:
 
     idata = az.from_netcdf(str(cli.idata_path))
     cells = pd.read_parquet(cli.cells_path)
-    dobbs = _resolve_dobbs(cells, cli.post_dobbs_year_start)
     cli_output.print_kv(
         "Paths & settings",
         [
@@ -162,7 +135,6 @@ def main(argv: list[str] | None = None) -> int:
             ("cells", cli.cells_path),
             ("out_dir", cli.out_dir),
             ("n_cells", len(cells)),
-            ("post_dobbs_year_start", dobbs),
             ("cchd_target", cli.cchd_target),
             ("hdi_prob", cli.hdi_prob),
             ("strata", list(cli.strata)),
@@ -175,7 +147,6 @@ def main(argv: list[str] | None = None) -> int:
         cells,
         cli.out_dir,
         options=RenderOptions(
-            post_dobbs_year_start=dobbs,
             cchd_target=cli.cchd_target,
             hdi_prob=cli.hdi_prob,
             strata=cli.strata,

@@ -14,7 +14,7 @@ This report proposes a **three-stage Bayesian selection model** that makes the g
 2. **Screening-and-termination pass-through** ($\eta$), decomposed into prenatal detection ($\eta_{\text{detect}}$) and termination given detection ($\eta_{\text{term}}$); and
 3. **Birth-certificate sensitivity** ($s$), the probability that a DS livebirth is correctly flagged on the certificate.
 
-Each component receives priors informed by specific published literatures: Morris et al.'s age-specific livebirth rates for $\theta_{\text{LB}}$; Natoli, Kuppermann and de Graaf et al. for $\eta_{\text{term}}$; Boulet et al. and Salemi et al. for $s$. Combined with the 2022 Dobbs decision as a near-experimental shock to $\eta_{\text{term}}$, the model is identifiable to a meaningful degree, and the priors can be stress-tested by running the model under alternative assumptions.
+Each component receives priors informed by specific published literatures: Morris et al.'s age-specific livebirth rates for $\theta_{\text{LB}}$; Natoli, Kuppermann and de Graaf et al. for $\eta_{\text{term}}$; Boulet et al. and Salemi et al. for $s$. Identification rests on the strength of those priors and on the clinical features that enter only $s$; the priors can be stress-tested by running the model under alternative assumptions.
 
 The output is a posterior distribution over true DS livebirth counts by demographic cell, with honest uncertainty and explicit separation of under-recording from upstream selection. This is something the current classifier approach structurally cannot provide.
 
@@ -56,7 +56,7 @@ Two behavioural filters then reduce this baseline rate to the observed livebirth
 
 **Prenatal detection.** Non-invasive prenatal testing (NIPT) became standard of care over 2012–2020 in the US, with ACOG recommending it for high-risk women in 2012 and for all women in 2020. Detection rates therefore rose substantially over the 2016–2024 window that concerns us. Uptake varies by payer, education, region, and access to maternal–fetal medicine specialists.
 
-**Termination given detection.** Natoli et al. (2012) systematically reviewed US termination rates following a prenatal DS diagnosis and reported a weighted average around 67%, with substantial heterogeneity. Kuppermann et al. (2006) documented lower termination rates among non-Hispanic Black and Hispanic women and among younger mothers. de Graaf, Buckley & Skotko (2017) built these stages into a population-prevalence model and is the most usable single external reference for termination-rate priors. Chaiken et al. (2023) compared states with and without 20-week abortion bans from 2011–2018 and found measurable differences in recorded DS livebirth rates. The 2022 Dobbs decision introduced a much larger geographic discontinuity.
+**Termination given detection.** Natoli et al. (2012) systematically reviewed US termination rates following a prenatal DS diagnosis and reported a weighted average around 67%, with substantial heterogeneity. Kuppermann et al. (2006) documented lower termination rates among non-Hispanic Black and Hispanic women and among younger mothers. de Graaf, Buckley & Skotko (2017) built these stages into a population-prevalence model and is the most usable single external reference for termination-rate priors.
 
 A model that ignores this upstream selection and attributes all demographic variation in recorded DS rates to birth-certificate sensitivity will systematically misattribute termination-rate variation to recording variation — the two effects pull in the same direction for some groups (both decrease recorded counts among higher-education mothers) and opposite directions for others (non-Hispanic Black mothers are associated with *lower* sensitivity but *higher* livebirth pass-through due to lower termination).
 
@@ -102,7 +102,7 @@ $$
 p(\text{parameters} \mid \text{data}) \propto p(\text{data} \mid \text{parameters}) \cdot p(\text{parameters}).
 $$
 
-Two properties make this approach particularly suitable here. First, it lets us inject the extensive validation literature (Boulet, Salemi, Natoli, de Graaf, etc.) directly into the model as priors on specific parameters, rather than applying ad-hoc corrections after the fact. Second, the posterior is a full distribution rather than a point estimate, so every downstream quantity — predicted true livebirth counts by demographic cell, relative under-ascertainment by race or education, post-Dobbs state comparisons — comes with honest uncertainty.
+Two properties make this approach particularly suitable here. First, it lets us inject the extensive validation literature (Boulet, Salemi, Natoli, de Graaf, etc.) directly into the model as priors on specific parameters, rather than applying ad-hoc corrections after the fact. Second, the posterior is a full distribution rather than a point estimate, so every downstream quantity — predicted true livebirth counts by demographic cell, relative under-ascertainment by race or education — comes with honest uncertainty.
 
 In practice, the posterior is computed by simulation: an algorithm called **Markov Chain Monte Carlo** (MCMC; in PyMC, the specific variant is Hamiltonian Monte Carlo via the No-U-Turn Sampler) draws thousands of plausible parameter values from the posterior. Everything reported — means, credible intervals, subgroup contrasts — is a summary of those draws.
 
@@ -142,7 +142,7 @@ $$
 
 The interpretation: a DS pregnancy becomes a livebirth if it is *not* (detected *and* terminated). If either detection fails or the family declines termination, the pregnancy reaches delivery.
 
-This factorisation has three substantive advantages. It separates technology access ($\eta^{\text{detect}}$) from decision-making ($\eta^{\text{term}}$); it allows the 2012–2020 NIPT rollout to load onto $\eta^{\text{detect}}$ without being conflated with termination rates; and it allows the 2022 Dobbs shock to load onto $\eta^{\text{term}}$ via post-2022 state-level variation in access, providing a near-experimental lever for identification.
+This factorisation has two substantive advantages. It separates technology access ($\eta^{\text{detect}}$) from decision-making ($\eta^{\text{term}}$), and it allows the 2012–2020 NIPT rollout to load onto $\eta^{\text{detect}}$ without being conflated with termination rates.
 
 ### 4.3 Observed-data likelihood
 
@@ -172,9 +172,9 @@ $$
 \text{logit}(\eta^{\text{detect}}) = \beta_0^{\text{det}} + g^{\text{det}}(\text{year}) + h^{\text{det}}(\text{age}) + \gamma^{\text{det}}_{\text{race}} + \gamma^{\text{det}}_{\text{edu}} + \gamma^{\text{det}}_{\text{payer}} + \gamma^{\text{det}}_{\text{region}}.
 $$
 
-**Termination given detection** depends on race, education, region, and year (especially post-Dobbs):
+**Termination given detection** depends on race, education, and year (year enters as a residual-drift term, with a single homoscedastic sigma):
 $$
-\text{logit}(\eta^{\text{term}}) = \beta_0^{\text{term}} + \gamma^{\text{term}}_{\text{race}} + \gamma^{\text{term}}_{\text{edu}} + \gamma^{\text{term}}_{\text{region} \times \text{year}}.
+\text{logit}(\eta^{\text{term}}) = \beta_0^{\text{term}} + \gamma^{\text{term}}_{\text{race}} + \gamma^{\text{term}}_{\text{edu}} + \gamma^{\text{term}}_{\text{year}}.
 $$
 
 **Sensitivity** depends on race, education, preterm status, CCHD, NICU, and assisted ventilation:
@@ -253,7 +253,7 @@ The key reading of the DAG:
 - **Maternal age** enters at Stage 1 via Morris's logit-logistic curve, pinning $\theta_{\text{LB}}$ as a function of age.
 - **Demographic covariates** (race, education, payer, region) enter at Stages 2 and 3 but *not* Stage 1. This is a substantive modelling claim: the DS livebirth rate in the absence of screening does not depend meaningfully on race or education once maternal age is controlled. Any apparent demographic signal in baseline rates reflects downstream filters.
 - **Clinical covariates observed at birth** (CCHD, NICU, ventilation, preterm) enter only $s$ and arise downstream of $L$. They inform recording sensitivity because NICU workups delay DS confirmation past certificate submission; they cannot causally influence the screening/termination stage.
-- **Year** enters $\eta^{\text{detect}}$ (the NIPT rollout) and $\eta^{\text{term}}$ (pre/post-Dobbs). Separating these is a principal identification strategy.
+- **Year** enters $\eta^{\text{detect}}$ (capturing the NIPT rollout) and $\eta^{\text{term}}$ (as a residual drift term with a tight sigma).
 
 ---
 
@@ -297,7 +297,7 @@ Demographic priors on $\gamma^{\text{det}}$ follow the access-to-screening liter
 
 Natoli et al. (2012) provides the central anchor: weighted average US termination rate of 67% following prenatal DS diagnosis, based on studies from 1995–2011. Kuppermann et al. (2006) provides demographic decomposition — lower termination among non-Hispanic Black and Hispanic women, lower among younger mothers, lower in regions with restrictive abortion access. de Graaf et al. (2017) synthesises these for their US population-prevalence model.
 
-Priors: $\beta_0^{\text{term}} \sim \mathcal{N}(\text{logit}(0.67), 0.25)$. Race effects: $\gamma^{\text{term}}_{\text{NH Black}} \sim \mathcal{N}(-0.7, 0.2)$, $\gamma^{\text{term}}_{\text{Hispanic}} \sim \mathcal{N}(-0.4, 0.2)$, $\gamma^{\text{term}}_{\text{NH White}} = 0$ (reference). Education effects similarly negative for lower education. Region × year effects permit the Dobbs shock: states that restricted access post-2022 should show $\gamma^{\text{term}}$ decreasing (i.e., fewer terminations, more livebirths) after mid-2022. Chaiken et al. (2023) provides the state classification and pre-Dobbs direction of effect.
+Priors: $\beta_0^{\text{term}} \sim \mathcal{N}(\text{logit}(0.67), 0.25)$. Race effects: $\gamma^{\text{term}}_{\text{NH Black}} \sim \mathcal{N}(-0.7, 0.2)$, $\gamma^{\text{term}}_{\text{Hispanic}} \sim \mathcal{N}(-0.4, 0.2)$, $\gamma^{\text{term}}_{\text{NH White}} = 0$ (reference). Education effects similarly negative for lower education. A single homoscedastic year term $\gamma^{\text{term}}_{\text{year}} \sim \mathcal{N}(0, 0.15)$ absorbs residual year-over-year drift around the Natoli anchor; year coefficients are expected to be small since conditional termination rates have been approximately stable over the 2016–2024 window.
 
 ### 6.4 Birth-certificate sensitivity $s$
 
@@ -327,19 +327,11 @@ For race, the literature gives *opposing* expected effects: non-Hispanic Black m
 
 The risk is that the posterior partitions the joint demographic effect between $\eta^{\text{term}}$ and $s$ roughly in proportion to the prior precisions, without the data contributing much. That is a real limitation. It means race-specific posterior estimates should be read as *consistent with* the external literatures, not *derived from the national data*.
 
-### 7.3 The Dobbs shock is the key lever
+### 7.3 The NIPT rollout as a year-dimension signal for detection
 
-The 2022 Dobbs decision is a near-experimental shock that almost certainly affected $\eta^{\text{term}}$ and almost certainly did not affect $s$ (birth-certificate recording practices did not change in mid-2022). States that introduced access restrictions after Dobbs should show a measurable increase in DS livebirth rates relative to states that did not, with the increase localisable to the specific post-Dobbs months.
+The 2012–2020 NIPT rollout provides a year-dimension signal for $\eta^{\text{detect}}$. For the 2016–2024 window this is mostly the tail of the rollout, but year effects on detection should still be visible. Termination-rate priors are assumed stable over the window (single tight year sigma), which means year variation in the recorded rate that is not attributable to cohort age or clinical-marker composition is allocated primarily to $\eta^{\text{detect}}$.
 
-Within the Bayesian model, this becomes a difference-in-differences-in-differences: (treated states vs control states) × (post-Dobbs vs pre-Dobbs) × (race-specific contrasts, since termination-rate changes should be larger in groups with higher pre-Dobbs termination rates). The contrast pins $\eta^{\text{term}}$ *independently* of the Natoli-derived priors — providing a data-driven check on whether the prior magnitudes are approximately right.
-
-If post-Dobbs contrasts are consistent with the Natoli priors, that cross-validates the termination-rate estimates and strengthens confidence in the decomposition. If they disagree, the posterior will update away from the prior and flag the disagreement.
-
-### 7.4 The NIPT rollout as secondary lever
-
-The 2012–2020 NIPT rollout provides a smaller but real year-dimension signal for $\eta^{\text{detect}}$. For the 2016–2024 window this is mostly the tail of the rollout, but year effects on detection should still be visible. The contrast is cleanest within demographic groups where termination rates are relatively stable, so that year variation isolates detection changes.
-
-### 7.5 CCHD, NICU, ventilation identify $s$ separately
+### 7.4 CCHD, NICU, ventilation identify $s$ separately
 
 The clinical features are the cleanest part of the identification. They are informative about DS status (causally downstream of DS) and about sensitivity (delayed workup mechanism), and they enter *only* $s$. Two cells with identical demographics but different CCHD rates should differ in $s$ but not $\eta$ — this is what lets the model distinguish "this cell has low recorded rate because sensitivity is low" from "this cell has low recorded rate because termination rate is high".
 
@@ -355,9 +347,7 @@ Because identification depends heavily on the priors for race and education effe
 
 **Variant C — both informative.** The main specification.
 
-**Variant D — Dobbs-only identification for $\eta^{\text{term}}$.** $\gamma^{\text{term}}$ priors kept weak except for the region × year interaction capturing Dobbs; the model has to use the state-level post-2022 contrast to pin termination rates without relying on the Natoli priors.
-
-Reporting discipline: if the three informative variants (A, B, C) give materially different race-specific posterior estimates for $\eta^{\text{term}}$ and $s$ individually, but similar estimates for the *compound quantity* $\theta \eta s$ (which is what the data constrain), then the data cannot cleanly decompose the demographic effects and the honest reporting is the compound rate plus sensitivity bounds on the decomposition. If they agree, or if Variant D (the Dobbs-identified version) agrees with Variant C, that is genuine identification and the decomposition can be reported with confidence.
+Reporting discipline: if the three variants (A, B, C) give materially different race-specific posterior estimates for $\eta^{\text{term}}$ and $s$ individually, but similar estimates for the *compound quantity* $\theta \eta s$ (which is what the data constrain), then the data cannot cleanly decompose the demographic effects and the honest reporting is the compound rate plus sensitivity bounds on the decomposition. If they agree, that is evidence the decomposition is data-supported and can be reported with confidence.
 
 ---
 
@@ -368,8 +358,6 @@ The model's posterior gives the following quantities, each with full uncertainty
 **True DS livebirth counts per demographic cell** (marginalised over $R$). This is the principal quantity of interest and improves on the current predicted-missing set by not being ranked against the biased target. Counts can be aggregated to any level — year, region, race, race × region, etc. — from the joint posterior.
 
 **Decomposition of observed under-ascertainment.** For any demographic contrast, the model returns the fraction of the apparent recording gap attributable to each of: natural loss ($\eta^{\text{loss}}$), lower detection ($\eta^{\text{detect}}$), lower termination-given-detection ($\eta^{\text{term}}$), and lower BC sensitivity ($s$). This is the finding that the classifier approach structurally cannot produce.
-
-**Post-Dobbs state-level impact estimates.** Posterior distributions over state × year effects on $\eta^{\text{term}}$, with a credible-interval-based assessment of whether the effect was material and localisable in time.
 
 **CCHD co-occurrence in true DS livebirths.** The Heinke et al. (2021) and EUROCAT estimates put true DS × CCHD co-occurrence around 20–25% (for cyanotic lesions specifically). The current birth-certificate data shows ~6% co-occurrence among recorded DS cases. The Bayesian model posterior should recover the ~20–25% figure after correcting for under-ascertainment, providing an internal consistency check.
 
@@ -384,8 +372,6 @@ Bekker, J. & Davis, J. (2020). Learning from positive and unlabeled data: A surv
 Bishop, J., Huether, C. A., Torfs, C., Lorey, F. & Deddens, J. (2000). Epidemiologic study of Down syndrome in a racially diverse California population, 1989–1991. *American Journal of Public Health*, 90(11), 1778–1784.
 
 Boulet, S. L., Shin, M., Kirby, R. S., Goodman, D. & Correa, A. (2011). Sensitivity of birth certificate reports of birth defects in Atlanta, 1995–2005: Effects of maternal, infant, and hospital characteristics. *Public Health Reports*, 126(2), 186–194.
-
-Chaiken, S. R., Mandelbaum, A. D., Garg, B., Doshi, U., Packer, C. H. & Caughey, A. B. (2023). Association between rates of Down syndrome diagnosis in states with vs without 20-week abortion bans from 2011 to 2018. *JAMA Network Open*, 6(3), e233684.
 
 Cuckle, H. (2021). Maternal age in the epidemiology of common autosomal trisomies. *Prenatal Diagnosis*, 41(5), 621–629.
 
@@ -435,11 +421,10 @@ This annex sketches an implementation path for the model in PyMC. It is organise
 
 ### A.1 Data preparation
 
-Input data: NCHS natality files for 2016–2024, joined with a state-to-region mapping and the Chaiken et al. state classification for Dobbs exposure. For each birth, extract the covariates used in the model and `down_ind`.
+Input data: NCHS natality files for 2016–2024. For each birth, extract the covariates used in the model and `down_ind`.
 
 Aggregate to cells indexed by:
 - `year` (2016–2024): 9 levels
-- `state` or `region`: use state for Dobbs analysis (50+ levels); region (4) as fallback
 - `age_group`: <20, 20–24, 25–29, 30–34, 35–39, 40–44, 45+ (7 levels)
 - `race`: NH White, NH Black, NH Asian, NH AIAN/NHOPI/Other, Hispanic, Unknown (6 levels)
 - `education`: <HS, HS/GED, some college, BA, MA+, Unknown (6 levels)
@@ -449,7 +434,7 @@ Aggregate to cells indexed by:
 - `nicu`: yes/no (2 levels)
 - `aven`: yes/no (2 levels)
 
-Full cross gives approximately $9 \times 4 \times 7 \times 6 \times 6 \times 4 \times 2^4 \approx 580{,}000$ cells at regional level or ~7M at state level. For state-level modelling, reduce cardinality by dropping one of the clinical features (e.g., drop `aven` and rely on NICU + CCHD) or coarsening race/education.
+Full cross over these seven factors and four clinical flags gives a cell count in the tens of thousands; observed real-data cell counts sit around 60,000 for the 2016–2024 window.
 
 For each cell, compute $N_{\text{cell}}$ (total livebirths) and $R_{\text{cell}}$ (recorded DS). Store as a pandas DataFrame with integer-coded factor levels.
 
@@ -463,7 +448,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 # Load cell-level data into arrays
-# age_idx, race_idx, edu_idx, payer_idx, region_idx, year_idx,
+# age_idx, race_idx, edu_idx, payer_idx, year_idx,
 # preterm, cchd, nicu, aven, N_cell, R_cell
 
 def logit(p):
@@ -517,10 +502,9 @@ with pm.Model() as ds_model:
     eta_term_edu = pm.Normal("eta_term_edu",
                              mu=np.array([-0.30, -0.10, 0, 0.10, 0.20, 0]),
                              sigma=0.2, shape=N_EDU)
-    # Region x year for Dobbs. Pre-2022 effects tight around zero;
-    # post-2022 with wider prior for treated states.
-    eta_term_ry = pm.Normal("eta_term_ry", mu=0, sigma=0.3,
-                            shape=(N_REGION, N_YEAR))
+    # Homoscedastic year effect absorbing residual drift in termination.
+    eta_term_year = pm.Normal("eta_term_year", mu=0, sigma=0.15,
+                              shape=N_YEAR)
 
     # ------------------------------------------------------------------
     # Stage 3: BC sensitivity (s)
@@ -550,7 +534,7 @@ with pm.Model() as ds_model:
 
     eta_term = pm.math.invlogit(
         eta_term_intercept + eta_term_race[race_idx]
-        + eta_term_edu[edu_idx] + eta_term_ry[region_idx, year_idx]
+        + eta_term_edu[edu_idx] + eta_term_year[year_idx]
     )
 
     # Pass-through: a pregnancy becomes a livebirth if it is NOT
@@ -584,17 +568,17 @@ Do not attempt to fit the full model first. Build up:
 
 3. **Stage C — three-stage with single $\eta$.** Add the pass-through component without the detection/termination split. Check that posterior $\eta$ is somewhere near Egan's 50–55% figure in aggregate.
 
-4. **Stage D — full model with $\eta^{\text{detect}} \cdot \eta^{\text{term}}$ split.** The final model. Check that the Dobbs region × year contrast is recovered, that NIPT year effects are recovered for $\eta^{\text{detect}}$, and that the total recorded-DS rate is well-calibrated in aggregate and by cell.
+4. **Stage D — full model with $\eta^{\text{detect}} \cdot \eta^{\text{term}}$ split.** The final model. Check that NIPT year effects are recovered for $\eta^{\text{detect}}$ and that the total recorded-DS rate is well-calibrated in aggregate and by cell.
 
 ### A.4 Sampling
 
-Start with NUTS, 4 chains of 2,000 draws + 1,000 warmup. On regional-level aggregation (~50k cells), expect sampling to take a few hours on a modern workstation. Monitor $\hat R$ and effective sample sizes; expect some difficulty in the race × region interactions where data are sparse.
+Start with NUTS, 4 chains of 2,000 draws + 1,000 warmup. On the 2016–2024 aggregation (~60k cells), expect sampling to take a few hours on a modern workstation. Monitor $\hat R$ and effective sample sizes; expect some difficulty where cells are sparse.
 
 If sampling is slow or poorly mixing, two remedies:
 - **Reparameterise hierarchical effects non-centrally.** Replace `pm.Normal("x", mu=mu, sigma=sigma)` with `pm.Normal("x_raw", 0, 1)` and `x = mu + sigma * x_raw`.
-- **Reduce the model.** Drop one of the clinical features, coarsen education, or drop the race × region interaction in $\eta^{\text{term}}$, keeping only a main region and main race effect.
+- **Reduce the model.** Drop one of the clinical features or coarsen education.
 
-For very large cell counts or state-level models, consider **variational inference** via `pm.fit(..., method='advi')` as a fast diagnostic, but rely on NUTS for final results.
+For very large cell counts, consider **variational inference** via `pm.fit(..., method='advi')` as a fast diagnostic, but rely on NUTS for final results.
 
 ### A.5 Posterior summaries
 
@@ -602,7 +586,7 @@ Key quantities to extract:
 
 - **True DS livebirth count per cell.** Posterior predictive on $N_{\text{cell}} \cdot \theta_{\text{cell}} \cdot \eta_{\text{cell}}$. Aggregate to desired levels.
 - **Sensitivity by subgroup.** Posterior on `invlogit(s_int + s_race[k])` for each race.
-- **Termination-rate posterior** by race, by region × year, pre/post-Dobbs.
+- **Termination-rate posterior** by race and education.
 - **Detection-rate posterior** by year, demonstrating the NIPT rollout.
 - **Compound under-ascertainment ratio** by cell: (expected DS livebirths) / (recorded DS livebirths). Compare to current classifier outputs.
 
@@ -610,12 +594,11 @@ Report all subgroup quantities with 50% and 95% credible intervals. The width of
 
 ### A.6 Sensitivity analysis protocol
 
-Run the full model four times:
+Run the full model three times:
 
 - **Variant A:** Tight $s$ priors (sigma halved), weak $\eta^{\text{term}}$ priors (sigma doubled).
 - **Variant B:** Tight $\eta^{\text{term}}$ priors, weak $s$ priors.
 - **Variant C:** All priors at default (main specification).
-- **Variant D:** Uninformative $\gamma^{\text{term}}_{\text{race}}$ (sigma = 1), informative region × year for Dobbs. Data must identify termination effects through the Dobbs shock alone.
 
 Compare posterior race and education effects across variants. Report the main results from Variant C, with the range across variants as the effective uncertainty.
 
@@ -628,7 +611,6 @@ If access can be arranged, validate the model's state-level predicted DS livebir
 At minimum:
 - Posterior predictive checks on recorded counts by year, by race, by age group.
 - Pair plots of the race effects in $\eta^{\text{term}}$ vs $s$ (to diagnose the identifiability issue directly — strong negative correlation in the posterior indicates that the data cannot separate them and priors are doing the work).
-- Pre/post-Dobbs forest plot for state-level $\eta^{\text{term}}$ changes.
 - Compound sensitivity × detection × termination plots showing the decomposition of each demographic contrast.
 
 The identifiability pair-plots are the single most important diagnostic. If race effects in $\eta^{\text{term}}$ and $s$ have posterior correlation below about −0.7, the separation is genuinely prior-driven and should be reported as such.

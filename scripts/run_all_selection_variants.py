@@ -1,4 +1,4 @@
-"""Sequentially fit the four selection-model variants (A/B/C/D).
+"""Sequentially fit the three selection-model variants (A/B/C).
 
 Wraps ``scripts/fit_selection_model.py`` as a Python subprocess runner
 so each variant's stdout/stderr streams into a per-variant log file
@@ -8,12 +8,12 @@ not kill the others. Intended for overnight batch runs at
 
 Examples
 --------
-    # Overnight reporting run, all four variants, full spec.
+    # Overnight reporting run, all three variants, full spec.
     python scripts/run_all_selection_variants.py --profile reporting
 
-    # Rerun just C and D, skipping anything already on disk.
+    # Rerun just B and C, skipping anything already on disk.
     python scripts/run_all_selection_variants.py \\
-        --variants C D --skip-existing
+        --variants B C --skip-existing
 
     # Pass extra flags through to each fit.
     python scripts/run_all_selection_variants.py \\
@@ -64,7 +64,7 @@ class RunnerCliConfig:
 def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
     p = argparse.ArgumentParser(
         description=(
-            "Batch-run the four selection-model variants sequentially. "
+            "Batch-run the three selection-model variants sequentially. "
             "Intended for overnight reporting-quality runs."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

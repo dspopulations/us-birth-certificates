@@ -48,30 +48,17 @@ def fit_dir(tmp_path_factory) -> Path:
     )
 
     out = tmp_path_factory.mktemp("selection_fit")
-    truth = TrueParams.from_priors(
-        variant_C_default(),
-        n_year=9,
-        post_dobbs_year_start=6,
-        seed=0,
-    )
+    truth = TrueParams.from_priors(variant_C_default(), n_year=9, seed=0)
     cells = simulate_cells(
         truth,
         n_cells_per_month=2,
         n_year=9,
-        post_dobbs_year_start=6,
         n_cells_mean=1000,
         seed=0,
     )
-    cells.attrs["post_dobbs_year_start"] = 6
     cells.attrs["n_year"] = 9
 
-    model = build_model(
-        cells,
-        variant_C_default(),
-        spec="full",
-        n_year=9,
-        post_dobbs_year_start=6,
-    )
+    model = build_model(cells, variant_C_default(), spec="full", n_year=9)
     with model:
         idata = pm.sample(
             draws=60,
@@ -101,8 +88,6 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
             str(fit_dir / "cells.parquet"),
             "--out-dir",
             str(out_dir),
-            "--post-dobbs-year-start",
-            "6",
             "--strata",
             "year_idx",
             "race_idx",
@@ -114,7 +99,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     tables = out_dir / "tables"
     expected = {
         "identifiability",
-        "dobbs_year_trajectory",
+        "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",
         "decomposition_by_race",
@@ -128,7 +113,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     # The non-PPC diagnostics all produce a CSV companion.
     for stem in (
         "identifiability",
-        "dobbs_year_trajectory",
+        "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",
         "decomposition_by_race",
@@ -164,8 +149,6 @@ def test_cli_fit_dir_discovery(fit_dir: Path, tmp_path: Path) -> None:
             str(fit_dir),
             "--out-dir",
             str(tmp_path / "out2"),
-            "--post-dobbs-year-start",
-            "6",
             "--strata",
             "year_idx",
         ]

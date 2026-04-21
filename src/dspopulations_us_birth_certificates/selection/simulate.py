@@ -14,13 +14,9 @@ Example
 
     truth = TrueParams.from_priors(variant_C_default(), seed=0)
     cells = simulate_cells(
-        truth, n_cells_per_month=400,
-        n_year=9, post_dobbs_year_start=6, seed=0,
+        truth, n_cells_per_month=400, n_year=9, seed=0,
     )
-    model = build_model(
-        cells, variant_C_default(), spec="full",
-        n_year=9, post_dobbs_year_start=6,
-    )
+    model = build_model(cells, variant_C_default(), spec="full", n_year=9)
     with model:
         idata = pm.sample(1000, tune=1000, chains=4)
 """
@@ -76,7 +72,6 @@ class TrueParams:
         priors: ModelPriors,
         *,
         n_year: int = 9,
-        post_dobbs_year_start: int = 6,
         seed: int | None = None,
     ) -> TrueParams:
         """Draw one plausible parameter set from the prior distribution."""
@@ -86,13 +81,7 @@ class TrueParams:
             return rng.normal(mu, sigma, size=size)
 
         year_offsets = priors.eta_detect_year_offsets[:n_year]
-
-        sigma_year = np.where(
-            np.arange(n_year) >= post_dobbs_year_start,
-            priors.eta_term_year_sigma_post_dobbs,
-            priors.eta_term_year_sigma_pre_dobbs,
-        )
-        eta_term_year = rng.normal(0.0, sigma_year)
+        eta_term_year = rng.normal(0.0, priors.eta_term_year_sigma, size=n_year)
 
         return cls(
             theta_lb_age_logit=draw(
@@ -134,7 +123,6 @@ def simulate_cells(
     *,
     n_cells_per_month: int = 400,
     n_year: int,
-    post_dobbs_year_start: int,  # noqa: ARG001 — kept for CLI symmetry
     n_cells_mean: int = 12_000,
     seed: int | None = None,
 ) -> pd.DataFrame:
@@ -145,8 +133,6 @@ def simulate_cells(
         n_cells_per_month: Cells per (year, month). Covariate profiles are
             sampled uniformly at random.
         n_year: Number of years (must match ``build_model``).
-        post_dobbs_year_start: Retained for CLI symmetry with ``build_model``
-            — the Dobbs sigma is baked into ``truth.eta_term_year`` already.
         n_cells_mean: Mean of the Poisson cell-size distribution.
         seed: RNG seed.
 

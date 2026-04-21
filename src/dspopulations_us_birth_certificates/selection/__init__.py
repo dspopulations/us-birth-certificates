@@ -29,7 +29,6 @@ from dspopulations_us_birth_certificates.selection.config import (
 )
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_DB_PATH,
-    DEFAULT_POST_DOBBS_YEAR,
     DEFAULT_YEAR_RANGE,
     prepare_cells,
     summarise_cells,
@@ -56,7 +55,6 @@ from dspopulations_us_birth_certificates.selection.priors import (
     variant_A_tight_s,
     variant_B_tight_eta_term,
     variant_C_default,
-    variant_D_dobbs_only,
 )
 from dspopulations_us_birth_certificates.selection.simulate import (
     TrueParams,
@@ -66,7 +64,6 @@ from dspopulations_us_birth_certificates.selection.simulate import (
 __all__ = [
     "AGE_LEVELS",
     "DEFAULT_DB_PATH",
-    "DEFAULT_POST_DOBBS_YEAR",
     "DEFAULT_YEAR_RANGE",
     "EDU_LEVELS",
     "MODEL_ID",
@@ -95,5 +92,4 @@ __all__ = [
     "variant_A_tight_s",
     "variant_B_tight_eta_term",
     "variant_C_default",
-    "variant_D_dobbs_only",
 ]

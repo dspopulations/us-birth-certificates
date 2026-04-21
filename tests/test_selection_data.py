@@ -107,9 +107,7 @@ def tiny_db(tmp_path: Path) -> Path:
 def test_prepare_cells_column_schema(tiny_db: Path) -> None:
     con = duckdb.connect(str(tiny_db), read_only=True)
     try:
-        cells = prepare_cells(
-            con, year_range=(2016, 2024), post_dobbs_year=2022
-        )
+        cells = prepare_cells(con, year_range=(2016, 2024))
     finally:
         con.close()
 
@@ -130,7 +128,6 @@ def test_prepare_cells_column_schema(tiny_db: Path) -> None:
     assert "region_idx" not in cells.columns
     assert "n_region" not in cells.attrs
     assert cells.attrs["n_year"] == 9
-    assert cells.attrs["post_dobbs_year_start"] == 6
     assert cells.attrs["year_range"] == (2016, 2024)
 
 

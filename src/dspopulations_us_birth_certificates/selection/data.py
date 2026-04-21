@@ -20,9 +20,8 @@ The current ``data/us_births.db`` has these relevant columns (DuckDB
     ``down_ind`` (UTINYINT 0/1/NULL).
 
 The DB does not carry a state/region column, so the model has no
-region dimension — the Dobbs interaction is a year-only effect on
-termination. See ``plans/20260420-selection-model.md`` §10 for the
-identification implications.
+region dimension — the termination effect is modelled with demographic
+covariates plus a homoscedastic year term.
 """
 
 from __future__ import annotations
@@ -43,7 +42,6 @@ from dspopulations_us_birth_certificates.selection.priors import (
 
 DEFAULT_DB_PATH = Path("data/us_births.db")
 DEFAULT_YEAR_RANGE: tuple[int, int] = (2016, 2024)
-DEFAULT_POST_DOBBS_YEAR: int = 2022
 
 
 # --------------------------------------------------------------------------- #
@@ -191,7 +189,6 @@ def prepare_cells(
     con: duckdb.DuckDBPyConnection,
     *,
     year_range: tuple[int, int] = DEFAULT_YEAR_RANGE,
-    post_dobbs_year: int = DEFAULT_POST_DOBBS_YEAR,
     table: str = "us_births",
     columns: dict[str, str] | None = None,
 ) -> pd.DataFrame:
@@ -200,16 +197,12 @@ def prepare_cells(
     Args:
         con: Open DuckDB connection (read-only is fine).
         year_range: Inclusive ``(from_year, to_year)``.
-        post_dobbs_year: Calendar year at which the post-Dobbs sigma kicks
-            in. ``post_dobbs_year_start`` is stored in ``DataFrame.attrs``
-            as ``post_dobbs_year - from_year``.
         table: Name of the births table (default ``us_births``).
         columns: Optional override for column names (schema drift).
 
     Returns:
         A DataFrame with the integer index columns + ``N_cell`` / ``R_cell``,
-        and ``attrs = {"n_year", "n_region", "post_dobbs_year_start",
-        "year_range", "N_total", "R_total"}``.
+        and ``attrs = {"n_year", "year_range", "N_total", "R_total"}``.
     """
     cols = {**DEFAULT_COLUMNS, **(columns or {})}
     sql = _build_sql(table=table, columns=cols, year_range=year_range)
@@ -236,7 +229,6 @@ def prepare_cells(
     cells.attrs.update(
         {
             "n_year": n_year,
-            "post_dobbs_year_start": int(post_dobbs_year - from_year),
             "year_range": year_range,
             "N_total": int(cells["N_cell"].sum()),
             "R_total": int(cells["R_cell"].sum()),

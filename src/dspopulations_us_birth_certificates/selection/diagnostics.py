@@ -14,10 +14,9 @@ Functions
   on ``eta_term`` vs ``s``. Correlation ``|r| > 0.7`` indicates the
   decomposition is prior-driven rather than data-identified (plan §4.3,
   §10 #4).
-- :func:`dobbs_year_trajectory_plot` — posterior trajectory of
-  ``eta_term_year`` by year with a pre/post-Dobbs split. A shift in the
-  post-2022 mean relative to the pre-2022 mean is the identification
-  signal (weaker than the original region×year contrast would have been).
+- :func:`eta_term_year_trajectory_plot` — posterior trajectory of
+  ``eta_term_year`` by year. Drift across the window is a residual
+  year-over-year effect on termination rates.
 - :func:`cchd_consistency_check` — posterior CCHD co-occurrence among
   true DS livebirths vs the EUROCAT published prevalence (~22.5%).
 - :func:`posterior_predictive_by_stratum` — recorded-count PPC plot
@@ -160,25 +159,20 @@ def identifiability_table(idata: az.InferenceData) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------- #
-# 2. Dobbs year-trajectory plot                                               #
+# 2. Year-trajectory plot for eta_term                                        #
 # --------------------------------------------------------------------------- #
 
 
-def dobbs_year_trajectory_plot(
+def eta_term_year_trajectory_plot(
     idata: az.InferenceData,
     *,
-    post_dobbs_year_start: int,
     hdi_prob: float = 0.94,
 ) -> Figure:
-    """Posterior trajectory of ``eta_term_year`` by year with Dobbs split.
+    """Posterior trajectory of ``eta_term_year`` by year.
 
-    Years are coloured pre vs post Dobbs. The plot title reports the
-    posterior mean of ``mean(post) - mean(pre)`` with a credible
-    interval — the single number that summarises the Dobbs effect on
-    termination under the no-region model.
-
-    Note: without state-level data this is a weaker identification
-    target than the original region×year contrast (plan §10 #5).
+    Year effects on termination are modelled with a single
+    homoscedastic sigma; this plot shows the per-year posterior means
+    with credible intervals so any residual year drift is visible.
     """
     import matplotlib.pyplot as plt
 
@@ -191,92 +185,46 @@ def dobbs_year_trajectory_plot(
 
     year_arr = np.asarray(post["eta_term_year"].values)  # (chain, draw, year)
     n_year = year_arr.shape[-1]
-    if not 0 <= post_dobbs_year_start < n_year:
-        raise ValueError(
-            f"post_dobbs_year_start={post_dobbs_year_start} must lie in "
-            f"[0, {n_year})"
-        )
 
     mean = year_arr.mean(axis=(0, 1))
     lo = _quantile(year_arr, (1 - hdi_prob) / 2)
     hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
 
-    pre = year_arr[..., :post_dobbs_year_start].mean(axis=-1)
-    post_window = year_arr[..., post_dobbs_year_start:].mean(axis=-1)
-    diff = post_window - pre
-    diff_mean = float(diff.mean())
-    diff_lo = float(np.quantile(diff, (1 - hdi_prob) / 2))
-    diff_hi = float(np.quantile(diff, 1 - (1 - hdi_prob) / 2))
-
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     x = np.arange(n_year)
-    pre_mask = x < post_dobbs_year_start
-    post_mask = ~pre_mask
     ax.errorbar(
-        x[pre_mask],
-        mean[pre_mask],
-        yerr=[mean[pre_mask] - lo[pre_mask], hi[pre_mask] - mean[pre_mask]],
+        x,
+        mean,
+        yerr=[mean - lo, hi - mean],
         fmt="o",
         color=styles.COLOUR_BLUE,
         ecolor=styles.TEXT_COLOUR,
         capsize=3,
-        label="Pre-Dobbs",
-    )
-    ax.errorbar(
-        x[post_mask],
-        mean[post_mask],
-        yerr=[mean[post_mask] - lo[post_mask], hi[post_mask] - mean[post_mask]],
-        fmt="o",
-        color=styles.COLOUR_RED,
-        ecolor=styles.TEXT_COLOUR,
-        capsize=3,
-        label="Post-Dobbs",
     )
     ax.axhline(0, color=styles.TEXT_COLOUR, lw=0.8)
-    ax.axvline(
-        post_dobbs_year_start - 0.5,
-        color=styles.TEXT_COLOUR,
-        lw=0.8,
-        ls="--",
-    )
     ax.set_xticks(x)
     ax.set_xlabel("year_idx")
     ax.set_ylabel(r"$\eta_{term}$ year effect (logit)")
-    ax.set_title(
-        f"Dobbs effect on termination: mean(post) - mean(pre) = "
-        f"{diff_mean:+.3f} [{diff_lo:+.3f}, {diff_hi:+.3f}]"
-    )
-    ax.legend()
+    ax.set_title("Termination year effect posterior trajectory")
     fig.tight_layout()
     return fig
 
 
-def dobbs_year_trajectory_table(
+def eta_term_year_trajectory_table(
     idata: az.InferenceData,
     *,
-    post_dobbs_year_start: int,
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
-    """Per-year ``eta_term_year`` posterior + post-minus-pre summary row.
-
-    The last row has ``year_idx = -1`` and carries the summary effect
-    size (mean(post) − mean(pre)) so a single CSV captures both the
-    trajectory and the headline number.
-    """
+    """Per-year ``eta_term_year`` posterior summary."""
     post = idata.posterior
     year_arr = np.asarray(post["eta_term_year"].values)
     mean = year_arr.mean(axis=(0, 1))
     lo = _quantile(year_arr, (1 - hdi_prob) / 2)
     hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
 
-    pre = year_arr[..., :post_dobbs_year_start].mean(axis=-1)
-    post_window = year_arr[..., post_dobbs_year_start:].mean(axis=-1)
-    diff = post_window - pre
-
     rows = [
         {
             "year_idx": int(i),
-            "is_post_dobbs": bool(i >= post_dobbs_year_start),
             "posterior_mean": float(mean[i]),
             "lo": float(lo[i]),
             "hi": float(hi[i]),
@@ -284,16 +232,6 @@ def dobbs_year_trajectory_table(
         }
         for i in range(year_arr.shape[-1])
     ]
-    rows.append(
-        {
-            "year_idx": -1,
-            "is_post_dobbs": True,
-            "posterior_mean": float(diff.mean()),
-            "lo": float(np.quantile(diff, (1 - hdi_prob) / 2)),
-            "hi": float(np.quantile(diff, 1 - (1 - hdi_prob) / 2)),
-            "hdi_prob": hdi_prob,
-        }
-    )
     return pd.DataFrame(rows)
 
 

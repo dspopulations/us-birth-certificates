@@ -77,8 +77,8 @@
   <rect x="365" y="280" width="255" height="80" rx="4" class="param"/>
   <text x="492" y="302" text-anchor="middle" class="param-title">η_term</text>
   <text x="492" y="320" text-anchor="middle" class="param-desc">P(termination | detection)</text>
-  <text x="492" y="338" text-anchor="middle" class="covar-tag">inputs: race, education, region,</text>
-  <text x="492" y="352" text-anchor="middle" class="covar-tag">year (Dobbs 2022 shock)</text>
+  <text x="492" y="338" text-anchor="middle" class="covar-tag">inputs: race, education,</text>
+  <text x="492" y="352" text-anchor="middle" class="covar-tag">year (residual drift)</text>
 
   <rect x="665" y="232" width="280" height="48" rx="4" fill="#fffdf4" stroke="#c5b572" stroke-width="1" stroke-dasharray="4 2"/>
   <text x="805" y="252" text-anchor="middle" class="formula-label">pass-through fraction</text>

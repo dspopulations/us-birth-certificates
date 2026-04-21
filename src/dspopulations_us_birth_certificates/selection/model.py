@@ -6,7 +6,7 @@ The model factors observed birth-certificate DS recording as::
 
 where ``theta_LB`` is the baseline DS livebirth rate in the absence of
 screening (Morris 2002), ``eta = 1 - eta_detect . eta_term`` is the
-screening/termination pass-through (Kuppermann/Natoli/Chaiken), ``s`` is
+screening/termination pass-through (Kuppermann/Natoli), ``s`` is
 birth-certificate sensitivity given a DS livebirth (Boulet 2011 /
 Salemi 2017), and ``f`` is the small false-positive rate pinned from
 Ohio/NY validation.
@@ -62,7 +62,6 @@ def build_model(
     *,
     spec: Spec = "full",
     n_year: int,
-    post_dobbs_year_start: int,
 ) -> pm.Model:
     """Build the PyMC model for a given spec.
 
@@ -72,10 +71,6 @@ def build_model(
             :mod:`priors`.
         spec: Which stages to enable.
         n_year: Number of year levels in the data (e.g. 9 for 2016-2024).
-        post_dobbs_year_start: ``year_idx`` at which the post-Dobbs sigma
-            kicks in (e.g. 6 for 2022 given year_start=2016). Originally
-            a region×year interaction; with no state-level data available
-            this is a year-only effect on termination.
     """
     import pymc as pm
     import pytensor.tensor as pt
@@ -206,15 +201,10 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
-                sigma_year = np.where(
-                    np.arange(n_year) >= post_dobbs_year_start,
-                    priors.eta_term_year_sigma_post_dobbs,
-                    priors.eta_term_year_sigma_pre_dobbs,
-                )
                 eta_term_year = pm.Normal(
                     "eta_term_year",
                     mu=0.0,
-                    sigma=sigma_year,
+                    sigma=priors.eta_term_year_sigma,
                     dims="year",
                 )
                 eta_term = pm.math.invlogit(

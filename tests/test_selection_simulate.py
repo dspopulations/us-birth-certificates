@@ -43,18 +43,9 @@ TRUE_COLS = (
 
 
 def _make_cells(seed: int = 0, n_cells_per_month: int = 30) -> pd.DataFrame:
-    truth = TrueParams.from_priors(
-        variant_C_default(),
-        n_year=9,
-        post_dobbs_year_start=6,
-        seed=seed,
-    )
+    truth = TrueParams.from_priors(variant_C_default(), n_year=9, seed=seed)
     return simulate_cells(
-        truth,
-        n_cells_per_month=n_cells_per_month,
-        n_year=9,
-        post_dobbs_year_start=6,
-        seed=seed,
+        truth, n_cells_per_month=n_cells_per_month, n_year=9, seed=seed
     )
 
 
@@ -133,19 +124,8 @@ def test_simulate_cell_dimensions() -> None:
 
 
 def test_eta_term_year_shape_matches_n_year() -> None:
-    truth = TrueParams.from_priors(
-        variant_C_default(),
-        n_year=7,
-        post_dobbs_year_start=4,
-        seed=0,
-    )
+    truth = TrueParams.from_priors(variant_C_default(), n_year=7, seed=0)
     assert truth.eta_term_year.shape == (7,)
-    cells = simulate_cells(
-        truth,
-        n_cells_per_month=5,
-        n_year=7,
-        post_dobbs_year_start=4,
-        seed=0,
-    )
+    cells = simulate_cells(truth, n_cells_per_month=5, n_year=7, seed=0)
     assert "region_idx" not in cells.columns
     assert cells["year_idx"].between(0, 6).all()
