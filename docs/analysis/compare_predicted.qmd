@@ -198,13 +198,6 @@ _render_compare_table("ab_aven1")
 _render_compare_table("wtgain")
 ```
 
-## Birth year (`year`)
-
-```{python}
-# | echo: false
-_render_compare_table("year")
-```
-
 ## Cyanotic congenital heart disease (`ca_cchd`)
 
 ```{python}

@@ -436,41 +436,6 @@ gains.
 _render_summary_table(_load_summary("wtgain"))
 ```
 
-## Birth year (`year`)
-
-Distribution across the nine years the report covers (2016–2024,
-matching the gradient-boosting model's training window).
-
-![Recorded vs. predicted missing DS births by birth year](year_recorded_vs_predicted.png){#fig-year .lightbox fig-align="center"}
-
-```{python}
-# | echo: false
-_render_summary_table(_load_summary("year"))
-```
-
-::: {.callout-note title="Literature contrast — temporal stability"}
-
-Boulet et al. (2011) found essentially no improvement in sensitivity
-across 1995–2005, and Salemi et al. (2017) found no improvement after
-the 2003 form redesign in Florida — the bias is structural, not tied
-to form design.
-
-This stacked view cannot test that claim. The classifier writes
-`ds_pred_missing` via a year×month quota of `ceil(1.5 × recorded)`,
-so the *recorded* and *predicted* shares per year are tied to each
-other by construction (each year's predicted share is exactly
-`1.5 ×` its recorded share, modulo the `ceil`); the two columns will
-look essentially identical year-over-year regardless of any actual
-trend in recording sensitivity. Pre-2014 years are also absent from
-this report (the model was not fit on them).
-
-See § "Follow-up investigations" for a direct test: plot
-`recorded / R'` ratio year-by-year against an external surveillance
-benchmark — the structural-stability question can only be answered
-with that comparator.
-
-:::
-
 ## Cyanotic congenital heart disease (`ca_cchd`)
 
 Yes/no/unknown flag for a birth-certificate-recorded diagnosis of
