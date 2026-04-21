@@ -1,4 +1,4 @@
-"""Thin wrapper around ``pm.sample`` for the Bayesian pipeline.
+"""Thin wrapper around ``pm.sample`` for the selection-model pipeline.
 
 Centralises sampler choice (``nutpie`` by default, falling back to PyMC's
 default NUTS), seeding, and attachment of prior- and posterior-predictive
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dspopulations_us_birth_certificates.bayes.config import BayesRunConfig
+from dspopulations_us_birth_certificates.selection.config import RunConfig
 
 if TYPE_CHECKING:
     import arviz as az
@@ -19,13 +19,13 @@ if TYPE_CHECKING:
 def sample(
     model: pm.Model,
     *,
-    config: BayesRunConfig,
+    config: RunConfig,
     prior_only: bool = False,
 ) -> az.InferenceData:
     """Run the full Bayesian workflow: prior predictive → posterior → PPC.
 
     Args:
-        model: A PyMC model (typically from ``MODELS[<id>].build(cells)``).
+        model: A PyMC model (typically from ``selection.build_model``).
         config: Run config controlling draws/tune/chains/target_accept/seed.
         prior_only: If True, only run the prior-predictive step and return
             an InferenceData carrying ``prior`` and ``prior_predictive`` —
@@ -59,7 +59,7 @@ def sample(
     return idata
 
 
-def _sample_posterior(config: BayesRunConfig) -> az.InferenceData:
+def _sample_posterior(config: RunConfig) -> az.InferenceData:
     """Run NUTS with the requested sampler backend."""
     import pymc as pm
 

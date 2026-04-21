@@ -1,4 +1,4 @@
-"""Artefact persistence for Bayesian fits."""
+"""Artefact persistence for selection-model fits."""
 
 from __future__ import annotations
 
@@ -7,18 +7,14 @@ import shutil
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from dspopulations_us_birth_certificates.bayes.config import BayesFitContext
-
-if TYPE_CHECKING:
-    import arviz as az
-
+from dspopulations_us_birth_certificates.selection.config import FitContext
 
 DOCS_TEMPLATE_ROOT = Path("docs/models")
 
 
-def save_artefacts(context: BayesFitContext, output_dir: Path) -> None:
+def save_artefacts(context: FitContext, output_dir: Path) -> None:
     """Write InferenceData, configs, and the aggregated cell frame.
 
     Layout::
@@ -51,24 +47,6 @@ def save_summary(summary: Any, output_dir: Path, *, name: str = "summary.csv") -
     """Write an ``az.summary`` DataFrame to CSV."""
     output_dir.mkdir(parents=True, exist_ok=True)
     summary.to_csv(output_dir / name)
-
-
-def save_prior_predictive_summary(
-    summary: Any,
-    output_dir: Path,
-    *,
-    name: str = "prior_predictive_summary.csv",
-) -> None:
-    """Write a prior-predictive summary DataFrame to CSV next to the fit."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    summary.to_csv(output_dir / name)
-
-
-def load_idata(output_dir: Path) -> az.InferenceData:
-    """Load a previously-saved InferenceData from an artefact directory."""
-    import arviz as az
-
-    return az.from_netcdf(str(output_dir / "idata.nc"))
 
 
 def copy_docs_template(

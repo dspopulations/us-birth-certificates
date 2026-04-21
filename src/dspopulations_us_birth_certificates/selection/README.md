@@ -49,11 +49,11 @@ scripts/fit_selection_model.py \
         │
         ├── selection.prepare_cells(con)          # DuckDB → cell frame
         ├── selection.build_model(cells, priors)  # PyMC full spec
-        ├── bayes.sampling.sample(...)            # NUTS + posterior predictive
-        ├── bayes.io.save_artefacts(...)          # idata.nc, cells.parquet, ...
-        ├── bayes.io.copy_docs_template(...)      # docs/models/selection/index.qmd → run dir
+        ├── selection.sample(...)                 # NUTS + posterior predictive
+        ├── selection.save_artefacts(...)         # idata.nc, cells.parquet, ...
+        ├── selection.copy_docs_template(...)     # docs/models/selection/index.qmd → run dir
         ├── selection.render.render_all(...)      # six diagnostic plots + tables
-        └── bayes.io.render_quarto(...)           # index.qmd → index.html
+        └── selection.render_quarto(...)          # index.qmd → index.html
 ```
 
 Output layout:
@@ -63,7 +63,7 @@ output/selection/<variant>/<spec>/<timestamp>/
 ├── idata.nc            # posterior InferenceData
 ├── cells.parquet       # exact input frame
 ├── config.json         # SelectionModelConfig snapshot
-├── run_config.json     # BayesRunConfig (profile + overrides)
+├── run_config.json     # RunConfig (profile + overrides)
 ├── summary.csv         # az.summary on posterior
 ├── index.qmd           # copied Quarto template
 ├── index.html          # rendered (if --render)

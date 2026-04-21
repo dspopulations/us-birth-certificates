@@ -1,20 +1,22 @@
 """Run / model configuration for the selection-model fit pipeline.
 
-Parallels ``dspopulations_us_birth_certificates.bayes.config`` and reuses
-its :class:`BayesRunConfig` dataclass — the shape (draws / tune / chains
-/ target_accept / sampler / seed) is identical. The presets diverge:
+- :class:`RunConfig` — sampler preset (draws / tune / chains /
+  target_accept / sampler / seed). Build via :func:`selection_run_config`.
+- :class:`FitContext` — mutable state threaded through fit steps
+  (cells → model → idata → artefacts).
+- :class:`SelectionModelConfig` — serialisable snapshot of a fit, written
+  to ``config.json`` next to the InferenceData so runs are reproducible
+  from artefacts alone.
 
+Run profiles
+------------
 - ``dev`` — 1000 tune + 1000 draws × 2 chains, target_accept 0.9.
   Enough posterior support to land ESS above 400 on the named RVs on
   the full spec; a few minutes on nutpie for theta_only, ~30 min for
   full.
-- ``reporting`` — 1500 draws, 4 chains, target_accept 0.95. Higher than
-  the bayes ``reporting`` preset (0.9) because the selection model has
-  the known η/s identification challenge and needs tighter stepping.
-
-:class:`SelectionModelConfig` is the serialisable snapshot of a fit,
-written to ``config.json`` next to the InferenceData so runs are
-reproducible from artefacts alone.
+- ``reporting`` — 1500 draws, 4 chains, target_accept 0.95. The
+  selection model has a known η/s identification challenge and needs
+  tighter stepping than the usual 0.9.
 """
 
 from __future__ import annotations
@@ -24,7 +26,6 @@ from typing import Any, Literal
 
 import numpy as np
 
-from dspopulations_us_birth_certificates.bayes.config import BayesRunConfig
 from dspopulations_us_birth_certificates.selection.priors import (
     VARIANTS,
     ModelPriors,
@@ -59,16 +60,48 @@ _SELECTION_PRESETS: dict[str, dict[str, Any]] = {
 }
 
 
+@dataclass(frozen=True)
+class RunConfig:
+    """Speed / fidelity preset for a selection-model fit."""
+
+    name: SelectionRunConfigName
+    draws: int
+    tune: int
+    chains: int
+    target_accept: float
+    prior_predictive_samples: int
+    posterior_predictive: bool
+    nuts_sampler: str
+    random_seed: int = 47
+
+
+@dataclass
+class FitContext:
+    """Mutable state threaded through the selection-model fit steps.
+
+    Populated progressively by the CLI: cells → model → idata → artefacts.
+    """
+
+    config: Any  # SelectionModelConfig (duck-typed on ``.to_dict()``)
+    run_config: RunConfig
+    output_dir: Any = None  # pathlib.Path, kept loose to avoid import cost
+    cells: Any = None
+    model: Any = None
+    idata: Any = None
+    summary: Any = None
+    metrics: dict[str, Any] = field(default_factory=dict)
+
+
 def selection_run_config(
     name: SelectionRunConfigName, *, random_seed: int = 47
-) -> BayesRunConfig:
-    """Return a ``BayesRunConfig`` instance with selection-tuned presets."""
+) -> RunConfig:
+    """Return a :class:`RunConfig` with selection-tuned presets."""
     if name not in _SELECTION_PRESETS:
         raise ValueError(
             f"Unknown selection run profile {name!r}. "
             f"Valid names: {sorted(_SELECTION_PRESETS)}"
         )
-    return BayesRunConfig(name=name, random_seed=random_seed, **_SELECTION_PRESETS[name])
+    return RunConfig(name=name, random_seed=random_seed, **_SELECTION_PRESETS[name])
 
 
 def preset_names() -> tuple[str, ...]:
@@ -94,7 +127,7 @@ class SelectionModelConfig:
     """Serialisable snapshot of a selection-model fit.
 
     ``model_id`` is always ``"selection"`` so
-    :func:`bayes.io.copy_docs_template` resolves to
+    :func:`selection.io.copy_docs_template` resolves to
     ``docs/models/selection/index.qmd`` regardless of variant. ``variant``
     and ``spec`` are separate fields the Quarto template branches on.
     """
@@ -140,6 +173,8 @@ class SelectionModelConfig:
 
 __all__ = [
     "MODEL_ID",
+    "FitContext",
+    "RunConfig",
     "SelectionModelConfig",
     "SelectionRunConfigName",
     "Spec",

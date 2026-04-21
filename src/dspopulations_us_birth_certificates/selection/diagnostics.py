@@ -5,8 +5,8 @@ the aggregated ``cells`` frame that produced it, and returns a
 :class:`matplotlib.figure.Figure`. Callers wanting paired CSVs /
 publication-quality artefacts should use
 :mod:`dspopulations_us_birth_certificates.selection.render_diagnostics`,
-which wraps these with the same ``_save`` helper the ``bayes`` pipeline
-uses.
+which wraps these with a ``_save`` helper that writes figures alongside
+their tidy-DataFrame companions.
 
 Functions
 ---------
@@ -583,7 +583,7 @@ def age_curve_table(
 
 
 # --------------------------------------------------------------------------- #
-# Convergence summary (parity with bayes.diagnostics)                          #
+# Convergence summary                                                          #
 # --------------------------------------------------------------------------- #
 
 
