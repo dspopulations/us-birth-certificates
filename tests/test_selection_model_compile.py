@@ -22,22 +22,17 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 N_YEAR = 9
-POST_DOBBS = 6
 
 
 @pytest.fixture(scope="module")
 def tiny_cells() -> pd.DataFrame:
     truth = TrueParams.from_priors(
-        variant_C_default(),
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
-        seed=0,
+        variant_C_default(), n_year=N_YEAR, seed=0
     )
     cells = simulate_cells(
         truth,
         n_cells_per_month=2,
         n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
         n_cells_mean=500,
         seed=0,
     )
@@ -53,11 +48,7 @@ def test_build_model_and_prior_predict(
     import pymc as pm
 
     model = build_model(
-        tiny_cells,
-        variant_C_default(),
-        spec=spec,
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
+        tiny_cells, variant_C_default(), spec=spec, n_year=N_YEAR
     )
     with model:
         prior = pm.sample_prior_predictive(draws=5, random_seed=0)
@@ -78,18 +69,13 @@ def test_build_model_rejects_unknown_spec(tiny_cells: pd.DataFrame) -> None:
             variant_C_default(),
             spec="bogus",  # type: ignore[arg-type]
             n_year=N_YEAR,
-            post_dobbs_year_start=POST_DOBBS,
         )
 
 
 def test_full_spec_has_detect_and_term(tiny_cells: pd.DataFrame) -> None:
     """Only the ``full`` spec should emit the decomposed eta_detect/eta_term."""
     model = build_model(
-        tiny_cells,
-        variant_C_default(),
-        spec="full",
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
+        tiny_cells, variant_C_default(), spec="full", n_year=N_YEAR
     )
     named = {rv.name for rv in model.free_RVs}
     assert "eta_detect_int" in named
@@ -100,11 +86,7 @@ def test_full_spec_has_detect_and_term(tiny_cells: pd.DataFrame) -> None:
 
 def test_theta_only_omits_eta_and_s(tiny_cells: pd.DataFrame) -> None:
     model = build_model(
-        tiny_cells,
-        variant_C_default(),
-        spec="theta_only",
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
+        tiny_cells, variant_C_default(), spec="theta_only", n_year=N_YEAR
     )
     named = {rv.name for rv in model.free_RVs}
     assert "theta_lb_age" in named

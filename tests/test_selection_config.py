@@ -54,7 +54,6 @@ def test_model_config_from_priors_serialises() -> None:
         variant="C",
         spec="full",
         year_range=(2016, 2024),
-        post_dobbs_year=2022,
         notes="smoke test",
     )
     d = cfg.to_dict()
@@ -62,7 +61,6 @@ def test_model_config_from_priors_serialises() -> None:
     assert d["variant"] == "C"
     assert d["spec"] == "full"
     assert d["year_range"] == [2016, 2024]
-    assert d["post_dobbs_year"] == 2022
     assert d["notes"] == "smoke test"
     # Priors dict carries the expected scalar and array-valued keys.
     priors = d["priors"]
@@ -73,21 +71,16 @@ def test_model_config_from_priors_serialises() -> None:
     assert restored["priors"]["eta_detect_race"] == priors["eta_detect_race"]
 
 
-def test_model_config_variant_selection_covers_A_through_D() -> None:
+def test_model_config_variant_selection_covers_A_through_C() -> None:
     """Each variant letter resolves to a distinct priors snapshot."""
     snapshots = {
         v: SelectionModelConfig.from_priors(
             variant=v,
             spec="full",
             year_range=(2016, 2024),
-            post_dobbs_year=2022,
         ).to_dict()["priors"]
-        for v in ("A", "B", "C", "D")
+        for v in ("A", "B", "C")
     }
-    # Variants differ by sigma settings, not by all fields — but at least
-    # one sigma should move between A/C and between D/C.
-    assert snapshots["A"]["s_race_sigma"] != snapshots["C"]["s_race_sigma"]
-    assert (
-        snapshots["D"]["eta_term_year_sigma_post_dobbs"]
-        != snapshots["C"]["eta_term_year_sigma_post_dobbs"]
-    )
+    # A tightens s_race_sigma relative to C; B loosens it.
+    assert snapshots["A"]["s_race_sigma"] < snapshots["C"]["s_race_sigma"]
+    assert snapshots["B"]["s_race_sigma"] > snapshots["C"]["s_race_sigma"]

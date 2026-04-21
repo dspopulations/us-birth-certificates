@@ -35,10 +35,9 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     variant_C_default,
 )
 
-# Test-wide constants. A 9-year window with post_dobbs_year_start=6
-# matches the real-data fit configuration in Phase 4.
+# Test-wide constants. A 9-year window matches the real-data fit
+# configuration in Phase 4.
 N_YEAR = 9
-POST_DOBBS = 6
 SEED = 42
 
 
@@ -64,27 +63,15 @@ def recovery_fit() -> tuple[TrueParams, object]:
     import pymc as pm
 
     priors = variant_C_default()
-    truth = TrueParams.from_priors(
-        priors,
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
-        seed=SEED,
-    )
+    truth = TrueParams.from_priors(priors, n_year=N_YEAR, seed=SEED)
     cells = simulate_cells(
         truth,
         n_cells_per_month=15,
         n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
         n_cells_mean=1500,
         seed=SEED,
     )
-    model = build_model(
-        cells,
-        priors,
-        spec="full",
-        n_year=N_YEAR,
-        post_dobbs_year_start=POST_DOBBS,
-    )
+    model = build_model(cells, priors, spec="full", n_year=N_YEAR)
     with model:
         idata = pm.sample(
             draws=400,

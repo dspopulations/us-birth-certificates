@@ -1,6 +1,6 @@
 """Aggregate posterior summaries across selection-model variants.
 
-Reads the four variant fit directories (A/B/C/D) produced by
+Reads the three variant fit directories (A/B/C) produced by
 ``scripts/fit_selection_model.py --spec full --profile reporting`` and
 builds a side-by-side comparison CSV + forest-plot figure of the
 headline posterior quantities:
@@ -9,8 +9,6 @@ headline posterior quantities:
 - Per-race ``eta_term_race`` and ``s_race`` posterior means + CIs
 - Per-race identifiability correlation ``|r|`` between ``eta_term_race``
   and ``s_race`` (from each fit's ``tables/identifiability.csv``)
-- Dobbs year effect (mean(post) − mean(pre), from each fit's
-  ``tables/dobbs_year_trajectory.csv``)
 
 A material spread across variants on any row indicates prior-driven
 decomposition for that quantity; tight agreement indicates
@@ -19,7 +17,7 @@ data-identified structure (plan §4.4).
 Examples
 --------
     # Default: pick the most recent variant run from each of
-    # output/selection/{A,B,C,D}/full/
+    # output/selection/{A,B,C}/full/
     python scripts/compare_selection_variants.py \\
         --output-dir output/selection/_compare_$(date +%Y%m%d-%H%M%S)
 
@@ -28,7 +26,6 @@ Examples
         --fit-dirs output/selection/A/full/20260421-020000 \\
                    output/selection/B/full/20260421-030000 \\
                    output/selection/C/full/20260421-040000 \\
-                   output/selection/D/full/20260421-050000 \\
         --output-dir output/selection/_compare
 """
 
@@ -48,7 +45,7 @@ from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.selection import RACE_LEVELS
 
 DEFAULT_ROOT = Path("output/selection")
-VARIANTS: tuple[str, ...] = ("A", "B", "C", "D")
+VARIANTS: tuple[str, ...] = ("A", "B", "C")
 
 
 @dataclass
@@ -84,7 +81,7 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
         default=None,
         help=(
             "Explicit variant fit directories (one per variant). If omitted, "
-            "the most recent run under <root>/{A,B,C,D}/full/ is used."
+            "the most recent run under <root>/{A,B,C}/full/ is used."
         ),
     )
     p.add_argument(
@@ -173,13 +170,6 @@ def _load_identifiability(fit_dir: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def _load_dobbs(fit_dir: Path) -> pd.DataFrame:
-    path = fit_dir / "tables" / "dobbs_year_trajectory.csv"
-    if not path.is_file():
-        return pd.DataFrame()
-    return pd.read_csv(path)
-
-
 # --------------------------------------------------------------------------- #
 # Aggregation                                                                  #
 # --------------------------------------------------------------------------- #
@@ -191,8 +181,8 @@ def build_comparison(fit_dirs: dict[str, Path]) -> pd.DataFrame:
     Columns: ``variant``, ``metric``, ``level``, ``mean``, ``lo``, ``hi``.
 
     ``metric`` ∈ {``total_true``, ``eta_term_race``, ``s_race``,
-    ``identifiability_abs_r``, ``dobbs_effect``}; ``level`` is the
-    race label (where applicable), or "(all)" for scalars.
+    ``identifiability_abs_r``}; ``level`` is the race label (where
+    applicable), or "(all)" for scalars.
     """
     rows: list[dict] = []
     for variant, fit_dir in sorted(fit_dirs.items()):
@@ -244,23 +234,6 @@ def build_comparison(fit_dirs: dict[str, Path]) -> pd.DataFrame:
                     "hi": float("nan"),
                 }
             )
-
-        # Dobbs effect = summary row (year_idx == -1) from trajectory table.
-        dobbs = _load_dobbs(fit_dir)
-        if not dobbs.empty:
-            summary_row = dobbs[dobbs["year_idx"] == -1]
-            if len(summary_row) == 1:
-                r = summary_row.iloc[0]
-                rows.append(
-                    {
-                        "variant": variant,
-                        "metric": "dobbs_effect",
-                        "level": "(all)",
-                        "mean": float(r["posterior_mean"]),
-                        "lo": float(r["lo"]),
-                        "hi": float(r["hi"]),
-                    }
-                )
 
     return pd.DataFrame(rows)
 

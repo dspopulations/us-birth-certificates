@@ -1,7 +1,7 @@
 """Fit the three-stage Bayesian selection model.
 
 Thin CLI over ``dspopulations_us_birth_certificates.selection``. Given a
-variant (A/B/C/D), spec (theta_only / theta_s / single_eta / full), and
+variant (A/B/C), spec (theta_only / theta_s / single_eta / full), and
 run profile, this script:
 
     1. Aggregates ``us_births`` into selection cells via
@@ -81,7 +81,6 @@ class FitSelectionCliConfig:
     profile: str
     start_year: int
     end_year: int
-    post_dobbs_year: int
     random_seed: int
     duckdb_path: Path
     output_dir: Path
@@ -111,7 +110,7 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         "--variant",
         required=True,
         choices=sorted(VARIANTS),
-        help="Prior-sensitivity variant (A/B/C/D).",
+        help="Prior-sensitivity variant (A/B/C).",
     )
     p.add_argument(
         "--spec",
@@ -129,12 +128,6 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         "--years",
         default=None,
         help="Year range as 'YYYY-YYYY'. Defaults to 2016-2024.",
-    )
-    p.add_argument(
-        "--post-dobbs-year",
-        type=int,
-        default=2022,
-        help="Calendar year at which the post-Dobbs sigma kicks in.",
     )
     p.add_argument("--random-seed", type=int, default=47)
     p.add_argument(
@@ -194,7 +187,6 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         profile=ns.profile,
         start_year=start_year,
         end_year=end_year,
-        post_dobbs_year=ns.post_dobbs_year,
         random_seed=ns.random_seed,
         duckdb_path=ns.duckdb_path,
         output_dir=out_dir,
@@ -229,7 +221,6 @@ def main(argv: list[str] | None = None) -> int:
     run_config = _build_run_config(cli)
     cli_output.info(
         f"years=[bold]{cli.start_year}-{cli.end_year}[/bold], "
-        f"post_dobbs_year=[bold]{cli.post_dobbs_year}[/bold], "
         f"draws=[bold]{run_config.draws}[/bold], "
         f"tune=[bold]{run_config.tune}[/bold], "
         f"chains=[bold]{run_config.chains}[/bold], "
@@ -241,11 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Load cells")
     con = duckdb.connect(str(cli.duckdb_path), read_only=True)
     try:
-        cells = prepare_cells(
-            con,
-            year_range=(cli.start_year, cli.end_year),
-            post_dobbs_year=cli.post_dobbs_year,
-        )
+        cells = prepare_cells(con, year_range=(cli.start_year, cli.end_year))
     finally:
         con.close()
     summary = summarise_cells(cells)
@@ -257,21 +244,13 @@ def main(argv: list[str] | None = None) -> int:
             ("r_total (recorded DS)", f"{summary['r_total']:,}"),
             ("recorded_rate", f"{summary['recorded_rate']:.2e}"),
             ("year_range", summary.get("year_range")),
-            ("post_dobbs_year_start", summary.get("post_dobbs_year_start")),
         ],
     )
 
     cli_output.section("Build model")
     priors = VARIANTS[cli.variant]()
     n_year = cells.attrs["n_year"]
-    post_dobbs_year_start = cells.attrs["post_dobbs_year_start"]
-    model = build_model(
-        cells,
-        priors,
-        spec=cli.spec,
-        n_year=n_year,
-        post_dobbs_year_start=post_dobbs_year_start,
-    )
+    model = build_model(cells, priors, spec=cli.spec, n_year=n_year)
 
     cli_output.section("Sample")
     idata = sample(model, config=run_config, prior_only=cli.prior_only)
@@ -281,7 +260,6 @@ def main(argv: list[str] | None = None) -> int:
         variant=cli.variant,
         spec=cli.spec,
         year_range=(cli.start_year, cli.end_year),
-        post_dobbs_year=cli.post_dobbs_year,
         priors_obj=priors,
         notes=f"profile={cli.profile}",
     )
@@ -334,10 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         idata,
         cells,
         cli.output_dir,
-        options=RenderOptions(
-            post_dobbs_year_start=post_dobbs_year_start,
-            strata=DEFAULT_STRATA,
-        ),
+        options=RenderOptions(strata=DEFAULT_STRATA),
     )
 
     if cli.render and qmd_path is not None:

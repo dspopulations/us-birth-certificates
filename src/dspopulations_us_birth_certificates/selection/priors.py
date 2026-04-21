@@ -4,14 +4,14 @@ Stage 1 — baseline DS livebirth rate ``theta_lb(age)`` from Morris/de Graaf.
 Stage 2a — prenatal detection ``eta_detect`` from Kuppermann (2006) and
     NIPT rollout evidence.
 Stage 2b — termination given diagnosis ``eta_term`` from Natoli (2012) and
-    Kuppermann (2006), with a heterogeneous region×year sigma pinned at the
-    Dobbs boundary (mid-2022).
+    Kuppermann (2006), with a homoscedastic year sigma to absorb mild
+    year-over-year drift.
 Stage 3 — birth-certificate sensitivity ``s`` from Boulet (2011) and Salemi
     (2017).
 
 Each prior is an informative Normal on the logit scale. Sigmas reflect the
-precision of the external evidence. Four sensitivity variants follow
-(A/B/C/D) — see ``docs/bayesian_selection_model.md`` section 8.
+precision of the external evidence. Three sensitivity variants follow
+(A/B/C) — see ``docs/bayesian_selection_model.md`` section 8.
 
 References
 ----------
@@ -21,7 +21,6 @@ References
 - Natoli, J.L., et al. (2012). Prenat Diagn 32:142-153.
 - Kuppermann, M., et al. (2006). Obstet Gynecol 107:1087-1097.
 - de Graaf, G., Buckley, F. & Skotko, B.G. (2017). Genet Med 19:439-447.
-- Chaiken, S.R., et al. (2023). JAMA Netw Open 6:e233684.
 - Boulet, S.L., et al. (2011). Public Health Rep 126:186-194.
 - Salemi, J.L., et al. (2017). Paediatr Perinat Epidemiol 31:67-75.
 """
@@ -192,14 +191,11 @@ ETA_TERM_EDU = np.array(
 )
 ETA_TERM_EDU_SIGMA = 0.20
 
-# Year effects on termination: pre-Dobbs tight, post-Dobbs (mid-2022+)
-# wider. Originally specified as a region×year interaction, but the
-# project DuckDB has no state-level column so the model uses a year-only
-# term. Dobbs identification is weaker as a result — the contrast is
-# between the post-2022 national mean and the pre-2022 national mean
-# rather than treated-vs-untreated-state differential.
-ETA_TERM_YEAR_SIGMA_PRE_DOBBS = 0.15
-ETA_TERM_YEAR_SIGMA_POST_DOBBS = 0.40
+# Year effect on termination: a single homoscedastic sigma absorbing
+# mild year-over-year drift in termination rates. Without a separate
+# policy shock to identify, we expect US termination rates conditional
+# on detection to be approximately stable around the Natoli anchor.
+ETA_TERM_YEAR_SIGMA = 0.15
 
 
 # --------------------------------------------------------------------------- #
@@ -301,8 +297,7 @@ class ModelPriors:
         default_factory=lambda: ETA_TERM_EDU.copy()
     )
     eta_term_edu_sigma: float = ETA_TERM_EDU_SIGMA
-    eta_term_year_sigma_pre_dobbs: float = ETA_TERM_YEAR_SIGMA_PRE_DOBBS
-    eta_term_year_sigma_post_dobbs: float = ETA_TERM_YEAR_SIGMA_POST_DOBBS
+    eta_term_year_sigma: float = ETA_TERM_YEAR_SIGMA
 
     # Stage 3
     s_logit: float = S_LOGIT
@@ -354,28 +349,8 @@ def variant_C_default() -> ModelPriors:
     return ModelPriors()
 
 
-def variant_D_dobbs_only() -> ModelPriors:
-    """Uninformative race/education priors on termination.
-
-    Termination race/education effects get shrunk to zero with wide
-    sigma; Dobbs identification rests on the pre/post-2022 national
-    year shift alone. Agreement with Variant C is evidence of
-    data-driven identification rather than prior-driven decomposition
-    — though without state-level contrast the test is weaker than in
-    the original plan (§4.3, §10 #5).
-    """
-    p = ModelPriors()
-    p.eta_term_race = np.zeros_like(p.eta_term_race)
-    p.eta_term_race_sigma = 1.0
-    p.eta_term_edu = np.zeros_like(p.eta_term_edu)
-    p.eta_term_edu_sigma = 1.0
-    p.eta_term_year_sigma_post_dobbs = 0.60
-    return p
-
-
 VARIANTS = {
     "A": variant_A_tight_s,
     "B": variant_B_tight_eta_term,
     "C": variant_C_default,
-    "D": variant_D_dobbs_only,
 }

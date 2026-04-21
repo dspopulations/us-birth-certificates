@@ -1,6 +1,6 @@
 """Test ``scripts/compare_selection_variants.py`` against synthetic fit dirs.
 
-Builds four minimal ``idata.nc`` + ``cells.parquet`` + ``summary.csv`` +
+Builds three minimal ``idata.nc`` + ``cells.parquet`` + ``summary.csv`` +
 ``tables/*.csv`` trees (one per variant), invokes the script, and
 verifies the aggregated CSV + forest plot appear with the expected
 rows.
@@ -101,7 +101,7 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
     summary = pd.DataFrame(rows, index=index)
     summary.to_csv(fit_dir / "summary.csv")
 
-    # tables/identifiability.csv + tables/dobbs_year_trajectory.csv.
+    # tables/identifiability.csv.
     tables = fit_dir / "tables"
     tables.mkdir(exist_ok=True)
     pd.DataFrame(
@@ -121,60 +121,35 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
         }
     ).to_csv(tables / "identifiability.csv", index=False)
 
-    dobbs_rows = [
-        {
-            "year_idx": i,
-            "is_post_dobbs": i >= 6,
-            "posterior_mean": rng.normal(0, 0.2),
-            "lo": -0.3,
-            "hi": 0.3,
-            "hdi_prob": 0.94,
-        }
-        for i in range(9)
-    ]
-    dobbs_rows.append(
-        {
-            "year_idx": -1,
-            "is_post_dobbs": True,
-            "posterior_mean": rng.normal(0, 0.1),
-            "lo": -0.2,
-            "hi": 0.2,
-            "hdi_prob": 0.94,
-        }
-    )
-    pd.DataFrame(dobbs_rows).to_csv(
-        tables / "dobbs_year_trajectory.csv", index=False
-    )
-
 
 @pytest.fixture
-def four_variant_fits(tmp_path: Path) -> Path:
-    """Build synthetic output/selection/{A,B,C,D}/full/<ts>/ trees."""
+def three_variant_fits(tmp_path: Path) -> Path:
+    """Build synthetic output/selection/{A,B,C}/full/<ts>/ trees."""
     root = tmp_path / "selection_root"
-    for i, v in enumerate(("A", "B", "C", "D")):
+    for i, v in enumerate(("A", "B", "C")):
         fit_dir = root / v / "full" / f"20260420-0000{i}0"
         _build_minimal_fit(fit_dir, v, seed=i)
     return root
 
 
 def test_compare_autodiscovers_and_aggregates(
-    four_variant_fits: Path, tmp_path: Path
+    three_variant_fits: Path, tmp_path: Path
 ) -> None:
     mod = _load_cli_module()
     out = tmp_path / "compare_out"
     exit_code = mod.main(
         [
             "--root",
-            str(four_variant_fits),
+            str(three_variant_fits),
             "--output-dir",
             str(out),
         ]
     )
     assert exit_code == 0
     csv = pd.read_csv(out / "comparison.csv")
-    # All four variants × at least three metrics.
-    assert set(csv["variant"].unique()) == {"A", "B", "C", "D"}
-    assert {"total_true", "eta_term_race", "s_race", "dobbs_effect"}.issubset(
+    # All three variants × at least three metrics.
+    assert set(csv["variant"].unique()) == {"A", "B", "C"}
+    assert {"total_true", "eta_term_race", "s_race"}.issubset(
         csv["metric"].unique()
     )
     # Forest-plot image written.
@@ -182,11 +157,13 @@ def test_compare_autodiscovers_and_aggregates(
     assert (out / "comparison_forest.svg").is_file()
 
 
-def test_compare_explicit_fit_dirs(four_variant_fits: Path, tmp_path: Path) -> None:
+def test_compare_explicit_fit_dirs(
+    three_variant_fits: Path, tmp_path: Path
+) -> None:
     mod = _load_cli_module()
     fit_dirs = [
-        next((four_variant_fits / v / "full").iterdir())
-        for v in ("A", "B", "C", "D")
+        next((three_variant_fits / v / "full").iterdir())
+        for v in ("A", "B", "C")
     ]
     out = tmp_path / "compare_explicit"
     exit_code = mod.main(

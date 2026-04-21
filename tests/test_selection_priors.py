@@ -55,7 +55,6 @@ def test_sensitivity_variants_differ_as_expected() -> None:
     c = P.variant_C_default()
     a = P.variant_A_tight_s()
     b = P.variant_B_tight_eta_term()
-    d = P.variant_D_dobbs_only()
 
     # Variant A: tighter s, looser eta_term.
     assert a.s_race_sigma < c.s_race_sigma
@@ -64,14 +63,6 @@ def test_sensitivity_variants_differ_as_expected() -> None:
     # Variant B: tighter eta_term, looser s.
     assert b.eta_term_race_sigma < c.eta_term_race_sigma
     assert b.s_race_sigma > c.s_race_sigma
-
-    # Variant D: informative race priors on eta_term shrunk to zero with
-    # wide sigma; post-Dobbs year sigma widened.
-    assert np.allclose(d.eta_term_race, 0.0)
-    assert d.eta_term_race_sigma > c.eta_term_race_sigma
-    assert (
-        d.eta_term_year_sigma_post_dobbs > c.eta_term_year_sigma_post_dobbs
-    )
 
 
 def test_logit_round_trip() -> None:
@@ -93,13 +84,11 @@ def test_false_positive_rate_fixed() -> None:
         assert factory().false_positive_rate == pytest.approx(7.8e-5)
 
 
-def test_variants_registry_contains_abcd() -> None:
-    assert set(P.VARIANTS) == {"A", "B", "C", "D"}
+def test_variants_registry_contains_abc() -> None:
+    assert set(P.VARIANTS) == {"A", "B", "C"}
 
 
-def test_post_dobbs_sigma_wider_than_pre() -> None:
-    """The pre/post-Dobbs asymmetry is load-bearing for identification."""
+def test_eta_term_year_sigma_tight() -> None:
+    """Year sigma on eta_term stays tight; large year drift is not expected."""
     c = P.variant_C_default()
-    assert (
-        c.eta_term_year_sigma_post_dobbs > c.eta_term_year_sigma_pre_dobbs
-    )
+    assert c.eta_term_year_sigma <= 0.20

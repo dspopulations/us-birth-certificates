@@ -55,7 +55,7 @@ P(R=1 | X) = θ_LB(age) · η(X) · s(X) + (1 − θ_LB·η) · f
 - `s` — birth-certificate sensitivity (Boulet 2011 / Salemi 2017).
 - `f` — false-positive rate (Ohio/NY study), fixed at 7.8e-5.
 
-The LightGBM approach cannot separate `s` from `η_term`. The Bayesian model does so via external priors plus the Dobbs 2022 shock.
+The LightGBM approach cannot separate `s` from `η_term`. The Bayesian model does so via external priors on each stage plus the clinical-feature discipline that enters only `s`.
 
 ---
 
@@ -72,11 +72,10 @@ The original plan placed the code under a sibling package `src/ds_model/pymc/`. 
 `data/us_births.db` has no state-level column (only `mbstate_rec` = maternal nativity). The model dropped `region` entirely in commit `c6a7c4b`:
 
 - `build_model` no longer takes `n_region`.
-- `eta_term_ry[region, year]` became `eta_term_year[year]` with the same pre/post-Dobbs heterogeneous sigma.
+- `eta_term_ry[region, year]` became `eta_term_year[year]`.
 - Cells no longer carry `region_idx`.
-- Variant D still works but identifies termination only via the national pre-vs-post-2022 year shift — a weaker test than the original plan's region × year contrast.
 
-If restricted-use NCHS files or a state-linkage source land later, restoring the region dimension means reintroducing the old `eta_term_ry` block in `model.py`, the `region_idx` column in `data.py`, and the per-region Dobbs forest in `diagnostics.py` — all clean additions rather than refactors.
+If restricted-use NCHS files or a state-linkage source land later, restoring the region dimension means reintroducing the old `eta_term_ry` block in `model.py` and the `region_idx` column in `data.py` — clean additions rather than refactors.
 
 ### 2.3 Recorded rate is ~5.3e-4, not ~1e-3
 
@@ -84,7 +83,7 @@ Plan §2.6 predicted `R_total` of 30–50 k and a rate near 1e-3. The actual DB 
 
 ### 2.4 `diagnostics.py` was written from scratch
 
-The plan described `diagnostics.py` as "⚠️ PARTIAL"; no such file was delivered in `plans/src/`. The module under `selection/diagnostics.py` is a from-scratch implementation with six figure-returning functions plus tidy-DataFrame companions (see §5). `dobbs_forest_plot` became `dobbs_year_trajectory_plot` as a consequence of §2.2.
+The original plan described `diagnostics.py` as "⚠️ PARTIAL" and carried pre-implementation sketches under `plans/src/`. The sketches have since been removed; `selection/diagnostics.py` is a from-scratch implementation with six figure-returning functions plus tidy-DataFrame companions (see §5).
 
 ---
 
@@ -207,13 +206,13 @@ Commit `f96ecac`. 36 tests landed across four files (priors / simulate / model c
 
 Delivered:
 
-- `selection/priors.py` — Morris/Natoli/Kuppermann/Boulet values; four variants A/B/C/D; `ModelPriors` dataclass (read §10 before editing values).
-- `selection/model.py` — `build_model(cells, priors, *, spec, n_year, post_dobbs_year_start)` returning a `pm.Model` across four specs (`theta_only`, `theta_s`, `single_eta`, `full`); helpers `extract_true_counts`, `posterior_subgroup_rate`.
+- `selection/priors.py` — Morris/Natoli/Kuppermann/Boulet values; three variants A/B/C; `ModelPriors` dataclass (read §10 before editing values).
+- `selection/model.py` — `build_model(cells, priors, *, spec, n_year)` returning a `pm.Model` across four specs (`theta_only`, `theta_s`, `single_eta`, `full`); helpers `extract_true_counts`, `posterior_subgroup_rate`.
 - `selection/simulate.py` — `TrueParams.from_priors(...)` and `simulate_cells(...)` for parameter-recovery validation.
-- `selection/data.py` — `prepare_cells(con, *, year_range, post_dobbs_year, table, columns)` returning a cell frame with integer-index columns + `N_cell` / `R_cell` totals. Schema-drift handled by an explicit `columns` override.
+- `selection/data.py` — `prepare_cells(con, *, year_range, table, columns)` returning a cell frame with integer-index columns + `N_cell` / `R_cell` totals. Schema-drift handled by an explicit `columns` override.
 - `tests/test_selection_*.py` — priors lock-down, simulate shape/determinism, model-compile × 4 specs, data SQL / in-memory DuckDB fixture.
 
-Real-data self-test: 60 057 cells, `N_total = 33 498 266`, `R_total = 17 776`, rate ≈ 5.3e-4. `cells.attrs = {n_year: 9, post_dobbs_year_start: 6, year_range: (2016, 2024), N_total, R_total}`.
+Real-data self-test: 60 057 cells, `N_total = 33 498 266`, `R_total = 17 776`, rate ≈ 5.3e-4. `cells.attrs = {n_year: 9, year_range: (2016, 2024), N_total, R_total}`.
 
 ---
 
@@ -224,7 +223,7 @@ Commits `9ce27a1` (initial) + `c6a7c4b` (region removal). 12 additional tests (9
 Delivered in `selection/diagnostics.py`:
 
 1. `identifiability_pairplot(idata)` + `identifiability_table(idata)` — per-race scatter of `eta_term_race` vs `s_race` draws, with `|r|>0.7` flagged as prior-driven.
-2. `dobbs_year_trajectory_plot(idata, *, post_dobbs_year_start)` + `dobbs_year_trajectory_table(idata, ...)` — year-level trajectory of `eta_term_year` with pre/post-Dobbs colouring; headline mean(post)−mean(pre) shift and CI.
+2. `eta_term_year_trajectory_plot(idata)` + `eta_term_year_trajectory_table(idata)` — year-level trajectory of `eta_term_year` with posterior CIs.
 3. `cchd_consistency_check(idata, cells, *, published_cchd_prevalence=0.225)` + `cchd_consistency_summary(...)` — posterior CCHD prevalence among true DS livebirths vs EUROCAT target.
 4. `posterior_predictive_by_stratum(idata, cells, *, stratum_col)` — observed vs predicted recorded counts, aggregated by year/race/age.
 5. `decomposition_by_race(idata, cells)` — stacked recorded/missed + implied prenatal terminations; tidy frame attached to `fig._selection_data`.
@@ -235,7 +234,6 @@ Parity helpers `summary_table` and `convergence_health` mirror `bayes.diagnostic
 Delivered in `scripts/render_selection_diagnostics.py`:
 
 - Arg parsing with either `--fit-dir` (auto-discovers `idata.nc` and `cells.parquet`) or explicit `--idata / --cells / --out-dir`.
-- Reads `post_dobbs_year_start` from `cells.attrs` unless overridden via CLI.
 - Saves PNG + SVG per figure under `<out-dir>/plots/` and tidy CSVs under `<out-dir>/tables/` — mirrors `bayes.plots._save`.
 - Logs through `cli_output`; each diagnostic is guarded so one failure does not kill the run.
 - Prefers a cached `summary.csv` on re-runs; computes fresh via `az.summary` only when the cache is absent (commit `2a9da20`).
@@ -266,7 +264,7 @@ Landed as `tests/test_selection_parameter_recovery.py`, 9 cases, runs in ~20 s o
 
 ### Task 4.0 — `selection.config` + run-config preset *(done, `2630985`)*
 
-`src/dspopulations_us_birth_certificates/selection/config.py` adds `SelectionModelConfig` (JSON-serialisable snapshot with variant/spec/year_range/post_dobbs_year/priors/notes) and `selection_run_config(name)` factory returning `BayesRunConfig` with selection-tuned presets.
+`src/dspopulations_us_birth_certificates/selection/config.py` adds `SelectionModelConfig` (JSON-serialisable snapshot with variant/spec/year_range/priors/notes) and `selection_run_config(name)` factory returning `BayesRunConfig` with selection-tuned presets.
 
 Profiles (updated on `2025-04-20`):
 
@@ -282,11 +280,10 @@ The `dev` preset was bumped from 400×2 after the dev-validation fit (`94ad2e2`)
 `scripts/fit_selection_model.py` mirrors `scripts/fit_bayes_model.py`:
 
 ```
---variant {A,B,C,D}                 # sensitivity variant
+--variant {A,B,C}                   # sensitivity variant
 --spec {theta_only,theta_s,single_eta,full}   # default: full
 --profile {dev,reporting}           # default: dev
 --years YYYY-YYYY                   # default 2016-2024
---post-dobbs-year YYYY              # default 2022
 --duckdb-path data/us_births.db
 --output-dir output/selection/<variant>/<spec>/<ts>    # auto
 --prior-only                        # skip NUTS, run prior-predictive only
@@ -312,12 +309,12 @@ Single Quarto template branching on `variant` and `spec` read from `config.json`
 
 Measured size: theta_only prior-only goes from 298 MB → 46 MB. Full-spec reporting extrapolates from the dev-validation 4.2 GB to ~1 GB per variant (still large; watch the `_run_logs/` disk budget during overnight sweeps).
 
-### Task 4.3 — Fit all four variants (full spec, reporting profile)
+### Task 4.3 — Fit all three variants (full spec, reporting profile)
 
 **Driver:** `scripts/run_all_selection_variants.py` *(done, this commit)*
 
 ```bash
-# Overnight run. All four variants, full spec, reporting profile.
+# Overnight run. All three variants, full spec, reporting profile.
 python scripts/run_all_selection_variants.py --profile reporting --render
 
 # Resumable after interruption.
@@ -330,7 +327,7 @@ python scripts/run_all_selection_variants.py --profile reporting \
 
 Runs the variants sequentially as subprocesses so a failure in one doesn't sink the batch. Per-variant log goes to `output/selection/_run_logs/<batch_ts>_<variant>.log`.
 
-**Wall-time estimate** (nutpie, 60 k cells, `reporting` profile after the Deterministic trim): 1–3 h per variant for a total of ~4–12 h. Post-trim idata.nc should be ~1 GB per variant (~4 GB total). The dev profile at 1000×2 is reasonable for inner-loop iteration at ~30 min per fit.
+**Wall-time estimate** (nutpie, 60 k cells, `reporting` profile after the Deterministic trim): 1–3 h per variant for a total of ~3–9 h. Post-trim idata.nc should be ~1 GB per variant (~3 GB total). The dev profile at 1000×2 is reasonable for inner-loop iteration at ~30 min per fit.
 
 **Acceptance per variant:**
 
@@ -344,12 +341,10 @@ Runs the variants sequentially as subprocesses so a failure in one doesn't sink 
 For each variant's `tables/identifiability.csv`:
 
 - |r| > 0.7 on most race panels → decomposition is **prior-driven**. Report prominently; do not over-interpret individual race effects on η_term vs s.
-- |r| < 0.7 AND Variant C race effects agree with Variant D (Dobbs-only) → **genuine identification**.
+- |r| < 0.7 across variants A/B/C with consistent race-effect signs → **genuine identification**.
 - In between → **partial** — report with caveats.
 
-**Dev-validation preview** (variant C, full spec, `output/selection/C/full/dev_validation/`): all six race panels have |r| ≤ 0.15, well below the 0.7 threshold (see `notes/202604201706-selection-full-spec-dev-validation.md`). The clinical-marker → `s` channel plus the year-level Dobbs signal identify the decomposition even without state-level contrast. **Positive result for the no-region model.** Reporting-profile runs should confirm.
-
-**Caveat on the Dobbs year effect** (also in the validation note): dev-profile posterior mean(post) − mean(pre) = +0.69 on logit — *opposite* sign to what Dobbs would predict. The no-region model cannot separate year-level termination from year-level detection drifts. The Dobbs trajectory is a diagnostic, not a causal estimate, until state-level data restores `eta_term_ry[region, year]`.
+**Dev-validation preview** (variant C, full spec, `output/selection/C/full/dev_validation/`): all six race panels have |r| ≤ 0.15, well below the 0.7 threshold (see `notes/202604201706-selection-full-spec-dev-validation.md`). The clinical-marker → `s` channel identifies the decomposition. **Positive result for the no-region model.** Reporting-profile runs should confirm.
 
 ---
 
@@ -364,7 +359,7 @@ For each variant's `tables/identifiability.csv`:
 3. Convergence section (max R̂ + min ESS from `summary.csv`).
 4. Age curve — Stage 1 sanity check against Morris anchors.
 5. Identifiability pair-plot + table.
-6. Dobbs year trajectory + effect-size summary row.
+6. Termination year-effect trajectory.
 7. CCHD consistency.
 8. Decomposition by race.
 9. Posterior predictive checks (PPC by year / race / age).
@@ -377,7 +372,7 @@ Section 10 of the template computes headline Bayesian numbers (total DS livebirt
 
 ### Task 5.3 — Cross-variant aggregation script *(done, `b8e04c9`)*
 
-`scripts/compare_selection_variants.py` auto-discovers the latest `output/selection/{A,B,C,D}/full/<ts>/` directories (or accepts explicit `--fit-dirs`), aggregates posterior means + 95% CIs for `total_true`, per-race `eta_term_race` / `s_race`, identifiability |r|, and the Dobbs year-effect summary into a long-format `comparison.csv`, plus a forest-plot figure of the two race-effect families across variants. 4 tests against synthetic fit dirs.
+`scripts/compare_selection_variants.py` auto-discovers the latest `output/selection/{A,B,C}/full/<ts>/` directories (or accepts explicit `--fit-dirs`), aggregates posterior means + 95% CIs for `total_true`, per-race `eta_term_race` / `s_race`, and identifiability |r| into a long-format `comparison.csv`, plus a forest-plot figure of the two race-effect families across variants. 4 tests against synthetic fit dirs.
 
 ### Task 5.x — Dev full-spec validation *(done, `94ad2e2`)*
 
@@ -385,14 +380,13 @@ Section 10 of the template computes headline Bayesian numbers (total DS livebirt
 
 - All six identifiability panels data-informed (|r| ≤ 0.15).
 - Race effects qualitatively prior-consistent, magnitudes larger than priors (data is contributing).
-- Dobbs year effect has **wrong sign** — flagged as a no-region identification weakness. The year trajectory is a diagnostic, not a causal estimate, without state-level data.
 - idata.nc size drove the per-cell Deterministic trim (Task 4.2a above).
 - Dev profile at 400×2 undershoots convergence gates; bumped to 1000×2.
 
 ### Phase 5 still to do (after Task 4.3 reporting sweep)
 
 - Re-render each variant's Quarto against the reporting-profile fit.
-- Run `scripts/compare_selection_variants.py --profile reporting` across the four variants and append a cross-variant analysis section to the master report.
+- Run `scripts/compare_selection_variants.py --profile reporting` across the three variants and append a cross-variant analysis section to the master report.
 - Write-up of findings (separate note under `notes/`).
 
 ---
@@ -441,7 +435,7 @@ These are not suggestions; they have specific identifiability consequences.
 2. **Clinical features (CCHD, NICU, Aven, Preterm) enter only `s`**, never `η`. They are observed after the pregnancy filters and cannot causally influence detection or termination. Adding them to η is a causal-structure violation.
 3. **False-positive rate `f` is fixed at 7.8e-5**, not estimated. Ohio/NY pins it.
 4. **Reference levels:** Race = NH White (idx 0); Education = Some college (idx 2); Payer = Private (idx 1). Changing references changes every other coefficient's interpretation.
-5. **Year coding is `year − year_start`** (0-based within the window). `post_dobbs_year_start = 2022 − year_start`. Do not decouple.
+5. **Year coding is `year − year_start`** (0-based within the window). Do not decouple.
 6. **Stage 1 is θ_LB (baseline livebirth rate), not θ (conception rate).** That is what makes Morris directly usable and removes the need for an η_loss stage.
 7. **Region is intentionally absent** (§2.2). Do not fake a region (e.g. `mbstate_rec` is not a region). Restore only if a genuine state-level column appears.
 

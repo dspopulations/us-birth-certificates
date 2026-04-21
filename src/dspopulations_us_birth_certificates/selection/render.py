@@ -44,7 +44,6 @@ DEFAULT_STRATA: tuple[str, ...] = ("year_idx", "race_idx", "age_idx")
 class RenderOptions:
     """Options for :func:`render_all`."""
 
-    post_dobbs_year_start: int
     cchd_target: float = 0.225
     hdi_prob: float = 0.94
     strata: tuple[str, ...] = DEFAULT_STRATA
@@ -121,22 +120,18 @@ def render_all(
     )
 
     _guarded(
-        "Dobbs year trajectory",
+        "Termination year trajectory",
         lambda: (
-            diagnostics.dobbs_year_trajectory_plot(
-                idata,
-                post_dobbs_year_start=options.post_dobbs_year_start,
-                hdi_prob=options.hdi_prob,
+            diagnostics.eta_term_year_trajectory_plot(
+                idata, hdi_prob=options.hdi_prob
             ),
-            diagnostics.dobbs_year_trajectory_table(
-                idata,
-                post_dobbs_year_start=options.post_dobbs_year_start,
-                hdi_prob=options.hdi_prob,
+            diagnostics.eta_term_year_trajectory_table(
+                idata, hdi_prob=options.hdi_prob
             ),
         ),
         plots_dir,
         tables_dir,
-        "dobbs_year_trajectory",
+        "eta_term_year_trajectory",
     )
 
     _guarded(
@@ -197,7 +192,7 @@ def expected_stems(strata: Iterable[str] = DEFAULT_STRATA) -> tuple[str, ...]:
     """Stem names of the figures :func:`render_all` writes (tests rely on this)."""
     base = (
         "identifiability",
-        "dobbs_year_trajectory",
+        "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",
         "decomposition_by_race",

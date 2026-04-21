@@ -31,7 +31,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
 )
 
 SelectionRunConfigName = Literal["dev", "reporting"]
-Variant = Literal["A", "B", "C", "D"]
+Variant = Literal["A", "B", "C"]
 Spec = Literal["theta_only", "theta_s", "single_eta", "full"]
 
 MODEL_ID = "selection"
@@ -102,7 +102,6 @@ class SelectionModelConfig:
     variant: Variant
     spec: Spec
     year_range: tuple[int, int]
-    post_dobbs_year: int
     priors: dict[str, Any] = field(default_factory=dict)
     notes: str = ""
     model_id: str = MODEL_ID
@@ -114,7 +113,6 @@ class SelectionModelConfig:
         variant: Variant,
         spec: Spec,
         year_range: tuple[int, int],
-        post_dobbs_year: int,
         priors_obj: ModelPriors | None = None,
         notes: str = "",
     ) -> SelectionModelConfig:
@@ -125,7 +123,6 @@ class SelectionModelConfig:
             variant=variant,
             spec=spec,
             year_range=year_range,
-            post_dobbs_year=post_dobbs_year,
             priors=_priors_to_dict(priors_obj),
             notes=notes,
         )
@@ -136,7 +133,6 @@ class SelectionModelConfig:
             "variant": self.variant,
             "spec": self.spec,
             "year_range": list(self.year_range),
-            "post_dobbs_year": self.post_dobbs_year,
             "priors": dict(self.priors),
             "notes": self.notes,
         }

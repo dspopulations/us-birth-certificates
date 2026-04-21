@@ -37,7 +37,7 @@ $$
 where $\theta_\text{LB}$ is the baseline DS livebirth rate in the
 absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
 \eta_\text{detect} \cdot \eta_\text{term}$ is the screening/termination
-pass-through (Kuppermann / Natoli / Chaiken), $s$ is birth-certificate
+pass-through (Kuppermann / Natoli), $s$ is birth-certificate
 sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
 is a fixed false-positive rate (Ohio/NY validation). See
 `plans/docs/bayesian_selection_model.md` for the full design.
@@ -59,17 +59,14 @@ run_config = json.loads(Path("run_config.json").read_text())
 variant = config["variant"]
 spec = config["spec"]
 year_range = config["year_range"]
-post_dobbs_year = config["post_dobbs_year"]
 profile = run_config["name"]
 sampler = run_config["nuts_sampler"]
 
 Markdown(
     f"- **variant**: `{variant}` "
-    f"({'tight s' if variant == 'A' else 'tight η_term' if variant == 'B' else 'default' if variant == 'C' else 'Dobbs-only'})\n"
+    f"({'tight s' if variant == 'A' else 'tight η_term' if variant == 'B' else 'default'})\n"
     f"- **spec**: `{spec}`\n"
     f"- **year range**: {year_range[0]}–{year_range[1]}\n"
-    f"- **post-Dobbs year**: {post_dobbs_year} "
-    f"(year_idx ≥ {post_dobbs_year - year_range[0]} uses the wider sigma)\n"
     f"- **sampling profile**: `{profile}` "
     f"({run_config['chains']} chains × {run_config['draws']} draws, "
     f"tune={run_config['tune']}, "
@@ -83,8 +80,9 @@ Births within the year range with known `down_ind`, `mage_c`, and the
 required covariates are aggregated into cells keyed on year × age band
 × race × education × payer × preterm × CCHD × NICU × assisted-
 ventilation. A state/region column is not available in the project
-DuckDB, so the Dobbs shock is captured as a national year effect
-(`eta_term_year`) rather than a state-level contrast.
+DuckDB, so year effects on termination are modelled as a single
+national trend term (`eta_term_year`) rather than a state-level
+contrast.
 
 ```{python}
 # | echo: false
@@ -172,21 +170,20 @@ if id_table.exists():
                          abs_correlation=id_df["abs_correlation"].round(3)))
 ```
 
-## Dobbs year trajectory
+## Termination year trajectory
 
-Posterior $\eta_\text{term,year}$ trajectory with pre/post-Dobbs
-colouring. The summary row in the table (`year_idx = -1`) carries
-`mean(post) − mean(pre)` with its 95% credible interval — the headline
-Dobbs effect under the no-region model.
+Posterior $\eta_\text{term,year}$ trajectory across the window —
+year-over-year residual effects on termination under a single
+homoscedastic sigma.
 
 ```{python}
 # | echo: false
-dobbs_plot = Path("plots/dobbs_year_trajectory.png")
-if dobbs_plot.exists():
-    display(Image(str(dobbs_plot)))
-dobbs_table = Path("tables/dobbs_year_trajectory.csv")
-if dobbs_table.exists():
-    display(pd.read_csv(dobbs_table).round(3))
+eta_year_plot = Path("plots/eta_term_year_trajectory.png")
+if eta_year_plot.exists():
+    display(Image(str(eta_year_plot)))
+eta_year_table = Path("tables/eta_term_year_trajectory.csv")
+if eta_year_table.exists():
+    display(pd.read_csv(eta_year_table).round(3))
 ```
 
 ## CCHD consistency
@@ -354,10 +351,10 @@ Interpretation notes:
 ## Caveats
 
 - The project DuckDB has no state-level column. `eta_term_year` is a
-  national year effect; Variant D's Dobbs identification is therefore a
-  pre-vs-post-2022 national shift, weaker than the treated-vs-untreated
-  state contrast the original design called for. Revisit when
-  state-level data becomes available.
+  national year effect absorbing residual year-over-year drift in
+  termination rates. State-level granularity would let the model
+  separate access-to-care variation from national trends; revisit when
+  such data becomes available.
 - The `dev` profile is for iteration, not reporting. Publication-
   quality posteriors require `--profile reporting`.
 - The false-positive rate $f$ is fixed at 7.8e-5 (Ohio/NY) and not

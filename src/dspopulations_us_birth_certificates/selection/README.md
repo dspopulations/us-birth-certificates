@@ -10,7 +10,7 @@ P(R=1 | X) = θ_LB(age) · η(X) · s(X) + (1 − θ_LB·η) · f
 - `θ_LB` — baseline DS livebirth rate in absence of screening (Morris
   2002 / de Graaf 2015). Stage 1.
 - `η = 1 − η_detect · η_term` — screening/termination pass-through
-  (Kuppermann / Natoli / Chaiken). Stage 2.
+  (Kuppermann / Natoli). Stage 2.
 - `s` — birth-certificate sensitivity given a DS livebirth (Boulet 2011
   / Salemi 2017). Stage 3.
 - `f` — false-positive rate, fixed at 7.8e-5 (Ohio/NY validation).
@@ -26,12 +26,12 @@ from dspopulations_us_birth_certificates.selection import (
     # Priors + variants
     ModelPriors, VARIANTS,
     variant_A_tight_s, variant_B_tight_eta_term,
-    variant_C_default, variant_D_dobbs_only,
+    variant_C_default,
     # Model
     build_model, SPECS,
     # Data
     prepare_cells, summarise_cells,
-    DEFAULT_DB_PATH, DEFAULT_POST_DOBBS_YEAR, DEFAULT_YEAR_RANGE,
+    DEFAULT_DB_PATH, DEFAULT_YEAR_RANGE,
     # Simulation (for parameter-recovery validation)
     TrueParams, simulate_cells,
     # Config + run profile
@@ -67,7 +67,7 @@ output/selection/<variant>/<spec>/<timestamp>/
 ├── summary.csv         # az.summary on posterior
 ├── index.qmd           # copied Quarto template
 ├── index.html          # rendered (if --render)
-├── plots/              # identifiability, dobbs_year_trajectory,
+├── plots/              # identifiability, eta_term_year_trajectory,
 │                       # cchd_consistency, age_curve,
 │                       # decomposition_by_race, ppc_{year,race,age}_idx
 └── tables/             # CSV companions for the non-PPC plots
@@ -89,13 +89,6 @@ output/selection/<variant>/<spec>/<timestamp>/
   `eta_term` under B, the data alone cannot separate them.
 - **B (tight eta_term)** — the mirror image.
 - **C (default)** — both informative. The main specification.
-- **D (Dobbs-only)** — race/edu priors on `eta_term` shrunk to zero
-  with wide sigma; termination effects must be identified through the
-  pre-vs-post-2022 national year shift alone. Agreement with C is
-  evidence of data-driven identification rather than prior-driven
-  decomposition. (Weaker test than the original design called for
-  because `us_births.db` has no state-level column — see
-  `plans/20260420-selection-model.md` §2.2.)
 
 ## Important invariants
 

@@ -7,16 +7,27 @@
 > human reviewer should verify the interpretation and decide on the
 > next design iteration before these numbers are cited anywhere.
 
+> [!NOTE]
+> This sweep ran against an earlier model specification that carried a
+> pre/post-2022 asymmetric sigma on `eta_term_year` and a fourth
+> variant (D) built around that mechanism. That year asymmetry has
+> since been removed; the fourth variant no longer exists. The intercept-level
+> findings below — θ_LB above Morris, s below Boulet, and the
+> resulting incompatibility with surveillance — are not specific to
+> that removed mechanism and still apply to the current A/B/C
+> variants.
+
 ## TL;DR
 
 The plumbing works. The posteriors don't.
 
-Four variants (A/B/C/D) × `--profile reporting` × `--spec full` ran
-cleanly in ~3.5 h total on nutpie. All four produced the complete
-artefact set (idata.nc, summary.csv, six diagnostic plots + tables,
-rendered Quarto HTML). Convergence ranged from clean (A) to marginal
-(B). The cross-variant identifiability diagnostic reports all
-race-level panels as **data-informed** (|r| ≤ 0.3 everywhere).
+Four variants (A/B/C plus a now-removed fourth variant) × `--profile
+reporting` × `--spec full` ran cleanly in ~3.5 h total on nutpie. All
+four produced the complete artefact set (idata.nc, summary.csv, six
+diagnostic plots + tables, rendered Quarto HTML). Convergence ranged
+from clean (A) to marginal (B). The cross-variant identifiability
+diagnostic reports all race-level panels as **data-informed** (|r| ≤
+0.3 everywhere).
 
 **But the posterior intercepts are wildly inconsistent with the
 priors.** θ_LB sits 10–15σ above Morris, `s_int` sits 6–10σ below
@@ -36,11 +47,13 @@ these posteriors support inference, the model needs redesign.
 | A | `output/selection/A/full/20260420-182719/` | ~52 min |
 | B | `output/selection/B/full/20260420-191926/` | ~49 min |
 | C | `output/selection/C/full/20260420-200804/` | ~47 min |
-| D | `output/selection/D/full/20260420-205506/` | ~47 min |
+
+(The fourth variant, a since-removed specification, ran for ~47 min
+alongside these and is omitted from the tables below.)
 
 Total wall-clock ≈ 3.5 h. `idata.nc` ~1 GB per variant (as expected
-after the Task 4.2a Deterministic trim). All four HTML reports
-rendered successfully via the `--render` flag.
+after the Task 4.2a Deterministic trim). All reports rendered
+successfully via the `--render` flag.
 
 ## Convergence
 
@@ -49,7 +62,6 @@ rendered successfully via the `--render` flag.
 | A | 79 | 1.000 | 806 | 1559 | **PASS** |
 | B | 79 | 1.030 | 201 | 298 | **FAIL** (R̂ > 1.01, ESS < 400) |
 | C | 79 | 1.020 | 491 | 973 | **FAIL** (R̂ > 1.01) |
-| D | 79 | 1.010 | 374 | 635 | **MARGINAL** (R̂ = 1.01, ESS just below 400) |
 
 Variant B's min ESS 201 is the standout — likely a handful of highly
 correlated RVs the sampler couldn't separate. A cleaner rerun at
@@ -62,14 +74,14 @@ priority.
 All six race panels are below the |r| = 0.7 "prior-driven" threshold
 in every variant:
 
-|   | A | B | C | D |
-|---|---:|---:|---:|---:|
-| NH White | 0.160 | 0.019 | 0.068 | 0.130 |
-| NH Black | 0.202 | 0.036 | 0.081 | 0.126 |
-| NH AIAN/NHOPI/Other | 0.103 | 0.012 | 0.085 | 0.185 |
-| NH Asian | 0.280 | 0.055 | 0.147 | 0.278 |
-| Hispanic | 0.164 | 0.018 | 0.049 | 0.149 |
-| Unknown | 0.230 | 0.047 | 0.128 | 0.226 |
+|   | A | B | C |
+|---|---:|---:|---:|
+| NH White | 0.160 | 0.019 | 0.068 |
+| NH Black | 0.202 | 0.036 | 0.081 |
+| NH AIAN/NHOPI/Other | 0.103 | 0.012 | 0.085 |
+| NH Asian | 0.280 | 0.055 | 0.147 |
+| Hispanic | 0.164 | 0.018 | 0.049 |
+| Unknown | 0.230 | 0.047 | 0.128 |
 
 Read naively this says the decomposition is data-informed. Read more
 carefully alongside the intercept-level findings below, it says the
@@ -83,25 +95,25 @@ and s.
 
 `eta_term_race` posterior means:
 
-|   | A (tight s) | B (tight η_term) | C (default) | D (Dobbs-only) |
-|---|---:|---:|---:|---:|
-| NH White | −0.74 | −0.07 | −0.27 | −1.50 |
-| NH Black | −1.04 | −0.73 | −0.80 | −1.65 |
-| NH AIAN/NHOPI/Other | −0.56 | −0.30 | −0.32 | −0.82 |
-| NH Asian | +0.53 | −0.12 | +0.01 | +0.84 |
-| Hispanic | −0.57 | −0.42 | −0.46 | −0.63 |
-| Unknown | −0.21 | −0.01 | −0.02 | −1.06 |
+|   | A (tight s) | B (tight η_term) | C (default) |
+|---|---:|---:|---:|
+| NH White | −0.74 | −0.07 | −0.27 |
+| NH Black | −1.04 | −0.73 | −0.80 |
+| NH AIAN/NHOPI/Other | −0.56 | −0.30 | −0.32 |
+| NH Asian | +0.53 | −0.12 | +0.01 |
+| Hispanic | −0.57 | −0.42 | −0.46 |
+| Unknown | −0.21 | −0.01 | −0.02 |
 
 `s_race` posterior means:
 
-|   | A | B | C | D |
-|---|---:|---:|---:|---:|
-| NH White | −0.03 | −0.75 | −0.23 | −0.29 |
-| NH Black | −0.76 | −1.53 | −0.99 | −1.01 |
-| NH AIAN/NHOPI/Other | +0.05 | −0.30 | +0.13 | +0.12 |
-| NH Asian | −0.66 | −1.71 | −1.11 | −0.97 |
-| Hispanic | +0.01 | −0.76 | −0.23 | −0.23 |
-| Unknown | −0.13 | −0.98 | −0.41 | −0.43 |
+|   | A | B | C |
+|---|---:|---:|---:|
+| NH White | −0.03 | −0.75 | −0.23 |
+| NH Black | −0.76 | −1.53 | −0.99 |
+| NH AIAN/NHOPI/Other | +0.05 | −0.30 | +0.13 |
+| NH Asian | −0.66 | −1.71 | −1.11 |
+| Hispanic | +0.01 | −0.76 | −0.23 |
+| Unknown | −0.13 | −0.98 | −0.41 |
 
 Variant A (tight priors on s) pushes demographic variation into
 η_term; Variant B (tight priors on η_term) pushes it into s. The
@@ -109,16 +121,19 @@ between-variant spread is substantial — this is the sensitivity
 analysis working as intended, but the spread itself says the data
 cannot pin down the decomposition without external information.
 
+(The removed fourth variant showed the largest spread from C, as
+expected when termination race/edu priors are shrunk to zero.)
+
 ## Intercept-level prior violations
 
 This is the key finding. Prior means/sigmas vs posterior means, on the
 logit scale, across all four variants:
 
-| RV | prior μ | prior σ | A | B | C | D | max |z| |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `eta_detect_int` | +0.85 | 0.30 | −0.53 | −0.93 | −0.84 | −0.25 | **5.9** |
-| `eta_term_int` | +0.71 | 0.25 | +0.30 | +0.17 | +0.21 | +0.40 | **2.1** |
-| `s_int` | −0.41 | 0.30 | **−3.40** | −2.23 | −3.08 | −3.02 | **10.0** |
+| RV | prior μ | prior σ | A | B | C | max |z| |
+|---|---:|---:|---:|---:|---:|---:|
+| `eta_detect_int` | +0.85 | 0.30 | −0.53 | −0.93 | −0.84 | **5.9** |
+| `eta_term_int` | +0.71 | 0.25 | +0.30 | +0.17 | +0.21 | **2.0** |
+| `s_int` | −0.41 | 0.30 | **−3.40** | −2.23 | −3.08 | **10.0** |
 
 The `theta_lb_age` posterior means per age band are **1–1.5 logit
 units above Morris** — with a σ=0.10 prior, that's a 10–15σ shift.
@@ -141,7 +156,7 @@ sensitivity; published under-ascertainment ≈ 60%, i.e. ~40% recorded).
 ## CCHD consistency check is conceptually broken
 
 Posterior CCHD prevalence among true DS livebirths: **0.1%** across
-all four variants. EUROCAT target: ~22.5%.
+all variants. EUROCAT target: ~22.5%.
 
 **This is by construction**, not a fit failure. The model's design
 invariant #2 says clinical features (CCHD, NICU, Aven, Preterm) enter
@@ -243,13 +258,16 @@ output/selection/
 ├── A/full/20260420-182719/    idata.nc, summary.csv, index.html, plots/, tables/
 ├── B/full/20260420-191926/    (same)
 ├── C/full/20260420-200804/    (same)
-├── D/full/20260420-205506/    (same)
 ├── _compare_reporting_20260420/
 │       comparison.csv, comparison_forest.{png,svg}
 └── _run_logs/
         batch_20260420-182718.log
-        20260420-182719_{A,B,C,D}.log
+        20260420-182719_{A,B,C}.log
 ```
+
+(A fourth variant directory from the since-removed variant was also
+produced in this sweep and is preserved on disk as historical
+context; it is not referenced by the current pipeline.)
 
 All artefacts under `output/` are gitignored per NCHS DUA
 considerations; this note is the canonical record.
