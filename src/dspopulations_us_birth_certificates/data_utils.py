@@ -11,18 +11,38 @@ def load_predictors_data(
     from_year: int = 1989,
     to_year: int = 9999,
     include_unknown: bool = False,
+    confirmed_only: bool = False,
     db_path: str = "../data/us_births.db",
 ) -> pd.DataFrame:
+    # Target column name and CASE differ based on whether pending ('P') cases
+    # count as positive. confirmed_only=True drops 'P' rows entirely (target
+    # → NULL, filtered out by the WHERE clause below) so that the model
+    # trains and predicts on a cleaner C/N label; the column is renamed to
+    # ``ca_down_c_n`` so downstream code can tell the two label definitions
+    # apart.
+    target_col = "ca_down_c_n" if confirmed_only else "ca_down_c_p_n"
+    p_case_sql = (
+        ""
+        if confirmed_only
+        else "WHEN COALESCE (ca_down, ca_downs) = 'P' THEN 1::UTINYINT"
+    )
+    # When confirmed_only is set, P rows must be dropped regardless of
+    # include_unknown, so the NULL filter always applies.
+    target_filter_sql = (
+        f"AND {target_col} IS NOT NULL" if confirmed_only or not include_unknown else ""
+    )
+
     con = duckdb.connect(db_path, read_only=True)
 
     df = con.execute(
         f"""
         SELECT
             id,
-            -- (training label) indicated if C or P, not indicated if N, U and missing excluded from training
+            -- (training label) indicated if C (or P unless confirmed_only),
+            -- not indicated if N; U and missing excluded from training
             CASE
                 WHEN COALESCE (ca_down, ca_downs) = 'C' THEN 1::UTINYINT
-                WHEN COALESCE (ca_down, ca_downs) = 'P' THEN 1::UTINYINT
+                {p_case_sql}
                 WHEN COALESCE (ca_down, ca_downs) = 'N' THEN 0::UTINYINT
                 WHEN COALESCE (ca_down, ca_downs) = 'U' AND {include_unknown} THEN 0::UTINYINT
                 WHEN uca_downs = 1 THEN 1::UTINYINT
@@ -30,7 +50,7 @@ def load_predictors_data(
                 WHEN uca_downs = 9 AND {include_unknown} THEN 0::UTINYINT
                 WHEN ca_down IS NULL AND ca_downs IS NULL AND uca_downs IS NULL AND {include_unknown} THEN 0::UTINYINT
                 ELSE NULL
-            END AS ca_down_c_p_n,
+            END AS {target_col},
             -- ==================== date of birth ====================
             year,
             -- month of birth
@@ -360,7 +380,7 @@ def load_predictors_data(
             END AS wic
         FROM
             us_births
-        WHERE year >= {from_year} AND year <= {to_year} {"" if include_unknown else "AND ca_down_c_p_n IS NOT NULL"}
+        WHERE year >= {from_year} AND year <= {to_year} {target_filter_sql}
         ORDER BY
             year, dob_mm, dob_wk, dob_tt
         """

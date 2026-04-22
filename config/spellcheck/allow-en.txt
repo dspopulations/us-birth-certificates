@@ -37,6 +37,7 @@ GESTREC
 GHYPE
 INDL
 INFTR
+LBW
 MBRACE
 MEDUC
 MHISP
@@ -54,6 +55,7 @@ PRES
 UCA_DOWNS
 UMHISP
 USBC
+VLBW
 WTGAIN
 
 # Statistical / ML vocabulary
@@ -107,6 +109,7 @@ iloc
 jupytext
 Jupytext
 Matplotlib
+Optuna
 pytest
 ruff
 

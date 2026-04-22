@@ -29,7 +29,7 @@ def prepare_features(
         categorical = [c for c in categorical if c not in drop_features]
 
     X = df[features].copy()
-    y = df["ca_down_c_p_n"].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
+    y = df[config.target_var].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
     X[categorical] = X[categorical].astype("category")
 
     return X, y, features, categorical

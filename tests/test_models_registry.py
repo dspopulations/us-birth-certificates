@@ -94,3 +94,94 @@ def test_duplicate_model_id_raises() -> None:
 
         class _ConflictingM0(ModelDefinition):
             model_id = "usbc10_m0"  # already taken
+
+
+def test_confirmed_only_variants_expose_c_only_target() -> None:
+    """The C-only variants declare the right target + writeback columns."""
+    for parent_id, cn_id, pred_col in [
+        ("usbc10_m0", "usbc10_m0_cn", "p_ds_lb_pred_11"),
+        ("usbc11_m0", "usbc11_m0_cn", "p_ds_lb_pred_12"),
+    ]:
+        parent_cfg = MODELS[parent_id].to_config()
+        cn_cfg = MODELS[cn_id].to_config()
+
+        assert parent_cfg.confirmed_only is False
+        assert parent_cfg.target_var == "ca_down_c_p_n"
+
+        assert cn_cfg.confirmed_only is True
+        assert cn_cfg.target_var == "ca_down_c_n"
+        assert cn_cfg.predictions_column == pred_col
+        # Parent and C-only must not share writeback columns.
+        assert cn_cfg.predictions_column != parent_cfg.predictions_column
+        assert cn_cfg.missing_flag_column != parent_cfg.missing_flag_column
+
+        # C-only variant inherits the parent's feature set and appends one
+        # selection step documenting the label change.
+        assert cn_cfg.numeric_features == parent_cfg.numeric_features
+        assert cn_cfg.categorical_features == parent_cfg.categorical_features
+        assert len(cn_cfg.selection_history) == len(parent_cfg.selection_history) + 1
+
+
+def test_usbc10_m1_cn_prunes_under_c_only_importance() -> None:
+    """M1_CN drops additional features beyond M1's prune under C-only importance."""
+    m0_cn = MODELS["usbc10_m0_cn"].to_config()
+    m1_cn = MODELS["usbc10_m1_cn"].to_config()
+    m1 = MODELS["usbc10_m1"].to_config()
+
+    # Confirmed-only flag propagates to the pruned variant.
+    assert m1_cn.confirmed_only is True
+    assert m1_cn.target_var == "ca_down_c_n"
+
+    # M1_CN has fewer categorical features than M0_CN.
+    assert len(m1_cn.categorical_features) < len(m0_cn.categorical_features)
+    # M1_CN has its own writeback columns distinct from M0_CN.
+    assert m1_cn.predictions_column != m0_cn.predictions_column
+    assert m1_cn.missing_flag_column != m0_cn.missing_flag_column
+
+    # Under C-only, wic and rf_pdiab cross the importance threshold and are
+    # retained, whereas ld_indl, ld_augm, rf_inftr, apgar5, bfacil3, rf_fedrg
+    # drop below it. Guard against accidental edits flipping this balance.
+    cn_cats = set(m1_cn.categorical_features)
+    m1_cats = set(m1.categorical_features)
+    assert {"wic", "rf_pdiab"}.issubset(cn_cats)
+    assert not cn_cats & {
+        "ld_indl",
+        "ld_augm",
+        "rf_inftr",
+        "apgar5",
+        "bfacil3",
+        "rf_fedrg",
+    }
+    # Features that drop under both labels should still be absent.
+    assert not cn_cats & (
+        set(MODELS["usbc10_m0"].categorical_features) - m1_cats - {"wic", "rf_pdiab"}
+    )
+
+
+def test_usbc11_m1_cn_prunes_under_c_only_importance() -> None:
+    """usbc11_m1_cn drops 6 clinical features that fall below threshold under C-only."""
+    m0_cn = MODELS["usbc11_m0_cn"].to_config()
+    m1_cn = MODELS["usbc11_m1_cn"].to_config()
+
+    assert m1_cn.confirmed_only is True
+    assert m1_cn.target_var == "ca_down_c_n"
+    assert m1_cn.predictions_column != m0_cn.predictions_column
+    assert m1_cn.missing_flag_column != m0_cn.missing_flag_column
+
+    cn_cats = set(m1_cn.categorical_features)
+    # Six features drop under clinical-only + C-only importance (see
+    # selection_steps). rf_phype is the one with strongly negative
+    # importance — guard that it's gone.
+    assert not cn_cats & {
+        "sex",
+        "rf_phype",
+        "rf_ghype",
+        "me_pres",
+        "apgar5",
+        "ab_anti",
+    }
+    # The clinical predictors that survive at every prune step should all
+    # still be present — they carry the bulk of the signal under both
+    # label definitions.
+    for core_feature in ("ca_cchd", "ca_disor", "ab_nicu", "gestrec10", "dmeth_rec"):
+        assert core_feature in cn_cats

@@ -10,7 +10,12 @@ from __future__ import annotations
 
 # Import concrete model modules so their __init_subclass__ hook populates
 # MODELS. Add new variants here as they land.
-from dspopulations_us_birth_certificates.models import usbc10, usbc11  # noqa: F401
+from dspopulations_us_birth_certificates.models import (  # noqa: F401
+    usbc10,
+    usbc10_cn,
+    usbc11,
+    usbc11_cn,
+)
 from dspopulations_us_birth_certificates.models.base_model import (
     MODELS,
     ModelDefinition,

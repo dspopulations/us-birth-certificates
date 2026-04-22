@@ -63,6 +63,7 @@ def _load_xy(
         from_year=cfg.year_range[0],
         to_year=cfg.year_range[1],
         include_unknown=cfg.include_unknown,
+        confirmed_only=cfg.confirmed_only,
     )
     if db_path is not None:
         kwargs["db_path"] = db_path
