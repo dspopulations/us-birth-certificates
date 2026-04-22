@@ -3,7 +3,7 @@
 > [!WARNING]
 > This is work in progress. All data and models are preliminary.
 
-This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing births and how they may be changing over time. To mitigate the problem of possible biases associated with systemic under-reporting in birth certificate data, we are using machine learning techniques to identify likely true cases of Down syndrome in birth certificate data that were not recorded as having the condition (missed cases).
+This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing births and how they may be changing over time. To mitigate the problem of possible biases associated with systemic under-reporting in birth certificate data, we are using machine learning techniques and statistical modelling to identify likely true cases of Down syndrome in birth certificate data that were not recorded as having the condition (missed cases).
 
 More specifically, we aim to:
 
