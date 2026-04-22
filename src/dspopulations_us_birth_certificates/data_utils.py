@@ -200,15 +200,15 @@ def load_predictors_data(
                 ELSE NULL
             END AS dmeth_rec,
             -- ==================== newborn health ====================
-            -- five minute apgar score
+            -- five minute apgar score (valid range 0-10; 99 = not stated)
             CASE
-                WHEN apgar5 >= 10 AND apgar5 <= 10 THEN apgar5
+                WHEN apgar5 >= 0 AND apgar5 <= 10 THEN apgar5
                 WHEN apgar5 = 99 THEN apgar5
                 ELSE NULL
             END AS apgar5,
-            -- ten minute apgar score
+            -- ten minute apgar score (valid range 0-10; 99 = not stated)
             CASE
-                WHEN apgar10 >= 10 AND apgar10 <= 10 THEN apgar10
+                WHEN apgar10 >= 0 AND apgar10 <= 10 THEN apgar10
                 WHEN apgar10 = 99 THEN apgar10
                 ELSE NULL
             END AS apgar10,
