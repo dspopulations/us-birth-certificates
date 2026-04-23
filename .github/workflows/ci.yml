@@ -47,11 +47,18 @@ jobs:
         # touched by tests and bloat install time. Drop --no-deps once the
         # Bayesian deps move into a separate extra.
         #
+        # ``dse-research-utils`` isn't published to PyPI — install from git
+        # (also --no-deps, the console subpackage only needs pandas + rich
+        # which are already pinned below; the package's declared deps
+        # include the Bayesian stack we skip above).
+        #
         # Bounds here track environment.yml (the canonical local env) so CI
         # and local runs resolve to the same major versions. Keep them in
         # sync when bumping either file.
         run: |
           uv pip install --python .venv --no-deps -e .
+          uv pip install --python .venv --no-deps \
+            'dse-research-utils @ git+https://github.com/dseinternational/research.git@main#subdirectory=src/python'
           uv pip install --python .venv \
             'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.17.1' 'matplotlib>=3.10.8' \
             'duckdb>=1.5.2' 'dcor>=0.6' \
