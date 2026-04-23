@@ -1,15 +1,20 @@
-"""Pretty CLI output helpers built on ``rich``.
+"""Pretty CLI output helpers for the us-birth-certificates pipelines.
 
-Centralises the formatting used by ``scripts/fit_model.py``,
-``scripts/tune_model.py``, the pipeline steps, and the Optuna harness so
-that every command-line invocation of the LightGBM pipeline produces a
-consistent, scannable run log.
+Historically this module implemented its own rich-based primitives
+(banner, section, kv_table, ...). Those primitives now live in
+:mod:`dse_research_utils.console` and are shared across DSE research
+projects. This module is now a shim over the shared implementation with
+US-BC-specific composers (fit/model/run config tables, LightGBM
+importance tables, Optuna study summary, artefact walker) kept local but
+built on the shared primitives.
 
-All helpers write to a shared ``Console`` — callers can either import
-``console`` directly or use the convenience functions below. No function
-here raises; formatting helpers degrade gracefully when optional inputs
-are ``None`` so they can be called unconditionally at the relevant step
-in the pipeline.
+Public API is preserved — every name that callers in ``scripts/`` and
+``src/`` reach for still exists with the same signature.
+
+All helpers write to the shared console from
+``dse_research_utils.console.console.get_console()``; callers that want
+to capture output for tests should use
+``dse_research_utils.console.console.set_console``.
 """
 
 from __future__ import annotations
@@ -19,14 +24,28 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dse_research_utils.console.console import get_console, print_panel, print_table
+from dse_research_utils.console.format import format_value as _format_value
+from dse_research_utils.console.sections import (
+    banner as _banner,
+)
+from dse_research_utils.console.sections import (
+    section_header as _section_header,
+)
+from dse_research_utils.console.sections import (
+    subsection as _subsection,
+)
+from dse_research_utils.console.tables import key_value_table as _key_value_table
 from rich.box import SIMPLE_HEAVY
 from rich.console import Console
 from rich.panel import Panel
-from rich.rule import Rule
 from rich.table import Table
-from rich.text import Text
 
-console = Console(highlight=False, soft_wrap=False)
+# Backwards-compatible module-level console handle. Anything that previously
+# did ``from dspopulations_us_birth_certificates.cli_output import console``
+# (or ``cli_output.console.print(...)``) continues to work and writes to the
+# shared singleton.
+console: Console = get_console()
 
 
 # ---------------------------------------------------------------------------
@@ -36,35 +55,29 @@ console = Console(highlight=False, soft_wrap=False)
 
 def banner(title: str, subtitle: str | None = None) -> None:
     """Print a large, framed banner — one per command invocation."""
-    body = Text(title, style="bold white on blue", justify="center")
-    if subtitle:
-        body.append("\n")
-        body.append(subtitle, style="white")
-    console.print()
-    console.print(Panel(body, border_style="blue", padding=(1, 2)))
+    _banner(title, subtitle)
 
 
 def section(title: str) -> None:
     """Print a section rule. Use once per logical pipeline step."""
-    console.print()
-    console.print(Rule(f"[bold cyan]{title}[/bold cyan]", style="cyan"))
+    _section_header(title)
 
 
 def subsection(title: str) -> None:
     """Print a minor section marker (e.g. sub-step within a pipeline stage)."""
-    console.print(f"\n[bold yellow]{title}[/bold yellow]")
+    _subsection(title)
 
 
 def success(message: str) -> None:
-    console.print(f"[bold green][OK][/bold green] {message}")
+    get_console().print(f"[bold green][OK][/bold green] {message}")
 
 
 def warning(message: str) -> None:
-    console.print(f"[bold yellow][!][/bold yellow] {message}")
+    get_console().print(f"[bold yellow][!][/bold yellow] {message}")
 
 
 def info(message: str) -> None:
-    console.print(f"[dim]*[/dim] {message}")
+    get_console().print(f"[dim]*[/dim] {message}")
 
 
 # ---------------------------------------------------------------------------
@@ -73,25 +86,8 @@ def info(message: str) -> None:
 
 
 def _fmt(value: Any) -> str:
-    """Shared renderer for mixed config/metric values."""
-    if value is None:
-        return "[dim]-[/dim]"
-    if isinstance(value, bool):
-        return "yes" if value else "no"
-    if isinstance(value, float):
-        if value == 0:
-            return "0"
-        if abs(value) >= 1000 or abs(value) < 1e-3:
-            return f"{value:.4g}"
-        return f"{value:.6f}".rstrip("0").rstrip(".")
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, (list, tuple)):
-        if not value:
-            return "[dim](none)[/dim]"
-        if all(isinstance(v, (str, int, float, bool)) for v in value):
-            return ", ".join(str(v) for v in value)
-    return str(value)
+    """Shared renderer for mixed config/metric values (delegates to shared format_value)."""
+    return _format_value(value)
 
 
 def kv_table(
@@ -100,27 +96,21 @@ def kv_table(
     *,
     key_header: str = "Setting",
     value_header: str = "Value",
-    key_style: str = "cyan",
-    value_style: str = "white",
+    key_style: str = "cyan",  # retained for API compatibility; unused
+    value_style: str = "white",  # retained for API compatibility; unused
 ) -> Table:
     """Build a two-column key/value table suitable for config summaries."""
-    table = Table(
+    del key_style, value_style  # styling is centralised in the shared module
+    return _key_value_table(
+        list(items),
         title=title,
-        title_style="bold",
-        box=SIMPLE_HEAVY,
-        show_header=True,
-        header_style="bold magenta",
-        expand=False,
+        key_header=key_header,
+        value_header=value_header,
     )
-    table.add_column(key_header, style=key_style, no_wrap=True)
-    table.add_column(value_header, style=value_style, overflow="fold")
-    for k, v in items:
-        table.add_row(str(k), _fmt(v))
-    return table
 
 
 def print_kv(title: str, items: Iterable[tuple[str, Any]]) -> None:
-    console.print(kv_table(title, items))
+    print_table(kv_table(title, items))
 
 
 # ---------------------------------------------------------------------------
@@ -153,25 +143,19 @@ def print_fit_config(config: Any) -> None:
 
 def print_model_config(model_config: Any) -> None:
     """Summarise a ``ModelConfig`` instance in a single table + feature lists."""
-    rows = [
+    rows: list[tuple[str, Any]] = [
         ("model_id", getattr(model_config, "model_id", None)),
         ("variant_of", getattr(model_config, "variant_of", None)),
         ("target_var", getattr(model_config, "target_var", None)),
         ("year_range", getattr(model_config, "year_range", None)),
         ("include_unknown", getattr(model_config, "include_unknown", None)),
-        (
-            "numeric features",
-            f"{len(model_config.numeric_features)}",
-        ),
-        (
-            "categorical features",
-            f"{len(model_config.categorical_features)}",
-        ),
+        ("numeric features", f"{len(model_config.numeric_features)}"),
+        ("categorical features", f"{len(model_config.categorical_features)}"),
     ]
-    console.print(kv_table("Model configuration", rows))
+    print_table(kv_table("Model configuration", rows))
 
     if model_config.numeric_features:
-        console.print(
+        print_panel(
             Panel(
                 ", ".join(model_config.numeric_features),
                 title="Numeric features",
@@ -181,7 +165,7 @@ def print_model_config(model_config: Any) -> None:
             )
         )
     if model_config.categorical_features:
-        console.print(
+        print_panel(
             Panel(
                 ", ".join(model_config.categorical_features),
                 title="Categorical features",
@@ -194,29 +178,26 @@ def print_model_config(model_config: Any) -> None:
 
 def print_run_config(run_config: Any) -> None:
     """Render a ``RunConfig`` as a single-row table."""
-    rows = [
+    rows: list[tuple[str, Any]] = [
         ("preset", getattr(run_config, "name", None)),
         ("n_trials", getattr(run_config, "n_trials", None)),
         ("num_boost_round", getattr(run_config, "num_boost_round", None)),
-        (
-            "early_stopping_rounds",
-            getattr(run_config, "early_stopping_rounds", None),
-        ),
+        ("early_stopping_rounds", getattr(run_config, "early_stopping_rounds", None)),
         ("cv_splits", getattr(run_config, "cv_splits", None)),
         ("shap_mode", getattr(run_config, "shap_mode", None)),
         ("shap_subsample_size", getattr(run_config, "shap_subsample_size", None)),
         ("random_seed", getattr(run_config, "random_seed", None)),
     ]
-    console.print(kv_table("Run configuration", rows))
+    print_table(kv_table("Run configuration", rows))
 
 
 def print_params(title: str, params: Mapping[str, Any], *, style: str = "cyan") -> None:
     """Pretty-print a parameter dict (e.g. best Optuna params)."""
+    del style  # styling centralised in the shared module; kept for API compatibility
     if not params:
-        console.print(f"[dim]{title}: (none)[/dim]")
+        get_console().print(f"[dim]{title}: (none)[/dim]")
         return
-    items = sorted(params.items())
-    console.print(kv_table(title, items, key_style=style))
+    print_table(kv_table(title, sorted(params.items())))
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +224,7 @@ def print_data_summary(
         rows.append(("year range", f"{year_range[0]}-{year_range[1]}"))
     if include_unknown is not None:
         rows.append(("include unknown", include_unknown))
-    console.print(kv_table("Predictors frame", rows))
+    print_table(kv_table("Predictors frame", rows))
 
 
 def print_split_summary(
@@ -273,7 +254,7 @@ def print_split_summary(
         pos = int(sum(y))
         rate = _rate(y)
         table.add_row(label, f"{n:,}", f"{pos:,}", f"{rate * 100:.3f}%")
-    console.print(table)
+    print_table(table)
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +282,7 @@ def print_metrics_table(metrics: Mapping[str, Any]) -> None:
     for key, value in metrics.items():
         if key not in preferred:
             items.append((key, value))
-    console.print(kv_table("Validation metrics", items, key_header="Metric"))
+    print_table(kv_table("Validation metrics", items, key_header="Metric"))
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +315,7 @@ def print_gain_importance(df, *, n: int = 15) -> None:
     if df is None or len(df) == 0:
         warning("No gain-importance frame available.")
         return
-    console.print(
+    print_table(
         _importance_table("Gain importance", df, "feature", "importance_gain", n=n)
     )
 
@@ -343,7 +324,7 @@ def print_permutation_importance(df, *, n: int = 15) -> None:
     if df is None or len(df) == 0:
         warning("No permutation-importance frame available.")
         return
-    console.print(
+    print_table(
         _importance_table(
             "Permutation importance (mean drop in AP)",
             df,
@@ -358,7 +339,7 @@ def print_shap_importance(df, *, n: int = 15) -> None:
     if df is None or len(df) == 0:
         warning("No SHAP-importance frame available.")
         return
-    console.print(
+    print_table(
         _importance_table(
             "SHAP importance (mean |value|)", df, "feature", "mean_abs_shap", n=n
         )
@@ -372,8 +353,8 @@ def print_shap_importance(df, *, n: int = 15) -> None:
 
 def print_optuna_search_space(space: Mapping[str, Any]) -> None:
     """Best-effort summary of a hyperparameter search space dict."""
-    rows = [(k, v) for k, v in sorted(space.items())]
-    console.print(kv_table("LightGBM search space", rows, key_header="Param"))
+    rows = list(sorted(space.items()))
+    print_table(kv_table("LightGBM search space", rows, key_header="Param"))
 
 
 def print_optuna_summary(study: Any, *, n_top: int = 10) -> None:
@@ -392,14 +373,14 @@ def print_optuna_summary(study: Any, *, n_top: int = 10) -> None:
     pruned = [t for t in trials if t.state == TrialState.PRUNED]
     failed = [t for t in trials if t.state == TrialState.FAIL]
 
-    overview_rows = [
+    overview_rows: list[tuple[str, Any]] = [
         ("best AP", f"{best_value:.6f}"),
         ("trials (total)", len(trials)),
         ("trials (completed)", len(completed)),
         ("trials (pruned)", len(pruned)),
         ("trials (failed)", len(failed)),
     ]
-    console.print(kv_table("Optuna study", overview_rows, key_header="Summary"))
+    print_table(kv_table("Optuna study", overview_rows, key_header="Summary"))
 
     print_params("Best params", best_params)
 
@@ -431,7 +412,7 @@ def print_optuna_summary(study: Any, *, n_top: int = 10) -> None:
                 _fmt(p.get("feature_fraction")),
                 _fmt(p.get("bagging_fraction")),
             )
-        console.print(table)
+        print_table(table)
 
 
 # ---------------------------------------------------------------------------
@@ -468,4 +449,31 @@ def print_artefact_summary(output_dir: Path) -> None:
         paths = by_suffix[suffix]
         rels = [str(p.relative_to(output_dir)) for p in paths]
         table.add_row(suffix, str(len(paths)), ", ".join(rels))
-    console.print(table)
+    print_table(table)
+
+
+__all__ = [
+    "banner",
+    "console",
+    "info",
+    "kv_table",
+    "print_artefact_summary",
+    "print_data_summary",
+    "print_fit_config",
+    "print_gain_importance",
+    "print_kv",
+    "print_metrics_table",
+    "print_model_config",
+    "print_optuna_search_space",
+    "print_optuna_summary",
+    "print_params",
+    "print_permutation_importance",
+    "print_run_config",
+    "print_run_header",
+    "print_shap_importance",
+    "print_split_summary",
+    "section",
+    "subsection",
+    "success",
+    "warning",
+]
