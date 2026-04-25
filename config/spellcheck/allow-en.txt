@@ -16,15 +16,19 @@ NVSS
 
 # NVSS / birth-certificate variables and codings
 AIAN
+anen
 APGAR
+artec
 AUGM
 AVEN
 BFACIL
 CCHD
+clpal
 DBWT
 DISOR
 DMETH
 DOWNS
+ehype
 FAGECOMB
 FEDRG
 FEDUC
@@ -33,6 +37,8 @@ FHISP
 frace
 FRACE
 FRACEHISP
+gast
+gdiab
 GESTREC
 GHYPE
 INDL
@@ -40,6 +46,7 @@ INFTR
 LBW
 MBRACE
 MEDUC
+mnsb
 MHISP
 MHISPX
 MRACE
@@ -47,11 +54,16 @@ MRACEHISP
 MRACEREC
 NHOPI
 NICU
+omph
 ORRACEF
 ORRACEM
+pdiab
 PHYPE
+ppterm
 PRECARE
 PRES
+seiz
+surf
 UCA_DOWNS
 UMHISP
 USBC
@@ -67,6 +79,8 @@ beeswarm
 sociodemographic
 codings
 dataclasses
+dcor
+distributionally
 downweight
 dtype
 dtypes
@@ -74,6 +88,7 @@ numpy
 heteroscedastic
 homoscedastic
 HSGP
+Hyperband
 hyperparameters
 iqr
 isclose
@@ -88,6 +103,8 @@ missingness
 multicollinearity
 nonnegative
 nutpie
+overfit
+overfitting
 parameterisation
 docstrings
 pred
@@ -100,6 +117,7 @@ sigmas
 sigmoidal
 sklearn
 vars
+wallclock
 
 # Tooling
 asis

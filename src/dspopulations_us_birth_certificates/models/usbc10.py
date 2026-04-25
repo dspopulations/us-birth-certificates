@@ -33,19 +33,22 @@ _USBC10_BASE_PARAMS: dict = {
     "force_col_wise": True,
 }
 
-# Last-known-good hyperparameters from the 00010-predictors-10-c notebook.
-# Updates are a deliberate reviewable commit — rerun tune_model.py (step 6)
-# to regenerate.
+# Hyperparameters from output/tuning/usbc10_m1/best_params.json — Optuna
+# reporting-profile search (200 trials, 50K boost rounds, 9 yr) on the
+# post-PR-#26 USBC10_M1 feature set. The earlier values predated the apgar
+# fix and were tuned against a feature set that included a near-constant
+# apgar5 column. Re-tune by `python scripts/tune_model.py usbc10_m1
+# --profile reporting`.
 _USBC10_PARAMS: dict = {
-    "learning_rate": 0.009461164726049449,
-    "num_leaves": 180,
-    "min_data_in_leaf": 756,
-    "min_gain_to_split": 0.9285634625013361,
-    "feature_fraction": 0.9239582799934513,
-    "bagging_fraction": 0.9185684081749333,
-    "bagging_freq": 2,
-    "lambda_l1": 0.0005836073944757167,
-    "lambda_l2": 0.6142323696066677,
+    "learning_rate": 0.01720685773741596,
+    "num_leaves": 64,
+    "min_data_in_leaf": 537,
+    "min_gain_to_split": 0.09872595484881053,
+    "feature_fraction": 0.7201745741445154,
+    "bagging_fraction": 0.8563422711241703,
+    "bagging_freq": 4,
+    "lambda_l1": 4.6714020036883115e-07,
+    "lambda_l2": 1.7978023398871819,
 }
 
 
@@ -111,32 +114,46 @@ _M0_CATEGORICAL: tuple[str, ...] = (
 )
 
 
-# Features dropped between M0 and M1. Lifted from the 00010-predictors-10-c
-# notebook (features_to_remove_0 list). These had near-zero permutation
-# importance in the M0 run.
+# Features dropped between M0 and M1. Re-derived under PR #26's apgar5/apgar10
+# fix on 2026-04-23: 23 features fall below the AP-loss < 1e-4 threshold and
+# `fagecomb` is added on correlation grounds (dcor 0.75 with `mage_c`, which
+# absorbs its signal). See notes/20260422-1132-retune-afterapgar-fix.md and
+# the per-class SelectionStep below for the full per-feature reasoning.
 _M1_FEATURES_REMOVED: tuple[str, ...] = (
-    "ca_cdh",
-    "apgar10",
-    "ca_cleft",
-    "rf_artec",
-    "ca_omph",
-    "ca_clpal",
-    "wic",
-    "ca_limb",
-    "rf_pdiab",
-    "ca_hypo",
-    "rf_ppterm",
+    # 23 importance-based drops (permutation AP loss < 1e-4):
+    "sex",
     "ca_mnsb",
-    "rf_ehype",
+    "ld_augm",
+    "rf_ppterm",
+    "wic",
     "ca_anen",
+    "ld_indl",
+    "rf_ehype",
+    "rf_pdiab",
     "ca_gast",
+    "ca_limb",
     "ab_surf",
+    "ca_cleft",
+    "ca_hypo",
+    "ca_cdh",
     "rf_gdiab",
     "ab_seiz",
+    "fracehisp",
+    "ca_omph",
+    "rf_artec",
+    "rf_fedrg",
+    "ca_clpal",
+    "apgar10",
+    # Correlation-based drop: dcor 0.75 with mage_c, which has 142x its
+    # permutation importance — fagecomb is essentially a redundant signal.
+    "fagecomb",
 )
 
 _M1_CATEGORICAL: tuple[str, ...] = tuple(
     f for f in _M0_CATEGORICAL if f not in _M1_FEATURES_REMOVED
+)
+_M1_NUMERIC: tuple[str, ...] = tuple(
+    f for f in _M0_NUMERIC if f not in _M1_FEATURES_REMOVED
 )
 
 
@@ -174,24 +191,36 @@ class USBC10_M0(ModelDefinition):
 
 
 class USBC10_M1(USBC10_M0):
-    """``M0`` minus 18 predictors with near-zero permutation importance."""
+    """``M0`` minus 24 predictors (post-PR-#26 re-derivation, 2026-04-23)."""
 
     model_id = "usbc10_m1"
     variant_of = "usbc10_m0"
+    numeric_features = _M1_NUMERIC
     categorical_features = _M1_CATEGORICAL
     selection_steps = (
         SelectionStep(
-            step_date=date(2026, 4, 17),
+            step_date=date(2026, 4, 23),
             rationale=(
-                "Drop predictors whose permutation importance was near zero "
-                "in the M0 run (AP loss < 1e-4). Includes rare-disorder flags "
-                "(CA_CDH, CA_ANEN, CA_MNSB, ...) whose low prevalence makes "
-                "them more noise than signal here."
+                "Re-derived under PR #26's apgar5/apgar10 fix. Drops 23 "
+                "features whose permutation AP loss is < 1e-4 in the post-fix "
+                "USBC10_M0 test-profile fit, plus `fagecomb` (numeric) on "
+                "correlation grounds: dcor 0.75 with `mage_c`, which has "
+                "~140x its permutation importance, so fagecomb's signal is "
+                "redundant once mage_c is in. Notable changes vs the original "
+                "2026-04-17 prune: `apgar5` is newly retained (its variance "
+                "was destroyed by the pre-PR-#26 SQL bug); `apgar10` stays "
+                "dropped with stronger evidence (now actively harmful at "
+                "permutation importance -1.33e-4); 6 features (`sex`, "
+                "`ld_augm`, `ld_indl`, `fracehisp`, `rf_fedrg`, `fagecomb`) "
+                "are newly dropped because they no longer act as surrogates "
+                "for the apgar5 variance the bugged data lacked. See "
+                "notes/20260422-1132-retune-afterapgar-fix.md for the full "
+                "rationale and per-feature numbers."
             ),
             features_removed=_M1_FEATURES_REMOVED,
         ),
     )
-    notes = "After removing 18 low-importance predictors from M0."
+    notes = "Post-apgar-fix USBC10_M1: 24 predictors after the PR #26 re-prune."
 
 
 class USBC10_M2(USBC10_M1):

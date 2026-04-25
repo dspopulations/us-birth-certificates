@@ -26,61 +26,78 @@ from datetime import date
 from dspopulations_us_birth_certificates.models.common import SelectionStep
 from dspopulations_us_birth_certificates.models.usbc10 import USBC10_M0
 
-# Hyperparameters from output/fit_model_test/usbc10_m0_cn/best_params.json
-# (Optuna test-profile search, 50 trials). Notably simpler than the C+P
-# tune (num_leaves 180→38, min_data_in_leaf 756→2590) — fewer positives
-# under C-only push the model toward more conservative regularisation.
-# Re-tuning under the M1-CN feature set is the expected next step before
-# the reporting fit; these inherited values are a reviewable starting
-# point.
+# Hyperparameters from output/tuning/usbc10_m1_cn/best_params.json — Optuna
+# reporting-profile search (200 trials, 50K boost rounds, 9 yr) on the
+# post-PR-#26 USBC10_M1_CN feature set. Re-tune by
+# `python scripts/tune_model.py usbc10_m1_cn --profile reporting`.
 _USBC10_CN_PARAMS: dict = {
-    "learning_rate": 0.00985764771940847,
-    "num_leaves": 38,
-    "min_data_in_leaf": 2590,
-    "min_gain_to_split": 0.5228409298411366,
-    "feature_fraction": 0.842269144947652,
-    "bagging_fraction": 0.8547221230128124,
+    "learning_rate": 0.017611067651380975,
+    "num_leaves": 78,
+    "min_data_in_leaf": 507,
+    "min_gain_to_split": 0.18220994215266872,
+    "feature_fraction": 0.7488234311216709,
+    "bagging_fraction": 0.8570140617352552,
     "bagging_freq": 4,
-    "lambda_l1": 0.0005876364919646983,
-    "lambda_l2": 0.00010450639051902668,
+    "lambda_l1": 4.3675423264507757e-07,
+    "lambda_l2": 0.12848472888514878,
 }
 
 
-# Features dropped between M0_CN and M1_CN. Selected from the
-# permutation_importance.csv of the test-profile USBC10_M0_CN fit using
-# the same threshold USBC10_M1 applied to its C+P baseline: drop any
-# feature whose mean AP loss from permutation < 1e-4 (including
-# negative-valued features, where permuting them improves AP — i.e.,
-# pure noise). Four more features drop than under C+P (see notes below).
+# Features dropped between M0_CN and M1_CN. Re-derived under PR #26's
+# apgar5/apgar10 fix on 2026-04-24 against the post-fix
+# USBC10_M0_CN test-profile fit (output/fit_model_test/20260424-105543/).
+# 30 features fall below the AP-loss < 1e-4 threshold and `fagecomb` is
+# added on correlation grounds (dcor 0.75 with `mage_c`). Two notable
+# features cross zero under C-only: `bmi` (-4.3e-5) and `rf_phype`
+# (-2.6e-4) — both register as actively harmful, i.e. permuting them
+# improves AP. `rf_phype` was already flagged as a co-linearity artefact
+# with maternal age in notes/20260422-compare-confirmed-only.md §1
+# Caveats; the apgar fix didn't rescue it. `apgar5` is newly retained
+# (importance 2.65e-3 vs 1.37e-5 pre-fix). `pay_rec` (-1.55e-4) drops
+# under C-only despite being SES-proxy — consistent with the C+P→C-only
+# pattern documented in the prior comparison.
 _M1_CN_FEATURES_REMOVED: tuple[str, ...] = (
-    # Present in USBC10_M1's drops AND still near-zero under C-only:
-    "ca_cdh",
-    "apgar10",
-    "ca_cleft",
-    "rf_artec",
-    "ca_omph",
-    "ca_clpal",
-    "ca_limb",
-    "ca_hypo",
-    "rf_ppterm",
-    "ca_mnsb",
+    # 1 numeric drop on importance:
+    "bmi",
+    # Correlation-only drop (numeric): dcor 0.75 with mage_c.
+    "fagecomb",
+    # 29 categorical drops on importance < 1e-4:
+    "mracehisp",
+    "bfacil3",
+    "ab_anti",
+    "ld_indl",
     "rf_ehype",
+    "ca_omph",
+    "rf_pdiab",
+    "sex",
+    "me_pres",
+    "ca_clpal",
+    "apgar10",
+    "ab_surf",
     "ca_anen",
     "ca_gast",
-    "ab_surf",
-    "rf_gdiab",
     "ab_seiz",
-    # Additional drops under C-only:
-    "ld_indl",
-    "rf_inftr",
-    "apgar5",
-    "ld_augm",
+    "ca_cdh",
     "rf_fedrg",
-    "bfacil3",
+    "ca_cleft",
+    "rf_gdiab",
+    "ca_hypo",
+    "rf_ppterm",
+    "rf_inftr",
+    "rf_artec",
+    "ca_limb",
+    "ca_mnsb",
+    "fracehisp",
+    "wic",
+    "pay_rec",
+    "rf_phype",
 )
 
 _M1_CN_CATEGORICAL: tuple[str, ...] = tuple(
     f for f in USBC10_M0.categorical_features if f not in _M1_CN_FEATURES_REMOVED
+)
+_M1_CN_NUMERIC: tuple[str, ...] = tuple(
+    f for f in USBC10_M0.numeric_features if f not in _M1_CN_FEATURES_REMOVED
 )
 
 
@@ -121,10 +138,11 @@ class USBC10_M0_CN(USBC10_M0):
 
 
 class USBC10_M1_CN(USBC10_M0_CN):
-    """``M0_CN`` minus features with near-zero permutation importance under C-only."""
+    """``M0_CN`` minus 31 predictors (post-PR-#26 re-derivation, 2026-04-24)."""
 
     model_id = "usbc10_m1_cn"
     variant_of = "usbc10_m0_cn"
+    numeric_features = _M1_CN_NUMERIC
     categorical_features = _M1_CN_CATEGORICAL
     # Separate writeback columns from M0_CN so both variants can coexist
     # in DuckDB for direct comparison.
@@ -132,26 +150,29 @@ class USBC10_M1_CN(USBC10_M0_CN):
     missing_flag_column = "ds_pred_missing_13"
     selection_steps = (
         SelectionStep(
-            step_date=date(2026, 4, 21),
+            step_date=date(2026, 4, 24),
             rationale=(
-                "Drop predictors whose permutation importance was below the "
-                "AP-loss < 1e-4 threshold in the USBC10_M0_CN test-profile "
-                "fit. Four more features drop than under C+P (ld_indl, "
-                "rf_inftr, apgar5, ld_augm, rf_fedrg, bfacil3 added; wic and "
-                "rf_pdiab cross back above the threshold under the cleaner "
-                "label). Two notes on the added drops: apgar5 is stripped "
-                "by the existing data_utils filter to only values exactly "
-                "equal to 10, so it has no remaining variance; bfacil3's "
-                "importance turns negative under C-only (permuting it "
-                "improves AP), suggesting it encodes recording variation "
-                "across facility types that is tangled with the C/P split."
+                "Re-derived under PR #26's apgar5/apgar10 fix. Drops 30 "
+                "features below the AP-loss < 1e-4 threshold in the post-fix "
+                "USBC10_M0_CN test-profile fit, plus `fagecomb` (numeric) "
+                "on correlation grounds (dcor 0.75 with `mage_c`). "
+                "Notable changes vs the original 2026-04-21 prune: `apgar5` "
+                "is newly retained (importance jumped from 1.37e-5 to "
+                "2.65e-3 under the fix); `bmi` drops (importance -4.3e-5 "
+                "— now actively harmful, was a default-kept numeric); "
+                "`pay_rec` (-1.55e-4) and `rf_phype` (-2.61e-4) drop with "
+                "strongly negative importance, the `rf_phype` finding "
+                "consistent with the prior C-only co-linearity-with-mage "
+                "observation in compare-confirmed-only.md §2 Caveats. "
+                "`ld_augm` is re-instated above the threshold under the "
+                "fixed apgar inputs. See "
+                "notes/20260422-1132-retune-afterapgar-fix.md for full "
+                "per-feature numbers and the C+P↔C-only contrast."
             ),
             features_removed=_M1_CN_FEATURES_REMOVED,
         ),
     )
     notes = (
-        "C-only equivalent of USBC10_M1. Pruned against the ca_down = 'C' "
-        "label to get a cleanly-matched comparison against USBC10_M1 "
-        "(rather than comparing a post-prune C+P model to a pre-prune "
-        "C-only model)."
+        "Post-apgar-fix USBC10_M1_CN: 17 predictors after the PR #26 "
+        "re-prune (4 numeric + 13 categorical)."
     )
