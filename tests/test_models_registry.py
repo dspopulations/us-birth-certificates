@@ -71,8 +71,10 @@ def test_to_config_reflects_variant_state() -> None:
     m1_cfg = m1.to_config()
     m0_cfg = m0.to_config()
 
-    # M1 inherits numeric features from M0 (no numeric removals in this variant).
-    assert m1_cfg.numeric_features == m0_cfg.numeric_features
+    # M1's numeric set is a subset of M0's (post-PR-#26 prune drops
+    # ``fagecomb`` on correlation grounds with ``mage_c``).
+    assert set(m1_cfg.numeric_features).issubset(set(m0_cfg.numeric_features))
+    assert "fagecomb" not in set(m1_cfg.numeric_features)
     # M1's categorical set is strictly smaller than M0's.
     assert len(m1_cfg.categorical_features) < len(m0_cfg.categorical_features)
     removed = set(m0_cfg.categorical_features) - set(m1_cfg.categorical_features)
@@ -126,7 +128,6 @@ def test_usbc10_m1_cn_prunes_under_c_only_importance() -> None:
     """M1_CN drops additional features beyond M1's prune under C-only importance."""
     m0_cn = MODELS["usbc10_m0_cn"].to_config()
     m1_cn = MODELS["usbc10_m1_cn"].to_config()
-    m1 = MODELS["usbc10_m1"].to_config()
 
     # Confirmed-only flag propagates to the pruned variant.
     assert m1_cn.confirmed_only is True
@@ -138,28 +139,32 @@ def test_usbc10_m1_cn_prunes_under_c_only_importance() -> None:
     assert m1_cn.predictions_column != m0_cn.predictions_column
     assert m1_cn.missing_flag_column != m0_cn.missing_flag_column
 
-    # Under C-only, wic and rf_pdiab cross the importance threshold and are
-    # retained, whereas ld_indl, ld_augm, rf_inftr, apgar5, bfacil3, rf_fedrg
-    # drop below it. Guard against accidental edits flipping this balance.
     cn_cats = set(m1_cn.categorical_features)
-    m1_cats = set(m1.categorical_features)
-    assert {"wic", "rf_pdiab"}.issubset(cn_cats)
+    # Under the post-PR-#26 C-only re-derivation, ``ld_augm`` is re-instated
+    # above the AP-loss < 1e-4 threshold whereas ``wic``, ``rf_pdiab``,
+    # ``mracehisp``, ``ab_anti``, ``rf_phype``, ``pay_rec``, ``me_pres``,
+    # ``sex``, ``bfacil3`` all cross BELOW it. Guard the asymmetry.
+    assert "ld_augm" in cn_cats
     assert not cn_cats & {
-        "ld_indl",
-        "ld_augm",
-        "rf_inftr",
-        "apgar5",
+        "wic",
+        "rf_pdiab",
+        "mracehisp",
+        "ab_anti",
+        "rf_phype",
+        "pay_rec",
+        "me_pres",
+        "sex",
         "bfacil3",
-        "rf_fedrg",
     }
-    # Features that drop under both labels should still be absent.
-    assert not cn_cats & (
-        set(MODELS["usbc10_m0"].categorical_features) - m1_cats - {"wic", "rf_pdiab"}
-    )
+    # Numeric drop under C-only: ``bmi`` registers as actively harmful
+    # (-4.3e-5 in the M0_CN test-profile fit) and falls out.
+    assert "bmi" not in set(m1_cn.numeric_features)
+    # ``apgar5`` is retained under C-only after the PR #26 fix.
+    assert "apgar5" in cn_cats
 
 
 def test_usbc11_m1_cn_prunes_under_c_only_importance() -> None:
-    """usbc11_m1_cn drops 6 clinical features that fall below threshold under C-only."""
+    """usbc11_m1_cn drops 22 clinical features that fall below threshold under C-only."""
     m0_cn = MODELS["usbc11_m0_cn"].to_config()
     m1_cn = MODELS["usbc11_m1_cn"].to_config()
 
@@ -169,17 +174,27 @@ def test_usbc11_m1_cn_prunes_under_c_only_importance() -> None:
     assert m1_cn.missing_flag_column != m0_cn.missing_flag_column
 
     cn_cats = set(m1_cn.categorical_features)
-    # Six features drop under clinical-only + C-only importance (see
-    # selection_steps). rf_phype is the one with strongly negative
-    # importance — guard that it's gone.
+    # Strongly-negative-importance features under C-only should be gone:
+    # rf_phype (-1.51e-4), rf_gdiab (-1.37e-4), rf_artec (-5.68e-5),
+    # rf_fedrg (-6.74e-5), rf_ppterm (-8.60e-5), ld_augm (-5.15e-5),
+    # ca_cleft (-2.13e-4), ca_clpal (-6.32e-5).
     assert not cn_cats & {
-        "sex",
         "rf_phype",
-        "rf_ghype",
-        "me_pres",
-        "apgar5",
-        "ab_anti",
+        "rf_gdiab",
+        "rf_artec",
+        "rf_fedrg",
+        "rf_ppterm",
+        "ld_augm",
+        "ca_cleft",
+        "ca_clpal",
     }
+    # ``apgar5`` is retained under the post-PR-#26 C-only fit (importance
+    # 3.05e-3 in the M0_CN test fit, the largest of the four families).
+    assert "apgar5" in cn_cats
+    # ``rf_pdiab`` and ``wic`` cross BACK ABOVE threshold under C-only on
+    # the clinical-only feature set, opposite of the USBC11_M1 (C+P) drop.
+    assert "rf_pdiab" in cn_cats
+    assert "wic" in cn_cats
     # The clinical predictors that survive at every prune step should all
     # still be present — they carry the bulk of the signal under both
     # label definitions.

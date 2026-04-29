@@ -7,6 +7,7 @@ __pycache__/
 *.pyc
 /.vscode
 /output
+/logs
 /.claude
 .DS_Store
 /notes/__*
