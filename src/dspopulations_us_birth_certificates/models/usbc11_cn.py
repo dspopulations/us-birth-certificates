@@ -58,7 +58,7 @@ _USBC11_M1_CN_PARAMS: dict = {
 # below the AP-loss < 1e-4 threshold; no numeric features drop. The
 # apgar5 ~ apgar10 and rf_fedrg ~ rf_artec correlation pairs are both
 # resolved by importance alone (the weaker side of each pair is already
-# sub-threshold). Seven features have strongly-negative permutation
+# sub-threshold). Eight features have strongly-negative permutation
 # importance under the C-only label (rf_phype, rf_gdiab, rf_ppterm,
 # rf_fedrg, rf_artec, ld_augm, ca_cleft, ca_clpal), i.e. permuting them
 # improves AP. The rf_phype signal is the same co-linearity-with-mage_c
