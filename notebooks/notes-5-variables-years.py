@@ -39,6 +39,38 @@ df = con.execute(
     f"""
     SELECT
         b.year,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'C')) as confirmed,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'P')) as pending,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'N')) as no,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'U')) as unknown
+    FROM us_births as b
+    GROUP BY b.year
+    ORDER BY b.year
+    """
+).df()
+df
+
+# %%
+df = con.execute(
+    f"""
+    SELECT
+        b.year,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_downs = 'C')) as confirmed,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_downs = 'P')) as pending,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_downs = 'N')) as no,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_downs = 'U')) as unknown
+    FROM us_births as b
+    GROUP BY b.year
+    ORDER BY b.year
+    """
+).df()
+df
+
+# %%
+df = con.execute(
+    f"""
+    SELECT
+        b.year,
         (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'C' or ca_downs = 'C')) as confirmed,
         (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'P' or ca_downs = 'P')) as pending,
         (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'N' or ca_downs = 'N')) as no,
