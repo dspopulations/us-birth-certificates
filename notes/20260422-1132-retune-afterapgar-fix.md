@@ -225,15 +225,11 @@ Both are close to threshold; both stayed in the M1 set per the M0-derived
 prune. Worth flagging but not re-iterating the prune cycle for this
 plan — a future "M2" pass could revisit them.
 
-#### Pending: write predictions to DuckDB
-The `--write-predictions` step (overwrites `p_ds_lb_pred_01` /
-`ds_pred_missing` columns) needs to be run separately because the
-runtime guard requires explicit per-invocation approval. Command:
-```
-python scripts/fit_model.py --model-id usbc10_m1 --profile reporting \
-  --load-model output/fit_model_reporting/20260423-183929/model.txt \
-  --write-predictions --no-permutation --no-shap
-```
+#### Predictions written to DuckDB (2026-04-24)
+`--write-predictions` overwrote `p_ds_lb_pred_01` / `ds_pred_missing`
+on 2026-04-24 18:11 (artefacts: `output/fit_model_reporting/20260424-181109/`).
+33,589,228 rows populated; 26,742 non-recorded births flagged as likely
+missed.
 
 ### `usbc10_cn` (C-only, full feature set)
 
@@ -462,7 +458,7 @@ ca_limb, ca_cleft, ca_hypo, wic.
 | AP (valid)   | 0.0310 | **0.0334** | **+7.7%** |
 | ROC-AUC      | 0.883  | **0.8916** | **+0.86 pp** |
 | best_iter    | 570    | 948        | +66% |
-| log_loss     | —      | 0.003608   | — |
+| log_loss     | —      | 0.003576   | — |
 | n_valid      | —      | 6,717,846  | — |
 | n_pos_valid  | —      | 3,562      | — |
 
@@ -586,7 +582,7 @@ optimum is within ~0.6% of that more conservative trial.
 | AP (valid)   | 0.0262 | **0.0198** | **−24%** |
 | ROC-AUC      | 0.902  | **0.9082** | **+0.62 pp** |
 | best_iter    | 1,157  | 99         | −91% |
-| log_loss     | —      | 0.001794   | — |
+| log_loss     | —      | 0.001762   | — |
 | n_valid      | —      | 6,715,881  | — |
 | n_pos_valid  | —      | 1,597      | — |
 
