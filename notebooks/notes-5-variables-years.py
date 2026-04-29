@@ -1,6 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -32,6 +33,23 @@ os.makedirs("./output", exist_ok=True)
 # %%
 # con.close()
 con = duckdb.connect("../data/us_births.db", read_only=True)
+
+# %%
+df = con.execute(
+    f"""
+    SELECT
+        b.year,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'C' or ca_downs = 'C')) as confirmed,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'P' or ca_downs = 'P')) as pending,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'N' or ca_downs = 'N')) as no,
+        (SELECT COUNT(*) FROM us_births WHERE year = b.year AND (ca_down = 'U' or ca_downs = 'U')) as unknown
+    FROM us_births as b
+    GROUP BY b.year
+    ORDER BY b.year
+    """
+).df()
+df.to_csv("./output/ca_downs_by_year.csv", index=False)
+df
 
 # %%
 df = con.execute(
