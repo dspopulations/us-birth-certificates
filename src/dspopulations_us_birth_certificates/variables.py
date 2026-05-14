@@ -658,16 +658,3 @@ CATEGORICAL_BASE: list[str] = [
 """Categorical features common to predictor experiments 0009-0011."""
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def is_confirmed_or_pending(x: str):
-    """Combine C (confirmed) and P (pending) into Y value."""
-    return 1 if pd.isna(x) else 1 if x in {"P", "C"} else 0
-
-
-def is_value(x: str, value: str):
-    """Check if x is equal to a specific value."""
-    return 1 if pd.isna(x) else 1 if x == value else 0
