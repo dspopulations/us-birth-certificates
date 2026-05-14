@@ -340,14 +340,14 @@ def distance_corr_dissimilarity_linkage(X):
         Condensed dissimilarity matrix suitable for linkage clustering algorithms.
 
     linkage : ndarray
-        Linkage matrix resulting from hierarchical clustering using Ward's method.
+        Linkage matrix from hierarchical clustering using average linkage.
 
     Notes
     -----
     - Uses distance correlation dissimilarity metric
     - Returns condensed form for compatibility with scipy linkage functions
     """
-    dissim = distance_corr_dissimilarity(X)
+    dissim, _ = distance_corr_dissimilarity(X)
     condensed = squareform(dissim)
     linkage = hierarchy.linkage(condensed, method="average")
     return dissim, condensed, linkage
