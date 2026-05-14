@@ -255,7 +255,7 @@ def load_predictors_data(
                 ELSE NULL
             END AS no_abnorm,
             -- ==================== identified disorders ====================
-            -- congenital disorder
+            -- suspected chromosomal disorder
             CASE
                 WHEN ca_disor = 'C' THEN 1::UTINYINT
                 WHEN ca_disor = 'P' THEN 2::UTINYINT
@@ -323,14 +323,6 @@ def load_predictors_data(
                 WHEN ca_hypo = 'N' THEN 0::UTINYINT
                 ELSE NULL
             END AS ca_hypo,
-            -- suspected chromosomal disorder
-            CASE
-                WHEN ca_disor = 'C' THEN 1::UTINYINT
-                WHEN ca_disor = 'P' THEN 2::UTINYINT
-                WHEN ca_disor = 'N' THEN 0::UTINYINT
-                WHEN ca_disor = 'U' THEN 9::UTINYINT
-                ELSE NULL
-            END AS ca_disor,
             -- no_congen
             CASE
                 WHEN no_congen >= 0 AND no_congen <= 1 THEN no_congen
