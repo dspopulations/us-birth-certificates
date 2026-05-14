@@ -119,7 +119,8 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
     if not fit_dirs:
         raise SystemExit("No variant fits found — pass --fit-dirs explicitly.")
     output_dir = ns.output_dir or (
-        ns.root / f"_compare_{pd.Timestamp.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        ns.root
+        / f"_compare_{pd.Timestamp.now(tz='UTC').strftime('%Y%m%d-%H%M%S')}"
     )
     return CompareCliConfig(
         fit_dirs=fit_dirs,
