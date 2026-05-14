@@ -36,7 +36,7 @@ dependencies:
       - matplotlib>=3.10.9
       - mpmath
       - networkx
-      - notebook>=7.5.5
+      - notebook>=7.5.6
       - orjson>=3.11.9
       - pingouin
       - plotly
@@ -45,11 +45,11 @@ dependencies:
       - pytest>=9.0.3
       - pyxlsb
       - rich>=15.0.0
-      - ruff>=0.15.11
+      - ruff>=0.15.12
       - scipy-stubs
       - scipy>=1.17.1
       - seaborn>=0.13.2
-      - setuptools>=81.0.0
+      - setuptools>=82.0.1
       - statsmodels
       - tabulate
       - truststore
