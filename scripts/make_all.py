@@ -31,7 +31,12 @@ def merge_years():
 
         df = pd.read_parquet(source)
 
-        df = variables.set_all_column_types(df)
+        # Annual parquets carry only ``IMPORTED_VARS`` (reindexed by
+        # ``import_parquet.py``); the COMPUTED columns are derived later
+        # in the DuckDB stage. ``set_all_column_types`` would index every
+        # COMPUTED entry with df[col] and KeyError on the first missing
+        # one — only the imported dtypes apply at this stage.
+        df = variables.set_imported_column_types(df)
 
         dataframes.append(df)
 
