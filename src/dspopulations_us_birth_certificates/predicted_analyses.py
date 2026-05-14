@@ -944,7 +944,9 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
     Columns: ``code``, ``label``, ``predicted_n``, ``predicted_pct``,
     ``recorded_n``, ``recorded_pct``, ``rprime_n``, ``rprime_pct``. Also
     appends a ``Total`` row. Proportions are expressed as percentages to
-    two decimals.
+    two decimals. The ``code`` column is held as a nullable integer so
+    the ``Total`` row can carry NA without dragging the whole column to
+    ``object`` dtype.
     """
     rows = counts[["code", "label"]].copy()
     for col in POPULATION_COLUMNS:
@@ -954,11 +956,16 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
             (counts[col.key] / total * 100).round(2) if total else 0.0
         )
 
-    total_row = {"code": "", "label": "Total"}
+    total_row: dict = {"code": pd.NA, "label": "Total"}
     for col in POPULATION_COLUMNS:
         total_row[f"{col.key}_n"] = int(counts[col.key].sum())
         total_row[f"{col.key}_pct"] = 100.0 if int(counts[col.key].sum()) else 0.0
-    return pd.concat([rows, pd.DataFrame([total_row])], ignore_index=True)
+    out = pd.concat([rows, pd.DataFrame([total_row])], ignore_index=True)
+    # Hold ``code`` as nullable Int64 so the Total row's NA doesn't drag
+    # the whole column to ``object`` (which previously happened when the
+    # Total row used the empty string ``""`` as its code placeholder).
+    out["code"] = out["code"].astype("Int64")
+    return out
 
 
 # ---------------------------------------------------------------------------
