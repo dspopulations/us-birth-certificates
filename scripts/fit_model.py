@@ -544,7 +544,7 @@ def _recover_loaded_params(model_path: Path) -> dict:
         try:
             with sibling.open() as f:
                 return json.load(f)
-        except OSError, json.JSONDecodeError:
+        except (OSError, json.JSONDecodeError):
             pass
 
     try:
