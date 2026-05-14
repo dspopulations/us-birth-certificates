@@ -82,9 +82,10 @@ def print_balance(y_train: pd.Series, y_valid: pd.Series):
     for name, y in [("Training", y_train), ("Validation", y_valid)]:
         neg = (y == 0).sum()
         pos = (y == 1).sum()
+        ratio = f"{pos / neg:.8f}" if neg else "n/a (no negatives)"
         print(
             f"{name} set: {neg} negatives, {pos} positives, "
-            f"probability positive {pos / neg:.8f}"
+            f"probability positive {ratio}"
         )
 
 
