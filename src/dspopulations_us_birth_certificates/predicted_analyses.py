@@ -176,6 +176,7 @@ PRECARE_LABELS: dict[int, str] = {
     1: "1st trimester (months 1–3)",
     2: "2nd trimester (months 4–6)",
     3: "3rd trimester (months 7–10)",
+    4: "Not stated",
 }
 
 # ca_disor carries the C/P/N/U schema common to NCHS congenital-anomaly
@@ -417,6 +418,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         legend_title="precare",
         group_sql=(
             "CASE "
+            "WHEN precare = 99 THEN 4 "
             "WHEN precare = 0 THEN 0 "
             "WHEN precare BETWEEN 1 AND 3 THEN 1 "
             "WHEN precare BETWEEN 4 AND 6 THEN 2 "
