@@ -36,7 +36,7 @@ dependencies:
       - matplotlib>=3.10.9
       - mpmath
       - networkx
-      - notebook>=7.5.5
+      - notebook>=7.5.6
       - orjson>=3.11.9
       - pingouin
       - plotly
