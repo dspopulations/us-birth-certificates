@@ -263,9 +263,15 @@ def build_explain_set(
 
     # hard negatives (top predicted p among negatives)
     n_neg_hard = min(n_neg_hard, idx_neg.size)
-    p_neg = p_valid[idx_neg]
-    hard_local = np.argpartition(p_neg, -n_neg_hard)[-n_neg_hard:]
-    idx_neg_hard = idx_neg[hard_local]
+    if n_neg_hard > 0:
+        p_neg = p_valid[idx_neg]
+        hard_local = np.argpartition(p_neg, -n_neg_hard)[-n_neg_hard:]
+        idx_neg_hard = idx_neg[hard_local]
+    else:
+        # argpartition with kth=0 on an empty array would fail, and
+        # the [-0:] slice would return everything — neither is correct
+        # when the user asked for zero hard negatives.
+        idx_neg_hard = np.empty(0, dtype=idx_neg.dtype)
 
     idx = np.unique(np.concatenate([idx_pos, idx_neg_rand, idx_neg_hard]))
     rng.shuffle(idx)
