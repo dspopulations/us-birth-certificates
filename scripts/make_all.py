@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+from dspopulations_us_birth_certificates import variables
+
 PARQUET_ENGINE = "fastparquet"
 
 
@@ -29,7 +31,7 @@ def merge_years():
 
         df = pd.read_parquet(source)
 
-        df = columns.set_all_column_types(df)  # noqa: F821  # TODO: restore the `columns` / `variables` import; script is currently broken
+        df = variables.set_all_column_types(df)
 
         dataframes.append(df)
 
