@@ -37,7 +37,7 @@ dependencies:
       - mpmath
       - networkx
       - notebook>=7.5.5
-      - orjson>=3.11.8
+      - orjson>=3.11.9
       - pingouin
       - plotly
       - preliz
