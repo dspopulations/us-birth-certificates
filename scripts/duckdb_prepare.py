@@ -358,16 +358,25 @@ def combine_all() -> None:
 
         print("Setting mrace_c...")
 
+        # Fallback chain per the NCHS coding history (see
+        # previous/us-birth-certificates/data-preparation.md): MRACE15 is
+        # the 2014+ recode, MRACEREC covers 2005-2013, MBRACE is the
+        # 2003-2013 bridged recode, and MRACE is the 1989 cert (available
+        # 1989-2013). Each source is populated only for its own year
+        # window, so a simple IS NOT NULL fallback chain expresses the
+        # documented precedence without the buggy
+        # (year < 2014 OR year > 2019) guard that previously left
+        # mrace_c NULL across the entire 2014-2019 window.
         con.execute(
             f"""
             UPDATE us_births
             SET {vars.MRACE_C} = CASE
-                WHEN {vars.MRACE15} IS NOT NULL AND (year < 2014 OR year > 2019) THEN
+                WHEN {vars.MRACE15} IS NOT NULL THEN
                     CASE
                         WHEN {vars.MRACE15} IN(1, 2, 3) THEN {vars.MRACE15}
                         WHEN {vars.MRACE15} BETWEEN 4 AND 14 THEN 4
                     END
-                WHEN {vars.MRACEREC} IS NOT NULL AND (year < 2014 OR year > 2019) THEN
+                WHEN {vars.MRACEREC} IS NOT NULL THEN
                     CASE
                         WHEN {vars.MRACEREC} IN(1, 2, 3, 4) THEN {vars.MRACEREC}
                     END
