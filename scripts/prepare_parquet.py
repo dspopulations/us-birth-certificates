@@ -192,7 +192,7 @@ uint8_specs = {
     vars.ILLB_R11: (0, 99),
     vars.ILOP_R11: (0, 99),
     vars.ILP_R11: (0, 99),
-    vars.PRECARE: (0, 10),
+    vars.PRECARE: (0, 99),
     vars.PAY: (1, 9),
     vars.PAY_REC: (1, 9),
     vars.APGAR5: (0, 99),
