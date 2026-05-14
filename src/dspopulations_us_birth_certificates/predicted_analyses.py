@@ -644,24 +644,24 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
 
 @dataclass(frozen=True)
 class PopulationColumn:
-    """One column in the three-column comparison plot."""
+    """One column in the three-column comparison plot.
+
+    The actual SQL predicate that selects each population is built
+    inline by :func:`load_category_counts` from ``flag_column``, so
+    this struct only carries the display metadata.
+    """
 
     key: str
     title: str
-    where: str
 
 
 # Column order runs left → right on the plot. The user's requested layout
 # is: predicted on the left, recorded in the centre, recorded+predicted
 # on the right.
 POPULATION_COLUMNS: tuple[PopulationColumn, ...] = (
-    PopulationColumn("predicted", "Predicted missing", "ds_pred_missing"),
-    PopulationColumn("recorded", "Recorded", "down_ind = 1"),
-    PopulationColumn(
-        "rprime",
-        "Recorded + predicted",
-        "down_ind = 1 OR ds_pred_missing",
-    ),
+    PopulationColumn("predicted", "Predicted missing"),
+    PopulationColumn("recorded", "Recorded"),
+    PopulationColumn("rprime", "Recorded + predicted"),
 )
 
 
