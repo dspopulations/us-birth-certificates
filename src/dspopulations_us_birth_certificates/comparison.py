@@ -171,9 +171,13 @@ def compare_feature_importance(
         manifest = load_manifest(manifest_path)
         run_dir = os.path.dirname(manifest_path)
 
-        # Resolve model index
+        # Resolve to the model entry's own ``index`` field (which drives the
+        # output file naming), whether ``model_index`` is positive or
+        # negative. Using ``model_index`` directly previously broke when
+        # the list position didn't match the stored index — e.g. when a
+        # variant was dropped from ``manifest["models"]``.
         models = manifest["models"]
-        idx = models[model_index]["index"] if model_index < 0 else model_index
+        idx = models[model_index]["index"]
 
         csv_path = f"{run_dir}/model_{idx}_{file_suffix}.csv"
         if os.path.exists(csv_path):
