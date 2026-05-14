@@ -15,7 +15,7 @@ dependencies:
   - optuna-integration[lightgbm,shap,scikit-learn,xgboost]
   - pandas-stubs
   - pandas>=3.0.1
-  - polars>=1.40.0
+  - polars>=1.40.1
   - pyarrow>=23.0.1
   - pymc>=5.28.4,<6.0
   - pytorch>=2.10.0
