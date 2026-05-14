@@ -110,8 +110,8 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
             "race": [
                 "NH White",
                 "NH Black",
-                "NH AIAN_NHOPI_Other",
-                "NH Asian",
+                "NH AIAN",
+                "NH Asian/Pacific Islander",
                 "Hispanic",
                 "Unknown",
             ],
