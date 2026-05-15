@@ -10,7 +10,7 @@ dependencies:
   - numba>=0.65.0
   - numpy>=2.4.3
   - numpyro>=0.20.1
-  - nutpie>=0.16.8
+  - nutpie>=0.16.10
   - optuna>=4.8.0
   - optuna-integration[lightgbm,shap,scikit-learn,xgboost]
   - pandas-stubs
