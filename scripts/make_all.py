@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+from dspopulations_us_birth_certificates import variables
+
 PARQUET_ENGINE = "fastparquet"
 
 
@@ -29,7 +31,12 @@ def merge_years():
 
         df = pd.read_parquet(source)
 
-        df = columns.set_all_column_types(df)  # noqa: F821  # TODO: restore the `columns` / `variables` import; script is currently broken
+        # Annual parquets carry only ``IMPORTED_VARS`` (reindexed by
+        # ``import_parquet.py``); the COMPUTED columns are derived later
+        # in the DuckDB stage. ``set_all_column_types`` would index every
+        # COMPUTED entry with df[col] and KeyError on the first missing
+        # one — only the imported dtypes apply at this stage.
+        df = variables.set_imported_column_types(df)
 
         dataframes.append(df)
 

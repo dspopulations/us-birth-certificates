@@ -151,9 +151,6 @@ def combine_all() -> None:
         alter_column_type(vars.CA_ANEN, "VARCHAR", con)
         alter_column_type(vars.CA_MNSB, "VARCHAR", con)
         alter_column_type(vars.CA_CCHD, "VARCHAR", con)
-        alter_column_type(vars.CA_ANEN, "VARCHAR", con)
-        alter_column_type(vars.CA_MNSB, "VARCHAR", con)
-        alter_column_type(vars.CA_CCHD, "VARCHAR", con)
         alter_column_type(vars.CA_CDH, "VARCHAR", con)
         alter_column_type(vars.CA_OMPH, "VARCHAR", con)
         alter_column_type(vars.CA_GAST, "VARCHAR", con)
@@ -358,16 +355,27 @@ def combine_all() -> None:
 
         print("Setting mrace_c...")
 
+        # Fallback chain per the NCHS coding history (see
+        # previous/us-birth-certificates/data-preparation.md): MRACE15 is
+        # the from-2014 recode, MRACEREC covers 2003-2013, MBRACE is the
+        # 2003-2019 bridged recode, and MRACE is the 1989 cert (available
+        # 1989-2013, declining from 2003). Multiple sources are populated
+        # simultaneously in overlap years — MRACE15 wins for 2014+,
+        # MRACEREC wins for 2003-2013, MBRACE fills any 2003-2019 gap,
+        # and MRACE covers 1989-2002. A simple IS NOT NULL fallback chain
+        # expresses that precedence without the buggy
+        # (year < 2014 OR year > 2019) guard that previously left
+        # mrace_c NULL across the entire 2014-2019 window.
         con.execute(
             f"""
             UPDATE us_births
             SET {vars.MRACE_C} = CASE
-                WHEN {vars.MRACE15} IS NOT NULL AND (year < 2014 OR year > 2019) THEN
+                WHEN {vars.MRACE15} IS NOT NULL THEN
                     CASE
                         WHEN {vars.MRACE15} IN(1, 2, 3) THEN {vars.MRACE15}
                         WHEN {vars.MRACE15} BETWEEN 4 AND 14 THEN 4
                     END
-                WHEN {vars.MRACEREC} IS NOT NULL AND (year < 2014 OR year > 2019) THEN
+                WHEN {vars.MRACEREC} IS NOT NULL THEN
                     CASE
                         WHEN {vars.MRACEREC} IN(1, 2, 3, 4) THEN {vars.MRACEREC}
                     END

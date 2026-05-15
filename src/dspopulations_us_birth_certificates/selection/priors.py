@@ -48,11 +48,20 @@ def inv_logit(x):
 # --------------------------------------------------------------------------- #
 
 AGE_LEVELS = ["<20", "20-24", "25-29", "30-34", "35-39", "40-44", "45+"]
+# Race vocabulary, aligned to the mracehisp_c coding produced by
+# duckdb_prepare.py and consumed by selection.data.RACE_MAP. The codes
+# are: 1=NH White (idx 0), 2=NH Black (1), 3=NH AIAN only (2), 4=NH
+# Asian/Pacific Islander (broad bucket — Asian + NHOPI + Other; 3),
+# 5=Hispanic (4), NULL=Unknown (5). The prior arrays below are indexed
+# in this order — re-derive ETA_TERM_RACE / S_RACE etc. against the
+# published literature if any single demographic's prior magnitude looks
+# off; an earlier version of this label list swapped positions 2 and 3
+# and the values may need a second look.
 RACE_LEVELS = [
     "NH White",
     "NH Black",
-    "NH AIAN_NHOPI_Other",
-    "NH Asian",
+    "NH AIAN",
+    "NH Asian/Pacific Islander",
     "Hispanic",
     "Unknown",
 ]
@@ -122,8 +131,8 @@ ETA_DETECT_RACE = np.array(
     [
         0.00,  # NH White (reference)
         -0.30,  # NH Black
-        -0.40,  # AIAN_NHOPI_Other
-        -0.10,  # NH Asian
+        -0.40,  # NH AIAN
+        -0.10,  # NH Asian/Pacific Islander
         -0.25,  # Hispanic
         0.00,  # Unknown
     ]
@@ -171,8 +180,8 @@ ETA_TERM_RACE = np.array(
     [
         0.00,  # NH White (reference)
         -0.70,  # NH Black
-        -0.30,  # AIAN_NHOPI_Other
-        -0.15,  # NH Asian
+        -0.30,  # NH AIAN
+        -0.15,  # NH Asian/Pacific Islander
         -0.40,  # Hispanic
         0.00,  # Unknown
     ]
@@ -210,8 +219,8 @@ S_RACE = np.array(
     [
         0.00,  # NH White (reference)
         -0.40,  # NH Black
-        -0.30,  # AIAN_NHOPI_Other
-        -0.10,  # NH Asian
+        -0.30,  # NH AIAN
+        -0.10,  # NH Asian/Pacific Islander
         -0.20,  # Hispanic
         0.00,  # Unknown
     ]

@@ -176,6 +176,7 @@ PRECARE_LABELS: dict[int, str] = {
     1: "1st trimester (months 1–3)",
     2: "2nd trimester (months 4–6)",
     3: "3rd trimester (months 7–10)",
+    4: "Not stated",
 }
 
 # ca_disor carries the C/P/N/U schema common to NCHS congenital-anomaly
@@ -417,6 +418,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         legend_title="precare",
         group_sql=(
             "CASE "
+            "WHEN precare = 99 THEN 4 "
             "WHEN precare = 0 THEN 0 "
             "WHEN precare BETWEEN 1 AND 3 THEN 1 "
             "WHEN precare BETWEEN 4 AND 6 THEN 2 "
@@ -644,24 +646,24 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
 
 @dataclass(frozen=True)
 class PopulationColumn:
-    """One column in the three-column comparison plot."""
+    """One column in the three-column comparison plot.
+
+    The actual SQL predicate that selects each population is built
+    inline by :func:`load_category_counts` from ``flag_column``, so
+    this struct only carries the display metadata.
+    """
 
     key: str
     title: str
-    where: str
 
 
 # Column order runs left → right on the plot. The user's requested layout
 # is: predicted on the left, recorded in the centre, recorded+predicted
 # on the right.
 POPULATION_COLUMNS: tuple[PopulationColumn, ...] = (
-    PopulationColumn("predicted", "Predicted missing", "ds_pred_missing"),
-    PopulationColumn("recorded", "Recorded", "down_ind = 1"),
-    PopulationColumn(
-        "rprime",
-        "Recorded + predicted",
-        "down_ind = 1 OR ds_pred_missing",
-    ),
+    PopulationColumn("predicted", "Predicted missing"),
+    PopulationColumn("recorded", "Recorded"),
+    PopulationColumn("rprime", "Recorded + predicted"),
 )
 
 
@@ -942,7 +944,9 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
     Columns: ``code``, ``label``, ``predicted_n``, ``predicted_pct``,
     ``recorded_n``, ``recorded_pct``, ``rprime_n``, ``rprime_pct``. Also
     appends a ``Total`` row. Proportions are expressed as percentages to
-    two decimals.
+    two decimals. The ``code`` column is held as a nullable integer so
+    the ``Total`` row can carry NA without dragging the whole column to
+    ``object`` dtype.
     """
     rows = counts[["code", "label"]].copy()
     for col in POPULATION_COLUMNS:
@@ -952,11 +956,16 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
             (counts[col.key] / total * 100).round(2) if total else 0.0
         )
 
-    total_row = {"code": "", "label": "Total"}
+    total_row: dict = {"code": pd.NA, "label": "Total"}
     for col in POPULATION_COLUMNS:
         total_row[f"{col.key}_n"] = int(counts[col.key].sum())
         total_row[f"{col.key}_pct"] = 100.0 if int(counts[col.key].sum()) else 0.0
-    return pd.concat([rows, pd.DataFrame([total_row])], ignore_index=True)
+    out = pd.concat([rows, pd.DataFrame([total_row])], ignore_index=True)
+    # Hold ``code`` as nullable Int64 so the Total row's NA doesn't drag
+    # the whole column to ``object`` (which previously happened when the
+    # Total row used the empty string ``""`` as its code placeholder).
+    out["code"] = out["code"].astype("Int64")
+    return out
 
 
 # ---------------------------------------------------------------------------

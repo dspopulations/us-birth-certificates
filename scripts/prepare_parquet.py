@@ -143,7 +143,6 @@ uint8_specs = {
     vars.MAGER9: (1, 14),
     vars.MAGE36: (1, 41),
     vars.MAGER12: (1, 14),
-    vars.MAGER8: (1, 9),
     vars.MBSTATE_REC: (1, 3),
     vars.RESTATUS: (1, 4),
     vars.MBRACE: (1, 24),
@@ -193,7 +192,7 @@ uint8_specs = {
     vars.ILLB_R11: (0, 99),
     vars.ILOP_R11: (0, 99),
     vars.ILP_R11: (0, 99),
-    vars.PRECARE: (0, 10),
+    vars.PRECARE: (0, 99),
     vars.PAY: (1, 9),
     vars.PAY_REC: (1, 9),
     vars.APGAR5: (0, 99),
@@ -321,8 +320,8 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
     return pa.RecordBatch.from_arrays(arrays, schema=pa.schema(fields))
 
 
-in_path = "../data/us_births_combined.parquet"
-out_path = "../data/us_births.parquet"
+in_path = "data/us_births_combined.parquet"
+out_path = "data/us_births.parquet"
 
 dataset = ds.dataset(in_path, format="parquet")
 

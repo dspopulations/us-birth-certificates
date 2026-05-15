@@ -354,8 +354,6 @@ COMPUTED: dict[
     str(Variables.DS_N): pd.CategoricalDtype(),
     str(Variables.DS_U): pd.CategoricalDtype(),
     str(Variables.DS_CORP): pd.CategoricalDtype(),
-    str(Variables.P_DS_LB_WT): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_NT): pd.Float64Dtype(),
     str(Variables.P_DS_LB_WT_MAGE): pd.Float64Dtype(),
     str(Variables.P_DS_LB_NT_MAGE): pd.Float64Dtype(),
     str(Variables.P_DS_LB_WT_ETHN): pd.Float64Dtype(),
@@ -488,9 +486,6 @@ IMPORTED: dict[
     str(Variables.CA_HYPO): pd.CategoricalDtype(),
     str(Variables.NO_CONGEN): pd.CategoricalDtype(),
     str(Variables.BFED): pd.CategoricalDtype(),
-    str(Variables.PREVIS): pd.CategoricalDtype(),
-    str(Variables.PREVIS_REC): pd.CategoricalDtype(),
-    str(Variables.WIC): pd.CategoricalDtype(),
     str(Variables.M_HT_IN): pd.CategoricalDtype(),
     str(Variables.BMI): pd.Float32Dtype(),
     str(Variables.BMI_R): pd.CategoricalDtype(),
@@ -658,16 +653,3 @@ CATEGORICAL_BASE: list[str] = [
 """Categorical features common to predictor experiments 0009-0011."""
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def is_confirmed_or_pending(x: str):
-    """Combine C (confirmed) and P (pending) into Y value."""
-    return 1 if pd.isna(x) else 1 if x in {"P", "C"} else 0
-
-
-def is_value(x: str, value: str):
-    """Check if x is equal to a specific value."""
-    return 1 if pd.isna(x) else 1 if x == value else 0

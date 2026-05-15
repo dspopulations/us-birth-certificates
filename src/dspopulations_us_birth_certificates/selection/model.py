@@ -320,13 +320,14 @@ def posterior_subgroup_rate(
 ) -> pd.DataFrame:
     """N-weighted posterior rate aggregated by a single subgroup column.
 
-    ``quantity`` is one of ``"true_rate"`` (``theta_LB . eta``),
-    ``"recorded_rate"`` (``p_recorded``) or ``"sensitivity"`` (``s``).
+    ``quantity`` is one of ``"true_rate"`` (``theta_LB . eta``) or
+    ``"recorded_rate"`` (``p_recorded``). ``s`` is not retained on
+    the posterior (per-cell, dropped at idata-write time for size),
+    so a sensitivity option is intentionally not offered here.
     """
     key = {
         "true_rate": "p_ds_lb",
         "recorded_rate": "p_recorded",
-        "sensitivity": "s",
     }[quantity]
     q = idata.posterior[key]
     N = cells["N_cell"].to_numpy()

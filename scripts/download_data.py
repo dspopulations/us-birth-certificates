@@ -70,7 +70,7 @@ us_data_files_sas = [
     "https://data.nber.org/nvss/natality/sas/2014/natality2014us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2015/natality2015us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2016/natality2016us.sas7bdat",
-    "https://data.nber.org/nvss/natality/sas/2015/natality2015us.sas7bdat",
+    "https://data.nber.org/nvss/natality/sas/2017/natality2017us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2018/natality2018us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2019/natality2019us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2020/natality2020us.sas7bdat",

@@ -240,17 +240,10 @@ class USBC10_M2(USBC10_M1):
             ),
         ),
     )
+    # fagecomb-coloured scatters were dropped here when USBC10_M1's prune
+    # removed fagecomb itself — the SHAP explanation has no such column to
+    # index, and the scatter helpers would raise on access.
     shap_scatter_specs = USBC10_M1.shap_scatter_specs + (
-        ShapScatterSpec(
-            x_feature="year",
-            colour_by_feature="fagecomb",
-            description="Year vs paternal age.",
-        ),
-        ShapScatterSpec(
-            x_feature="mage_c",
-            colour_by_feature="fagecomb",
-            description="Maternal vs paternal age interaction.",
-        ),
         ShapScatterSpec(
             x_feature="bmi",
             colour_by_feature="mage_c",

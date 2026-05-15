@@ -1,5 +1,12 @@
-"""
-Create DuckDB database from combined Parquet file.
+"""Create the intermediate DuckDB from data/us_births.parquet.
+
+Writes to ``data/us_births_temp.db``. The final ``data/us_births.db``
+is produced by ``scripts/duckdb_prepare.py``, which reads the temp
+DB, runs the column-derivation pipeline, then COPYs FROM DATABASE
+into ``us_births.db``. The full pipeline is:
+
+    import_parquet -> combine_parquet -> prepare_parquet
+    -> duckdb_create -> duckdb_prepare
 """
 
 import pathlib
@@ -7,7 +14,7 @@ import pathlib
 import duckdb
 
 
-def combine_all() -> None:
+def create_temp_db() -> None:
     src_dir = pathlib.Path("data")
     source_parquet = src_dir / "us_births.parquet"
     out_db_temp = src_dir / "us_births_temp.db"
@@ -36,4 +43,4 @@ def combine_all() -> None:
 
 
 if __name__ == "__main__":
-    combine_all()
+    create_temp_db()
