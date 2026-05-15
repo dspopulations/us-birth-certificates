@@ -57,7 +57,7 @@ def fitted() -> tuple[pd.DataFrame, object]:
             progressbar=False,
             nuts_sampler="pymc",
         )
-        idata.extend(pm.sample_posterior_predictive(idata, random_seed=0))
+        idata.update(pm.sample_posterior_predictive(idata, random_seed=0))
     return cells, idata
 
 

@@ -69,7 +69,7 @@ def fit_dir(tmp_path_factory) -> Path:
             progressbar=False,
             nuts_sampler="pymc",
         )
-        idata.extend(pm.sample_posterior_predictive(idata, random_seed=0))
+        idata.update(pm.sample_posterior_predictive(idata, random_seed=0))
 
     idata.to_netcdf(str(out / "idata.nc"))
     # Parquet drops attrs; write them into a sidecar so the CLI can still read them.

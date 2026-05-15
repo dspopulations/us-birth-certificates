@@ -1,6 +1,6 @@
 """Posterior diagnostics for the three-stage selection model.
 
-Each function takes a fitted ``az.InferenceData`` plus (where relevant)
+Each function takes a fitted ``xr.DataTree`` plus (where relevant)
 the aggregated ``cells`` frame that produced it, and returns a
 :class:`matplotlib.figure.Figure`. Callers wanting paired CSVs /
 publication-quality artefacts should use
@@ -43,7 +43,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
 )
 
 if TYPE_CHECKING:
-    import arviz as az
+    import xarray as xr
     from matplotlib.figure import Figure
 
 
@@ -70,7 +70,7 @@ def _quantile(arr: np.ndarray, q: float) -> np.ndarray:
 
 
 def identifiability_pairplot(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
 ) -> Figure:
     """Per-race pair-plot of ``eta_term_race`` vs ``s_race`` draws.
 
@@ -129,7 +129,7 @@ def identifiability_pairplot(
     return fig
 
 
-def identifiability_table(idata: az.InferenceData) -> pd.DataFrame:
+def identifiability_table(idata: xr.DataTree) -> pd.DataFrame:
     """Per-race posterior correlations between ``eta_term_race`` and ``s_race``.
 
     Returned as a tidy DataFrame so the rendering CLI can save it
@@ -164,7 +164,7 @@ def identifiability_table(idata: az.InferenceData) -> pd.DataFrame:
 
 
 def eta_term_year_trajectory_plot(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     *,
     hdi_prob: float = 0.94,
 ) -> Figure:
@@ -211,7 +211,7 @@ def eta_term_year_trajectory_plot(
 
 
 def eta_term_year_trajectory_table(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     *,
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
@@ -241,7 +241,7 @@ def eta_term_year_trajectory_table(
 
 
 def cchd_consistency_check(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame,
     *,
     published_cchd_prevalence: float = 0.225,
@@ -291,7 +291,7 @@ def cchd_consistency_check(
 
 
 def cchd_consistency_summary(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame,
     *,
     published_cchd_prevalence: float = 0.225,
@@ -328,7 +328,7 @@ def cchd_consistency_summary(
 
 
 def posterior_predictive_by_stratum(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame,
     *,
     stratum_col: str,
@@ -404,7 +404,7 @@ def posterior_predictive_by_stratum(
 
 
 def decomposition_by_race(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame,
 ) -> Figure:
     """Stacked bar of true DS livebirths by race: recorded / missed.
@@ -514,7 +514,7 @@ def decomposition_by_race(
 
 
 def age_curve_check(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame | None = None,  # noqa: ARG001 — reserved for future use
     *,
     hdi_prob: float = 0.94,
@@ -563,7 +563,7 @@ def age_curve_check(
 
 
 def age_curve_table(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     *,
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
@@ -588,7 +588,7 @@ def age_curve_table(
 
 
 def summary_table(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     *,
     var_names: tuple[str, ...] | None = None,
     hdi_prob: float = 0.94,
@@ -597,11 +597,11 @@ def summary_table(
     import arviz as az
 
     if var_names is None:
-        return az.summary(idata, hdi_prob=hdi_prob)
+        return az.summary(idata, ci_prob=hdi_prob, ci_kind="hdi")
     available = [n for n in var_names if n in idata.posterior.data_vars]
     if not available:
-        return az.summary(idata, hdi_prob=hdi_prob)
-    return az.summary(idata, var_names=list(available), hdi_prob=hdi_prob)
+        return az.summary(idata, ci_prob=hdi_prob, ci_kind="hdi")
+    return az.summary(idata, var_names=list(available), ci_prob=hdi_prob, ci_kind="hdi")
 
 
 def convergence_health(

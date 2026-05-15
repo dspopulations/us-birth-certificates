@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 from dspopulations_us_birth_certificates.selection.config import RunConfig
 
 if TYPE_CHECKING:
-    import arviz as az
     import pymc as pm
+    import xarray as xr
 
 
 def sample(
@@ -21,7 +21,7 @@ def sample(
     *,
     config: RunConfig,
     prior_only: bool = False,
-) -> az.InferenceData:
+) -> xr.DataTree:
     """Run the full Bayesian workflow: prior predictive → posterior → PPC.
 
     Args:
@@ -32,7 +32,7 @@ def sample(
             useful for prior-predictive checks before a full fit.
 
     Returns:
-        ``az.InferenceData`` with ``prior``, ``prior_predictive`` and
+        ``xr.DataTree`` with ``prior``, ``prior_predictive`` and
         (unless ``prior_only``) ``posterior`` and ``posterior_predictive``.
     """
     import pymc as pm
@@ -47,19 +47,19 @@ def sample(
             return idata
 
         posterior = _sample_posterior(config)
-        idata.extend(posterior)
+        idata.update(posterior)
 
         if config.posterior_predictive:
             ppc = pm.sample_posterior_predictive(
                 posterior,
                 random_seed=config.random_seed,
             )
-            idata.extend(ppc)
+            idata.update(ppc)
 
     return idata
 
 
-def _sample_posterior(config: RunConfig) -> az.InferenceData:
+def _sample_posterior(config: RunConfig) -> xr.DataTree:
     """Run NUTS with the requested sampler backend."""
     import pymc as pm
 
