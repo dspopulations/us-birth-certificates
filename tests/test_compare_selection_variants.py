@@ -39,13 +39,12 @@ def _load_cli_module():
 
 def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
     """Write a minimum set of artefacts that compare_selection_variants reads."""
-    import arviz as az
     import xarray as xr
 
     fit_dir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
 
-    # Minimal InferenceData with p_ds_lb (needed for total-true computation).
+    # Minimal DataTree with p_ds_lb (needed for total-true computation).
     n_chain, n_draw, n_cell = 2, 50, 12
     p_ds_lb = rng.uniform(1e-4, 1e-3, size=(n_chain, n_draw, n_cell))
     posterior = xr.Dataset(
@@ -58,7 +57,7 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
             "cell": np.arange(n_cell),
         },
     )
-    idata = az.InferenceData(posterior=posterior)
+    idata = xr.DataTree.from_dict({"posterior": posterior})
     idata.to_netcdf(str(fit_dir / "idata.nc"))
 
     # Cells frame — enough structure to let compare_build_comparison run.

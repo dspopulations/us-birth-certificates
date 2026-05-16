@@ -192,7 +192,7 @@ y_ppc = ppc.posterior_predictive["y_obs"]
 
 y_mean = y_ppc.mean(dim=("chain", "draw"))
 
-hdi = az.hdi(y_ppc, hdi_prob=0.95)
+hdi = az.hdi(y_ppc, prob=0.95)
 lower = hdi.sel(hdi="lower")
 upper = hdi.sel(hdi="higher")
 
@@ -217,7 +217,7 @@ score_post = m_post * n_max   # broadcast over chain/draw/obs
 score_mean = score_post.mean(dim=("chain", "draw"))
 
 # 95% HDI for latent mean score per observation
-score_hdi = az.hdi(score_post, hdi_prob=0.95)
+score_hdi = az.hdi(score_post, prob=0.95)
 
 m_lower = score_hdi.sel(hdi="lower")
 m_upper = score_hdi.sel(hdi="higher")

@@ -33,7 +33,7 @@ from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.selection import diagnostics
 
 if TYPE_CHECKING:
-    import arviz as az
+    import xarray as xr
     from matplotlib.figure import Figure
 
 
@@ -98,7 +98,7 @@ def _guarded(
 
 
 def render_all(
-    idata: az.InferenceData,
+    idata: xr.DataTree,
     cells: pd.DataFrame,
     out_dir: Path,
     *,
