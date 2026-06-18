@@ -13,7 +13,8 @@ jobs:
     name: Lint (ruff)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
+
       - uses: astral-sh/setup-uv@v3
       - name: Install ruff
         run: uv tool install 'ruff>=0.15.11'
@@ -24,10 +25,11 @@ jobs:
     name: Spellcheck (cspell)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.0
+
+      - uses: actions/setup-node@v6.4.0
         with:
-          node-version: 25
+          node-version: 26.3.0
       - run: npm ci
       - run: npm run spellcheck
 
@@ -35,7 +37,8 @@ jobs:
     name: Tests (pytest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
+
       - uses: astral-sh/setup-uv@v3
       - name: Create venv
         run: uv venv --python 3.14
