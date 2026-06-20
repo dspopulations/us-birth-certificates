@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.28"]
+requires = ["hatchling>=1.30.1"]
 build-backend = "hatchling.build"
 
 [project]
@@ -12,45 +12,42 @@ license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Frank Buckley" }]
 
 dependencies = [
-  "numpy>=2.4.3",
-  "pandas>=3.0.1",
+  "arviz-plots>=1.2.0",
+  "arviz-stats>=1.2.0",
+  "arviz>=1.2.0",
   "duckdb>=1.5.2",
-  "preliz>=0.18.0",
-  "pymc>=6.0",
-  "nutpie>=0.16.8",
   "jaxlib>=0.9.2",
-  "numpyro>=0.20.0",
-  "arviz>=1.0",
-  "arviz-stats>=1.0",
-  "arviz-plots>=1.0",
   "matplotlib>=3.10.8",
-  "scipy>=1.17.1",
-  # 0.2.0 introduced the ``dse_research_utils.console`` subpackage that
-  # ``cli_output.py`` now shims. environment.yml installs this editable
-  # from ../../dseinternational/research/src/python for local dev.
+  "numpy>=2.4.3",
+  "numpyro>=0.20.0",
+  "nutpie>=0.16.8",
+  "pandas>=3.0.1",
+  "preliz>=0.18.0",
+  "pymc>=6.0.1",
+  "scipy>=1.18.0",
   "dse-research-utils>=0.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "notebook>=7.5.5",
   "ipython>=9.11.0",
   "ipywidgets>=8.1.8",
+  "notebook>=7.5.5",
   "pytest>=9.0.3",
-  "ruff>=0.15.11",
+  "ruff>=0.15.18"
 ]
 modelling = [
   # Lower bounds track environment.yml (the canonical local env) and the
   # CI workflow. Bumping here requires updating both to avoid
   # "works locally, fails in CI" drift.
+  "dcor>=0.6",
+  "joblib>=1.4.0",
   "lightgbm>=4.6.0",
   "optuna>=4.8.0",
-  "shap>=0.51.0",
-  "scikit-learn>=1.8.0",
-  "joblib>=1.4.0",
   "pyarrow>=23.0.1",
-  "dcor>=0.6",
   "rich>=15.0.0",
+  "scikit-learn>=1.8.0",
+  "shap>=0.51.0",
 ]
 
 [tool.hatch.version]
