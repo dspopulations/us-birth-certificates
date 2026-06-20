@@ -17,7 +17,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@v3
       - name: Install ruff
-        run: uv tool install 'ruff>=0.15.11'
+        run: uv tool install 'ruff>=0.15.18'
       - name: Ruff check
         run: ruff check src scripts tests
 
@@ -63,7 +63,7 @@ jobs:
           uv pip install --python .venv --no-deps \
             'dse-research-utils @ git+https://github.com/dseinternational/research.git@main#subdirectory=src/python'
           uv pip install --python .venv \
-            'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.17.1' 'matplotlib>=3.10.8' \
+            'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.18.0' 'matplotlib>=3.10.8' \
             'duckdb>=1.5.2' 'dcor>=0.6' \
             'lightgbm>=4.6.0' 'optuna>=4.8.0' 'shap>=0.51.0' \
             'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
