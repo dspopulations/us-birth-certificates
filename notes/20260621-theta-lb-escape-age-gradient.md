@@ -99,3 +99,33 @@ The intercept-level θ_LB↔s indeterminacy (April) and this age-gradient
 indeterminacy are the same disease in two dimensions: both resolve by pinning θ_LB
 hard and giving the selection channel enough freedom — **level via `s`, age via
 `η`.**
+
+## Resolution (2026-06-21)
+
+Implemented and verified (dev profile, full spec):
+
+1. **Pinned θ_LB** (`MORRIS_SIGMA` 0.10→0.001) — escape gone, posterior = Morris.
+2. **Age structure in η** — informative increasing `eta_detect_age` (screening
+   access) + new `eta_term_age` (termination). Only the COMBINED age effect on η is
+   data-identified; the access-vs-choice split is prior-driven.
+3. **Pinned `s` hard** (`S_SIGMA` 0.10→0.001; `s_race`/`s_edu` σ→0.05) — σ=0.10
+   still escaped 7σ to s~0.24.
+4. **Dropped clinical flags from `s`** — they blew up positive (`s_nicu` +5.8;
+   invariant #2 backwards). Retained as the Aim-4 co-occurrence readout
+   (`diagnostics.cchd_consistency_*`).
+
+Result — A/B/C now **agree** (the ridges are closed), at validation s≈0.40:
+
+| variant | total true DS 2016–24 | agg η | reduction | agg s |
+|---|---|---|---|---|
+| A | 40,202 [39,180–41,247] | 0.555 | 0.445 | 0.380 |
+| B | 39,313 [36,810–41,914] | 0.543 | 0.457 | 0.386 |
+| C | 39,110 [37,536–40,654] | 0.540 | 0.460 | 0.388 |
+
+Age-graded reduction (variant C): η 0.93 (<20) → 0.36 (45+), i.e. 7%→64%
+termination. Age-PPC fits within ~5% across all bands. Commits 9b2c035 (η
+re-anchor), 9b3ece6 (structural fix).
+
+**Open:** the `s` anchor. Validation s=0.40 → ~39–40k (independent of surveillance,
+recommended). Surveillance-match needs s≈0.34 → ~46k. The ~39–40k vs de Graaf ~48k
+gap is a finding (higher true reduction or lower true `s`), not necessarily an error.
