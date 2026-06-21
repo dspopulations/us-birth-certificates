@@ -99,7 +99,12 @@ MORRIS_THETA_LB_PER_1000 = np.array(
 
 MORRIS_THETA_LB = MORRIS_THETA_LB_PER_1000 / 1000.0
 MORRIS_LOGIT = logit(MORRIS_THETA_LB)
-MORRIS_SIGMA = 0.10  # tight: biology + large dataset
+# Pinned hard (2026-06-21). At 33.5M rows a sigma=0.10 logit prior behaves like
+# data, letting theta_LB drift 11-15 sigma to absorb the screening/termination
+# age signal (total inflated ~5x). Morris is the EXTERNAL conception-rate anchor;
+# pin it so the maternal-age gradient lands in eta. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+MORRIS_SIGMA = 0.001
 
 
 # --------------------------------------------------------------------------- #
@@ -171,9 +176,24 @@ ETA_DETECT_PAYER = np.array(
 )
 ETA_DETECT_PAYER_SIGMA = 0.20
 
-# Residual age effects on detection (older mothers more likely to access
-# screening historically).
-ETA_DETECT_AGE_SIGMA = 0.20
+# Age effects on detection/access (2026-06-21): older mothers reach screening and
+# diagnostic testing far more (the AMA trigger), so detection rises steeply with
+# maternal age. Informative INCREASING prior (was a zero-mean wiggle, mu=0 / sigma
+# 0.20); eta_detect now carries the dominant age gradient. Offsets on the logit,
+# added to the eta_detect baseline. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_DETECT_AGE = np.array(
+    [
+        -1.5,  # <20
+        -1.0,  # 20-24
+        -0.4,  # 25-29
+        0.3,  # 30-34
+        1.0,  # 35-39
+        1.6,  # 40-44
+        1.9,  # 45+
+    ]
+)
+ETA_DETECT_AGE_SIGMA = 0.5
 
 
 # --------------------------------------------------------------------------- #
@@ -217,6 +237,25 @@ ETA_TERM_EDU = np.array(
 )
 ETA_TERM_EDU_SIGMA = 0.20
 
+# Age effects on termination choice (2026-06-21, NEW). Termination given a
+# confirmed diagnosis varies with maternal age (Natoli 2012 noted age variation).
+# Modest INCREASING prior — the softest piece (the US direction is genuinely
+# uncertain), wide enough for the data to refine. NB: only the COMBINED
+# eta_detect*eta_term age effect is data-identified; the access-vs-choice split is
+# prior-driven. See notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_TERM_AGE = np.array(
+    [
+        -0.4,  # <20
+        -0.2,  # 20-24
+        -0.1,  # 25-29
+        0.1,  # 30-34
+        0.3,  # 35-39
+        0.4,  # 40-44
+        0.5,  # 45+
+    ]
+)
+ETA_TERM_AGE_SIGMA = 0.4
+
 # Year effect on termination: a single homoscedastic sigma absorbing
 # mild year-over-year drift in termination rates. Without a separate
 # policy shock to identify, we expect US termination rates conditional
@@ -230,7 +269,13 @@ ETA_TERM_YEAR_SIGMA = 0.15
 
 S_BASELINE = 0.40
 S_LOGIT = logit(S_BASELINE)
-S_SIGMA = 0.30
+# Pinned HARD (2026-06-21): sigma=0.10 was still overwhelmed (s_int escaped ~7 sigma
+# to ~0.24 along the eta*s ridge), so pin the recording LEVEL at the Boulet/Salemi
+# validation value (~0.40) with sigma=0.001, like theta_LB. With s pinned the age-
+# graded reduction lands in eta. The level trades off validation (s~0.40 -> total
+# ~38k) vs surveillance (total ~45k -> s~0.34). See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+S_SIGMA = 0.001
 
 S_RACE = np.array(
     [
@@ -242,7 +287,7 @@ S_RACE = np.array(
         0.00,  # Unknown
     ]
 )
-S_RACE_SIGMA = 0.25
+S_RACE_SIGMA = 0.05  # tightened (2026-06-21): keep s_race from absorbing the ridge
 
 S_EDU = np.array(
     [
@@ -254,19 +299,14 @@ S_EDU = np.array(
         0.00,  # Unknown
     ]
 )
-S_EDU_SIGMA = 0.20
+S_EDU_SIGMA = 0.05  # tightened (2026-06-21): keep s_edu from absorbing the ridge
 
-S_PRETERM_MU = -0.40
-S_PRETERM_SIGMA = 0.20
-
-S_CCHD_MU = -0.50
-S_CCHD_SIGMA = 0.40
-
-S_NICU_MU = -0.50
-S_NICU_SIGMA = 0.40
-
-S_AVEN_MU = -0.40
-S_AVEN_SIGMA = 0.40
+# Clinical-flag recording effects (preterm/CCHD/NICU/Aven) were DROPPED from s on
+# 2026-06-21. They blew up positive (s_nicu +5.8) because CCHD/NICU correlate with
+# true DS prevalence (invariant #2 is backwards) and the model could only express
+# that through recording. The flags remain available as the Aim-4 co-occurring-
+# conditions analysis (diagnostics.cchd_consistency_*), where they are an OUTCOME of
+# true DS, not a recording covariate. See notes/20260621-theta-lb-escape-age-gradient.md.
 
 
 # --------------------------------------------------------------------------- #
@@ -310,6 +350,9 @@ class ModelPriors:
         default_factory=lambda: ETA_DETECT_PAYER.copy()
     )
     eta_detect_payer_sigma: float = ETA_DETECT_PAYER_SIGMA
+    eta_detect_age: np.ndarray = field(
+        default_factory=lambda: ETA_DETECT_AGE.copy()
+    )
     eta_detect_age_sigma: float = ETA_DETECT_AGE_SIGMA
 
     # Stage 2b
@@ -323,6 +366,10 @@ class ModelPriors:
         default_factory=lambda: ETA_TERM_EDU.copy()
     )
     eta_term_edu_sigma: float = ETA_TERM_EDU_SIGMA
+    eta_term_age: np.ndarray = field(
+        default_factory=lambda: ETA_TERM_AGE.copy()
+    )
+    eta_term_age_sigma: float = ETA_TERM_AGE_SIGMA
     eta_term_year_sigma: float = ETA_TERM_YEAR_SIGMA
 
     # Stage 3
@@ -332,14 +379,6 @@ class ModelPriors:
     s_race_sigma: float = S_RACE_SIGMA
     s_edu: np.ndarray = field(default_factory=lambda: S_EDU.copy())
     s_edu_sigma: float = S_EDU_SIGMA
-    s_preterm_mu: float = S_PRETERM_MU
-    s_preterm_sigma: float = S_PRETERM_SIGMA
-    s_cchd_mu: float = S_CCHD_MU
-    s_cchd_sigma: float = S_CCHD_SIGMA
-    s_nicu_mu: float = S_NICU_MU
-    s_nicu_sigma: float = S_NICU_SIGMA
-    s_aven_mu: float = S_AVEN_MU
-    s_aven_sigma: float = S_AVEN_SIGMA
 
     # False positives
     false_positive_rate: float = FALSE_POSITIVE_RATE

@@ -83,10 +83,6 @@ def build_model(
     edu_idx = cells["edu_idx"].to_numpy()
     payer_idx = cells["payer_idx"].to_numpy()
     year_idx = cells["year_idx"].to_numpy()
-    preterm = cells["preterm"].to_numpy().astype(float)
-    cchd = cells["cchd"].to_numpy().astype(float)
-    nicu = cells["nicu"].to_numpy().astype(float)
-    aven = cells["aven"].to_numpy().astype(float)
     N_cell = cells["N_cell"].to_numpy()
     R_cell = cells["R_cell"].to_numpy()
 
@@ -153,7 +149,7 @@ def build_model(
                 )
                 eta_det_age = pm.Normal(
                     "eta_detect_age",
-                    mu=0.0,
+                    mu=priors.eta_detect_age,
                     sigma=priors.eta_detect_age_sigma,
                     dims="age",
                 )
@@ -201,6 +197,12 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
+                eta_term_age = pm.Normal(
+                    "eta_term_age",
+                    mu=priors.eta_term_age,
+                    sigma=priors.eta_term_age_sigma,
+                    dims="age",
+                )
                 eta_term_year = pm.Normal(
                     "eta_term_year",
                     mu=0.0,
@@ -211,6 +213,7 @@ def build_model(
                     eta_term_int
                     + eta_term_race[race_idx]
                     + eta_term_edu[edu_idx]
+                    + eta_term_age[age_idx]
                     + eta_term_year[year_idx]
                 )
                 eta = 1.0 - eta_detect * eta_term
@@ -232,28 +235,8 @@ def build_model(
                 sigma=priors.s_edu_sigma,
                 dims="edu",
             )
-            s_preterm = pm.Normal(
-                "s_preterm",
-                mu=priors.s_preterm_mu,
-                sigma=priors.s_preterm_sigma,
-            )
-            s_cchd = pm.Normal(
-                "s_cchd", mu=priors.s_cchd_mu, sigma=priors.s_cchd_sigma
-            )
-            s_nicu = pm.Normal(
-                "s_nicu", mu=priors.s_nicu_mu, sigma=priors.s_nicu_sigma
-            )
-            s_aven = pm.Normal(
-                "s_aven", mu=priors.s_aven_mu, sigma=priors.s_aven_sigma
-            )
             s = pm.math.invlogit(
-                s_int
-                + s_race[race_idx]
-                + s_edu[edu_idx]
-                + s_preterm * preterm
-                + s_cchd * cchd
-                + s_nicu * nicu
-                + s_aven * aven
+                s_int + s_race[race_idx] + s_edu[edu_idx]
             )
         else:
             s = pt.ones_like(theta_lb)

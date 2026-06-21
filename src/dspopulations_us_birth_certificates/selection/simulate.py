@@ -54,15 +54,12 @@ class TrueParams:
     eta_term_int: float
     eta_term_race: np.ndarray  # (N_RACE,)
     eta_term_edu: np.ndarray  # (N_EDU,)
+    eta_term_age: np.ndarray  # (N_AGE,)
     eta_term_year: np.ndarray  # (n_year,)
 
     s_int: float
     s_race: np.ndarray  # (N_RACE,)
     s_edu: np.ndarray  # (N_EDU,)
-    s_preterm: float
-    s_cchd: float
-    s_nicu: float
-    s_aven: float
 
     false_positive_rate: float
 
@@ -91,7 +88,7 @@ class TrueParams:
                 priors.eta_detect_logit, priors.eta_detect_sigma
             ),
             eta_det_year=draw(year_offsets, priors.eta_detect_year_sigma),
-            eta_det_age=draw(0.0, priors.eta_detect_age_sigma, size=N_AGE),
+            eta_det_age=draw(priors.eta_detect_age, priors.eta_detect_age_sigma),
             eta_det_race=draw(
                 priors.eta_detect_race, priors.eta_detect_race_sigma
             ),
@@ -106,14 +103,11 @@ class TrueParams:
                 priors.eta_term_race, priors.eta_term_race_sigma
             ),
             eta_term_edu=draw(priors.eta_term_edu, priors.eta_term_edu_sigma),
+            eta_term_age=draw(priors.eta_term_age, priors.eta_term_age_sigma),
             eta_term_year=eta_term_year,
             s_int=draw(priors.s_logit, priors.s_sigma),
             s_race=draw(priors.s_race, priors.s_race_sigma),
             s_edu=draw(priors.s_edu, priors.s_edu_sigma),
-            s_preterm=draw(priors.s_preterm_mu, priors.s_preterm_sigma),
-            s_cchd=draw(priors.s_cchd_mu, priors.s_cchd_sigma),
-            s_nicu=draw(priors.s_nicu_mu, priors.s_nicu_sigma),
-            s_aven=draw(priors.s_aven_mu, priors.s_aven_sigma),
             false_positive_rate=priors.false_positive_rate,
         )
 
@@ -172,6 +166,7 @@ def simulate_cells(
         truth.eta_term_int
         + truth.eta_term_race[race_idx]
         + truth.eta_term_edu[edu_idx]
+        + truth.eta_term_age[age_idx]
         + truth.eta_term_year[year_idx]
     )
     eta = 1.0 - eta_detect * eta_term
@@ -180,10 +175,6 @@ def simulate_cells(
         truth.s_int
         + truth.s_race[race_idx]
         + truth.s_edu[edu_idx]
-        + truth.s_preterm * preterm
-        + truth.s_cchd * cchd
-        + truth.s_nicu * nicu
-        + truth.s_aven * aven
     )
 
     p_ds_lb = theta_lb * eta
