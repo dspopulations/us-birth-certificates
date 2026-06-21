@@ -110,18 +110,26 @@ ETA_DETECT_BASELINE = 0.70
 ETA_DETECT_LOGIT = logit(ETA_DETECT_BASELINE)
 ETA_DETECT_SIGMA = 0.30
 
-# Year effects covering 2016-2024 (centred around 2020; NIPT rollout).
+# Year effects covering 2016-2024 — re-anchored (2026-06-21) to the
+# serum->NIPS transition (cfDNA average-risk validation ~2014-15; ACOG
+# "for all patients" Sept 2020). Shape is a logistic adoption S-curve:
+# reference-level effective detection ~62% in the serum-dominant era
+# rising to ~81% in the NIPS-dominant years, steepest 2019-2021. This is
+# the externally-anchored time structure that identifies eta vs s (s has
+# no reason to track NIPS penetration), so the *shape* is kept informative
+# while the overall level is loose. Implied reference-level detection shown
+# inline. See notes/20260621-screening-cascade-eta-reanchoring.md.
 ETA_DETECT_YEAR_OFFSETS = np.array(
     [
-        -0.25,  # 2016
-        -0.15,  # 2017
-        -0.05,  # 2018
-        0.05,  # 2019
-        0.15,  # 2020
-        0.20,  # 2021
-        0.25,  # 2022
-        0.28,  # 2023
-        0.30,  # 2024
+        -0.35,  # 2016  ~62%
+        -0.25,  # 2017  ~65%
+        -0.10,  # 2018  ~68%
+        0.10,  # 2019  ~72%
+        0.30,  # 2020  ~76%
+        0.45,  # 2021  ~79%
+        0.55,  # 2022  ~80%
+        0.60,  # 2023  ~81%
+        0.63,  # 2024  ~81%
     ]
 )
 ETA_DETECT_YEAR_SIGMA = 0.15
@@ -172,9 +180,18 @@ ETA_DETECT_AGE_SIGMA = 0.20
 # Stage 2b: termination eta_term                                              #
 # --------------------------------------------------------------------------- #
 
-ETA_TERM_BASELINE = 0.67
+ETA_TERM_BASELINE = 0.67  # Natoli 2012 US population-based weighted mean
 ETA_TERM_LOGIT = logit(ETA_TERM_BASELINE)
-ETA_TERM_SIGMA = 0.25
+# Data-identified level (2026-06-21): widened 0.25 -> 0.60 so the US
+# termination-given-diagnosis *level* is set by the data (under the pin-s
+# identification), not by the prior. Centre stays at Natoli's 67% (US,
+# population-based, heterogeneous); the ~90% in the literature is European/
+# hospital-based and is deliberately NOT imported. The time-varying engine
+# is eta_detect (NIPS detection), NOT eta_term — evidence shows
+# termination|diagnosis is flat-to-declining, not rising, with NIPS
+# (Lund 2021, Miltoft 2018), so the year effect below stays a zero-mean
+# drift. See notes/20260621-screening-cascade-eta-reanchoring.md.
+ETA_TERM_SIGMA = 0.60
 
 ETA_TERM_RACE = np.array(
     [
