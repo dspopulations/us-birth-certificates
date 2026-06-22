@@ -288,6 +288,19 @@ change in what families decide once a case is found.
 
 ![Prenatal screening, termination, and the combined reduction (with a 95% credible interval) over 2016–2024, variants C and B.](figures/year_detection_termination.png)
 
+Is that just the changing population — older mothers, shifting ethnicity and SES mix?
+**No.** Holding the demographic composition fixed (standardising every year to the
+pooled 2016–2024 mix) and varying only the fitted year effect leaves the curves almost
+unchanged: screening, termination and reduction each move by **at most ~1–2 percentage
+points** versus the population-weighted version. So the rising screening and flat
+termination are genuine year effects, not compositional artefacts — though the
+as-observed screening rise is a sliver steeper, as births shifted slightly toward
+higher-screening groups. (The model adjusts for age, ethnicity and education in both
+stages, and payer in screening; the population-weighted curves above simply re-mix that
+adjusted per-cell rate by each year's composition, which this standardisation removes.)
+
+![Screening, termination and reduction by year, composition-standardised (solid) versus as-observed (dashed), variant C. The two nearly coincide, so the trends are not driven by the changing demographic mix.](figures/year_standardised.png)
+
 In absolute numbers, the model puts DS livebirths at **~4,900 in 2016 falling to
 ~4,200 by 2024** under the pinned-recording variants (A, C), or **~5,800 → ~5,100**
 under variant B — a decline as rising termination outpaces the small rise in the
