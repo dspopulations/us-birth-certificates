@@ -350,13 +350,57 @@ across maternal ages. This is exactly the trap a raw-data reading falls into, an
 the interaction was worth fitting: the apparent "older mothers first" is an artefact
 of changing composition, not differential screening.
 
+## Cross-check: fitting a GB-corrected total (variant D)
+
+The recording rate is the headline assumption — the data can't pin it, so we pinned it
+from validation studies. A way to test that choice is to correct under-ascertainment a
+_completely different way_ and see whether the answer holds. The project's
+machine-learning strand does exactly that: gradient-boosted classifiers predict which
+_unrecorded_ births were likely DS. **Variant D** fits the structural model to that
+GB-corrected total — with recording pinned _off_ (≈1), so it decomposes the supplied
+total directly into natural rate × survival, sidestepping the recording-vs-termination
+ridge.
+
+To avoid circularity we use the **C-only-trained, demographically-blind** classifier
+(it excludes race, education and payer as features, so it cannot re-import demographic
+recording bias) and its **calibrated** target — the predicted DS probability summed
+over unrecorded births, not the thresholded "predicted-missing" flag (which is anchored
+to an arbitrary multiplier). That total is **~25,700 (implied recording ~0.69)**.
+
+**On the total, the cross-check is decisive — and it favours the structural model.**
+Variant D's ~25,700 is the _lowest_ of every estimate:
+
+![Triangulating the 2016–2024 DS livebirth total: the recorded count, variant D (GB-calibrated), the structural variants A/C/B (shaded recording-assumption bound), the previous prevalence model, and external surveillance.](figures/totals_triangulation.png)
+
+The structural bound (40–48k) is corroborated from _two_ independent directions — the
+earlier prevalence model (~44k) and de Graaf surveillance (~48k) both land inside or
+just above it. Variant D sits far below, and it carries its own refutation: with
+recording pinned to ~0.69 it must explain the low livebirth count as **termination**,
+and does so implausibly — **38% termination for mothers under 20** (versus ~5% under the
+structural model; teenagers have the lowest screening uptake of all). The GB total is
+too low because the classifier, trained on _recorded_ (hence clinically apparent) DS,
+cannot recognise the clinically-subtle missed cases — a selection bias that pushes its
+recording estimate high. So the structural recording-pin (~0.40) is the better-supported
+route for the _total_.
+
+**On the structure, the conclusions are robust.** Re-deriving the demographics on the
+GB-corrected counts — an entirely different de-biasing mechanism — leaves the
+qualitative findings intact: termination still rises steeply with maternal age, and NH
+Asian/Pacific Islander still have the lowest true DS livebirth rate. What does _not_
+survive is the demographic _spread_ (it compresses, because the GB is demographically
+blind) or the absolute _levels_ (inflated by the undercount).
+
+The takeaway: the headline _number_ is best anchored by recording validation and
+surveillance, not feature-based prediction — but the _conclusions_ about who and when
+are robust to how you correct for under-ascertainment.
+
 ## Limitations
 
 The model works, but:
 
 - **It is a reconstruction, not a measurement.** Because of the
-  non-identifiability (Section 4), the birth-certificate data _cannot_ pin the
-  total on their own. We resolved the ambiguity by **assumption** — pinning the
+  non-identifiability (_The hard part_, above), the birth-certificate data _cannot_
+  pin the total on their own. We resolved the ambiguity by **assumption** — pinning the
   recording rate `s` and the natural rate θ from outside studies. Change the
   assumption and the headline moves: pinning `s ≈ 0.40` gives ~40k; letting the data
   set it (`s ≈ 0.32`) gives ~48k. **The total is roughly inversely proportional to

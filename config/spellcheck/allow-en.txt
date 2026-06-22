@@ -118,6 +118,7 @@ rhat
 sigmas
 sigmoidal
 sklearn
+thresholded
 vars
 wallclock
 
