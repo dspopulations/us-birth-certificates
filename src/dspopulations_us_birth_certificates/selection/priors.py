@@ -432,21 +432,22 @@ def variant_C_default() -> ModelPriors:
     return ModelPriors()
 
 
-def variant_D_rprime() -> ModelPriors:
-    """Comparative track: fit R' = recorded + predicted-missing, recording off.
+def variant_D_recording_off() -> ModelPriors:
+    """Comparative track: fit a GB-bias-corrected DS total with recording pinned off.
 
-    R' is the project's ``down_ind = 1 OR ds_pred_missing`` union -- recorded cases
-    plus the likely-missed cases flagged by the **C-only-trained, demographically
-    blind** USBC11_M1_CN model (``ds_pred_missing_14``). Note: "predicted" refers to
-    the predicted-missing *flag*, NOT a "C+P" training label -- the underlying GB is
-    trained confirmed-only, and drops race/education/payer as features.
+    Recording is pinned to ~1 (s_int -> logit(0.999), no demographic offsets) and the
+    false-positive rate to 0, so the model decomposes an externally bias-corrected
+    total directly into natural rate x survival -- the recording-vs-termination
+    non-identifiability that needs the A/B/C bound does not arise here.
 
-    The recording stage is pinned to ~1 (s_int -> logit(0.999), no demographic
-    offsets) and the false-positive rate to 0, so the model decomposes R' directly
-    into natural rate x survival -- the recording-vs-termination non-identifiability
-    that needs the A/B/C bound does not arise here. Pair with
-    ``prepare_cells(missing_flag_column="ds_pred_missing_14")``. See
-    notes/20260622-predictors-bayesian-model.md.
+    The target is supplied by the cell aggregation, using the **C-only-trained,
+    demographically blind** USBC11_M1_CN predictions:
+    ``prepare_cells(predictions_column="p_ds_lb_pred_14")`` -- the calibrated expected
+    DS total (recorded + summed predicted probability over unrecorded), the definitive
+    target, independent of any quota/multiplier -- or
+    ``missing_flag_column="ds_pred_missing_14"`` for the coarser R' flag union.
+    "Predicted" is the GB prediction, NOT a C+P training label (the model is trained
+    confirmed-only). See notes/20260622-predictors-bayesian-model.md.
     """
     p = ModelPriors()
     p.s_logit = logit(0.999)
@@ -463,5 +464,5 @@ VARIANTS = {
     "A": variant_A_tight_s,
     "B": variant_B_tight_eta_term,
     "C": variant_C_default,
-    "D": variant_D_rprime,
+    "D": variant_D_recording_off,
 }

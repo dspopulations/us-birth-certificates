@@ -105,15 +105,28 @@ def _build_sql(
     columns: dict[str, str],
     year_range: tuple[int, int],
     missing_flag_column: str | None = None,
+    predictions_column: str | None = None,
 ) -> str:
     """Return SQL aggregating the raw table into selection-model cells.
 
-    When ``missing_flag_column`` is given (e.g. a GB ``ds_pred_missing_*`` flag),
-    ``R_cell`` counts the *union* ``down_ind = 1 OR flag = 1`` -- the project's R'
-    (recorded plus predicted-missing) -- instead of recorded DS alone, the input for
-    the variant-D comparative track. "Predicted" is the predicted-missing flag, not
-    a C+P training label (the GB model is trained confirmed-only).
+    ``R_cell`` defaults to recorded DS (``SUM(down_ind)``). Two GB-corrected modes
+    feed the variant-D comparative track (pass at most one):
+
+    - ``missing_flag_column`` (a ``ds_pred_missing_*`` flag): ``R_cell`` counts the
+      *union* ``down_ind = 1 OR flag = 1`` -- the project's R' (recorded plus
+      predicted-missing). Coarse: the flag is a thresholded year-month quota.
+    - ``predictions_column`` (a ``p_ds_lb_pred_*`` probability): ``R_cell`` is the
+      *calibrated expected* DS count -- recorded births contribute 1, unrecorded
+      births contribute the model's predicted DS probability -- summed per cell and
+      rounded. Independent of any quota/multiplier choice.
+
+    "Predicted" refers to the GB prediction, not a C+P training label (the model is
+    trained confirmed-only).
     """
+    if missing_flag_column and predictions_column:
+        raise ValueError(
+            "Pass at most one of missing_flag_column / predictions_column."
+        )
     from_year, to_year = year_range
     c = columns
     pred_missing_expr = (
@@ -121,11 +134,23 @@ def _build_sql(
         if missing_flag_column
         else "0"
     )
-    r_cell_expr = (
-        "SUM(CASE WHEN down_ind = 1 OR pred_missing = 1 THEN 1 ELSE 0 END)"
-        if missing_flag_column
-        else "SUM(down_ind)"
+    prob_expr = (
+        f"COALESCE(CAST({predictions_column} AS DOUBLE), 0.0)"
+        if predictions_column
+        else "0.0"
     )
+    if predictions_column:
+        # Calibrated expected DS per cell (float): recorded contribute 1, unrecorded
+        # contribute the model's predicted DS probability. Integerised by
+        # largest-remainder rounding in prepare_cells (preserves the total); a per-cell
+        # ROUND here would bias the total down ~9% via the many sub-0.5 cells.
+        r_cell_expr = "SUM(CASE WHEN down_ind = 1 THEN 1.0 ELSE prob END)"
+    elif missing_flag_column:
+        r_cell_expr = (
+            "SUM(CASE WHEN down_ind = 1 OR pred_missing = 1 THEN 1 ELSE 0 END)"
+        )
+    else:
+        r_cell_expr = "SUM(down_ind)"
     # ``mage_c`` binning — last edge is the 45+ open bin.
     age_case = (
         f"CASE "
@@ -183,7 +208,8 @@ def _build_sql(
                 {nicu_case}    AS nicu,
                 {aven_case}    AS aven,
                 CAST({c['down_ind']} AS INTEGER) AS down_ind,
-                {pred_missing_expr} AS pred_missing
+                {pred_missing_expr} AS pred_missing,
+                {prob_expr} AS prob
             FROM {table}
             WHERE {c['year']} BETWEEN {from_year} AND {to_year}
               AND {c['mage_c']} IS NOT NULL
@@ -204,6 +230,24 @@ def _build_sql(
     """
 
 
+def _largest_remainder_round(x: np.ndarray) -> np.ndarray:
+    """Round non-negative reals to integers preserving the rounded grand total.
+
+    Floor every value, then hand the leftover (``round(sum) - sum(floors)``) as +1 to
+    the cells with the largest fractional parts. This avoids the systematic downward
+    bias of independent per-cell rounding when many cells carry sub-0.5 expected
+    counts (as in the variant-D probability track).
+    """
+    floor = np.floor(x)
+    remainder = x - floor
+    out = floor.astype(np.int64)
+    deficit = int(round(float(x.sum()))) - int(floor.sum())
+    if deficit > 0:
+        top = np.argsort(remainder)[::-1][:deficit]
+        out[top] += 1
+    return out
+
+
 def prepare_cells(
     con: duckdb.DuckDBPyConnection,
     *,
@@ -211,6 +255,7 @@ def prepare_cells(
     table: str = "us_births",
     columns: dict[str, str] | None = None,
     missing_flag_column: str | None = None,
+    predictions_column: str | None = None,
 ) -> pd.DataFrame:
     """Aggregate raw NCHS rows into selection-model cells.
 
@@ -220,9 +265,13 @@ def prepare_cells(
         table: Name of the births table (default ``us_births``).
         columns: Optional override for column names (schema drift).
         missing_flag_column: Optional GB ``ds_pred_missing_*`` flag. When set,
-            ``R_cell`` counts ``down_ind = 1 OR flag = 1`` -- the project's R'
-            (recorded plus predicted-missing), the variant-D track -- rather than
-            recorded DS alone.
+            ``R_cell`` counts the R' union ``down_ind = 1 OR flag = 1`` (recorded
+            plus predicted-missing, the variant-D flag track).
+        predictions_column: Optional GB ``p_ds_lb_pred_*`` probability. When set,
+            ``R_cell`` is the calibrated expected DS count (recorded contribute 1,
+            unrecorded contribute their predicted probability, summed and rounded) --
+            the variant-D probability track, independent of any quota/multiplier.
+            Mutually exclusive with ``missing_flag_column``.
 
     Returns:
         A DataFrame with the integer index columns + ``N_cell`` / ``R_cell``,
@@ -234,11 +283,16 @@ def prepare_cells(
         columns=cols,
         year_range=year_range,
         missing_flag_column=missing_flag_column,
+        predictions_column=predictions_column,
     )
     cells = con.execute(sql).df()
 
     # DuckDB returns SUM() as nullable; cast for clean downstream use.
     cells["N_cell"] = cells["N_cell"].astype("int64")
+    if predictions_column is not None:
+        # R_cell is the per-cell expected DS count (float); integerise preserving the
+        # total (per-cell rounding would bias the total down).
+        cells["R_cell"] = _largest_remainder_round(cells["R_cell"].to_numpy(float))
     cells["R_cell"] = cells["R_cell"].astype("int64")
     for col in (
         "year_idx",

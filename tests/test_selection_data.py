@@ -23,6 +23,7 @@ from dspopulations_us_birth_certificates.selection.data import (
     PAYER_UNKNOWN_IDX,
     RACE_MAP,
     RACE_UNKNOWN_IDX,
+    _largest_remainder_round,
 )
 
 
@@ -129,6 +130,53 @@ def test_prepare_cells_column_schema(tiny_db: Path) -> None:
     assert "n_region" not in cells.attrs
     assert cells.attrs["n_year"] == 9
     assert cells.attrs["year_range"] == (2016, 2024)
+
+
+def test_largest_remainder_round_preserves_total() -> None:
+    # Many sub-0.5 values: independent per-cell rounding floors them all to 0 and
+    # loses the total; largest-remainder must preserve the rounded grand total.
+    x = np.array([0.3, 0.3, 0.4, 2.4, 0.6])  # sum 4.0
+    out = _largest_remainder_round(x)
+    assert out.sum() == round(x.sum()) == 4
+    assert out.dtype == np.int64
+    assert (out >= np.floor(x)).all() and (out <= np.ceil(x)).all()
+    # integer input returned unchanged
+    assert (_largest_remainder_round(np.array([1.0, 2.0, 3.0])) == [1, 2, 3]).all()
+
+
+def test_prepare_cells_prob_sum(tmp_path: Path) -> None:
+    """predictions_column gives calibrated expected DS = recorded + sum(prob | unrec)."""
+    rows = [
+        _make_row(year=2020, mage_c=30, down_ind=1),  # recorded -> contributes 1
+        _make_row(year=2020, mage_c=30, down_ind=1),  # recorded -> 1
+        _make_row(year=2020, mage_c=30, down_ind=0),  # unrecorded -> prob 0.7
+        _make_row(year=2020, mage_c=30, down_ind=0),  # unrecorded -> prob 0.3
+    ]
+    df = pd.DataFrame(rows)
+    df["p_ds_lb_pred_14"] = [0.9, 0.1, 0.7, 0.3]  # recorded preds ignored (CASE -> 1)
+    db = tmp_path / "p.db"
+    con = duckdb.connect(str(db))
+    con.register("_r", df)
+    con.execute("CREATE TABLE us_births AS SELECT * FROM _r")
+    con.unregister("_r")
+    con.close()
+
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        cells = prepare_cells(
+            con, year_range=(2020, 2020), predictions_column="p_ds_lb_pred_14"
+        )
+        # expected = 2 recorded + (0.7 + 0.3 over unrecorded) = 3
+        assert cells["R_cell"].sum() == 3
+        assert (cells["R_cell"] <= cells["N_cell"]).all()
+        with pytest.raises(ValueError, match="at most one"):
+            prepare_cells(
+                con,
+                predictions_column="p_ds_lb_pred_14",
+                missing_flag_column="ds_pred_missing_14",
+            )
+    finally:
+        con.close()
 
 
 def test_prepare_cells_year_filter(tiny_db: Path) -> None:

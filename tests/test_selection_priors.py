@@ -95,8 +95,8 @@ def test_variants_registry() -> None:
 
 
 def test_variant_d_recording_pinned_off() -> None:
-    """Variant D pins recording to ~1 (no demographic offsets) for the R' track."""
-    d = P.variant_D_rprime()
+    """Variant D pins recording to ~1 (no demographic offsets) for the GB-total track."""
+    d = P.variant_D_recording_off()
     assert P.inv_logit(d.s_logit) > 0.99
     assert d.s_sigma <= 0.001
     assert d.s_race_sigma <= 0.001 and d.s_edu_sigma <= 0.001
