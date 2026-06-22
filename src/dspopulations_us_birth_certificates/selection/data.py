@@ -109,9 +109,10 @@ def _build_sql(
     """Return SQL aggregating the raw table into selection-model cells.
 
     When ``missing_flag_column`` is given (e.g. a GB ``ds_pred_missing_*`` flag),
-    ``R_cell`` counts the *union* ``down_ind = 1 OR flag = 1`` (the "R-prime"
-    confirmed-plus-predicted total) instead of recorded DS alone — the input for
-    the variant-D comparative track.
+    ``R_cell`` counts the *union* ``down_ind = 1 OR flag = 1`` -- the project's R'
+    (recorded plus predicted-missing) -- instead of recorded DS alone, the input for
+    the variant-D comparative track. "Predicted" is the predicted-missing flag, not
+    a C+P training label (the GB model is trained confirmed-only).
     """
     from_year, to_year = year_range
     c = columns
@@ -219,8 +220,9 @@ def prepare_cells(
         table: Name of the births table (default ``us_births``).
         columns: Optional override for column names (schema drift).
         missing_flag_column: Optional GB ``ds_pred_missing_*`` flag. When set,
-            ``R_cell`` counts ``down_ind = 1 OR flag = 1`` (confirmed-plus-predicted,
-            the variant-D track) rather than recorded DS alone.
+            ``R_cell`` counts ``down_ind = 1 OR flag = 1`` -- the project's R'
+            (recorded plus predicted-missing), the variant-D track -- rather than
+            recorded DS alone.
 
     Returns:
         A DataFrame with the integer index columns + ``N_cell`` / ``R_cell``,

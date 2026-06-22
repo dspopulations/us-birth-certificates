@@ -61,7 +61,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
     variant_A_tight_s,
     variant_B_tight_eta_term,
     variant_C_default,
-    variant_D_cplus,
+    variant_D_rprime,
 )
 from dspopulations_us_birth_certificates.selection.sampling import sample
 from dspopulations_us_birth_certificates.selection.simulate import (
@@ -107,5 +107,5 @@ __all__ = [
     "variant_A_tight_s",
     "variant_B_tight_eta_term",
     "variant_C_default",
-    "variant_D_cplus",
+    "variant_D_rprime",
 ]

@@ -432,15 +432,20 @@ def variant_C_default() -> ModelPriors:
     return ModelPriors()
 
 
-def variant_D_cplus() -> ModelPriors:
-    """Comparative track: fit GB confirmed-plus-predicted (C+P) counts, recording off.
+def variant_D_rprime() -> ModelPriors:
+    """Comparative track: fit R' = recorded + predicted-missing, recording off.
+
+    R' is the project's ``down_ind = 1 OR ds_pred_missing`` union -- recorded cases
+    plus the likely-missed cases flagged by the **C-only-trained, demographically
+    blind** USBC11_M1_CN model (``ds_pred_missing_14``). Note: "predicted" refers to
+    the predicted-missing *flag*, NOT a "C+P" training label -- the underlying GB is
+    trained confirmed-only, and drops race/education/payer as features.
 
     The recording stage is pinned to ~1 (s_int -> logit(0.999), no demographic
-    offsets) and the false-positive rate to 0, so the model decomposes the
-    GB-corrected total directly into natural rate x survival -- the
-    recording-vs-termination non-identifiability that needs the A/B/C bound does not
-    arise here. Pair with ``prepare_cells(missing_flag_column="ds_pred_missing_14")``
-    (USBC11_M1_CN: C-only, demographically blind). See
+    offsets) and the false-positive rate to 0, so the model decomposes R' directly
+    into natural rate x survival -- the recording-vs-termination non-identifiability
+    that needs the A/B/C bound does not arise here. Pair with
+    ``prepare_cells(missing_flag_column="ds_pred_missing_14")``. See
     notes/20260622-predictors-bayesian-model.md.
     """
     p = ModelPriors()
@@ -458,5 +463,5 @@ VARIANTS = {
     "A": variant_A_tight_s,
     "B": variant_B_tight_eta_term,
     "C": variant_C_default,
-    "D": variant_D_cplus,
+    "D": variant_D_rprime,
 }
