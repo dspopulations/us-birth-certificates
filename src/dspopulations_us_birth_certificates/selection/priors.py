@@ -193,7 +193,13 @@ ETA_DETECT_AGE = np.array(
         1.9,  # 45+
     ]
 )
-ETA_DETECT_AGE_SIGMA = 0.5
+# Tightened 0.5 -> 0.1 (2026-06-22): with both eta_detect_age and eta_term_age
+# loose, only their PRODUCT (the combined age effect on eta) is identified, so the
+# sampler wandered the ridge and variant A failed to converge (r-hat 1.73, ESS 6 at
+# the 25-29 band). Pin the screening-access age effect (well anchored to AMA uptake)
+# and let eta_term_age carry the data-identified residual. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_DETECT_AGE_SIGMA = 0.1
 
 
 # --------------------------------------------------------------------------- #
