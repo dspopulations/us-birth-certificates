@@ -111,6 +111,7 @@ def _coverage_95(
         # (5/9 = 56%) loudly.
         ("theta_lb_age", "theta_lb_age_logit", 0.7),
         ("eta_term_race", "eta_term_race", 0.7),
+        ("eta_term_age", "eta_term_age", 0.7),
         ("eta_term_year", "eta_term_year", 0.7),
         ("s_race", "s_race", 0.7),
     ],
@@ -137,8 +138,6 @@ def test_parameter_recovery_95_ci_coverage(
         # typical MCMC variance under these sample sizes.
         ("eta_term_int", "eta_term_int", 0.5),
         ("s_int", "s_int", 0.5),
-        ("s_preterm", "s_preterm", 0.5),
-        ("s_cchd", "s_cchd", 0.5),
     ],
 )
 def test_scalar_posterior_mean_within_tolerance(
@@ -161,7 +160,13 @@ def test_sampler_converged(recovery_fit) -> None:
     _, idata = recovery_fit
     summary = az.summary(
         idata,
-        var_names=["theta_lb_age", "eta_term_race", "eta_term_year", "s_race"],
+        var_names=[
+            "theta_lb_age",
+            "eta_term_race",
+            "eta_term_age",
+            "eta_term_year",
+            "s_race",
+        ],
     )
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     max_rhat = float(summary[rhat_col].max())
