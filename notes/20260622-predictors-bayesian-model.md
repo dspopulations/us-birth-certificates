@@ -10,38 +10,7 @@ provisional.
 
 ---
 
-## 1. Introduction
-
-This study estimates how many babies are truly born with Down syndrome (DS) in the
-United States, correcting for the well-documented under-recording of DS on birth
-certificates — validation studies that check certificates against medical records
-find only roughly 40% of true cases are recorded (Boulet 2011). Naïve counts
-therefore understate DS births by around 60%. The project closes that gap two
-complementary ways:
-
-- **A machine-learning strand.** Gradient-boosted classifiers (LightGBM) — the "GB
-  models", a family of variants (M0–M2) — are trained on the 2016–2024 certificates
-  to predict which births were DS, then used to flag _likely-missed_ cases and so
-  estimate the true total as recorded **plus** predicted. A labelling choice runs
-  through that work: **C** (confirmed — births actually recorded as DS) versus
-  **C+P** (confirmed _plus_ the model's predicted-missing cases). C-only proved the
-  cleaner training target, because C+P lets the model lean on a `ca_disor = pending`
-  tautology — an unresolved-diagnosis code that mechanically tracks the
-  predicted-missing label rather than reflecting genuine DS signal.
-
-- **A structural strand.** Rather than classifying individual
-  births, the Bayesian _selection model_ estimates the same true total by writing
-  down the chain of events that turns a real DS conception into (or fails to turn it
-  into) a recorded case, and inverting it. It uses only the recorded counts, and
-  serves as a complement and cross-check on the ML estimate.
-
-The rest of this note is about that selection model. We have US birth certificates
-for 2016–2024 — about **33.5 million births**, of which **17,776 were recorded** as
-having Down syndrome. Because certificates miss many true cases, that recorded count
-is an undercount, and we want the **true** number — recorded **plus** missed. You
-cannot get it by counting; you have to **model** it.
-
-## 2. The model
+## The model
 
 The data are simple: we group all 33.5 M births into demographic **cells** — one per
 combination of maternal-age band, race/ethnicity, education, insurance payer and
@@ -115,7 +84,7 @@ flowchart TD
     style OBS fill:#f7dede,stroke:#910202
 ```
 
-## 3. What the Bayesian framing adds
+## Bayesian posterior distributions
 
 In a frequentist analysis you'd maximise a **likelihood** — the probability of the
 data given the parameters — and report point estimates with confidence intervals.
@@ -132,7 +101,7 @@ all the parameters. The external knowledge in the priors is doing essential work
 That is a strength (it lets us use everything we know) and a liability (the answer
 leans on assumptions), and being explicit about it is the whole point.
 
-## 4. The hard part: things that only ever appear multiplied together
+## The hard part: things that only ever appear multiplied together
 
 Look again at `recorded rate ≈ θ × η × s`. The data only ever see the **product**.
 That means the data cannot, by themselves, tell apart:
@@ -150,7 +119,7 @@ That "something else" is the priors — i.e. external numbers we pin down. The t
 DS estimate therefore depends not just on the data but on **which external numbers
 we trust and how hard we pin them**. Keep this in mind; it's the main caveat.
 
-## 5. What went wrong the first time (and what it taught us)
+## What went wrong the first time (and what it taught us)
 
 Our first runs produced a nonsense answer: about **226,000** true DS livebirths
 over 2016–2024 — roughly **five times** the figure independent surveillance implies
@@ -176,7 +145,7 @@ the age pattern was θ itself — and it turned it, breaking the biology.
 **Lesson:** at this data scale, "informative prior" is not the same as "fixed
 number". Anything you mean to hold fixed has to be pinned _hard_.
 
-## 6. What we changed
+### What we changed
 
 Four changes, all aimed at putting each effect where it belongs and pinning the
 genuinely-external quantities so the data can't overwrite them:
@@ -204,7 +173,7 @@ shifted from older blood tests to **cell-free DNA (NIPT)** between roughly 2013 
 2022, which sharply raised detection (and so termination) — a literature review
 documents this and feeds the age/year structure of η.
 
-## 7. The result
+## Current results (preliminary)
 
 With those fixes the model converges (r̂ ≤ 1.01 across all three variants, with
 healthy effective sample sizes). The two variants that **pin** the recording rate
@@ -254,20 +223,15 @@ subgroup's recording-vs-termination split) is assumption-dependent. The variants
 **not** probe the big pins — θ, the 0.40 reference recording, the screening curve —
 so even 40–48k is conditional on those.
 
-## 8. Who the missed cases are — and how the picture is changing
-
-Because every stage can depend on a cell's covariates, the model also says _who_ the
-true and missed cases are. Three caveats travel with this whole section: the
-detection-vs-termination split inside η is prior-driven; recording by subgroup is
-**pinned** in the headline variant (so "missed by group" is partly an assumption);
-and only the C↔B spread bounds the recording-vs-termination question. With that
-flagged:
+### Maternal age
 
 **Maternal age — the strongest, cleanest gradient.** Elective termination of DS
 pregnancies climbs from roughly 5% under age 20 to about 64% at 45+. Both variants
 agree on the shape; freeing recording (B) lowers the level but keeps the steep rise.
 
 ![Termination share of DS pregnancies by maternal-age band, for variants C and B.](figures/age_termination_reduction.png)
+
+### Ethnicity
 
 **Ethnicity — real differences, not an age artefact.** True DS livebirth rates differ
 markedly by ethnicity, and the differences **survive age-standardisation**: re-
@@ -286,6 +250,8 @@ than assumed. For the others, whether the gap is "more termination" or "less
 recording" is exactly the non-identified split (e.g. Asian/PI is _either_ ~59–72%
 terminated _or_ recorded at only ~21%).
 
+### Education
+
 **Education — the strongest data-identified social gradient, and it lives in
 termination.** Education's termination effect was pinned only weakly, and the data
 overrode the prior at every level, roughly tripling its spread: termination climbs
@@ -300,6 +266,8 @@ parallel access story: privately-insured mothers reach screening more than Medic
 or self-pay patients (the data widened that gap well beyond the prior). But payer
 enters the model only through the screening stage, so the gradient is real yet its
 _channel_ is structural, not independently identified.
+
+### Summary
 
 In short: the **maternal-age structure** and the **orderings** (who has higher true
 rates, who terminates more) are robust and largely data-driven; the
@@ -346,10 +314,9 @@ across maternal ages. This is exactly the trap a raw-data reading falls into, an
 the interaction was worth fitting: the apparent "older mothers first" is an artefact
 of changing composition, not differential screening.
 
-## 9. Limitations and criticisms
+## Limitations
 
-This is where honesty matters most. The model works, but the result should not be
-oversold.
+The model works, but:
 
 - **It is a reconstruction, not a measurement.** Because of the
   non-identifiability (Section 4), the birth-certificate data _cannot_ pin the
@@ -402,21 +369,3 @@ oversold.
 - **Provisional.** These are now publication-quality ("reporting") fits and all
   three variants converged, but the project's own plan still flags all data and
   models as preliminary.
-
-## 10. Bottom line
-
-We built a transparent, internally-consistent framework that turns 17,776 recorded
-DS births into an estimate of **~40,000–48,000 true DS livebirths** for 2016–2024,
-depending on the assumed recording rate — implying that **roughly 62–68% of cases
-are missing from birth certificates**, with a clear maternal-age gradient in
-elective termination. The upper end of that range coincides with independent
-surveillance estimates.
-
-Its real value is not the single number but that **every assumption is explicit and
-you can see how the answer depends on it**. The estimate is only as good as the
-external screening and recording figures it leans on; it is a literature-anchored
-reconstruction, not a direct count, and the honest reading is conditional: _"given
-what published studies say about screening and recording, this is the implied
-number."_ Strengthening it means better external anchors — ideally a linked
-registry — not more clever modelling of the same birth-certificate data, which has
-already told us everything it structurally can.
