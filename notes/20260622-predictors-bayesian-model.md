@@ -101,6 +101,7 @@ flowchart TD
     PAY --> DET
     YEAR --> DET
     YEAR --> TERM
+    YEAR --> RECORD
 
     THETA --> TRUE["TRUE DS livebirths<br/>natural × survival"]
     DET --> TRUE
@@ -113,10 +114,6 @@ flowchart TD
     style TRUE fill:#fdf0df,stroke:#ef7001
     style OBS fill:#f7dede,stroke:#910202
 ```
-
-The blue nodes are **pinned** to outside knowledge; the red node is the **only thing
-we actually observe** (the recorded count). Everything in between — how many were
-really born, how many were terminated, how many were missed — is _inferred_.
 
 ## 3. What the Bayesian framing adds
 
