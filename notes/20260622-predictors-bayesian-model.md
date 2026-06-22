@@ -298,6 +298,19 @@ across all three variants.
 
 ![Estimated true DS livebirths (top) and termination reduction (bottom) by year, 2016–2024, for variants A, B and C with recorded counts. A and C (pinned recording) overlap; B (freed recording) is higher.](figures/selection_ds_by_year.png)
 
+**Longer-term context (1989–2024).** An earlier, prevalence-based model of this
+project — separate from the selection model — estimates DS livebirths back to 1989.
+It puts them rising from ~4,200 (1989) to a peak ~5,450 (2007), then easing to ~4,800
+by 2024, and its termination reduction climbing from ~23% (1989) to ~40% (2024). Its
+**2016–2024 total is ~44,400** — sitting *between* the selection model's pinned-recording
+variants (A/C, ~40k) and freed-recording B (~48k), and close to independent
+surveillance (~48k). That a structurally different, longer-horizon model lands inside
+the A↔B band is a useful external check on the headline. Read 2019–2024 with care,
+though: this model holds prevalence flat and termination linear from ~2018, so the
+recent years are extrapolated, not data-driven.
+
+![DS livebirths (top) and termination reduction (bottom) by year, 1989–2024, from the earlier prevalence-based model. The shaded 2019–2024 region is extrapolated (prevalence held flat, termination linear).](figures/previous_model_ds_by_year.png)
+
 Did screening expand fastest in older mothers, where NIPT was recommended first? The
 raw recorded-DS-rate decline _looks_ concentrated in them — between 2016–18 and
 2022–24 it fell **16–22% in mothers aged 30 and over** but only ~9% at 25–29 (the
