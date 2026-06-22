@@ -26,20 +26,27 @@ estimate those probabilities — and hence the missing cases.
 
 ## 2. The model: a chain from conception to checkbox
 
-We split the journey into three stages, each a probability:
+The data are simple: we group all 33.5 M births into demographic **cells** — one per
+combination of maternal-age band, race/ethnicity, education, insurance payer and
+year — and, in each cell, count how many births were *recorded* as DS. That count is
+modelled as a **binomial** draw: `N` births in the cell, each with some probability
+of showing up as a recorded DS case. We estimate that probability by splitting it
+into three stages, each itself a probability:
 
-1. **θ (theta) — the natural rate.** Out of all births to mothers of a given age,
-   what fraction would be DS livebirths *if no-one screened or terminated*? This is
-   biology, and it rises steeply with maternal age (about 1 in 1,500 under age 20,
-   about 1 in 33 at age 45+). It's well measured by earlier studies (Morris et
-   al.), so we treat it as known.
-2. **η (eta) — surviving to birth.** Not every DS pregnancy is born: many are
-   detected by prenatal screening and the pregnancy is electively terminated. η is
-   the fraction that *survive to a livebirth*. (So `1 − η` is the termination
-   "reduction".)
-3. **s — getting recorded.** Given a DS baby *is* born, what's the chance the
-   certificate records it? Validation studies put this around 0.40 — i.e. ~60% are
-   missed.
+1. **θ (theta) — the natural rate.** Of all births to mothers of a given age, what
+   fraction would be DS livebirths *if no-one screened or terminated*? This is
+   biology, rising steeply with maternal age (about 1 in 1,500 under age 20, about
+   1 in 33 at age 45+). It is well measured by earlier studies (Morris et al.), so
+   we **pin** it.
+2. **η (eta) — surviving to birth.** Not every DS pregnancy is born: some are
+   detected by prenatal screening and the pregnancy electively terminated. η is the
+   fraction that *survive to a livebirth*. It is itself the product of two sub-steps
+   — **η_detect** (does screening detect the case?) and **η_term** (given detection,
+   is it terminated?) — so `η = 1 − η_detect × η_term`, and `1 − η` is the
+   termination "reduction".
+3. **s — getting recorded.** Given a DS baby *is* born, does the certificate record
+   it? Validation studies put this around 0.40 — i.e. ~60% are missed — so we
+   **pin** it too.
 
 Put together, the chance a given birth shows up as a *recorded* DS case is roughly
 
@@ -47,7 +54,52 @@ Put together, the chance a given birth shows up as a *recorded* DS case is rough
 recorded rate ≈ θ × η × s     (plus a tiny rate of false positives)
 ```
 
-and the **true** number of DS livebirths is `θ × η` summed over all births.
+and the **true** number of DS livebirths is `θ × η` summed over all births. Each
+stage is allowed to depend on the cell's covariates — age, race, education, payer,
+year — which is how we can later read off, say, termination by education. The
+generative structure is:
+
+```mermaid
+flowchart TD
+    AGE[Maternal age]
+    RACE[Race / ethnicity]
+    EDU[Education]
+    PAY[Insurance payer]
+    YEAR[Year]
+
+    THETA["θ — natural DS rate<br/>PINNED to biology"]
+    DET["η_detect — screening reach"]
+    TERM["η_term — termination if detected"]
+    RECORD["s — certificate recording<br/>PINNED to validation ≈0.40"]
+
+    AGE --> THETA
+    AGE --> DET
+    AGE --> TERM
+    RACE --> DET
+    RACE --> TERM
+    RACE --> RECORD
+    EDU --> DET
+    EDU --> TERM
+    EDU --> RECORD
+    PAY --> DET
+    YEAR --> DET
+    YEAR --> TERM
+
+    THETA --> TRUE["TRUE DS livebirths<br/>θ × (1 − η_detect × η_term)"]
+    DET --> TRUE
+    TERM --> TRUE
+    TRUE --> OBS["OBSERVED — recorded DS count per cell<br/>TRUE × s + false positives"]
+    RECORD --> OBS
+
+    style THETA fill:#dfe7f2,stroke:#014b7f
+    style RECORD fill:#dfe7f2,stroke:#014b7f
+    style TRUE fill:#fdf0df,stroke:#ef7001
+    style OBS fill:#f7dede,stroke:#910202
+```
+
+The blue nodes are **pinned** to outside knowledge; the red node is the **only thing
+we actually observe** (the recorded count). Everything in between — how many were
+really born, how many were terminated, how many were missed — is *inferred*.
 
 ## 3. A note for the frequentist reader: what "Bayesian" adds
 
@@ -160,7 +212,62 @@ assumption, **34–45%** of those pregnancies were electively terminated, leavin
 **~25,000–33,000 missed**. The model also reproduces the recorded counts age-band
 by age-band (a "posterior-predictive check") to within about 5%.
 
-## 8. Limitations and criticisms
+![Ascertainment funnel. Of roughly 72,000 natural DS livebirths, an estimated 40,000–48,000 are born after elective termination, and only about 15,000 are recorded on a birth certificate.](figures/ascertainment_funnel.png)
+
+## 8. Who the missed cases are: age, ethnicity, education, insurance
+
+Because every stage can depend on a cell's covariates, the model also says *who* the
+true and missed cases are. Three caveats travel with this whole section: the
+detection-vs-termination split inside η is prior-driven; recording by subgroup is
+**pinned** in the headline variant (so "missed by group" is partly an assumption);
+and only the C↔B spread bounds the recording-vs-termination question. With that
+flagged:
+
+**Maternal age — the strongest, cleanest gradient.** Elective termination of DS
+pregnancies climbs from roughly 5% under age 20 to about 64% at 45+. Both variants
+agree on the shape; freeing recording (B) lowers the level but keeps the steep rise.
+
+![Termination share of DS pregnancies by maternal-age band, for variants C and B.](figures/age_termination_reduction.png)
+
+**Ethnicity — real differences, not an age artefact.** True DS livebirth rates differ
+markedly by ethnicity, and the differences **survive age-standardisation**: re-
+weighting every group to the national age mix barely moves them, so they are not just
+"some groups are older". The striking case — NH Asian/Pacific Islander mothers are
+the *oldest* (mean age 32; 31% are 35+) yet have the *lowest* true DS rate, because
+their termination is the highest; younger Hispanic mothers have the highest true rate.
+
+![True (model, C–B range) versus recorded DS livebirth rate per 10,000 by ethnicity.](figures/ds_rate_by_ethnicity.png)
+
+The recorded points (red) sit far below the true-rate bands (orange) for every group
+— that gap is the under-ascertainment. **NH Black is the one robust *recording*
+signal:** its implied recording is the lowest, and when recording is freed (variant
+B) the data push it *lower* still, so Black under-recording is data-supported rather
+than assumed. For the others, whether the gap is "more termination" or "less
+recording" is exactly the non-identified split (e.g. Asian/PI is *either* ~59–72%
+terminated *or* recorded at only ~21%).
+
+**Education — the strongest data-identified social gradient, and it lives in
+termination.** Education's termination effect was pinned only weakly, and the data
+overrode the prior at every level, roughly tripling its spread: termination climbs
+monotonically from the least to the most educated (about a 2.4 log-odds gap,
+Master's+ versus <HS).
+
+![Education's effect on termination: posterior (from the data) versus the prior we started with.](figures/education_termination_gradient.png)
+
+Education's effect on *recording* is, by contrast, weak and vanishes when freed — so
+this is genuinely about termination choice, not paperwork. **Insurance** tells a
+parallel access story: privately-insured mothers reach screening more than Medicaid
+or self-pay patients (the data widened that gap well beyond the prior). But payer
+enters the model only through the screening stage, so the gradient is real yet its
+*channel* is structural, not independently identified.
+
+In short: the **maternal-age structure** and the **orderings** (who has higher true
+rates, who terminates more) are robust and largely data-driven; the
+**recording-by-subgroup** numbers are mostly the pinned assumption; and the
+**detection-vs-termination split** within any group's gap is bounded by C↔B, not
+resolved.
+
+## 9. Limitations and criticisms
 
 This is where honesty matters most. The model works, but the result should not be
 oversold.
@@ -169,10 +276,11 @@ oversold.
   non-identifiability (Section 4), the birth-certificate data *cannot* pin the
   total on their own. We resolved the ambiguity by **assumption** — pinning the
   recording rate `s` and the natural rate θ from outside studies. Change the
-  assumption and the headline moves: pinning `s = 0.40` gives ~39k; `s = 0.34`
-  gives ~46k. **The total is roughly inversely proportional to the assumed
-  recording rate.** So the honest one-line statement is: *"if certificates record
-  ~40% of DS births, then there were ~39,000."* The "if" is load-bearing.
+  assumption and the headline moves: pinning `s ≈ 0.40` gives ~40k; letting the data
+  set it (`s ≈ 0.32`) gives ~48k. **The total is roughly inversely proportional to
+  the assumed recording rate.** So the honest one-line statement is: *"if
+  certificates record ~40% of DS births, then there were ~40,000."* The "if" is
+  load-bearing.
 
 - **The external numbers may not fit this population.** The recording-rate
   validation studies are older and from a few states; the screening/termination
@@ -216,7 +324,7 @@ oversold.
   three variants converged, but the project's own plan still flags all data and
   models as preliminary.
 
-## 9. Bottom line
+## 10. Bottom line
 
 We built a transparent, internally-consistent framework that turns 17,776 recorded
 DS births into an estimate of **~40,000–48,000 true DS livebirths** for 2016–2024,
