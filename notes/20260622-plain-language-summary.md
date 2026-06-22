@@ -3,8 +3,9 @@
 **Date:** 2026-06-22
 **Audience:** readers with some statistics background (frequentist) but not
 necessarily Bayesian modelling. Jargon is defined as it appears.
-**Status:** preliminary. Numbers are from fast ("dev") fits; a higher-quality
-("reporting") run is pending. All figures should be treated as provisional.
+**Status:** preliminary. Numbers are from the publication-quality ("reporting")
+fits — 4 chains, 1,500+1,500 draws, all three variants converged. Figures remain
+provisional.
 
 ---
 
@@ -139,22 +140,25 @@ documents this and feeds the age/year structure of η.
 
 ## 7. The result
 
-With those fixes the model behaves sensibly and the three variants now **agree**
-(they no longer share a hidden fault):
+With those fixes the model converges cleanly (all three variants pass their
+convergence checks). The two variants that **pin** the recording rate (A, C) agree
+tightly at ~40,000; the variant that instead **frees** recording (B) lands at
+~48,000. That spread is now an honest sensitivity range, not a shared fault:
 
 | quantity | estimate (2016–2024) | plain meaning |
 |---|---|---|
-| **True DS livebirths** | **~39,000–40,000** | recorded + missed |
+| **True DS livebirths** | **~40,000** (pin recording ≈0.40) **to ~48,000** (let the data set recording ≈0.32) | recorded + missed; the range *is* the recording-assumption bound |
 | Recorded (data) | 17,776 (~15,200 after removing estimated false positives) | what the certificates caught |
-| **Implied missed** | **~24,000 (~61%)** | true babies the certificates didn't record |
-| Recording rate `s` | ~0.39 | fraction of true DS recorded |
-| Termination reduction `1 − η` | ~46%, rising 7% (under 20) → 64% (45+) | share of DS pregnancies electively terminated |
+| **Implied missed** | **~25,000–33,000 (≈62–68%)** | true babies the certificates didn't record |
+| Recording rate `s` | 0.38 (pinned) → 0.32 (data-preferred, variant B) | fraction of true DS recorded |
+| Termination reduction `1 − η` | ~34–45% overall; age-graded ~5% (under 20) → ~64% (45+) | share of DS pregnancies electively terminated |
 
 Read it as a funnel: absent screening, roughly **72,000** DS babies would have been
-born; about **46%** of those pregnancies were electively terminated, leaving
-**~39,000** born; of those, only **~39%** were recorded, leaving **~24,000 missed**.
-The model also reproduces the recorded counts age-band by age-band (a
-"posterior-predictive check") to within about 5%.
+born (this baseline is fixed by the pinned biology). Depending on the recording
+assumption, **34–45%** of those pregnancies were electively terminated, leaving
+**~40,000–48,000** born; of those, only **~32–38%** were recorded, leaving
+**~25,000–33,000 missed**. The model also reproduces the recorded counts age-band
+by age-band (a "posterior-predictive check") to within about 5%.
 
 ## 8. Limitations and criticisms
 
@@ -199,22 +203,27 @@ oversold.
   false. We sidestepped it for the headline total, but it limits the planned
   analysis of conditions that co-occur with DS.
 
-- **There's a real gap to independent estimates.** Our ~39–40k (at `s = 0.40`) sits
-  below surveillance-based figures (de Graaf and colleagues: ~48k). Either our
-  termination estimate is a little high, or true recording is below the validation
-  studies. That gap is unresolved — it is itself a caveat, and a question worth
-  chasing, not something we should quietly tune away.
+- **The gap to independent estimates is itself informative.** Our pinned-recording
+  estimate (~40k at `s ≈ 0.40`) sits below surveillance figures (de Graaf and
+  colleagues: ~48k) — but the variant that *frees* recording (B) lands at ~47.7k,
+  essentially *on* the surveillance number, by pulling true recording down to
+  ~0.32. So the two reconcile **if** certificates record ~32% of DS births rather
+  than the ~40% the older validation studies report. The birth-certificate data
+  cannot say which is right; the surveillance agreement is mild external evidence
+  that true recording may be below the validation value and the total nearer 48k.
 
-- **Provisional.** These are fast-fit numbers; the publication-quality run is still
-  pending, and the project's own plan flags all data and models as preliminary.
+- **Provisional.** These are now publication-quality ("reporting") fits and all
+  three variants converged, but the project's own plan still flags all data and
+  models as preliminary.
 
 ## 9. Bottom line
 
 We built a transparent, internally-consistent framework that turns 17,776 recorded
-DS births into an estimate of **~39,000–46,000 true DS livebirths** for 2016–2024,
-depending on the assumed recording rate — implying that **roughly 55–65% of cases
+DS births into an estimate of **~40,000–48,000 true DS livebirths** for 2016–2024,
+depending on the assumed recording rate — implying that **roughly 62–68% of cases
 are missing from birth certificates**, with a clear maternal-age gradient in
-elective termination.
+elective termination. The upper end of that range coincides with independent
+surveillance estimates.
 
 Its real value is not the single number but that **every assumption is explicit and
 you can see how the answer depends on it**. The estimate is only as good as the
