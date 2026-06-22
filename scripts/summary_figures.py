@@ -184,7 +184,7 @@ def fig_age_reduction(c: dict, b: dict) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels(AGE_LEVELS, rotation=45, ha="right")
     ax.set_xlabel("Maternal age band")
-    ax.set_ylabel("Termination share (1 - eta)")
+    ax.set_ylabel("Reduction: DS pregnancies not born alive")
     ax.set_title("Elective termination of DS pregnancies rises steeply with maternal age")
     ax.set_ylim(0, 1)
     ax.legend(fontsize=8)

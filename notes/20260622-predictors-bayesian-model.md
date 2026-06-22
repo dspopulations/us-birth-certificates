@@ -1,28 +1,42 @@
-# Estimating Down syndrome births from US birth certificates — a plain-language summary
+# Estimating Down syndrome births from US birth certificates: a Bayesian selection model and its predictors
 
 **Date:** 2026-06-22
-**Audience:** readers with some statistics background (frequentist) but not
-necessarily Bayesian modelling. Jargon is defined as it appears.
 **Status:** preliminary. Numbers are from the publication-quality ("reporting")
 fits — 4 chains, 1,500+1,500 draws, all three variants converged. Figures remain
 provisional.
 
 ---
 
-## 1. The question
+## 1. Introduction
 
-How many babies are actually born with Down syndrome (DS) in the United States?
-We have US birth certificates for 2016–2024 — about **33.5 million births**, of
-which **17,776 were recorded as having Down syndrome**. The catch: birth
-certificates are known to **miss** many true cases (validation studies that
-checked certificates against medical records find only roughly 40% of true DS
-babies get the box ticked). So the recorded count is an undercount, and we want
-the **true** number — recorded **plus** missed.
+This study estimates how many babies are truly born with Down syndrome (DS) in the
+United States, correcting for the well-documented under-recording of DS on birth
+certificates — validation studies that check certificates against medical records
+find only roughly 40% of true cases are recorded (Boulet 2011). Naïve counts
+therefore understate DS births by around 60%. The project closes that gap two
+complementary ways:
 
-You cannot get that by counting. You have to **model** it: write down the chain of
-events that turns a real DS conception into (or fails to turn it into) a ticked box
-on a certificate, attach a probability to each step, and use the observed counts to
-estimate those probabilities — and hence the missing cases.
+- **A machine-learning strand.** Gradient-boosted classifiers (LightGBM) — the "GB
+  models", a family of variants (M0–M2) — are trained on the 2016–2024 certificates
+  to predict which births were DS, then used to flag *likely-missed* cases and so
+  estimate the true total as recorded **plus** predicted. A labelling choice runs
+  through that work: **C** (confirmed — births actually recorded as DS) versus
+  **C+P** (confirmed *plus* the model's predicted-missing cases). C-only proved the
+  cleaner training target, because C+P lets the model lean on a `ca_disor = pending`
+  tautology — an unresolved-diagnosis code that mechanically tracks the
+  predicted-missing label rather than reflecting genuine DS signal.
+
+- **A structural strand — this document.** Rather than classifying individual
+  births, the Bayesian *selection model* estimates the same true total by writing
+  down the chain of events that turns a real DS conception into (or fails to turn it
+  into) a recorded case, and inverting it. It uses only the recorded counts, and
+  serves as a complement and cross-check on the ML estimate.
+
+The rest of this note is about that selection model. We have US birth certificates
+for 2016–2024 — about **33.5 million births**, of which **17,776 were recorded** as
+having Down syndrome. Because certificates miss many true cases, that recorded count
+is an undercount, and we want the **true** number — recorded **plus** missed. You
+cannot get it by counting; you have to **model** it.
 
 ## 2. The model: a chain from conception to checkbox
 
@@ -33,28 +47,28 @@ modelled as a **binomial** draw: `N` births in the cell, each with some probabil
 of showing up as a recorded DS case. We estimate that probability by splitting it
 into three stages, each itself a probability:
 
-1. **θ (theta) — the natural rate.** Of all births to mothers of a given age, what
-   fraction would be DS livebirths *if no-one screened or terminated*? This is
-   biology, rising steeply with maternal age (about 1 in 1,500 under age 20, about
-   1 in 33 at age 45+). It is well measured by earlier studies (Morris et al.), so
-   we **pin** it.
-2. **η (eta) — surviving to birth.** Not every DS pregnancy is born: some are
-   detected by prenatal screening and the pregnancy electively terminated. η is the
-   fraction that *survive to a livebirth*. It is itself the product of two sub-steps
-   — **η_detect** (does screening detect the case?) and **η_term** (given detection,
-   is it terminated?) — so `η = 1 − η_detect × η_term`, and `1 − η` is the
-   termination "reduction".
-3. **s — getting recorded.** Given a DS baby *is* born, does the certificate record
-   it? Validation studies put this around 0.40 — i.e. ~60% are missed — so we
-   **pin** it too.
+1. **Natural rate (θ).** Of all births to mothers of a given age, what fraction
+   would be DS livebirths *if no-one screened or terminated*? This is biology,
+   rising steeply with maternal age (about 1 in 1,500 under age 20, about 1 in 33 at
+   age 45+). It is well measured by earlier studies (Morris et al.), so we **pin** it.
+2. **Survival (η).** Not every DS pregnancy is born: some are detected by prenatal
+   screening and the pregnancy electively terminated. *Survival* is the fraction that
+   reach a live birth. It is itself the product of two sub-steps — **screening**
+   (does prenatal screening detect the case?) and **termination** (given detection,
+   is the pregnancy ended?) — so `survival = 1 − screening × termination`, and the
+   complement, `1 − survival`, is the "reduction" (the share not born alive).
+3. **Recording (s).** Given a DS baby *is* born, does the certificate record it?
+   Validation studies put this around 0.40 — i.e. ~60% are missed — so we **pin** it
+   too.
 
 Put together, the chance a given birth shows up as a *recorded* DS case is roughly
 
 ```
-recorded rate ≈ θ × η × s     (plus a tiny rate of false positives)
+recorded rate ≈ natural × survival × recording   (θ × η × s; plus a tiny false-positive rate)
 ```
 
-and the **true** number of DS livebirths is `θ × η` summed over all births. Each
+and the **true** number of DS livebirths is `natural × survival` (θ × η) summed over
+all births. Each
 stage is allowed to depend on the cell's covariates — age, race, education, payer,
 year — which is how we can later read off, say, termination by education. The
 generative structure is:
@@ -67,10 +81,10 @@ flowchart TD
     PAY[Insurance payer]
     YEAR[Year]
 
-    THETA["θ — natural DS rate<br/>PINNED to biology"]
-    DET["η_detect — screening reach"]
-    TERM["η_term — termination if detected"]
-    RECORD["s — certificate recording<br/>PINNED to validation ≈0.40"]
+    THETA["Natural rate (θ)<br/>PINNED to biology"]
+    DET["Screening (η_detect)"]
+    TERM["Termination if detected (η_term)"]
+    RECORD["Recording (s)<br/>PINNED to validation ≈0.40"]
 
     AGE --> THETA
     AGE --> DET
@@ -85,10 +99,10 @@ flowchart TD
     YEAR --> DET
     YEAR --> TERM
 
-    THETA --> TRUE["TRUE DS livebirths<br/>θ × (1 − η_detect × η_term)"]
+    THETA --> TRUE["TRUE DS livebirths<br/>natural × survival"]
     DET --> TRUE
     TERM --> TRUE
-    TRUE --> OBS["OBSERVED — recorded DS count per cell<br/>TRUE × s + false positives"]
+    TRUE --> OBS["OBSERVED — recorded DS count per cell<br/>true × recording + false positives"]
     RECORD --> OBS
 
     style THETA fill:#dfe7f2,stroke:#014b7f
@@ -101,7 +115,7 @@ The blue nodes are **pinned** to outside knowledge; the red node is the **only t
 we actually observe** (the recorded count). Everything in between — how many were
 really born, how many were terminated, how many were missed — is *inferred*.
 
-## 3. A note for the frequentist reader: what "Bayesian" adds
+## 3. What the Bayesian framing adds
 
 In a frequentist analysis you'd maximise a **likelihood** — the probability of the
 data given the parameters — and report point estimates with confidence intervals.
@@ -197,7 +211,7 @@ convergence checks). The two variants that **pin** the recording rate (A, C) agr
 tightly at ~40,000; the variant that instead **frees** recording (B) lands at
 ~48,000. That spread is now an honest sensitivity range, not a shared fault:
 
-| quantity | estimate (2016–2024) | plain meaning |
+| quantity | estimate (2016–2024) | interpretation |
 |---|---|---|
 | **True DS livebirths** | **~40,000** (pin recording ≈0.40) **to ~48,000** (let the data set recording ≈0.32) | recorded + missed; the range *is* the recording-assumption bound |
 | Recorded (data) | 17,776 (~15,200 after removing estimated false positives) | what the certificates caught |
@@ -214,7 +228,7 @@ by age-band (a "posterior-predictive check") to within about 5%.
 
 ![Ascertainment funnel. Of roughly 72,000 natural DS livebirths, an estimated 40,000–48,000 are born after elective termination, and only about 15,000 are recorded on a birth certificate.](figures/ascertainment_funnel.png)
 
-## 8. Who the missed cases are: age, ethnicity, education, insurance
+## 8. Who the missed cases are — and how the picture is changing
 
 Because every stage can depend on a cell's covariates, the model also says *who* the
 true and missed cases are. Three caveats travel with this whole section: the
@@ -266,6 +280,31 @@ rates, who terminates more) are robust and largely data-driven; the
 **recording-by-subgroup** numbers are mostly the pinned assumption; and the
 **detection-vs-termination split** within any group's gap is bounded by C↔B, not
 resolved.
+
+**Over time (2016–2024) — a screening-access story.** The reduction (share of DS
+pregnancies not born alive) climbed from **38% [35–41] in 2016 to 50% [47–53] by
+2022**, then plateaued. This trend is one of the more robustly *identified* results
+in the model: recording carries no year term, so year-to-year movement in the
+recorded rate maps directly onto survival — the recording-vs-termination confounding
+that clouds the subgroup analysis does not act across years. Splitting the rise (the
+split itself is prior-driven): prenatal **screening detection rose from ~58% to ~75%**
+as cell-free DNA (NIPT) was adopted, while **termination given detection stayed flat
+at ~65%**. So the growing reduction is about more pregnancies being *screened*, not a
+change in what families decide once a case is found.
+
+![Prenatal screening, termination, and the combined reduction (with a 95% credible interval) over 2016–2024, variants C and B.](figures/year_detection_termination.png)
+
+Did screening expand fastest in older mothers, where NIPT was recommended first? The
+model cannot answer that on its own: screening is modelled as *additive* in year and
+age, with no year-by-age interaction, so it applies one uniform yearly shift to every
+age band. The raw data do point that way — between 2016–18 and 2022–24 the recorded
+DS rate fell **16–22% in mothers aged 30 and over** but only ~9% at 25–29 (the
+youngest bands are small-count noise). Within an age band, recording and the natural
+rate are fixed over time, so that decline *is* the rising reduction for that band.
+Pinning down the age-by-time interaction properly would need an interaction term and
+a re-fit; for now it is a raw-data observation, not a model result.
+
+![Change in recorded DS rate, 2016–18 versus 2022–24, by maternal-age band (raw data). The decline is concentrated in older mothers.](figures/recorded_rate_by_age_change.png)
 
 ## 9. Limitations and criticisms
 
