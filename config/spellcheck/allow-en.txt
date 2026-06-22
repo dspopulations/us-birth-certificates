@@ -94,8 +94,10 @@ iqr
 isclose
 kfold
 lightgbm
+liveborn
 livebirth
 livebirths
+invlogit
 logit
 MCMC
 microdata
@@ -138,18 +140,28 @@ rprime
 # Literature / authors
 Alberman
 Boulet
+Eiben
 Graaf
 Heinke
+Iwarsson
 Kuppermann
+Mikhaylova
+Miltoft
 Natoli
 Salemi
 Skotko
+Verma
+Xiao
+Yaron
 graaf
 
 # Literature / journals and terms
+ACOG
+BJOG
 Diagn
 EJHG
 Epidemiol
+Gynaecol
 Gynecol
 Netw
 NIPT
@@ -157,6 +169,9 @@ Obstet
 Paediatr
 Perinat
 Prenat
+Scand
+SURUSS
+Zhuhai
 
 # Refactor-document terms
 harmonisation
