@@ -250,22 +250,27 @@ than assumed. For the others, whether the gap is "more termination" or "less
 recording" is exactly the non-identified split (e.g. Asian/PI is _either_ ~59–72%
 terminated _or_ recorded at only ~21%).
 
-### Education
+### Socioeconomic status (education as the proxy)
 
-**Education — the strongest data-identified social gradient, and it lives in
-termination.** Education's termination effect was pinned only weakly, and the data
-overrode the prior at every level, roughly tripling its spread: termination climbs
-monotonically from the least to the most educated (about a 2.4 log-odds gap,
-Master's+ versus <HS).
+**The strongest data-identified social gradient — higher SES, more termination.**
+Education's termination effect was pinned only weakly, and the data overrode the prior
+at every level, roughly tripling its spread: termination climbs monotonically from the
+least to the most educated — about a 2.4 log-odds gap (Master's+ versus <HS), net of
+age and ethnicity.
 
 ![Education's effect on termination: posterior (from the data) versus the prior we started with.](figures/education_termination_gradient.png)
 
-Education's effect on _recording_ is, by contrast, weak and vanishes when freed — so
-this is genuinely about termination choice, not paperwork. **Insurance** tells a
-parallel access story: privately-insured mothers reach screening more than Medicaid
-or self-pay patients (the data widened that gap well beyond the prior). But payer
-enters the model only through the screening stage, so the gradient is real yet its
-_channel_ is structural, not independently identified.
+Read this as an **SES gradient with education as the proxy**, not "education" as such.
+Education and insurance are near-collinear here — <HS mothers are 75% Medicaid / 10%
+private, Master's+ are 6% / 88% — so they measure one socioeconomic dimension two ways;
+the termination gradient is adjusted for age and ethnicity but **cannot be cleanly netted
+of the insurance dimension** of SES. Insurance tells the same story on the screening
+side: privately-insured mothers reach screening far more than Medicaid or self-pay
+patients (the data widened that gap well beyond the prior). Education's effect on
+_recording_ is, by contrast, weak and vanishes when freed, so this is about the
+screening-and-termination cascade, not paperwork. As always, the split of this SES
+effect between screening and termination is prior-driven; only its combined effect on
+survival is data-identified.
 
 ### Summary
 
