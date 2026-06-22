@@ -201,6 +201,17 @@ ETA_DETECT_AGE = np.array(
 # notes/20260621-theta-lb-escape-age-gradient.md.
 ETA_DETECT_AGE_SIGMA = 0.1
 
+# Year-by-age interaction on detection (2026-06-22): lets the NIPT-era screening
+# rollout differ by maternal age — the "did screening reach older mothers first?"
+# question that the additive year+age structure could not express. Modelled as a
+# ZERO-SUM interaction (orthogonal to the pinned year and age main effects), so it
+# captures only the differential, not a shift in either margin. Sigma 0.35 is
+# weakly-informative: wide enough for the ~0.1-0.3 logit age-differentials the raw
+# recorded-rate trend suggests, tight enough to regularise the 9x7 cells with little
+# data. The year dimension is clean (s has no year term) so the interaction is
+# data-identified. See notes/20260622-predictors-bayesian-model.md sec. 8.
+ETA_DETECT_YEAR_AGE_SIGMA = 0.35
+
 
 # --------------------------------------------------------------------------- #
 # Stage 2b: termination eta_term                                              #
@@ -360,6 +371,7 @@ class ModelPriors:
         default_factory=lambda: ETA_DETECT_AGE.copy()
     )
     eta_detect_age_sigma: float = ETA_DETECT_AGE_SIGMA
+    eta_detect_year_age_sigma: float = ETA_DETECT_YEAR_AGE_SIGMA
 
     # Stage 2b
     eta_term_logit: float = ETA_TERM_LOGIT

@@ -153,6 +153,15 @@ def build_model(
                     sigma=priors.eta_detect_age_sigma,
                     dims="age",
                 )
+                # Zero-sum year-by-age interaction: lets the screening rollout
+                # differ by maternal age (the "older mothers first?" question)
+                # without shifting the pinned year or age main effects.
+                eta_det_year_age = pm.ZeroSumNormal(
+                    "eta_detect_year_age",
+                    sigma=priors.eta_detect_year_age_sigma,
+                    n_zerosum_axes=2,
+                    dims=("year", "age"),
+                )
                 eta_det_race = pm.Normal(
                     "eta_detect_race",
                     mu=priors.eta_detect_race,
@@ -175,6 +184,7 @@ def build_model(
                     eta_det_int
                     + eta_det_year[year_idx]
                     + eta_det_age[age_idx]
+                    + eta_det_year_age[year_idx, age_idx]
                     + eta_det_race[race_idx]
                     + eta_det_edu[edu_idx]
                     + eta_det_payer[payer_idx]

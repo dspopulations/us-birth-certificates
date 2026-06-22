@@ -74,10 +74,10 @@ def recovery_fit() -> tuple[TrueParams, object]:
     model = build_model(cells, priors, spec="full", n_year=N_YEAR)
     with model:
         idata = pm.sample(
-            draws=400,
-            tune=400,
+            draws=600,
+            tune=600,
             chains=2,
-            target_accept=0.9,
+            target_accept=0.95,
             random_seed=SEED,
             progressbar=False,
             nuts_sampler=_pick_sampler(),
@@ -113,6 +113,7 @@ def _coverage_95(
         ("eta_term_race", "eta_term_race", 0.7),
         ("eta_term_age", "eta_term_age", 0.7),
         ("eta_term_year", "eta_term_year", 0.7),
+        ("eta_detect_year_age", "eta_det_year_age", 0.7),
         ("s_race", "s_race", 0.7),
     ],
 )

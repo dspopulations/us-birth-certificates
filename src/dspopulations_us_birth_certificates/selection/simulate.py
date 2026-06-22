@@ -50,6 +50,7 @@ class TrueParams:
     eta_det_race: np.ndarray  # (N_RACE,)
     eta_det_edu: np.ndarray  # (N_EDU,)
     eta_det_payer: np.ndarray  # (N_PAYER,)
+    eta_det_year_age: np.ndarray  # (n_year, N_AGE) zero-sum interaction
 
     eta_term_int: float
     eta_term_race: np.ndarray  # (N_RACE,)
@@ -79,6 +80,12 @@ class TrueParams:
 
         year_offsets = priors.eta_detect_year_offsets[:n_year]
         eta_term_year = rng.normal(0.0, priors.eta_term_year_sigma, size=n_year)
+        # Zero-sum (double-centred over both axes) year-by-age interaction, matching
+        # the model's ZeroSumNormal(n_zerosum_axes=2).
+        yax = rng.normal(
+            0.0, priors.eta_detect_year_age_sigma, size=(n_year, N_AGE)
+        )
+        yax = yax - yax.mean(0, keepdims=True) - yax.mean(1, keepdims=True) + yax.mean()
 
         return cls(
             theta_lb_age_logit=draw(
@@ -98,6 +105,7 @@ class TrueParams:
             eta_det_payer=draw(
                 priors.eta_detect_payer, priors.eta_detect_payer_sigma
             ),
+            eta_det_year_age=yax,
             eta_term_int=draw(priors.eta_term_logit, priors.eta_term_sigma),
             eta_term_race=draw(
                 priors.eta_term_race, priors.eta_term_race_sigma
@@ -158,6 +166,7 @@ def simulate_cells(
         truth.eta_det_int
         + truth.eta_det_year[year_idx]
         + truth.eta_det_age[age_idx]
+        + truth.eta_det_year_age[year_idx, age_idx]
         + truth.eta_det_race[race_idx]
         + truth.eta_det_edu[edu_idx]
         + truth.eta_det_payer[payer_idx]
