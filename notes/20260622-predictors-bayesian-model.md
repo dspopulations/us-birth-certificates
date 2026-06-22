@@ -288,6 +288,16 @@ change in what families decide once a case is found.
 
 ![Prenatal screening, termination, and the combined reduction (with a 95% credible interval) over 2016–2024, variants C and B.](figures/year_detection_termination.png)
 
+In absolute numbers, the model puts DS livebirths at **~4,900 in 2016 falling to
+~4,200 by 2024** under the pinned-recording variants (A, C), or **~5,800 → ~5,100**
+under variant B — a decline as rising termination outpaces the small rise in the
+natural rate from older mothers; recorded counts fell in parallel (~2,170 → ~1,880).
+The A↔B band is the headline recording-assumption bound, traced year by year, and the
+*shape* (a decline, with termination rising then plateauing ~2022) is consistent
+across all three variants.
+
+![Estimated true DS livebirths (top) and termination reduction (bottom) by year, 2016–2024, for variants A, B and C with recorded counts. A and C (pinned recording) overlap; B (freed recording) is higher.](figures/selection_ds_by_year.png)
+
 Did screening expand fastest in older mothers, where NIPT was recommended first? The
 raw recorded-DS-rate decline _looks_ concentrated in them — between 2016–18 and
 2022–24 it fell **16–22% in mothers aged 30 and over** but only ~9% at 25–29 (the
