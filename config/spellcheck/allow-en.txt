@@ -113,12 +113,14 @@ pred
 pymc
 pyproject
 pytensor
+reframing
 reparameterise
 rhat
 sigmas
 sigmoidal
 sklearn
 thresholded
+unlabeled
 vars
 wallclock
 
@@ -142,15 +144,19 @@ rprime
 Alberman
 Boulet
 Eiben
+Elkan
 Graaf
 Heinke
+Horvitz
 Iwarsson
 Kuppermann
 Mikhaylova
 Miltoft
 Natoli
+Noto
 Salemi
 Skotko
+Teisseyre
 Verma
 Xiao
 Yaron
@@ -158,6 +164,7 @@ graaf
 
 # Literature / journals and terms
 ACOG
+AISTATS
 BJOG
 Diagn
 EJHG

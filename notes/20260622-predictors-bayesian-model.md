@@ -399,6 +399,78 @@ The takeaway: the headline _number_ is best anchored by recording validation and
 surveillance, not feature-based prediction — but the _conclusions_ about who and when
 are robust to how you correct for under-ascertainment.
 
+## The bigger picture: this is positive–unlabelled learning
+
+Step back from the specific models and the whole problem has a textbook name:
+**positive–unlabelled (PU) learning under a biased labelling mechanism** (Bekker and
+Davis, 2020). The recorded DS births are _labelled positives_; every other birth is
+_unlabelled_ (a mix of true negatives and missed positives). The chance a true DS birth
+is recorded is the **propensity** `e(x) = P(recorded | x, DS)` — and because recording
+depends on clinical severity, SES and race, the labelling is _Selected At Random_ (SAR),
+not completely at random. Our gradient-boosted classifier, trained by treating every
+unrecorded birth as a negative, is exactly what this literature calls a **non-traditional
+classifier (NTC)**: it predicts `P(recorded | x)`, not `P(DS | x)`.
+
+That reframing explains what we saw — and it does so _before_ looking at the data:
+
+- **Why the GB cohort is over-medicalised.** The NTC scores by `P(recorded | x)`, which
+  is the true posterior _multiplied by the propensity_, so it over-weights whatever
+  drives recording. Removing the demographic drivers (the demographically-blind model, to
+  strip racial/SES bias) did not remove the bias — it _promoted clinical severity to be
+  the entire remaining signal_. The 42% cyanotic-CHD / 83% NICU profile of the
+  predicted-missing cohort is that promotion. You cannot feature-select your way out: the
+  NTC always over-represents the propensity's drivers; dropping some just hands the weight
+  to the rest.
+
+- **Why variant D under-counts, exactly.** The PU identity is
+  `P(DS | x) = P(recorded | x) / e(x)`. Variant D's calibrated target summed
+  `P(recorded | x)` over the unlabelled **without dividing by the propensity** — the
+  _uncorrected_ estimator, deflated by exactly the recording rate. That is the whole
+  25,700-vs-40,000 story.
+
+- **Why the structural model is the _right_ PU estimator.** The principled way to recover
+  a total under SAR is inverse-propensity weighting:
+  `total = Σ_recorded 1/e(x) ≈ 17,776 / 0.40 ≈ 44,000` (Horvitz–Thompson) — squarely in
+  the A↔B band. The structural model _is_ this estimator: it pins `e(x) = s(X)` from
+  validation and divides. So variant D and the structural model are not two methods
+  disagreeing; they are one estimator with the propensity correction and one without.
+
+**The practical lesson: estimate the class prior, not the individual cases.** Everything
+the study actually wants — the total, the rate by group, the share with a co-occurring
+condition — is a function of the **class prior** `π = P(DS)`, an _aggregate_. Identifying
+_which_ unrecorded births are missed is individual classification, which the certificate
+features cannot do for clinically-subtle DS (a mild case is statistically
+indistinguishable from an ordinary birth) and which biases every sum built on it. The
+aggregate is recoverable where the individuals are not: you can know _how many_ you are
+missing without knowing _which_. Under SAR the prior is still only identifiable with a
+propensity handle (our validation-based `s`) or a clean-ascertainment anchor — it is not
+free — but it concentrates all the assumption-weight on one interpretable number instead
+of smearing bias across millions of predictions.
+
+**This matters most for co-occurring conditions** (a core aim of the study).
+Characterising the missed population by the GB-predicted-missing cohort _inverts_ the
+truth: it puts cyanotic CHD at ~20% of all DS, _above_ the recorded 5.6%, because the GB
+flags the cardiac, NICU-bound tail. The class-prior route instead estimates the true-DS
+count _within each clinical stratum_ from that stratum's own recording rate, and
+aggregates — no individual is identified. Because severe cases are recorded at a higher
+rate (`R = s_with / s_without > 1`), the missed cases concentrate in the milder,
+condition-absent stratum, so the full-population rate falls _below_ the recorded one — the
+correct direction.
+
+![Co-occurring-condition rate in the full (recorded + missed) true-DS population, estimated by stratified class priors as the recording-rate ratio R varies, versus the GB individual-prediction estimate (dashed). At R = 1 (constant recording) the class prior equals the recorded rate; for R > 1 (severe cases recorded more) it falls below, while the GB estimate sits above — inverted.](figures/cooccurring_class_prior.png)
+
+The one input the certificate cannot supply is `R` — how much more often a DS birth _with_
+the condition is recorded — which must come from validation studies that report
+ascertainment by anomaly status (or an added recording covariate); the figure sweeps it.
+But even the **neutral** `R = 1` version (missed mirror recorded) is right-side-up where
+the GB is upside-down, so the stratified class prior is the safer estimator for the
+co-occurring-conditions analysis regardless.
+
+_Method note: the PU framing and the threshold-calibration result that motivated this view
+are from Teisseyre, Martens, Bekker and Davis, "Learning from biased positive-unlabeled
+data via threshold calibration" (AISTATS 2025); the inverse-propensity and anchor
+estimators from Elkan and Noto (2008) and the survey of Bekker and Davis (2020)._
+
 ## Limitations
 
 The model works, but:
@@ -437,10 +509,14 @@ The model works, but:
   state, year and case mix. Collapsing that is a simplification that could bias
   subgroup comparisons.
 
-- **The co-occurring-conditions model is unresolved.** The current model treats DS
-  as statistically independent of conditions like CCHD, which is biologically
-  false. We sidestepped it for the headline total, but it limits the planned
-  analysis of conditions that co-occur with DS.
+- **The co-occurring-conditions analysis needs the recording-by-severity ratio.**
+  The structural total treats DS as statistically independent of conditions like
+  CCHD. The class-prior reframing (above) gives an unbiased _route_ to co-occurring
+  rates — stratify on the condition and weight each stratum by its own recording rate
+  — but the severity ratio `R = s_with / s_without` must come from external
+  validation; without it we have only the neutral `R = 1` estimate (missed mirror
+  recorded). Still unresolved, but no longer a dead end, and no longer at risk of the
+  GB cohort's inversion.
 
 - **The gap to independent estimates is itself informative.** Our pinned-recording
   estimate (~40k at `s ≈ 0.40`) sits below surveillance figures (de Graaf and
