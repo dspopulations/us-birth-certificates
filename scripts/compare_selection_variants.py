@@ -42,7 +42,7 @@ import numpy as np
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
-from dspopulations_us_birth_certificates.selection import RACE_LEVELS
+from dspopulations_us_birth_certificates.selection import AGE_LEVELS, RACE_LEVELS
 
 DEFAULT_ROOT = Path("output/selection")
 VARIANTS: tuple[str, ...] = ("A", "B", "C")
@@ -134,20 +134,88 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
 # --------------------------------------------------------------------------- #
 
 
-def _extract_total_true(fit_dir: Path) -> dict[str, float]:
-    """Posterior mean + 95% CI of total true DS livebirths."""
+def _inv_logit(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def _extract_aggregates(
+    fit_dir: Path,
+) -> tuple[dict[str, dict[str, float]], pd.DataFrame]:
+    """Posterior aggregates + per-age decomposition from one idata load.
+
+    Returns ``(aggregates, age_df)``. ``aggregates`` maps ``total_true`` /
+    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (95% CI).
+    ``age_df`` is the per-maternal-age decomposition used as an age
+    posterior-predictive check: ``obs_rate`` vs ``pred_rate`` (close = the
+    model fits that band), N-weighted ``eta``/``reduction``, and implied ``s``.
+    """
     import arviz as az
 
     idata = az.from_netcdf(str(fit_dir / "idata.nc"))
     cells = pd.read_parquet(fit_dir / "cells.parquet")
-    p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)
+    fpr = float(
+        json.loads((fit_dir / "config.json").read_text())["priors"][
+            "false_positive_rate"
+        ]
+    )
+    post = idata.posterior
+    p = np.asarray(post["p_ds_lb"].values)
+    p = p.reshape(-1, p.shape[-1])  # (draws, cell)
+    tla = np.asarray(post["theta_lb_age"].values).reshape(p.shape[0], -1)
     N = cells["N_cell"].to_numpy(dtype=float)
-    totals = (p_ds_lb * N[None, None, :]).sum(axis=-1)
-    return {
-        "mean": float(totals.mean()),
-        "lo": float(np.quantile(totals, 0.025)),
-        "hi": float(np.quantile(totals, 0.975)),
+    R = cells["R_cell"].to_numpy(dtype=float)
+    age = cells["age_idx"].to_numpy()
+    theta_cell = _inv_logit(tla[:, age])  # (draws, cell)
+
+    total = (p * N).sum(axis=1)
+    natural = (theta_cell * N).sum(axis=1)
+    eta = total / natural
+    fp = fpr * ((1.0 - p) * N).sum(axis=1)
+    agg_s = (R.sum() - fp) / total
+
+    def s3(a: np.ndarray) -> dict[str, float]:
+        return {
+            "mean": float(a.mean()),
+            "lo": float(np.quantile(a, 0.025)),
+            "hi": float(np.quantile(a, 0.975)),
+        }
+
+    aggregates = {
+        "total_true": s3(total),
+        "agg_eta": s3(eta),
+        "reduction": s3(1.0 - eta),
+        "agg_s": s3(agg_s),
     }
+
+    p_mean = p.mean(axis=0)
+    theta_mean = theta_cell.mean(axis=0)
+    p_rec = (
+        np.asarray(post["p_recorded"].values).reshape(p.shape[0], -1).mean(axis=0)
+    )
+    rows: list[dict] = []
+    for a in range(len(AGE_LEVELS)):
+        m = age == a
+        if not m.any():
+            continue
+        Na = float(N[m].sum())
+        Ra = float(R[m].sum())
+        true_ct = float((p_mean[m] * N[m]).sum())
+        tlb = float(theta_mean[m][0])
+        fp_a = fpr * float(((1.0 - p_mean[m]) * N[m]).sum())
+        rows.append(
+            {
+                "age": AGE_LEVELS[a],
+                "N_frac": Na / float(N.sum()),
+                "R": int(Ra),
+                "obs_rate": Ra / Na,
+                "pred_rate": float((p_rec[m] * N[m]).sum()) / Na,
+                "theta_lb": tlb,
+                "eta": true_ct / (tlb * Na),
+                "reduction": 1.0 - true_ct / (tlb * Na),
+                "s": (Ra - fp_a) / true_ct,
+            }
+        )
+    return aggregates, pd.DataFrame(rows)
 
 
 def _extract_summary_rows(summary: pd.DataFrame, prefix: str) -> pd.DataFrame:
@@ -177,28 +245,32 @@ def _load_identifiability(fit_dir: Path) -> pd.DataFrame:
 
 
 def build_comparison(fit_dirs: dict[str, Path]) -> pd.DataFrame:
-    """Build a long-format comparison frame across variants.
+    """Build the variant comparison: a long-format metric frame + per-age table.
 
-    Columns: ``variant``, ``metric``, ``level``, ``mean``, ``lo``, ``hi``.
+    Returns ``(comparison, age_decomposition)``.
 
-    ``metric`` ∈ {``total_true``, ``eta_term_race``, ``s_race``,
-    ``identifiability_abs_r``}; ``level`` is the race label (where
-    applicable), or "(all)" for scalars.
+    ``comparison`` columns: ``variant``, ``metric``, ``level``, ``mean``,
+    ``lo``, ``hi``. ``metric`` ∈ {``total_true``, ``agg_eta``, ``reduction``,
+    ``agg_s``, ``eta_term_race``, ``s_race``, ``identifiability_abs_r``};
+    ``level`` is the race label (where applicable) or "(all)" for scalars.
+
+    ``age_decomposition`` is the per-maternal-age posterior-predictive table
+    (one block per variant): observed vs predicted recorded-DS rate, the
+    N-weighted ``eta``/``reduction``, and implied ``s``.
     """
     rows: list[dict] = []
+    age_frames: list[pd.DataFrame] = []
     for variant, fit_dir in sorted(fit_dirs.items()):
         cli_output.info(f"Variant {variant}: reading {fit_dir}")
 
-        # Total true DS livebirths.
-        total = _extract_total_true(fit_dir)
-        rows.append(
-            {
-                "variant": variant,
-                "metric": "total_true",
-                "level": "(all)",
-                **total,
-            }
-        )
+        # Aggregates: total true DS, eta, reduction, s (+95% CI) + per-age table.
+        aggregates, age_df = _extract_aggregates(fit_dir)
+        for metric, vals in aggregates.items():
+            rows.append(
+                {"variant": variant, "metric": metric, "level": "(all)", **vals}
+            )
+        age_df.insert(0, "variant", variant)
+        age_frames.append(age_df)
 
         # Per-race eta_term_race, s_race from summary.csv.
         summary_path = fit_dir / "summary.csv"
@@ -236,7 +308,10 @@ def build_comparison(fit_dirs: dict[str, Path]) -> pd.DataFrame:
                 }
             )
 
-    return pd.DataFrame(rows)
+    age_decomp = (
+        pd.concat(age_frames, ignore_index=True) if age_frames else pd.DataFrame()
+    )
+    return pd.DataFrame(rows), age_decomp
 
 
 # --------------------------------------------------------------------------- #
@@ -320,11 +395,15 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cli_output.section("Build comparison")
-    comparison = build_comparison(cli.fit_dirs)
+    comparison, age_decomp = build_comparison(cli.fit_dirs)
     cli.output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = cli.output_dir / "comparison.csv"
     comparison.to_csv(csv_path, index=False)
     cli_output.success(f"comparison.csv -> {csv_path}")
+    if not age_decomp.empty:
+        age_path = cli.output_dir / "age_decomposition.csv"
+        age_decomp.to_csv(age_path, index=False)
+        cli_output.success(f"age_decomposition.csv -> {age_path}")
 
     cli_output.section("Render forest plot")
     try:
@@ -344,6 +423,22 @@ def main(argv: list[str] | None = None) -> int:
         [
             (v, f"{r['mean']:,.0f}  [{r['lo']:,.0f}, {r['hi']:,.0f}]")
             for v, r in totals.iterrows()
+        ],
+    )
+    red = comparison[comparison["metric"] == "reduction"].set_index("variant")
+    s_agg = comparison[comparison["metric"] == "agg_s"].set_index("variant")
+    cli_output.print_kv(
+        "Elective-termination reduction (1 - eta) [95% CI]",
+        [
+            (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
+            for v, r in red.iterrows()
+        ],
+    )
+    cli_output.print_kv(
+        "Aggregate BC sensitivity s [95% CI]",
+        [
+            (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
+            for v, r in s_agg.iterrows()
         ],
     )
     return 0
