@@ -228,9 +228,17 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.info(f"output_dir=[blue]{cli.output_dir}[/blue]")
 
     cli_output.section("Load cells")
+    # Variant D is the comparative C+P track: R_cell counts down_ind OR the C-only,
+    # demographically-blind GB predicted-missing flag (USBC11_M1_CN), and recording
+    # is pinned to ~1 (see variant_D_cplus).
+    missing_flag = "ds_pred_missing_14" if cli.variant == "D" else None
     con = duckdb.connect(str(cli.duckdb_path), read_only=True)
     try:
-        cells = prepare_cells(con, year_range=(cli.start_year, cli.end_year))
+        cells = prepare_cells(
+            con,
+            year_range=(cli.start_year, cli.end_year),
+            missing_flag_column=missing_flag,
+        )
     finally:
         con.close()
     summary = summarise_cells(cells)

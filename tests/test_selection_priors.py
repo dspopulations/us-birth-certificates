@@ -78,14 +78,29 @@ def test_morris_sigma_is_tight() -> None:
 
 
 def test_false_positive_rate_fixed() -> None:
-    """The Ohio/NY false-positive value is fixed, not estimated (plan §10 #3)."""
+    """The Ohio/NY false-positive value is fixed, not estimated (plan §10 #3).
+
+    The recorded-data variants (A/B/C) share the validation rate; variant D (the
+    C+P comparative track) sets it to 0 because the GB-corrected counts carry no
+    recording false positives.
+    """
     assert P.FALSE_POSITIVE_RATE == pytest.approx(7.8e-5)
-    for factory in P.VARIANTS.values():
-        assert factory().false_positive_rate == pytest.approx(7.8e-5)
+    for name, factory in P.VARIANTS.items():
+        expected = 0.0 if name == "D" else pytest.approx(7.8e-5)
+        assert factory().false_positive_rate == expected
 
 
-def test_variants_registry_contains_abc() -> None:
-    assert set(P.VARIANTS) == {"A", "B", "C"}
+def test_variants_registry() -> None:
+    assert set(P.VARIANTS) == {"A", "B", "C", "D"}
+
+
+def test_variant_d_recording_pinned_off() -> None:
+    """Variant D pins recording to ~1 (no demographic offsets) for the C+P track."""
+    d = P.variant_D_cplus()
+    assert P.inv_logit(d.s_logit) > 0.99
+    assert d.s_sigma <= 0.001
+    assert d.s_race_sigma <= 0.001 and d.s_edu_sigma <= 0.001
+    assert d.false_positive_rate == 0.0
 
 
 def test_eta_term_year_sigma_tight() -> None:

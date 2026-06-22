@@ -104,10 +104,27 @@ def _build_sql(
     table: str,
     columns: dict[str, str],
     year_range: tuple[int, int],
+    missing_flag_column: str | None = None,
 ) -> str:
-    """Return SQL aggregating the raw table into selection-model cells."""
+    """Return SQL aggregating the raw table into selection-model cells.
+
+    When ``missing_flag_column`` is given (e.g. a GB ``ds_pred_missing_*`` flag),
+    ``R_cell`` counts the *union* ``down_ind = 1 OR flag = 1`` (the "R-prime"
+    confirmed-plus-predicted total) instead of recorded DS alone — the input for
+    the variant-D comparative track.
+    """
     from_year, to_year = year_range
     c = columns
+    pred_missing_expr = (
+        f"COALESCE(CAST({missing_flag_column} AS INTEGER), 0)"
+        if missing_flag_column
+        else "0"
+    )
+    r_cell_expr = (
+        "SUM(CASE WHEN down_ind = 1 OR pred_missing = 1 THEN 1 ELSE 0 END)"
+        if missing_flag_column
+        else "SUM(down_ind)"
+    )
     # ``mage_c`` binning — last edge is the 45+ open bin.
     age_case = (
         f"CASE "
@@ -164,7 +181,8 @@ def _build_sql(
                 {cchd_case}    AS cchd,
                 {nicu_case}    AS nicu,
                 {aven_case}    AS aven,
-                CAST({c['down_ind']} AS INTEGER) AS down_ind
+                CAST({c['down_ind']} AS INTEGER) AS down_ind,
+                {pred_missing_expr} AS pred_missing
             FROM {table}
             WHERE {c['year']} BETWEEN {from_year} AND {to_year}
               AND {c['mage_c']} IS NOT NULL
@@ -174,7 +192,7 @@ def _build_sql(
             year_idx, age_idx, race_idx, edu_idx, payer_idx,
             preterm, cchd, nicu, aven,
             COUNT(*) AS N_cell,
-            SUM(down_ind) AS R_cell
+            {r_cell_expr} AS R_cell
         FROM coded
         WHERE preterm IS NOT NULL
           AND cchd IS NOT NULL
@@ -191,6 +209,7 @@ def prepare_cells(
     year_range: tuple[int, int] = DEFAULT_YEAR_RANGE,
     table: str = "us_births",
     columns: dict[str, str] | None = None,
+    missing_flag_column: str | None = None,
 ) -> pd.DataFrame:
     """Aggregate raw NCHS rows into selection-model cells.
 
@@ -199,13 +218,21 @@ def prepare_cells(
         year_range: Inclusive ``(from_year, to_year)``.
         table: Name of the births table (default ``us_births``).
         columns: Optional override for column names (schema drift).
+        missing_flag_column: Optional GB ``ds_pred_missing_*`` flag. When set,
+            ``R_cell`` counts ``down_ind = 1 OR flag = 1`` (confirmed-plus-predicted,
+            the variant-D track) rather than recorded DS alone.
 
     Returns:
         A DataFrame with the integer index columns + ``N_cell`` / ``R_cell``,
         and ``attrs = {"n_year", "year_range", "N_total", "R_total"}``.
     """
     cols = {**DEFAULT_COLUMNS, **(columns or {})}
-    sql = _build_sql(table=table, columns=cols, year_range=year_range)
+    sql = _build_sql(
+        table=table,
+        columns=cols,
+        year_range=year_range,
+        missing_flag_column=missing_flag_column,
+    )
     cells = con.execute(sql).df()
 
     # DuckDB returns SUM() as nullable; cast for clean downstream use.

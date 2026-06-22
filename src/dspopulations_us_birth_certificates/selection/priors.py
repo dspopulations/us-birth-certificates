@@ -432,8 +432,31 @@ def variant_C_default() -> ModelPriors:
     return ModelPriors()
 
 
+def variant_D_cplus() -> ModelPriors:
+    """Comparative track: fit GB confirmed-plus-predicted (C+P) counts, recording off.
+
+    The recording stage is pinned to ~1 (s_int -> logit(0.999), no demographic
+    offsets) and the false-positive rate to 0, so the model decomposes the
+    GB-corrected total directly into natural rate x survival -- the
+    recording-vs-termination non-identifiability that needs the A/B/C bound does not
+    arise here. Pair with ``prepare_cells(missing_flag_column="ds_pred_missing_14")``
+    (USBC11_M1_CN: C-only, demographically blind). See
+    notes/20260622-predictors-bayesian-model.md.
+    """
+    p = ModelPriors()
+    p.s_logit = logit(0.999)
+    p.s_sigma = 0.001
+    p.s_race = np.zeros(N_RACE)
+    p.s_race_sigma = 0.001
+    p.s_edu = np.zeros(N_EDU)
+    p.s_edu_sigma = 0.001
+    p.false_positive_rate = 0.0
+    return p
+
+
 VARIANTS = {
     "A": variant_A_tight_s,
     "B": variant_B_tight_eta_term,
     "C": variant_C_default,
+    "D": variant_D_cplus,
 }
