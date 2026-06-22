@@ -206,10 +206,10 @@ documents this and feeds the age/year structure of η.
 
 ## 7. The result
 
-With those fixes the model converges cleanly (all three variants pass their
-convergence checks). The two variants that **pin** the recording rate (A, C) agree
-tightly at ~40,000; the variant that instead **frees** recording (B) lands at
-~48,000. That spread is now an honest sensitivity range, not a shared fault:
+With those fixes the model converges (r̂ ≤ 1.01 across all three variants, with
+healthy effective sample sizes). The two variants that **pin** the recording rate
+(A, C) agree tightly at ~40,000; the variant that instead **frees** recording (B)
+lands at ~48,000. That spread is now an honest sensitivity range, not a shared fault:
 
 | quantity | estimate (2016–2024) | interpretation |
 |---|---|---|
@@ -227,6 +227,32 @@ assumption, **34–45%** of those pregnancies were electively terminated, leavin
 by age-band (a "posterior-predictive check") to within about 5%.
 
 ![Ascertainment funnel. Of roughly 72,000 natural DS livebirths, an estimated 40,000–48,000 are born after elective termination, and only about 15,000 are recorded on a birth certificate.](figures/ascertainment_funnel.png)
+
+**Why three variants (A, B, C).** The data fix the product
+`natural × survival × recording`; they cannot split survival (termination) from
+recording. The priors break that tie, and the three variants probe *how* — on the
+one axis where it bites: the tightness of the **race/education coefficients** in
+recording (`s`) versus termination (`η_term`). When a group's recorded DS rate is
+low, is it *recorded less* or *terminated more*? The variants tilt the answer:
+
+| variant | recording demographics | termination demographics | gaps load onto | total |
+|---|---|---|---|---|
+| **C** (main spec) | moderately pinned | moderately free | balanced | ~40k |
+| **A** (tight `s`) | pinned harder | freer | termination | ~40k |
+| **B** (tight `η_term`) | freer | pinned harder | recording | ~48k |
+
+θ, the baseline recording (~0.40 for the reference group) and the screening curve
+are pinned *identically* in all three — only the demographic *allocation* moves. B
+reaches ~48k because freeing recording lets the data pull the population-aggregate
+recording down to ~0.32. So A and C agree because they make the same choice, not as
+independent confirmations; the **A↔B spread (≈40–48k) is the bound on the
+recording-vs-termination attribution**, and it is far wider than any single variant's
+credible interval — so that spread, not the CIs, is the honest uncertainty. What
+stays put across variants (the age termination gradient, the subgroup orderings, the
+year trend) is trustworthy; what moves (the aggregate recording level, the total, a
+subgroup's recording-vs-termination split) is assumption-dependent. The variants do
+**not** probe the big pins — θ, the 0.40 reference recording, the screening curve —
+so even 40–48k is conditional on those.
 
 ## 8. Who the missed cases are — and how the picture is changing
 
@@ -295,16 +321,30 @@ change in what families decide once a case is found.
 ![Prenatal screening, termination, and the combined reduction (with a 95% credible interval) over 2016–2024, variants C and B.](figures/year_detection_termination.png)
 
 Did screening expand fastest in older mothers, where NIPT was recommended first? The
-model cannot answer that on its own: screening is modelled as *additive* in year and
-age, with no year-by-age interaction, so it applies one uniform yearly shift to every
-age band. The raw data do point that way — between 2016–18 and 2022–24 the recorded
-DS rate fell **16–22% in mothers aged 30 and over** but only ~9% at 25–29 (the
-youngest bands are small-count noise). Within an age band, recording and the natural
-rate are fixed over time, so that decline *is* the rising reduction for that band.
-Pinning down the age-by-time interaction properly would need an interaction term and
-a re-fit; for now it is a raw-data observation, not a model result.
+raw recorded-DS-rate decline *looks* concentrated in them — between 2016–18 and
+2022–24 it fell **16–22% in mothers aged 30 and over** but only ~9% at 25–29 (the
+youngest bands are small-count noise).
 
-![Change in recorded DS rate, 2016–18 versus 2022–24, by maternal-age band (raw data). The decline is concentrated in older mothers.](figures/recorded_rate_by_age_change.png)
+![Change in recorded DS rate, 2016–18 versus 2022–24, by maternal-age band (raw data). The decline looks concentrated in older mothers.](figures/recorded_rate_by_age_change.png)
+
+But that raw pattern does **not** survive the model. We added a year-by-age
+interaction to the screening stage — a zero-sum term, so it captures only the
+differential, not a shift in the year or age main effects — and re-fit all three
+variants. The interaction is *precisely* estimated (it is the best-sampled part of
+the model, effective sample sizes of 7,000–16,000) and it is **flat**: the
+age-gradient of the extra screening rise is **+0.015 log-odds per age band
+[95% CI −0.08, +0.11], P(gradient > 0) = 0.61**, with no monotone pattern across ages
+and every band's interval crossing zero.
+
+![Extra screening rise by maternal-age band (the year-by-age interaction, reporting variant C). Every band's 95% interval crosses zero; there is no age gradient.](figures/year_age_interaction.png)
+
+The reconciliation is **compositional**: the race, education and payer mix *within*
+each age band shifted over 2016–2024, and because those factors drive recording and
+termination they move the recorded rate. The model adjusts for them, and once it
+does, the screening rollout was — within this data's resolution — roughly uniform
+across maternal ages. This is exactly the trap a raw-data reading falls into, and why
+the interaction was worth fitting: the apparent "older mothers first" is an artefact
+of changing composition, not differential screening.
 
 ## 9. Limitations and criticisms
 
