@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # Notes 2 - Predictors of recorded DS live births
+# # Notes nn - Predictors of recorded DS live births
 #
 # - Drop calibration (makes no difference)
 #
@@ -40,16 +40,12 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-from dspopulations_us_birth_certificates import repl_utils
-from dspopulations_us_birth_certificates import stats_utils
-from dspopulations_us_birth_certificates import data_utils
-from dspopulations_us_birth_certificates import ml_utils
-from dspopulations_us_birth_certificates import plot_utils
-from dspopulations_us_birth_certificates.variables import Variables as vars
+import repl_utils, stats_utils, data_utils, ml_utils, plot_utils
+from variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
+plt.style.use("../../notebook.mplstyle")
 
 os.makedirs("./output", exist_ok=True)
 
@@ -61,7 +57,7 @@ N_CORES = joblib.cpu_count(only_physical_cores=True)
 
 START_TIME = datetime.now()
 
-OUTPUT_DIR = f"output/0008-predictors-6/{START_TIME:%Y%m%d-%H%M%S}"
+OUTPUT_DIR = f"output/0009-predictors-9/{START_TIME:%Y%m%d-%H%M%S}"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -83,8 +79,8 @@ TRAINING_SPLIT = 0.7
 VALIDATION_SPLIT = 0.3
 # CALIBRATION_SPLIT = 1 - TRAINING_SPLIT - VALIDATION_SPLIT
 #
-NUM_BOOST_ROUND = 5000
-EARLY_STOPPING_ROUNDS = 20
+NUM_BOOST_ROUND = 10000
+EARLY_STOPPING_ROUNDS = 50
 # True to search for hyperparameters
 SELECT_HYPERPARAMETERS = True
 #
@@ -109,7 +105,7 @@ df = data_utils.load_predictors_data(
 numeric = [
     vars.YEAR,
     vars.DBWT,
-    vars.PWGT_R,
+    # vars.PWGT_R,
     vars.WTGAIN,
     vars.BMI,
     vars.MAGE_C,
@@ -180,7 +176,7 @@ X[categorical] = X[categorical].astype("category")
 
 # %%
 X_train, X_valid, y_train, y_valid = train_test_split(
-    X, y, test_size=TRAINING_SPLIT, stratify=y, random_state=RANDOM_SEED
+    X, y, test_size=(1-TRAINING_SPLIT), stratify=y, random_state=RANDOM_SEED
 )
 
 train_data = lgb.Dataset(
@@ -225,15 +221,15 @@ base_params = {
 }
 
 last_best_params = {
-    "learning_rate": 0.02876437855047539,
-    "num_leaves": 93,
-    "min_data_in_leaf": 536,
-    "min_gain_to_split": 0.16350834484065044,
-    "feature_fraction": 0.975019923125186,
-    "bagging_fraction": 0.6692811208772795,
-    "bagging_freq": 3,
-    "lambda_l1": 0.4046983707091733,
-    "lambda_l2": 4.526936405831973,
+    "learning_rate": 0.009461164726049449,
+    "num_leaves": 180,
+    "min_data_in_leaf": 756,
+    "min_gain_to_split": 0.9285634625013361,
+    "feature_fraction": 0.9239582799934513,
+    "bagging_fraction": 0.9185684081749333,
+    "bagging_freq": 2,
+    "lambda_l1": 0.0005836073944757167,
+    "lambda_l2": 0.6142323696066677
 }
 
 
@@ -365,6 +361,100 @@ plot_utils.plot_precision_recall_curve(
     output_dir=OUTPUT_DIR,
     file_name=f"model_{model_idx}_precision_recall_curve",
 )
+
+
+# %%
+
+# -----------------------------
+# Precision@K / Recall@K curves
+# -----------------------------
+
+def precision_recall_at_k(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+    ks=(100, 500, 1000, 5000, 10000, 20000, 50000),
+) -> pd.DataFrame:
+    """
+    Compute Precision@K and Recall@K for a binary classifier ranking.
+
+    Parameters
+    ----------
+    y_true : array-like (n,)
+        Binary labels {0,1}.
+    y_score : array-like (n,)
+        Model scores (higher = more likely positive).
+    ks : iterable of int
+        Cutoffs.
+
+    Returns
+    -------
+    DataFrame with columns: K, tp, precision_at_k, recall_at_k.
+    """
+    y_true = np.asarray(y_true).astype(int)
+    y_score = np.asarray(y_score, dtype=float)
+
+    if y_true.ndim != 1 or y_score.ndim != 1 or y_true.shape[0] != y_score.shape[0]:
+        raise ValueError("y_true and y_score must be 1D arrays of the same length.")
+
+    n = y_true.shape[0]
+    pos_total = int(y_true.sum())
+    if pos_total == 0:
+        raise ValueError("y_true contains no positives; recall is undefined.")
+
+    # sort descending by score
+    order = np.argsort(-y_score, kind="mergesort")  # stable for ties
+    y_sorted = y_true[order]
+
+    # cumulative true positives along the ranked list
+    ctp = np.cumsum(y_sorted)
+
+    rows = []
+    for K in ks:
+        k = int(min(max(K, 1), n))
+        tp = int(ctp[k - 1])
+        precision = tp / k
+        recall = tp / pos_total
+        rows.append((k, tp, precision, recall))
+
+    return pd.DataFrame(rows, columns=["K", "tp", "precision_at_k", "recall_at_k"])
+
+
+def plot_precision_recall_at_k(pr_df: pd.DataFrame, title_prefix: str = "Validation"):
+    """
+    Plot Precision@K and Recall@K vs K (log-scaled x-axis).
+    """
+    ks = pr_df["K"].to_numpy()
+    prec = pr_df["precision_at_k"].to_numpy()
+    rec = pr_df["recall_at_k"].to_numpy()
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(ks, prec, marker="o")
+    plt.xscale("log")
+    plt.xlabel("K (top-K flagged; log scale)")
+    plt.ylabel("Precision@K")
+    plt.title(f"{title_prefix}: Precision@K")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    plt.show()
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(ks, rec, marker="o")
+    plt.xscale("log")
+    plt.xlabel("K (top-K flagged; log scale)")
+    plt.ylabel("Recall@K")
+    plt.title(f"{title_prefix}: Recall@K")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    plt.show()
+
+
+
+# %%
+Ks = (100, 500, 1000, 5000, 10000, 20000, 50000)
+
+pr_valid = precision_recall_at_k(y_valid.to_numpy(), p_valid, ks=Ks)
+print(pr_valid)
+
+plot_precision_recall_at_k(pr_valid, title_prefix="Validation")
+
 
 # %% [markdown]
 # #### Feature importance
@@ -531,30 +621,14 @@ plt.show()
 
 # %%
 features_to_remove_0 = [
-    "ca_limb",
-    "ca_hypo",
-    "rf_gdiab",
-    "ca_omph",
-    "rf_fedrg",
-    "rf_ehype",
-    "apgar10",
-    "ab_seiz",
-    "wic",
-    "fagecomb",
-    
-    "pwgt_r",
-    "feduc",
-    "fracehisp",
-    "rf_pdiab",
-    "apgar5",
-    "ld_indl",
-    "rf_ppterm",
-    "ca_mnsb",
-    "ca_gast",
-    "ld_augm",
-    "ca_anen",
-    "ab_surf",
     "ca_cdh",
+    "apgar10",
+    "ca_cleft",
+    "rf_artec",
+    "ca_omph",
+    "ca_clpal",
+    "wic",
+    "ca_limb"
 ]
 
 X_train = X_train.drop(columns=features_to_remove_0)
@@ -607,7 +681,7 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds = ml_utils.get_metrics(
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
     y_valid, p_valid, K=10000, thr=0.01
 )
 
@@ -760,7 +834,7 @@ with plt.rc_context({"axes.titlesize": 12}):
     plot = plt.figure()
     ax = plot.subplots()
     ax.set_title(f"Model {model_idx}: SHAP values for predictor variables")
-    shap.plots.beeswarm(explanation, max_display=30, plot_size=(8, 7))
+    shap.plots.beeswarm(explanation, max_display=40, plot_size=(8, 8))
     if SAVE_PLOTS:
         plt.savefig(
             f"{OUTPUT_DIR}/model_{model_idx}_shap_beeswarm.png",
@@ -794,10 +868,16 @@ plt.show()
 
 # %%
 features_to_remove_1 = [
-    "rf_artec",
-    "rf_phype",
-    "ca_cleft",
-    "ca_clpal"
+    "rf_pdiab",
+    "ca_hypo",
+    "rf_ppterm",
+    "ca_mnsb",
+    "rf_ehype",
+    "ca_anen",
+    "ca_gast",
+    "ab_surf",
+    "rf_gdiab",
+    "ab_seiz",
 ]
 
 X_train = X_train.drop(columns=features_to_remove_1)
@@ -850,7 +930,7 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds = ml_utils.get_metrics(
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
     y_valid, p_valid, K=10000, thr=0.01
 )
 
@@ -880,6 +960,14 @@ plot_utils.plot_precision_recall_curve(
     output_dir=OUTPUT_DIR,
     file_name=f"model_{model_idx}_precision_recall_curve",
 )
+
+# %%
+
+pr_valid = precision_recall_at_k(y_valid.to_numpy(), p_valid, ks=Ks)
+print(pr_valid)
+
+plot_precision_recall_at_k(pr_valid, title_prefix="Validation")
+
 
 # %%
 importance_gain = gbm.feature_importance(importance_type="gain")
@@ -986,9 +1074,6 @@ shap_importance.to_csv(
 shap_importance
 
 # %%
-shap_importance["feature"].tolist()
-
-# %%
 with plt.rc_context({"axes.titlesize": 12}):
     plot = plt.figure(figsize=(8, 8))
     ax = plot.subplots()
@@ -1032,6 +1117,9 @@ if SAVE_PLOTS:
         bbox_inches="tight",
     )
 plt.show()
+
+# %%
+# More SHAP plots...
 
 # %% [markdown]
 # ## Prediction
@@ -1141,7 +1229,7 @@ df[["year", "p_ds_lb_pred_01", "ca_down_c_p_n"]].groupby(
 # %%
 import duckdb
 
-con = duckdb.connect("../data/us_births.db")
+con = duckdb.connect("./data/us_births.db")
 
 # %%
 con.execute(
