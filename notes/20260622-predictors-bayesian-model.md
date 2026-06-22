@@ -452,24 +452,34 @@ Characterising the missed population by the GB-predicted-missing cohort _inverts
 truth: it puts cyanotic CHD at ~20% of all DS, _above_ the recorded 5.6%, because the GB
 flags the cardiac, NICU-bound tail. The class-prior route instead estimates the true-DS
 count _within each clinical stratum_ from that stratum's own recording rate, and
-aggregates — no individual is identified. Because severe cases are recorded at a higher
-rate (`R = s_with / s_without > 1`), the missed cases concentrate in the milder,
-condition-absent stratum, so the full-population rate falls _below_ the recorded one — the
-correct direction.
+aggregates — no individual is identified. The free parameter is `R = s_with / s_without`,
+how much more often a DS birth _with_ the condition is recorded than one without.
 
-![Co-occurring-condition rate in the full (recorded + missed) true-DS population, estimated by stratified class priors as the recording-rate ratio R varies, versus the GB individual-prediction estimate (dashed). At R = 1 (constant recording) the class prior equals the recorded rate; for R > 1 (severe cases recorded more) it falls below, while the GB estimate sits above — inverted.](figures/cooccurring_class_prior.png)
+![Co-occurring-condition rate in the full (recorded + missed) true-DS population, estimated by stratified class priors as the recording-rate ratio R varies, versus the GB individual-prediction estimate (dashed). At R ≈ 1 (the literature-supported value) the class prior equals the recorded rate; the GB estimate sits well above it — inverted. The estimate stays far below the GB across the whole sensitivity range.](figures/cooccurring_class_prior.png)
 
-The one input the certificate cannot supply is `R` — how much more often a DS birth _with_
-the condition is recorded — which must come from validation studies that report
-ascertainment by anomaly status (or an added recording covariate); the figure sweeps it.
-But even the **neutral** `R = 1` version (missed mirror recorded) is right-side-up where
-the GB is upside-down, so the stratified class prior is the safer estimator for the
-co-occurring-conditions analysis regardless.
+What does the validation literature say `R` is? We chased this down, and the answer is
+**`R ≈ 1` — there is no support for the "severe cases recorded more" story on the birth
+certificate.** Birth-certificate DS recording is driven by demographics (which the
+structural model already adjusts for) and by whether the diagnosis is confirmed within the
+24–48-hour window when the certificate is filled — not by clinical severity. A
+suspected-DS cohort that was **83.5% congenital heart disease still had only ~25%**
+birth-certificate DS recording, and even prenatally-diagnosed cases were recorded under
+40% of the time (Tennessee Medicaid validation; Atlanta surveillance found that **preterm
+birth _lowers_** defect reporting, if anything pushing `R < 1`). So the **neutral `R = 1`**
+estimate — missed DS mirror recorded DS — is the _supported_ one, not just a fallback: the
+full-population rates are best read as **≈ the recorded rates (cyanotic CHD ~5.6%, NICU
+~58%)**, with `R = 1.5–2` shown only as a sensitivity range. The GB's inflated figures
+(20% / 68%) are the artefact to avoid; the recorded rate is the answer.
 
 _Method note: the PU framing and the threshold-calibration result that motivated this view
 are from Teisseyre, Martens, Bekker and Davis, "Learning from biased positive-unlabeled
 data via threshold calibration" (AISTATS 2025); the inverse-propensity and anchor
-estimators from Elkan and Noto (2008) and the survey of Bekker and Davis (2020)._
+estimators from Elkan and Noto (2008) and the survey of Bekker and Davis (2020). The
+recording-by-severity evidence is from Salemi et al. (Paediatr Perinat Epidemiol 2017,
+doi:10.1111/ppe.12326), the Atlanta MACDP birth-certificate sensitivity study
+(doi:10.1177/003335491112600209), and a Tennessee Medicaid DS-ascertainment validation
+(doi:10.3390/children11101271); co-occurring-defect prevalences in DS from the NBDPN
+multi-state study (doi:10.1002/bdr2.1854)._
 
 ## Limitations
 
@@ -509,14 +519,16 @@ The model works, but:
   state, year and case mix. Collapsing that is a simplification that could bias
   subgroup comparisons.
 
-- **The co-occurring-conditions analysis needs the recording-by-severity ratio.**
-  The structural total treats DS as statistically independent of conditions like
-  CCHD. The class-prior reframing (above) gives an unbiased _route_ to co-occurring
-  rates — stratify on the condition and weight each stratum by its own recording rate
-  — but the severity ratio `R = s_with / s_without` must come from external
-  validation; without it we have only the neutral `R = 1` estimate (missed mirror
-  recorded). Still unresolved, but no longer a dead end, and no longer at risk of the
-  GB cohort's inversion.
+- **The co-occurring-conditions analysis is now tractable.** The structural total
+  treats DS as statistically independent of conditions like CCHD. The class-prior
+  reframing (above) gives an unbiased route to co-occurring rates — stratify on the
+  condition and weight each stratum by its recording rate `R = s_with / s_without`. We
+  chased `R` through the validation literature and found **no support for `R > 1`**
+  (birth-certificate DS recording is timing- and demographically-driven, not
+  severity-driven), so the neutral `R = 1` estimate — the full-population rate equals
+  the recorded rate — is the supported answer, with `R` swept as a sensitivity check.
+  The residual caveat is that this still assumes the recorded rate _within_ each
+  stratum is unbiased once demographics are adjusted.
 
 - **The gap to independent estimates is itself informative.** Our pinned-recording
   estimate (~40k at `s ≈ 0.40`) sits below surveillance figures (de Graaf and

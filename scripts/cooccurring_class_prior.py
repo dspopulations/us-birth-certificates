@@ -10,19 +10,25 @@ propensity estimate):
 
 where rec_present / rec_absent are recorded-DS counts with / without the condition and
 R is the recording-rate ratio (how much more likely a DS birth WITH the condition is to
-be recorded than one without). The absolute recording level cancels -- only the ratio R
-matters.
+be recorded than one without). The absolute recording level cancels -- only R matters.
 
-  * R = 1  -> constant-s / neutral baseline: the full-population rate equals the recorded
-             rate (the unrecorded cases mirror the recorded ones).
-  * R > 1  -> severe cases recorded more: the full-population rate falls BELOW the
-             recorded rate, because the missed cases concentrate in the milder,
-             condition-absent stratum. This is the "severity-s_g" extension.
+  * R = 1  -> neutral baseline: the full-population rate equals the recorded rate (the
+             unrecorded cases mirror the recorded ones). This is the LITERATURE-SUPPORTED
+             default. Birth-certificate DS recording is driven by demographics (already
+             adjusted in the structural model) and by whether DS is confirmed within the
+             24-48h certificate window -- NOT by clinical severity. A suspected-DS cohort
+             that was 83.5% congenital heart disease still had only ~25% birth-certificate
+             recording (Tennessee Medicaid, doi:10.3390/children11101271), and preterm
+             birth LOWERS defect reporting rather than raising it (Atlanta MACDP,
+             doi:10.1177/003335491112600209). So there is no empirical basis for R > 1.
+  * R != 1 -> sensitivity analysis spanning the two competing mechanisms (extra workup for
+             severe cases pushes R > 1; certificate-timing / transfer of sick infants
+             pushes R < 1). The estimate stays far below the GB estimate either way.
 
 Contrasted with the GB individual-prediction estimate, which combines the recorded
 cohort with the GB-predicted-missing cohort. Because the GB flags the clinically-florid
-tail (see the variant-D / over-medicalisation discussion), it INVERTS the correction --
-making missed DS look more affected than recorded DS.
+tail (see the variant-D / over-medicalisation discussion), it INVERTS the picture --
+making missed DS look MORE affected than recorded DS, which is unsupported.
 
 Figure -> notes/figures/cooccurring_class_prior (png/svg/csv).
 
@@ -50,7 +56,7 @@ from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E4
 OUTPUT_DIR = "notes/figures"
 DB = "data/us_births.db"
 PRED_MISSING = "ds_pred_missing_14"  # C-only, demographically-blind flag (variant-D source)
-R_DEFAULT = 2.0  # illustrative severity recording-rate ratio (pending a validation-based value)
+SENS_R = (1.5, 2.0)  # sensitivity values reported alongside the R=1 literature-supported default
 CONDITIONS = [
     ("ca_cchd", "Cyanotic CHD"),
     ("ab_nicu", "NICU admission"),
@@ -89,27 +95,25 @@ def main() -> int:
         recorded = c["rec_present"] / rec_n
         gb_full = (c["rec_present"] + c["pm_present"]) / (rec_n + pm_n)
         cp = _class_prior(c["rec_present"], c["rec_absent"], r_grid)
-        cp_default = float(_class_prior(c["rec_present"], c["rec_absent"], np.array([R_DEFAULT]))[0])
+        cp_sens = {r: float(_class_prior(c["rec_present"], c["rec_absent"], np.array([r]))[0]) for r in SENS_R}
 
         ax.plot(r_grid, cp * 100, "-", color=styles.COLOUR_BLUE, lw=2,
                 label="Class-prior estimate (full true-DS population)")
         ax.axhline(gb_full * 100, ls="--", color=styles.COLOUR_RED,
                    label=f"GB individual-prediction estimate ({gb_full * 100:.0f}%)")
-        ax.plot([1.0], [recorded * 100], "o", color=styles.COLOUR_GREEN, ms=7,
-                label=f"Recorded rate = constant-s, R=1 ({recorded * 100:.1f}%)")
-        ax.axvline(R_DEFAULT, ls=":", color=styles.TEXT_COLOUR, alpha=0.6)
-        ax.plot([R_DEFAULT], [cp_default * 100], "s", color=styles.COLOUR_BLUE, ms=6)
-        ax.annotate(f"R={R_DEFAULT:g}: {cp_default * 100:.1f}%", (R_DEFAULT, cp_default * 100),
-                    textcoords="offset points", xytext=(6, 8), fontsize=7, color=styles.COLOUR_BLUE)
+        ax.axvspan(1.0, 1.5, color=styles.TEXT_COLOUR, alpha=0.06)  # plausible range near R=1
+        ax.plot([1.0], [recorded * 100], "o", color=styles.COLOUR_GREEN, ms=8,
+                label=f"R≈1, literature-supported = recorded ({recorded * 100:.1f}%)")
         ax.set_title(f"{label}")
         ax.set_xlabel("Recording-rate ratio R = s(with) / s(without)")
         ax.set_ylabel(f"% of true DS with {label.lower()}")
         ax.set_ylim(0, max(gb_full, recorded) * 130)
         ax.legend(fontsize=6, loc="upper right")
         rows.append({
-            "condition": label, "recorded_pct": round(recorded * 100, 1),
+            "condition": label, "recorded_R1_pct": round(recorded * 100, 1),
             "gb_full_pct": round(gb_full * 100, 1),
-            f"classprior_R{R_DEFAULT:g}_pct": round(cp_default * 100, 1),
+            "classprior_R1.5_pct": round(cp_sens[1.5] * 100, 1),
+            "classprior_R2_pct": round(cp_sens[2.0] * 100, 1),
             "rec_present": c["rec_present"], "rec_absent": c["rec_absent"],
             "pm_present": c["pm_present"], "pm_absent": c["pm_absent"],
         })
@@ -120,9 +124,11 @@ def main() -> int:
     _save_fig(fig, OUTPUT_DIR, "cooccurring_class_prior", data=df)
     plt.close(fig)
 
-    pd.set_option("display.width", 160)
+    pd.set_option("display.width", 180)
     print(df.to_string(index=False))
-    print(f"\nR_DEFAULT={R_DEFAULT} is illustrative; a validation-based s(with)/s(without) ratio should replace it.")
+    print("\nR=1 (full population == recorded rate) is the literature-supported default: birth-certificate")
+    print("DS recording is timing- and demographically-driven, not severity-driven, so there is no basis")
+    print("for R>1. R=1.5/2.0 are shown only as a sensitivity range.")
     print(f"wrote cooccurring_class_prior to {OUTPUT_DIR}/")
     return 0
 
