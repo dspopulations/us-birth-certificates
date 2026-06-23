@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
 import pytest
 
 from dspopulations_us_birth_certificates.selection import (
@@ -81,6 +82,9 @@ def test_model_config_variant_selection_covers_A_through_C() -> None:
         ).to_dict()["priors"]
         for v in ("A", "B", "C")
     }
-    # A tightens s_race_sigma relative to C; B loosens it.
-    assert snapshots["A"]["s_race_sigma"] < snapshots["C"]["s_race_sigma"]
-    assert snapshots["B"]["s_race_sigma"] > snapshots["C"]["s_race_sigma"]
+    # A tightens s_race_year_sigma relative to C; B loosens it (elementwise).
+    a = np.asarray(snapshots["A"]["s_race_year_sigma"])
+    b = np.asarray(snapshots["B"]["s_race_year_sigma"])
+    c = np.asarray(snapshots["C"]["s_race_year_sigma"])
+    assert (a < c).all()
+    assert (b > c).all()

@@ -31,6 +31,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from dspopulations_us_birth_certificates.selection.recording_anchor import (
+    S_RACE_YEAR_LOGIT,
+    S_RACE_YEAR_SIGMA,
+)
+
 
 def logit(p):
     """Logit transform, safe for arrays."""
@@ -284,28 +289,22 @@ ETA_TERM_YEAR_SIGMA = 0.15
 # Stage 3: BC sensitivity s (Boulet / Salemi)                                 #
 # --------------------------------------------------------------------------- #
 
-S_BASELINE = 0.40
-S_LOGIT = logit(S_BASELINE)
-# Pinned HARD (2026-06-21): sigma=0.10 was still overwhelmed (s_int escaped ~7 sigma
-# to ~0.24 along the eta*s ridge), so pin the recording LEVEL at the Boulet/Salemi
-# validation value (~0.40) with sigma=0.001, like theta_LB. With s pinned the age-
-# graded reduction lands in eta. The level trades off validation (s~0.40 -> total
-# ~38k) vs surveillance (total ~45k -> s~0.34). See
-# notes/20260621-theta-lb-escape-age-gradient.md.
-S_SIGMA = 0.001
-
-S_RACE = np.array(
-    [
-        0.00,  # NH White (reference)
-        -0.40,  # NH Black
-        -0.30,  # NH AIAN
-        -0.10,  # NH Asian/Pacific Islander
-        -0.20,  # Hispanic
-        0.00,  # Unknown
-    ]
-)
-S_RACE_SIGMA = 0.05  # tightened (2026-06-21): keep s_race from absorbing the ridge
-
+# s(race, year) is anchored EXTERNALLY to recorded/true derived from de Graaf
+# surveillance prevalence (scripts/derive_recording_rates.py -> recording_anchor.py),
+# replacing the former hard-pinned global level (0.40, sigma=0.001) + guessed S_RACE
+# offsets. The recording LEVEL and the racial gradient are now MEASURED, with a year
+# dimension and a per-cell sigma that widens across the imputed 2019-2024 tail
+# (survival ratio held flat -- see the script's backtest). This breaks the eta x s
+# ridge with an external anchor instead of by fiat: Morris theta_LB and the anchored s
+# together identify eta, so s_int no longer needs pinning. Idx-5 "Unknown" has no
+# de Graaf anchor and falls back to a weak neutral prior baked into the arrays.
+# See notes/20260622-predictors-bayesian-model.md.
+#
+# s_edu stays as a small within-cell education residual (de Graaf has no education
+# split). It is tightly priored and ~mean-zero over the population, so it redistributes
+# within a race x year margin without materially shifting the anchored level. Clinical-
+# flag recording effects (preterm/CCHD/NICU/Aven) remain DROPPED -- they correlate with
+# true DS prevalence, not recording, and belong to the Aim-4 co-occurring analysis.
 S_EDU = np.array(
     [
         -0.30,  # <HS
@@ -317,13 +316,6 @@ S_EDU = np.array(
     ]
 )
 S_EDU_SIGMA = 0.05  # tightened (2026-06-21): keep s_edu from absorbing the ridge
-
-# Clinical-flag recording effects (preterm/CCHD/NICU/Aven) were DROPPED from s on
-# 2026-06-21. They blew up positive (s_nicu +5.8) because CCHD/NICU correlate with
-# true DS prevalence (invariant #2 is backwards) and the model could only express
-# that through recording. The flags remain available as the Aim-4 co-occurring-
-# conditions analysis (diagnostics.cchd_consistency_*), where they are an OUTCOME of
-# true DS, not a recording covariate. See notes/20260621-theta-lb-escape-age-gradient.md.
 
 
 # --------------------------------------------------------------------------- #
@@ -390,11 +382,14 @@ class ModelPriors:
     eta_term_age_sigma: float = ETA_TERM_AGE_SIGMA
     eta_term_year_sigma: float = ETA_TERM_YEAR_SIGMA
 
-    # Stage 3
-    s_logit: float = S_LOGIT
-    s_sigma: float = S_SIGMA
-    s_race: np.ndarray = field(default_factory=lambda: S_RACE.copy())
-    s_race_sigma: float = S_RACE_SIGMA
+    # Stage 3 (de Graaf surveillance anchor; see recording_anchor.py).
+    # s_race_year_* are [N_RACE, n_year] logit mean/sigma; the model slices [:, :n_year].
+    s_race_year_logit: np.ndarray = field(
+        default_factory=lambda: S_RACE_YEAR_LOGIT.copy()
+    )
+    s_race_year_sigma: np.ndarray = field(
+        default_factory=lambda: S_RACE_YEAR_SIGMA.copy()
+    )
     s_edu: np.ndarray = field(default_factory=lambda: S_EDU.copy())
     s_edu_sigma: float = S_EDU_SIGMA
 
@@ -410,7 +405,7 @@ class ModelPriors:
 def variant_A_tight_s() -> ModelPriors:
     """Tight sensitivity priors, weak termination priors."""
     p = ModelPriors()
-    p.s_race_sigma = S_RACE_SIGMA / 2
+    p.s_race_year_sigma = p.s_race_year_sigma * 0.5
     p.s_edu_sigma = S_EDU_SIGMA / 2
     p.eta_term_race_sigma = ETA_TERM_RACE_SIGMA * 2
     p.eta_term_edu_sigma = ETA_TERM_EDU_SIGMA * 2
@@ -422,7 +417,7 @@ def variant_B_tight_eta_term() -> ModelPriors:
     p = ModelPriors()
     p.eta_term_race_sigma = ETA_TERM_RACE_SIGMA / 2
     p.eta_term_edu_sigma = ETA_TERM_EDU_SIGMA / 2
-    p.s_race_sigma = S_RACE_SIGMA * 2
+    p.s_race_year_sigma = p.s_race_year_sigma * 2.0
     p.s_edu_sigma = S_EDU_SIGMA * 2
     return p
 
@@ -450,10 +445,8 @@ def variant_D_recording_off() -> ModelPriors:
     confirmed-only). See notes/20260622-predictors-bayesian-model.md.
     """
     p = ModelPriors()
-    p.s_logit = logit(0.999)
-    p.s_sigma = 0.001
-    p.s_race = np.zeros(N_RACE)
-    p.s_race_sigma = 0.001
+    p.s_race_year_logit = np.full_like(S_RACE_YEAR_LOGIT, logit(0.999))
+    p.s_race_year_sigma = np.full_like(S_RACE_YEAR_SIGMA, 0.001)
     p.s_edu = np.zeros(N_EDU)
     p.s_edu_sigma = 0.001
     p.false_positive_rate = 0.0

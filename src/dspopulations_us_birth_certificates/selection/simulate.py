@@ -58,11 +58,16 @@ class TrueParams:
     eta_term_age: np.ndarray  # (N_AGE,)
     eta_term_year: np.ndarray  # (n_year,)
 
-    s_int: float
-    s_race: np.ndarray  # (N_RACE,)
+    s_race_year: np.ndarray  # (N_RACE, n_year)
     s_edu: np.ndarray  # (N_EDU,)
 
     false_positive_rate: float
+
+    @property
+    def s_race(self) -> np.ndarray:
+        """Year-averaged per-race recording logit, matching the model's ``s_race``
+        Deterministic — so recovery/identifiability diagnostics can compare like-for-like."""
+        return self.s_race_year.mean(axis=1)
 
     @classmethod
     def from_priors(
@@ -113,8 +118,10 @@ class TrueParams:
             eta_term_edu=draw(priors.eta_term_edu, priors.eta_term_edu_sigma),
             eta_term_age=draw(priors.eta_term_age, priors.eta_term_age_sigma),
             eta_term_year=eta_term_year,
-            s_int=draw(priors.s_logit, priors.s_sigma),
-            s_race=draw(priors.s_race, priors.s_race_sigma),
+            s_race_year=draw(
+                priors.s_race_year_logit[:, :n_year],
+                priors.s_race_year_sigma[:, :n_year],
+            ),
             s_edu=draw(priors.s_edu, priors.s_edu_sigma),
             false_positive_rate=priors.false_positive_rate,
         )
@@ -181,8 +188,7 @@ def simulate_cells(
     eta = 1.0 - eta_detect * eta_term
 
     s = inv_logit(
-        truth.s_int
-        + truth.s_race[race_idx]
+        truth.s_race_year[race_idx, year_idx]
         + truth.s_edu[edu_idx]
     )
 

@@ -138,7 +138,6 @@ def test_parameter_recovery_95_ci_coverage(
         # coverage statistic). 0.5 on logit is a loose band covering
         # typical MCMC variance under these sample sizes.
         ("eta_term_int", "eta_term_int", 0.5),
-        ("s_int", "s_int", 0.5),
     ],
 )
 def test_scalar_posterior_mean_within_tolerance(

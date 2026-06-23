@@ -75,6 +75,8 @@ ADVI
 allclose
 arviz
 asarray
+backtest
+backtested
 beeswarm
 sociodemographic
 codings
@@ -115,7 +117,9 @@ pyproject
 pytensor
 reframing
 reparameterise
+reparameterisation
 rhat
+RMSE
 sigmas
 sigmoidal
 sklearn
