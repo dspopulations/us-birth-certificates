@@ -42,42 +42,16 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - name: Create venv
         run: uv venv --python 3.14
-      - name: Install package (editable) with pinned runtime deps for tests
-        # Installs the package editable with --no-deps, then pins the runtime
-        # deps the test suite actually exercises. We intentionally skip the
-        # heavy Bayesian stack (pymc/jaxlib/numpyro/arviz/nutpie/preliz)
-        # declared in pyproject's main [project.dependencies] — those aren't
-        # touched by tests and bloat install time. Drop --no-deps once the
-        # Bayesian deps move into a separate extra.
-        #
-        # ``dse-research-utils`` isn't published to PyPI — install from git
-        # (also --no-deps, the console subpackage only needs pandas + rich
-        # which are already pinned below; the package's declared deps
-        # include the Bayesian stack we skip above).
-        #
-        # Bounds here track environment.yml (the canonical local env) so CI
-        # and local runs resolve to the same major versions. Keep them in
-        # sync when bumping either file.
-        #
-        # ``numba`` is pinned explicitly even though it's only a transitive
-        # ``shap`` dep: without the lower bound uv backtracks to numba 0.53.1 /
-        # llvmlite 0.36.0, which has no Python 3.14 wheel and fails to build.
-        # numba>=0.65.0 resolves to llvmlite 0.47 (3.14 wheels). Matches
-        # environment.yml's numba bound.
-        run: |
-          uv pip install --python .venv --no-deps -e .
-          uv pip install --python .venv --no-deps \
-            'dse-research-utils @ git+https://github.com/dseinternational/research.git@main#subdirectory=src/python'
-          uv pip install --python .venv \
-            'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.18.0' 'matplotlib>=3.10.8' \
-            'duckdb>=1.5.2' 'dcor>=0.6' \
-            'lightgbm>=4.6.0' 'optuna>=4.8.0' 'shap>=0.51.0' \
-            'numba>=0.65.0' \
-            'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
-            'rich>=15.0.0' \
-            'pytest>=9.0.3'
+      - name: Install package (editable) with test + modelling deps
+        # Single source of truth: install the package's real dependencies from
+        # pyproject — [project.dependencies] (incl. the Bayesian stack) plus the
+        # [dev] and [modelling] extras. No hand-maintained CI dep list to drift
+        # out of sync (that drift is what previously let an ancient numba slip
+        # in). dse-research-utils (not on PyPI) resolves from git via
+        # [tool.uv.sources]. The Bayesian stack now installs in CI, so the
+        # pymc-gated tests actually run rather than skip.
+        run: uv pip install --python .venv -e '.[dev,modelling]'
       - name: Run pytest
-        # --no-sync keeps the venv we just pinned. Without it, `uv run`
-        # re-resolves against pyproject.toml and drops the modelling pins
-        # (joblib, lightgbm, etc.) the tests need.
+        # --no-sync keeps the venv we just installed into. Without it, `uv run`
+        # re-resolves against pyproject and can drop the editable install.
         run: uv run --no-sync --python .venv pytest
