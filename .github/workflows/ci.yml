@@ -58,6 +58,12 @@ jobs:
         # Bounds here track environment.yml (the canonical local env) so CI
         # and local runs resolve to the same major versions. Keep them in
         # sync when bumping either file.
+        #
+        # ``numba`` is pinned explicitly even though it's only a transitive
+        # ``shap`` dep: without the lower bound uv backtracks to numba 0.53.1 /
+        # llvmlite 0.36.0, which has no Python 3.14 wheel and fails to build.
+        # numba>=0.65.0 resolves to llvmlite 0.47 (3.14 wheels). Matches
+        # environment.yml's numba bound.
         run: |
           uv pip install --python .venv --no-deps -e .
           uv pip install --python .venv --no-deps \
@@ -66,6 +72,7 @@ jobs:
             'numpy>=2.4.3' 'pandas>=3.0.1' 'scipy>=1.18.0' 'matplotlib>=3.10.8' \
             'duckdb>=1.5.2' 'dcor>=0.6' \
             'lightgbm>=4.6.0' 'optuna>=4.8.0' 'shap>=0.51.0' \
+            'numba>=0.65.0' \
             'scikit-learn>=1.8.0' 'joblib>=1.4.0' 'pyarrow>=23.0.1' \
             'rich>=15.0.0' \
             'pytest>=9.0.3'
