@@ -94,8 +94,14 @@ output/selection/<variant>/<spec>/<timestamp>/
 
 See `plans/20260420-selection-model.md` §12 for the full list. Summary:
 
-1. Morris priors stay tight (σ=0.10 on logit).
-2. Clinical features (CCHD, NICU, Aven, Preterm) enter only `s`, never `η`.
+1. Morris θ_LB and `s` are **pinned hard** (σ=0.001 on logit, not 0.10) — at 33.5M
+   rows a σ=0.10 prior is overwhelmed and θ_LB/`s` escape along the η·s ridge
+   (2026-06-21; see `notes/20260621-theta-lb-escape-age-gradient.md`).
+2. Maternal age enters θ_LB (conception, pinned) **and** η — informative age
+   gradients on `eta_detect` (screening access) and `eta_term` (termination).
+   Clinical features (CCHD/NICU/Aven/Preterm) are **dropped from `s`** (they
+   correlate with true DS, so they're the Aim-4 co-occurrence readout via
+   `diagnostics.cchd_consistency_*`, not a recording covariate).
 3. False-positive rate is fixed, not estimated.
 4. Reference levels: Race = NH White, Education = Some college, Payer = Private.
 5. Year coding is `year − year_start` (0-based).

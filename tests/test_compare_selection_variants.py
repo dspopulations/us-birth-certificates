@@ -44,17 +44,24 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
     fit_dir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
 
-    # Minimal DataTree with p_ds_lb (needed for total-true computation).
-    n_chain, n_draw, n_cell = 2, 50, 12
+    # Minimal DataTree with the posterior vars compare_selection_variants reads:
+    # p_ds_lb + p_recorded (per cell) and theta_lb_age (per maternal-age band).
+    n_chain, n_draw, n_cell, n_age = 2, 50, 12, 7
     p_ds_lb = rng.uniform(1e-4, 1e-3, size=(n_chain, n_draw, n_cell))
+    p_recorded = rng.uniform(1e-5, 5e-4, size=(n_chain, n_draw, n_cell))
+    # logit-scale natural rate; invlogit(-5..-4) ~ 0.007..0.018 > p_ds_lb so eta<1.
+    theta_lb_age = rng.uniform(-5.0, -4.0, size=(n_chain, n_draw, n_age))
     posterior = xr.Dataset(
         {
             "p_ds_lb": (("chain", "draw", "cell"), p_ds_lb),
+            "p_recorded": (("chain", "draw", "cell"), p_recorded),
+            "theta_lb_age": (("chain", "draw", "age"), theta_lb_age),
         },
         coords={
             "chain": np.arange(n_chain),
             "draw": np.arange(n_draw),
             "cell": np.arange(n_cell),
+            "age": np.arange(n_age),
         },
     )
     idata = xr.DataTree.from_dict({"posterior": posterior})
@@ -66,14 +73,23 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
             "N_cell": rng.integers(1000, 5000, size=n_cell),
             "R_cell": rng.integers(0, 5, size=n_cell),
             "race_idx": rng.integers(0, 6, size=n_cell),
+            "age_idx": rng.integers(0, n_age, size=n_cell),
             "cchd": rng.integers(0, 2, size=n_cell),
         }
     )
     cells.to_parquet(fit_dir / "cells.parquet", index=False)
 
-    # config.json carries the variant label.
+    # config.json carries the variant label and the false-positive-rate prior
+    # that the age decomposition reads.
     (fit_dir / "config.json").write_text(
-        json.dumps({"model_id": "selection", "variant": variant, "spec": "full"})
+        json.dumps(
+            {
+                "model_id": "selection",
+                "variant": variant,
+                "spec": "full",
+                "priors": {"false_positive_rate": 7.8e-5},
+            }
+        )
     )
 
     # summary.csv with eta_term_race[0..5] + s_race[0..5].

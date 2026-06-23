@@ -151,7 +151,7 @@ def test_age_curve_check(fitted) -> None:
 def test_summary_table_and_convergence_health(fitted) -> None:
     _, idata = fitted
     summary = diagnostics.summary_table(
-        idata, var_names=("theta_lb_age", "s_int")
+        idata, var_names=("theta_lb_age", "s_race")
     )
     health = diagnostics.convergence_health(summary)
     for key in (

@@ -62,6 +62,7 @@ def build_model(
     *,
     spec: Spec = "full",
     n_year: int,
+    prev_margin: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> pm.Model:
     """Build the PyMC model for a given spec.
 
@@ -71,6 +72,13 @@ def build_model(
             :mod:`priors`.
         spec: Which stages to enable.
         n_year: Number of year levels in the data (e.g. 9 for 2016-2024).
+        prev_margin: Optional full-margin anchor ``(target, sigma)``, each a
+            ``[N_RACE, n_year]`` array of de Graaf TRUE prevalence per 10k (NaN where
+            unanchored, e.g. the Unknown race). When given, a soft Normal observation
+            ties the model's N-weighted marginal ``p_ds_lb`` per race×year to de Graaf's
+            surveillance prevalence — pinning η's race×year level (θ is already pinned to
+            Morris) so the literature η priors cannot drag the total below surveillance.
+            See ``selection.recording_anchor`` and ``scripts/derive_recording_rates.py``.
     """
     import pymc as pm
     import pytensor.tensor as pt
@@ -83,10 +91,6 @@ def build_model(
     edu_idx = cells["edu_idx"].to_numpy()
     payer_idx = cells["payer_idx"].to_numpy()
     year_idx = cells["year_idx"].to_numpy()
-    preterm = cells["preterm"].to_numpy().astype(float)
-    cchd = cells["cchd"].to_numpy().astype(float)
-    nicu = cells["nicu"].to_numpy().astype(float)
-    aven = cells["aven"].to_numpy().astype(float)
     N_cell = cells["N_cell"].to_numpy()
     R_cell = cells["R_cell"].to_numpy()
 
@@ -153,9 +157,18 @@ def build_model(
                 )
                 eta_det_age = pm.Normal(
                     "eta_detect_age",
-                    mu=0.0,
+                    mu=priors.eta_detect_age,
                     sigma=priors.eta_detect_age_sigma,
                     dims="age",
+                )
+                # Zero-sum year-by-age interaction: lets the screening rollout
+                # differ by maternal age (the "older mothers first?" question)
+                # without shifting the pinned year or age main effects.
+                eta_det_year_age = pm.ZeroSumNormal(
+                    "eta_detect_year_age",
+                    sigma=priors.eta_detect_year_age_sigma,
+                    n_zerosum_axes=2,
+                    dims=("year", "age"),
                 )
                 eta_det_race = pm.Normal(
                     "eta_detect_race",
@@ -179,6 +192,7 @@ def build_model(
                     eta_det_int
                     + eta_det_year[year_idx]
                     + eta_det_age[age_idx]
+                    + eta_det_year_age[year_idx, age_idx]
                     + eta_det_race[race_idx]
                     + eta_det_edu[edu_idx]
                     + eta_det_payer[payer_idx]
@@ -201,6 +215,12 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
+                eta_term_age = pm.Normal(
+                    "eta_term_age",
+                    mu=priors.eta_term_age,
+                    sigma=priors.eta_term_age_sigma,
+                    dims="age",
+                )
                 eta_term_year = pm.Normal(
                     "eta_term_year",
                     mu=0.0,
@@ -211,20 +231,27 @@ def build_model(
                     eta_term_int
                     + eta_term_race[race_idx]
                     + eta_term_edu[edu_idx]
+                    + eta_term_age[age_idx]
                     + eta_term_year[year_idx]
                 )
                 eta = 1.0 - eta_detect * eta_term
         else:
             eta = pt.ones_like(theta_lb)
 
-        # --- Stage 3: BC sensitivity s --------------------------------- #
+        # --- Stage 3: BC sensitivity s (de Graaf surveillance anchor) --- #
+        # s(race, year) is anchored to recorded/true derived from de Graaf prevalence
+        # (priors.s_race_year_*; see selection.recording_anchor). The external anchor
+        # supplies the recording LEVEL, the racial gradient AND a year dimension, breaking
+        # the eta x s ridge with data rather than the old hard pin on s_int. s_edu stays a
+        # small within-cell education residual. A year-averaged ``s_race`` Deterministic is
+        # retained so the identifiability / coefficient-forest / parameter-recovery
+        # diagnostics that summarise s by race keep working unchanged.
         if spec in ("theta_s", "single_eta", "full"):
-            s_int = pm.Normal("s_int", mu=priors.s_logit, sigma=priors.s_sigma)
-            s_race = pm.Normal(
-                "s_race",
-                mu=priors.s_race,
-                sigma=priors.s_race_sigma,
-                dims="race",
+            s_race_year = pm.Normal(
+                "s_race_year",
+                mu=priors.s_race_year_logit[:, :n_year],
+                sigma=priors.s_race_year_sigma[:, :n_year],
+                dims=("race", "year"),
             )
             s_edu = pm.Normal(
                 "s_edu",
@@ -232,28 +259,9 @@ def build_model(
                 sigma=priors.s_edu_sigma,
                 dims="edu",
             )
-            s_preterm = pm.Normal(
-                "s_preterm",
-                mu=priors.s_preterm_mu,
-                sigma=priors.s_preterm_sigma,
-            )
-            s_cchd = pm.Normal(
-                "s_cchd", mu=priors.s_cchd_mu, sigma=priors.s_cchd_sigma
-            )
-            s_nicu = pm.Normal(
-                "s_nicu", mu=priors.s_nicu_mu, sigma=priors.s_nicu_sigma
-            )
-            s_aven = pm.Normal(
-                "s_aven", mu=priors.s_aven_mu, sigma=priors.s_aven_sigma
-            )
+            pm.Deterministic("s_race", s_race_year.mean(axis=1), dims="race")
             s = pm.math.invlogit(
-                s_int
-                + s_race[race_idx]
-                + s_edu[edu_idx]
-                + s_preterm * preterm
-                + s_cchd * cchd
-                + s_nicu * nicu
-                + s_aven * aven
+                s_race_year[race_idx, year_idx] + s_edu[edu_idx]
             )
         else:
             s = pt.ones_like(theta_lb)
@@ -273,6 +281,37 @@ def build_model(
             observed=R_cell,
             dims="cell",
         )
+
+        # --- Full-margin anchor: tie marginal p_ds_lb per race×year to de Graaf --- #
+        if prev_margin is not None:
+            target_mat = np.asarray(prev_margin[0], dtype=float)
+            sigma_mat = np.asarray(prev_margin[1], dtype=float)
+            rows, tvec, svec = [], [], []
+            for r in range(target_mat.shape[0]):
+                for y in range(n_year):
+                    t = target_mat[r, y]
+                    if not np.isfinite(t):
+                        continue
+                    w = np.where((race_idx == r) & (year_idx == y), N_cell, 0.0)
+                    if w.sum() <= 0:
+                        continue
+                    rows.append(w / w.sum())  # N-weighted average over the cell's age/edu/...
+                    tvec.append(t)
+                    svec.append(sigma_mat[r, y])
+            if rows:
+                W = np.asarray(rows)  # (n_group, n_cell)
+                model.add_coord("prev_group", np.arange(len(rows)))
+                # marginal true DS prevalence per 10k for each anchored race×year group
+                margin = pm.Deterministic(
+                    "prev_margin", 1e4 * pt.dot(W, p_ds_lb), dims="prev_group"
+                )
+                pm.Normal(
+                    "prev_margin_obs",
+                    mu=margin,
+                    sigma=np.asarray(svec),
+                    observed=np.asarray(tvec),
+                    dims="prev_group",
+                )
 
     return model
 

@@ -1,0 +1,3 @@
+condition,recorded_R1_pct,gb_full_pct,classprior_R1.5_pct,classprior_R2_pct,rec_present,rec_absent,pm_present,pm_absent
+Cyanotic CHD,5.6,20.2,3.8,2.9,1000,16809,5007,6995
+NICU admission,58.3,68.3,48.3,41.2,10378,7413,9951,2040

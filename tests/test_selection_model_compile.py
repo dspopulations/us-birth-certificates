@@ -84,6 +84,39 @@ def test_full_spec_has_detect_and_term(tiny_cells: pd.DataFrame) -> None:
     assert "eta_term_ry" not in named
 
 
+def test_full_margin_anchor_adds_prevalence_observation(
+    tiny_cells: pd.DataFrame,
+) -> None:
+    """``prev_margin`` ties the marginal p_ds_lb per race×year to a de Graaf target."""
+    import pymc as pm
+
+    n_race = 6
+    # One anchored target per race×year for the named races; Unknown (idx 5) is NaN.
+    target = np.full((n_race, N_YEAR), 12.0)
+    target[5, :] = np.nan
+    sigma = np.full((n_race, N_YEAR), 1.0)
+
+    model = build_model(
+        tiny_cells,
+        variant_C_default(),
+        spec="full",
+        n_year=N_YEAR,
+        prev_margin=(target, sigma),
+    )
+    obs = {rv.name for rv in model.observed_RVs}
+    det = {d.name for d in model.deterministics}
+    assert "prev_margin_obs" in obs and "prev_margin" in det
+    # Only the 5 named races are anchored -> 5 × N_YEAR groups (Unknown excluded).
+    assert model["prev_margin"].eval().shape == (5 * N_YEAR,)
+
+    with model:
+        prior = pm.sample_prior_predictive(draws=5, random_seed=0)
+    assert "prev_margin_obs" in prior.prior_predictive
+    # Without prev_margin the observation must be absent (default path unchanged).
+    plain = build_model(tiny_cells, variant_C_default(), spec="full", n_year=N_YEAR)
+    assert "prev_margin_obs" not in {rv.name for rv in plain.observed_RVs}
+
+
 def test_theta_only_omits_eta_and_s(tiny_cells: pd.DataFrame) -> None:
     model = build_model(
         tiny_cells, variant_C_default(), spec="theta_only", n_year=N_YEAR

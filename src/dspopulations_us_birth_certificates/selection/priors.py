@@ -31,6 +31,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from dspopulations_us_birth_certificates.selection.recording_anchor import (
+    S_RACE_YEAR_LOGIT,
+    S_RACE_YEAR_SIGMA,
+)
+
 
 def logit(p):
     """Logit transform, safe for arrays."""
@@ -99,7 +104,12 @@ MORRIS_THETA_LB_PER_1000 = np.array(
 
 MORRIS_THETA_LB = MORRIS_THETA_LB_PER_1000 / 1000.0
 MORRIS_LOGIT = logit(MORRIS_THETA_LB)
-MORRIS_SIGMA = 0.10  # tight: biology + large dataset
+# Pinned hard (2026-06-21). At 33.5M rows a sigma=0.10 logit prior behaves like
+# data, letting theta_LB drift 11-15 sigma to absorb the screening/termination
+# age signal (total inflated ~5x). Morris is the EXTERNAL conception-rate anchor;
+# pin it so the maternal-age gradient lands in eta. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+MORRIS_SIGMA = 0.001
 
 
 # --------------------------------------------------------------------------- #
@@ -110,18 +120,26 @@ ETA_DETECT_BASELINE = 0.70
 ETA_DETECT_LOGIT = logit(ETA_DETECT_BASELINE)
 ETA_DETECT_SIGMA = 0.30
 
-# Year effects covering 2016-2024 (centred around 2020; NIPT rollout).
+# Year effects covering 2016-2024 — re-anchored (2026-06-21) to the
+# serum->NIPS transition (cfDNA average-risk validation ~2014-15; ACOG
+# "for all patients" Sept 2020). Shape is a logistic adoption S-curve:
+# reference-level effective detection ~62% in the serum-dominant era
+# rising to ~81% in the NIPS-dominant years, steepest 2019-2021. This is
+# the externally-anchored time structure that identifies eta vs s (s has
+# no reason to track NIPS penetration), so the *shape* is kept informative
+# while the overall level is loose. Implied reference-level detection shown
+# inline. See notes/20260621-screening-cascade-eta-reanchoring.md.
 ETA_DETECT_YEAR_OFFSETS = np.array(
     [
-        -0.25,  # 2016
-        -0.15,  # 2017
-        -0.05,  # 2018
-        0.05,  # 2019
-        0.15,  # 2020
-        0.20,  # 2021
-        0.25,  # 2022
-        0.28,  # 2023
-        0.30,  # 2024
+        -0.35,  # 2016  ~62%
+        -0.25,  # 2017  ~65%
+        -0.10,  # 2018  ~68%
+        0.10,  # 2019  ~72%
+        0.30,  # 2020  ~76%
+        0.45,  # 2021  ~79%
+        0.55,  # 2022  ~80%
+        0.60,  # 2023  ~81%
+        0.63,  # 2024  ~81%
     ]
 )
 ETA_DETECT_YEAR_SIGMA = 0.15
@@ -163,18 +181,59 @@ ETA_DETECT_PAYER = np.array(
 )
 ETA_DETECT_PAYER_SIGMA = 0.20
 
-# Residual age effects on detection (older mothers more likely to access
-# screening historically).
-ETA_DETECT_AGE_SIGMA = 0.20
+# Age effects on detection/access (2026-06-21): older mothers reach screening and
+# diagnostic testing far more (the AMA trigger), so detection rises steeply with
+# maternal age. Informative INCREASING prior (was a zero-mean wiggle, mu=0 / sigma
+# 0.20); eta_detect now carries the dominant age gradient. Offsets on the logit,
+# added to the eta_detect baseline. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_DETECT_AGE = np.array(
+    [
+        -1.5,  # <20
+        -1.0,  # 20-24
+        -0.4,  # 25-29
+        0.3,  # 30-34
+        1.0,  # 35-39
+        1.6,  # 40-44
+        1.9,  # 45+
+    ]
+)
+# Tightened 0.5 -> 0.1 (2026-06-22): with both eta_detect_age and eta_term_age
+# loose, only their PRODUCT (the combined age effect on eta) is identified, so the
+# sampler wandered the ridge and variant A failed to converge (r-hat 1.73, ESS 6 at
+# the 25-29 band). Pin the screening-access age effect (well anchored to AMA uptake)
+# and let eta_term_age carry the data-identified residual. See
+# notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_DETECT_AGE_SIGMA = 0.1
+
+# Year-by-age interaction on detection (2026-06-22): lets the NIPT-era screening
+# rollout differ by maternal age — the "did screening reach older mothers first?"
+# question that the additive year+age structure could not express. Modelled as a
+# ZERO-SUM interaction (orthogonal to the pinned year and age main effects), so it
+# captures only the differential, not a shift in either margin. Sigma 0.35 is
+# weakly-informative: wide enough for the ~0.1-0.3 logit age-differentials the raw
+# recorded-rate trend suggests, tight enough to regularise the 9x7 cells with little
+# data. The year dimension is clean (s has no year term) so the interaction is
+# data-identified. See notes/20260622-predictors-bayesian-model.md sec. 8.
+ETA_DETECT_YEAR_AGE_SIGMA = 0.35
 
 
 # --------------------------------------------------------------------------- #
 # Stage 2b: termination eta_term                                              #
 # --------------------------------------------------------------------------- #
 
-ETA_TERM_BASELINE = 0.67
+ETA_TERM_BASELINE = 0.67  # Natoli 2012 US population-based weighted mean
 ETA_TERM_LOGIT = logit(ETA_TERM_BASELINE)
-ETA_TERM_SIGMA = 0.25
+# Data-identified level (2026-06-21): widened 0.25 -> 0.60 so the US
+# termination-given-diagnosis *level* is set by the data (under the pin-s
+# identification), not by the prior. Centre stays at Natoli's 67% (US,
+# population-based, heterogeneous); the ~90% in the literature is European/
+# hospital-based and is deliberately NOT imported. The time-varying engine
+# is eta_detect (NIPS detection), NOT eta_term — evidence shows
+# termination|diagnosis is flat-to-declining, not rising, with NIPS
+# (Lund 2021, Miltoft 2018), so the year effect below stays a zero-mean
+# drift. See notes/20260621-screening-cascade-eta-reanchoring.md.
+ETA_TERM_SIGMA = 0.60
 
 ETA_TERM_RACE = np.array(
     [
@@ -200,6 +259,25 @@ ETA_TERM_EDU = np.array(
 )
 ETA_TERM_EDU_SIGMA = 0.20
 
+# Age effects on termination choice (2026-06-21, NEW). Termination given a
+# confirmed diagnosis varies with maternal age (Natoli 2012 noted age variation).
+# Modest INCREASING prior — the softest piece (the US direction is genuinely
+# uncertain), wide enough for the data to refine. NB: only the COMBINED
+# eta_detect*eta_term age effect is data-identified; the access-vs-choice split is
+# prior-driven. See notes/20260621-theta-lb-escape-age-gradient.md.
+ETA_TERM_AGE = np.array(
+    [
+        -0.4,  # <20
+        -0.2,  # 20-24
+        -0.1,  # 25-29
+        0.1,  # 30-34
+        0.3,  # 35-39
+        0.4,  # 40-44
+        0.5,  # 45+
+    ]
+)
+ETA_TERM_AGE_SIGMA = 0.4
+
 # Year effect on termination: a single homoscedastic sigma absorbing
 # mild year-over-year drift in termination rates. Without a separate
 # policy shock to identify, we expect US termination rates conditional
@@ -211,22 +289,22 @@ ETA_TERM_YEAR_SIGMA = 0.15
 # Stage 3: BC sensitivity s (Boulet / Salemi)                                 #
 # --------------------------------------------------------------------------- #
 
-S_BASELINE = 0.40
-S_LOGIT = logit(S_BASELINE)
-S_SIGMA = 0.30
-
-S_RACE = np.array(
-    [
-        0.00,  # NH White (reference)
-        -0.40,  # NH Black
-        -0.30,  # NH AIAN
-        -0.10,  # NH Asian/Pacific Islander
-        -0.20,  # Hispanic
-        0.00,  # Unknown
-    ]
-)
-S_RACE_SIGMA = 0.25
-
+# s(race, year) is anchored EXTERNALLY to recorded/true derived from de Graaf
+# surveillance prevalence (scripts/derive_recording_rates.py -> recording_anchor.py),
+# replacing the former hard-pinned global level (0.40, sigma=0.001) + guessed S_RACE
+# offsets. The recording LEVEL and the racial gradient are now MEASURED, with a year
+# dimension and a per-cell sigma that widens across the imputed 2019-2024 tail
+# (survival ratio held flat -- see the script's backtest). This breaks the eta x s
+# ridge with an external anchor instead of by fiat: Morris theta_LB and the anchored s
+# together identify eta, so s_int no longer needs pinning. Idx-5 "Unknown" has no
+# de Graaf anchor and falls back to a weak neutral prior baked into the arrays.
+# See notes/20260622-predictors-bayesian-model.md.
+#
+# s_edu stays as a small within-cell education residual (de Graaf has no education
+# split). It is tightly priored and ~mean-zero over the population, so it redistributes
+# within a race x year margin without materially shifting the anchored level. Clinical-
+# flag recording effects (preterm/CCHD/NICU/Aven) remain DROPPED -- they correlate with
+# true DS prevalence, not recording, and belong to the Aim-4 co-occurring analysis.
 S_EDU = np.array(
     [
         -0.30,  # <HS
@@ -237,19 +315,7 @@ S_EDU = np.array(
         0.00,  # Unknown
     ]
 )
-S_EDU_SIGMA = 0.20
-
-S_PRETERM_MU = -0.40
-S_PRETERM_SIGMA = 0.20
-
-S_CCHD_MU = -0.50
-S_CCHD_SIGMA = 0.40
-
-S_NICU_MU = -0.50
-S_NICU_SIGMA = 0.40
-
-S_AVEN_MU = -0.40
-S_AVEN_SIGMA = 0.40
+S_EDU_SIGMA = 0.05  # tightened (2026-06-21): keep s_edu from absorbing the ridge
 
 
 # --------------------------------------------------------------------------- #
@@ -293,7 +359,11 @@ class ModelPriors:
         default_factory=lambda: ETA_DETECT_PAYER.copy()
     )
     eta_detect_payer_sigma: float = ETA_DETECT_PAYER_SIGMA
+    eta_detect_age: np.ndarray = field(
+        default_factory=lambda: ETA_DETECT_AGE.copy()
+    )
     eta_detect_age_sigma: float = ETA_DETECT_AGE_SIGMA
+    eta_detect_year_age_sigma: float = ETA_DETECT_YEAR_AGE_SIGMA
 
     # Stage 2b
     eta_term_logit: float = ETA_TERM_LOGIT
@@ -306,23 +376,22 @@ class ModelPriors:
         default_factory=lambda: ETA_TERM_EDU.copy()
     )
     eta_term_edu_sigma: float = ETA_TERM_EDU_SIGMA
+    eta_term_age: np.ndarray = field(
+        default_factory=lambda: ETA_TERM_AGE.copy()
+    )
+    eta_term_age_sigma: float = ETA_TERM_AGE_SIGMA
     eta_term_year_sigma: float = ETA_TERM_YEAR_SIGMA
 
-    # Stage 3
-    s_logit: float = S_LOGIT
-    s_sigma: float = S_SIGMA
-    s_race: np.ndarray = field(default_factory=lambda: S_RACE.copy())
-    s_race_sigma: float = S_RACE_SIGMA
+    # Stage 3 (de Graaf surveillance anchor; see recording_anchor.py).
+    # s_race_year_* are [N_RACE, n_year] logit mean/sigma; the model slices [:, :n_year].
+    s_race_year_logit: np.ndarray = field(
+        default_factory=lambda: S_RACE_YEAR_LOGIT.copy()
+    )
+    s_race_year_sigma: np.ndarray = field(
+        default_factory=lambda: S_RACE_YEAR_SIGMA.copy()
+    )
     s_edu: np.ndarray = field(default_factory=lambda: S_EDU.copy())
     s_edu_sigma: float = S_EDU_SIGMA
-    s_preterm_mu: float = S_PRETERM_MU
-    s_preterm_sigma: float = S_PRETERM_SIGMA
-    s_cchd_mu: float = S_CCHD_MU
-    s_cchd_sigma: float = S_CCHD_SIGMA
-    s_nicu_mu: float = S_NICU_MU
-    s_nicu_sigma: float = S_NICU_SIGMA
-    s_aven_mu: float = S_AVEN_MU
-    s_aven_sigma: float = S_AVEN_SIGMA
 
     # False positives
     false_positive_rate: float = FALSE_POSITIVE_RATE
@@ -336,7 +405,7 @@ class ModelPriors:
 def variant_A_tight_s() -> ModelPriors:
     """Tight sensitivity priors, weak termination priors."""
     p = ModelPriors()
-    p.s_race_sigma = S_RACE_SIGMA / 2
+    p.s_race_year_sigma = p.s_race_year_sigma * 0.5
     p.s_edu_sigma = S_EDU_SIGMA / 2
     p.eta_term_race_sigma = ETA_TERM_RACE_SIGMA * 2
     p.eta_term_edu_sigma = ETA_TERM_EDU_SIGMA * 2
@@ -348,7 +417,7 @@ def variant_B_tight_eta_term() -> ModelPriors:
     p = ModelPriors()
     p.eta_term_race_sigma = ETA_TERM_RACE_SIGMA / 2
     p.eta_term_edu_sigma = ETA_TERM_EDU_SIGMA / 2
-    p.s_race_sigma = S_RACE_SIGMA * 2
+    p.s_race_year_sigma = p.s_race_year_sigma * 2.0
     p.s_edu_sigma = S_EDU_SIGMA * 2
     return p
 
@@ -358,8 +427,35 @@ def variant_C_default() -> ModelPriors:
     return ModelPriors()
 
 
+def variant_D_recording_off() -> ModelPriors:
+    """Comparative track: fit a GB-bias-corrected DS total with recording pinned off.
+
+    Recording is pinned to ~1 (s_int -> logit(0.999), no demographic offsets) and the
+    false-positive rate to 0, so the model decomposes an externally bias-corrected
+    total directly into natural rate x survival -- the recording-vs-termination
+    non-identifiability that needs the A/B/C bound does not arise here.
+
+    The target is supplied by the cell aggregation, using the **C-only-trained,
+    demographically blind** USBC11_M1_CN predictions:
+    ``prepare_cells(predictions_column="p_ds_lb_pred_14")`` -- the calibrated expected
+    DS total (recorded + summed predicted probability over unrecorded), the definitive
+    target, independent of any quota/multiplier -- or
+    ``missing_flag_column="ds_pred_missing_14"`` for the coarser R' flag union.
+    "Predicted" is the GB prediction, NOT a C+P training label (the model is trained
+    confirmed-only). See notes/20260622-predictors-bayesian-model.md.
+    """
+    p = ModelPriors()
+    p.s_race_year_logit = np.full_like(S_RACE_YEAR_LOGIT, logit(0.999))
+    p.s_race_year_sigma = np.full_like(S_RACE_YEAR_SIGMA, 0.001)
+    p.s_edu = np.zeros(N_EDU)
+    p.s_edu_sigma = 0.001
+    p.false_positive_rate = 0.0
+    return p
+
+
 VARIANTS = {
     "A": variant_A_tight_s,
     "B": variant_B_tight_eta_term,
     "C": variant_C_default,
+    "D": variant_D_recording_off,
 }

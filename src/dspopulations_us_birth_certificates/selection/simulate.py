@@ -50,21 +50,24 @@ class TrueParams:
     eta_det_race: np.ndarray  # (N_RACE,)
     eta_det_edu: np.ndarray  # (N_EDU,)
     eta_det_payer: np.ndarray  # (N_PAYER,)
+    eta_det_year_age: np.ndarray  # (n_year, N_AGE) zero-sum interaction
 
     eta_term_int: float
     eta_term_race: np.ndarray  # (N_RACE,)
     eta_term_edu: np.ndarray  # (N_EDU,)
+    eta_term_age: np.ndarray  # (N_AGE,)
     eta_term_year: np.ndarray  # (n_year,)
 
-    s_int: float
-    s_race: np.ndarray  # (N_RACE,)
+    s_race_year: np.ndarray  # (N_RACE, n_year)
     s_edu: np.ndarray  # (N_EDU,)
-    s_preterm: float
-    s_cchd: float
-    s_nicu: float
-    s_aven: float
 
     false_positive_rate: float
+
+    @property
+    def s_race(self) -> np.ndarray:
+        """Year-averaged per-race recording logit, matching the model's ``s_race``
+        Deterministic — so recovery/identifiability diagnostics can compare like-for-like."""
+        return self.s_race_year.mean(axis=1)
 
     @classmethod
     def from_priors(
@@ -82,6 +85,12 @@ class TrueParams:
 
         year_offsets = priors.eta_detect_year_offsets[:n_year]
         eta_term_year = rng.normal(0.0, priors.eta_term_year_sigma, size=n_year)
+        # Zero-sum (double-centred over both axes) year-by-age interaction, matching
+        # the model's ZeroSumNormal(n_zerosum_axes=2).
+        yax = rng.normal(
+            0.0, priors.eta_detect_year_age_sigma, size=(n_year, N_AGE)
+        )
+        yax = yax - yax.mean(0, keepdims=True) - yax.mean(1, keepdims=True) + yax.mean()
 
         return cls(
             theta_lb_age_logit=draw(
@@ -91,7 +100,7 @@ class TrueParams:
                 priors.eta_detect_logit, priors.eta_detect_sigma
             ),
             eta_det_year=draw(year_offsets, priors.eta_detect_year_sigma),
-            eta_det_age=draw(0.0, priors.eta_detect_age_sigma, size=N_AGE),
+            eta_det_age=draw(priors.eta_detect_age, priors.eta_detect_age_sigma),
             eta_det_race=draw(
                 priors.eta_detect_race, priors.eta_detect_race_sigma
             ),
@@ -101,19 +110,19 @@ class TrueParams:
             eta_det_payer=draw(
                 priors.eta_detect_payer, priors.eta_detect_payer_sigma
             ),
+            eta_det_year_age=yax,
             eta_term_int=draw(priors.eta_term_logit, priors.eta_term_sigma),
             eta_term_race=draw(
                 priors.eta_term_race, priors.eta_term_race_sigma
             ),
             eta_term_edu=draw(priors.eta_term_edu, priors.eta_term_edu_sigma),
+            eta_term_age=draw(priors.eta_term_age, priors.eta_term_age_sigma),
             eta_term_year=eta_term_year,
-            s_int=draw(priors.s_logit, priors.s_sigma),
-            s_race=draw(priors.s_race, priors.s_race_sigma),
+            s_race_year=draw(
+                priors.s_race_year_logit[:, :n_year],
+                priors.s_race_year_sigma[:, :n_year],
+            ),
             s_edu=draw(priors.s_edu, priors.s_edu_sigma),
-            s_preterm=draw(priors.s_preterm_mu, priors.s_preterm_sigma),
-            s_cchd=draw(priors.s_cchd_mu, priors.s_cchd_sigma),
-            s_nicu=draw(priors.s_nicu_mu, priors.s_nicu_sigma),
-            s_aven=draw(priors.s_aven_mu, priors.s_aven_sigma),
             false_positive_rate=priors.false_positive_rate,
         )
 
@@ -164,6 +173,7 @@ def simulate_cells(
         truth.eta_det_int
         + truth.eta_det_year[year_idx]
         + truth.eta_det_age[age_idx]
+        + truth.eta_det_year_age[year_idx, age_idx]
         + truth.eta_det_race[race_idx]
         + truth.eta_det_edu[edu_idx]
         + truth.eta_det_payer[payer_idx]
@@ -172,18 +182,14 @@ def simulate_cells(
         truth.eta_term_int
         + truth.eta_term_race[race_idx]
         + truth.eta_term_edu[edu_idx]
+        + truth.eta_term_age[age_idx]
         + truth.eta_term_year[year_idx]
     )
     eta = 1.0 - eta_detect * eta_term
 
     s = inv_logit(
-        truth.s_int
-        + truth.s_race[race_idx]
+        truth.s_race_year[race_idx, year_idx]
         + truth.s_edu[edu_idx]
-        + truth.s_preterm * preterm
-        + truth.s_cchd * cchd
-        + truth.s_nicu * nicu
-        + truth.s_aven * aven
     )
 
     p_ds_lb = theta_lb * eta

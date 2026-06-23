@@ -31,7 +31,9 @@ def test_morris_rates_match_de_graaf_2015() -> None:
 def test_factor_level_lengths_match_arrays() -> None:
     """Prior arrays must match their factor-level vocabularies in length."""
     assert len(P.RACE_LEVELS) == P.N_RACE == len(P.ETA_DETECT_RACE)
-    assert len(P.RACE_LEVELS) == len(P.ETA_TERM_RACE) == len(P.S_RACE)
+    # s is anchored as an absolute [N_RACE, n_year] surface (recording_anchor), not a
+    # reference-coded offset vector — check its race axis spans the race vocabulary.
+    assert len(P.RACE_LEVELS) == len(P.ETA_TERM_RACE) == P.S_RACE_YEAR_LOGIT.shape[0]
     assert len(P.EDU_LEVELS) == P.N_EDU == len(P.ETA_DETECT_EDU)
     assert len(P.EDU_LEVELS) == len(P.ETA_TERM_EDU) == len(P.S_EDU)
     assert len(P.PAYER_LEVELS) == P.N_PAYER == len(P.ETA_DETECT_PAYER)
@@ -43,7 +45,7 @@ def test_reference_levels_are_zero() -> None:
     interpretation stable (plan §10 #4)."""
     assert P.ETA_DETECT_RACE[0] == 0.0  # NH White
     assert P.ETA_TERM_RACE[0] == 0.0
-    assert P.S_RACE[0] == 0.0
+    # (s has no reference-level race offset now — it is anchored absolutely.)
     assert P.ETA_DETECT_EDU[2] == 0.0  # Some college
     assert P.ETA_TERM_EDU[2] == 0.0
     assert P.S_EDU[2] == 0.0
@@ -57,12 +59,12 @@ def test_sensitivity_variants_differ_as_expected() -> None:
     b = P.variant_B_tight_eta_term()
 
     # Variant A: tighter s, looser eta_term.
-    assert a.s_race_sigma < c.s_race_sigma
+    assert (a.s_race_year_sigma < c.s_race_year_sigma).all()
     assert a.eta_term_race_sigma > c.eta_term_race_sigma
 
     # Variant B: tighter eta_term, looser s.
     assert b.eta_term_race_sigma < c.eta_term_race_sigma
-    assert b.s_race_sigma > c.s_race_sigma
+    assert (b.s_race_year_sigma > c.s_race_year_sigma).all()
 
 
 def test_logit_round_trip() -> None:
@@ -78,14 +80,29 @@ def test_morris_sigma_is_tight() -> None:
 
 
 def test_false_positive_rate_fixed() -> None:
-    """The Ohio/NY false-positive value is fixed, not estimated (plan §10 #3)."""
+    """The Ohio/NY false-positive value is fixed, not estimated (plan §10 #3).
+
+    The recorded-data variants (A/B/C) share the validation rate; variant D (the
+    C+P comparative track) sets it to 0 because the GB-corrected counts carry no
+    recording false positives.
+    """
     assert P.FALSE_POSITIVE_RATE == pytest.approx(7.8e-5)
-    for factory in P.VARIANTS.values():
-        assert factory().false_positive_rate == pytest.approx(7.8e-5)
+    for name, factory in P.VARIANTS.items():
+        expected = 0.0 if name == "D" else pytest.approx(7.8e-5)
+        assert factory().false_positive_rate == expected
 
 
-def test_variants_registry_contains_abc() -> None:
-    assert set(P.VARIANTS) == {"A", "B", "C"}
+def test_variants_registry() -> None:
+    assert set(P.VARIANTS) == {"A", "B", "C", "D"}
+
+
+def test_variant_d_recording_pinned_off() -> None:
+    """Variant D pins recording to ~1 (no demographic offsets) for the GB-total track."""
+    d = P.variant_D_recording_off()
+    assert P.inv_logit(d.s_race_year_logit).min() > 0.99
+    assert d.s_race_year_sigma.max() <= 0.001
+    assert d.s_edu_sigma <= 0.001
+    assert d.false_positive_rate == 0.0
 
 
 def test_eta_term_year_sigma_tight() -> None:

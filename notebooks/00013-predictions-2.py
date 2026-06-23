@@ -1,12 +1,11 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.1
+#       jupytext_version: 1.19.3
 #   kernelspec:
 #     display_name: dspop-us-birth-certificates
 #     language: python
@@ -53,8 +52,8 @@ df = con.execute(
     SELECT
         b.year,
         sum(b.down_ind) as down_ind,
-        sum(b.p_ds_lb_pred_01) as down_pred,
-        sum(b.p_ds_lb_pred_01)  / sum(b.down_ind) as ratio,
+        sum(b.p_ds_lb_pred_02) as down_pred,
+        sum(b.p_ds_lb_pred_02)  / sum(b.down_ind) as ratio,
         sum(b.p_ds_lb_nt * (1 - r.reduction)) as ds_lb_est_reduc
     FROM us_births AS b
     LEFT JOIN reduction_rate_year r

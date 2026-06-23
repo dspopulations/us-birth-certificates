@@ -75,6 +75,8 @@ ADVI
 allclose
 arviz
 asarray
+backtest
+backtested
 beeswarm
 sociodemographic
 codings
@@ -94,8 +96,10 @@ iqr
 isclose
 kfold
 lightgbm
+liveborn
 livebirth
 livebirths
+invlogit
 logit
 MCMC
 microdata
@@ -111,11 +115,16 @@ pred
 pymc
 pyproject
 pytensor
+reframing
 reparameterise
+reparameterisation
 rhat
+RMSE
 sigmas
 sigmoidal
 sklearn
+thresholded
+unlabeled
 vars
 wallclock
 
@@ -138,18 +147,33 @@ rprime
 # Literature / authors
 Alberman
 Boulet
+Eiben
+Elkan
 Graaf
 Heinke
+Horvitz
+Iwarsson
 Kuppermann
+Mikhaylova
+Miltoft
 Natoli
+Noto
 Salemi
 Skotko
+Teisseyre
+Verma
+Xiao
+Yaron
 graaf
 
 # Literature / journals and terms
+ACOG
+AISTATS
+BJOG
 Diagn
 EJHG
 Epidemiol
+Gynaecol
 Gynecol
 Netw
 NIPT
@@ -157,6 +181,9 @@ Obstet
 Paediatr
 Perinat
 Prenat
+Scand
+SURUSS
+Zhuhai
 
 # Refactor-document terms
 harmonisation

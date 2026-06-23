@@ -84,6 +84,7 @@ class FitSelectionCliConfig:
     output_dir: Path
     prior_only: bool
     render: bool
+    anchor_margin: bool = False
     overrides: dict[str, Any] = field(default_factory=dict)
 
 
@@ -151,6 +152,17 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
     p.add_argument("--target-accept", type=float, default=None)
     p.add_argument("--prior-predictive-samples", type=int, default=None)
     p.add_argument(
+        "--anchor-margin",
+        action="store_true",
+        help=(
+            "Enable the FULL-MARGIN de Graaf anchor: tie the model's N-weighted marginal "
+            "p_ds_lb per race×year to de Graaf surveillance prevalence "
+            "(selection.recording_anchor.PREV_RACE_YEAR). Pins η's race×year level so the "
+            "literature termination/detection priors cannot drag the total below "
+            "surveillance. Ignored for variant D."
+        ),
+    )
+    p.add_argument(
         "--render",
         action="store_true",
         help=(
@@ -190,6 +202,7 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         output_dir=out_dir,
         prior_only=ns.prior_only,
         render=ns.render,
+        anchor_margin=ns.anchor_margin,
         overrides=overrides,
     )
 
@@ -228,9 +241,20 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.info(f"output_dir=[blue]{cli.output_dir}[/blue]")
 
     cli_output.section("Load cells")
+    # Variant D fits a GB-bias-corrected DS total with recording pinned ~off (see
+    # variant_D_recording_off). The target is the *calibrated expected* DS count from
+    # the C-only, demographically-blind USBC11_M1_CN model: recorded + summed
+    # predicted probability over unrecorded, per cell. This avoids the quota/multiplier
+    # artefacts of the ds_pred_missing flag. "Predicted" is the GB prediction, not a
+    # C+P training label.
+    predictions_col = "p_ds_lb_pred_14" if cli.variant == "D" else None
     con = duckdb.connect(str(cli.duckdb_path), read_only=True)
     try:
-        cells = prepare_cells(con, year_range=(cli.start_year, cli.end_year))
+        cells = prepare_cells(
+            con,
+            year_range=(cli.start_year, cli.end_year),
+            predictions_column=predictions_col,
+        )
     finally:
         con.close()
     summary = summarise_cells(cells)
@@ -248,7 +272,18 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Build model")
     priors = VARIANTS[cli.variant]()
     n_year = cells.attrs["n_year"]
-    model = build_model(cells, priors, spec=cli.spec, n_year=n_year)
+    prev_margin = None
+    if cli.anchor_margin and cli.variant != "D":
+        from dspopulations_us_birth_certificates.selection.recording_anchor import (
+            PREV_RACE_YEAR,
+            PREV_RACE_YEAR_SIGMA,
+        )
+
+        prev_margin = (PREV_RACE_YEAR[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year])
+        cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
+    model = build_model(
+        cells, priors, spec=cli.spec, n_year=n_year, prev_margin=prev_margin
+    )
 
     cli_output.section("Sample")
     idata = sample(model, config=run_config, prior_only=cli.prior_only)
