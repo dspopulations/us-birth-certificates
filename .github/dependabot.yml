@@ -1,16 +1,36 @@
 version: 2
 
+# Daily dependency scans, PRs assigned to the maintainer.
+# Note: Dependabot has no "conda" ecosystem, so environment.yml is not scannable.
+# pyproject.toml (the single source of truth for pip-resolved deps) is covered by
+# the "pip" ecosystem below.
 updates:
-  - package-ecosystem: "conda"
+  # Python dependencies declared in pyproject.toml ([project.dependencies] + extras).
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: weekly
-      day: wednesday
+      interval: daily
       time: "06:00"
+      timezone: "Europe/London"
+    assignees:
+      - "frankbuckley"
 
+  # Spellcheck / tooling (package.json + package-lock.json).
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: weekly
-      day: wednesday
+      interval: daily
       time: "06:00"
+      timezone: "Europe/London"
+    assignees:
+      - "frankbuckley"
+
+  # GitHub Actions used in .github/workflows (checkout, setup-uv, setup-node).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "06:00"
+      timezone: "Europe/London"
+    assignees:
+      - "frankbuckley"
