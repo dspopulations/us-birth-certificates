@@ -10,8 +10,10 @@ import truststore
 
 truststore.inject_into_ssl()  # avoids SSL: CERTIFICATE_VERIFY_FAILED on MacOS
 
+# https://www.nber.org/research/data/vital-statistics-natality-birth-data
 
 user_guides = [
+    "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2024.pdf",
     "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2023.pdf",
     "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2022.pdf",
     "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2021.pdf",
