@@ -10,6 +10,15 @@ This repository hosts an exploratory study of factors associated with recorded b
 
 Read plans/readme.md to learn about project plans.
 
+## Disclosing AI-assisted contributions
+
+Any content drafted with the help of an LLM-based AI tool **must be clearly labelled as AI-assisted**. This applies to **document drafts, pull requests, issues, and comments on pull requests or issues**. Prefix the content with a GitHub-style note callout naming the tool and model used, for example:
+
+> [!NOTE]
+> Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
+
+Substitute the actual tool and model you are using (for example `Codex`, `Cursor`, `Aider`, or `GitHub Copilot`). Keep the label at the very top of the draft, PR/issue body, or comment. Do not remove an existing disclosure label when editing AI-assisted content.
+
 ## Environment and commands
 
 Python **3.14** via conda (env name: `dspop-us-birth-certificates`):
