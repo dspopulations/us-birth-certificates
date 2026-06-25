@@ -19,6 +19,14 @@ Any content drafted with the help of an LLM-based AI tool **must be clearly labe
 
 Substitute the actual tool and model you are using (for example `Codex`, `Cursor`, `Aider`, or `GitHub Copilot`). Keep the label at the very top of the draft, PR/issue body, or comment. Do not remove an existing disclosure label when editing AI-assisted content.
 
+The `> [!NOTE]` alert syntax above is GitHub-flavoured Markdown and is the right form for PRs, issues, and their comments. **It does not render in Quarto.** For Quarto documents (`docs/**/*.qmd`), use a Quarto callout div instead, matching the existing callouts in those docs:
+
+```markdown
+::: {.callout-note title="AI-assisted"}
+Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
+:::
+```
+
 ## Environment and commands
 
 Python **3.14** via conda (env name: `dspop-us-birth-certificates`):

@@ -141,6 +141,7 @@ pytest
 ruff
 
 # Project / repo
+dspop
 dspopulations
 rprime
 
