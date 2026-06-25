@@ -12,9 +12,9 @@ This repository hosts an exploratory study of factors associated with recorded b
 
 ## Disclosing AI-assisted contributions
 
-Any content drafted with the help of an LLM-based AI tool **must be clearly labelled as AI-assisted**. This applies to **document drafts, pull requests, issues, and comments on pull requests or issues**. Prefix the content with a GitHub-style warning callout naming the tool and model used, for example:
+Any content drafted with the help of an LLM-based AI tool **must be clearly labelled as AI-assisted**. This applies to **document drafts, pull requests, issues, and comments on pull requests or issues**. Prefix the content with a GitHub-style informational callout naming the tool and model used, for example:
 
-> [!WARNING]
+> [!INFO]
 > Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 
 Substitute the actual tool and model you are using (for example `Codex`, `Cursor`, `Aider`, or `GitHub Copilot`). Keep the label at the very top of the draft, PR/issue body, or comment. Do not remove an existing disclosure label when editing AI-assisted content.
