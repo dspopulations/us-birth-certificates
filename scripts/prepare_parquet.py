@@ -143,6 +143,7 @@ uint8_specs = {
     vars.MAGER9: (1, 14),
     vars.MAGE36: (1, 41),
     vars.MAGER12: (1, 14),
+    vars.MAGER41: (1, 41),
     vars.MBSTATE_REC: (1, 3),
     vars.RESTATUS: (1, 4),
     vars.MBRACE: (1, 24),

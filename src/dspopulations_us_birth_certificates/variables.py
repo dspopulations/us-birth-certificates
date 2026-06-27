@@ -34,6 +34,8 @@ class Variables(StrEnum):
     """Age of Mother Recode 36 (pre-2004). 01 Under 15, 02 15, 03 16 ... 41 54; single-year bins."""
     MAGER12 = "mager12"
     """Age of Mother Recode 12 (pre-2004; named MAGE12 in the source). 01 Under 15, 03 15, 04 16, 05 17, 06 18, 07 19, 08 20-24, 09 25-29, 10 30-34, 11 35-39, 12 40-44, 13 45-49, 14 50-54."""
+    MAGER41 = "mager41"
+    """Mother's Age Recode 41 (2003 transition file only). 01 Under 15, 02 15, 03 16 ... 41 54; single-year bins in the same coding as MAGE36. The 2003 file carries no MAGER/DMAGE/MAGE36, so this is the only single-year maternal-age source for 2003 (mage_c = mager41 + 13)."""
     MBSTATE_REC = "mbstate_rec"
     """Mother's Nativity (1 Born in the U.S. [50 states + DC], 2 Born outside the U.S. [includes possessions], 3 Unknown or Not Stated)."""
     RESTATUS = "restatus"
@@ -388,6 +390,7 @@ IMPORTED: dict[
     str(Variables.MAGER9): pd.CategoricalDtype(),
     str(Variables.MAGE36): pd.CategoricalDtype(),
     str(Variables.MAGER12): pd.CategoricalDtype(),
+    str(Variables.MAGER41): pd.CategoricalDtype(),
     str(Variables.MBSTATE_REC): pd.CategoricalDtype(),
     str(Variables.RESTATUS): pd.CategoricalDtype(),
     str(Variables.MBRACE): pd.CategoricalDtype(),

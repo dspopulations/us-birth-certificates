@@ -77,6 +77,7 @@ def combine_all() -> None:
         alter_column_type(vars.MAGER9, "UTINYINT", con)
         alter_column_type(vars.MAGE36, "UTINYINT", con)
         alter_column_type(vars.MAGER12, "UTINYINT", con)
+        alter_try_cast_column_type(vars.MAGER41, "UTINYINT", con)
         alter_column_type(vars.MBSTATE_REC, "UTINYINT", con)
         alter_column_type(vars.RESTATUS, "UTINYINT", con)
         alter_column_type(vars.MBRACE, "UTINYINT", con)
@@ -276,10 +277,14 @@ def combine_all() -> None:
 
         print("Setting mage_c...")
 
+        # mager (2004+) -> dmage (<=2002) -> mage36+13 (<=2002 recode) ->
+        # mager41+13 (2003 only; the 2003 transition file carries none of the
+        # first three, so mager41 is the sole single-year age source for 2003,
+        # in the same 41-category coding as mage36).
         con.execute(
             f"""
             UPDATE us_births
-            SET {vars.MAGE_C} = COALESCE({vars.MAGER}, {vars.DMAGE}, ({vars.MAGE36} + 13));
+            SET {vars.MAGE_C} = COALESCE({vars.MAGER}, {vars.DMAGE}, ({vars.MAGE36} + 13), ({vars.MAGER41} + 13));
             """
         )
 
