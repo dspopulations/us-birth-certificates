@@ -357,7 +357,17 @@ class Variables(StrEnum):
     """
     Probability of Down syndrome live birth with terminations. Estimated from surveillance-based
     reduction rate for the given year applied to probability of DS live birth absent terminations,
-    estimated from maternal age (P_DS_LB_NT * reduc_rate[year]).
+    estimated from maternal age (P_DS_LB_NT * reduc_rate[year]). NB: despite the `_mage` in the
+    name the multiplicand is P_DS_LB_NT (Morris, no terminations), not P_DS_LB_WT_MAGE.
+    """
+
+    DS_CASE_WEIGHT = "ds_case_weight"
+    """
+    Per-record recording-rate weight for Down-syndrome cases, used to up-weight recorded cases
+    toward estimated true counts. For down_ind=1 it is selected by mracehisp_c (1 nhw, 2 nhb,
+    3 ai_an, 4 as_pi, 5 his) from us-births-ds-rec-weights.csv, falling back to the year's pooled
+    `total` weight when mracehisp_c is NULL/other; 0 for non-cases. Materialised in
+    scripts/duckdb_prepare.py.
     """
 
 

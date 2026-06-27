@@ -4,6 +4,7 @@ import shutil
 import duckdb
 import pandas as pd
 
+from dspopulations_us_birth_certificates import chance
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
@@ -290,13 +291,18 @@ def combine_all() -> None:
 
         print("Setting 'p_ds_lb_nt'")
 
+        # Morris maternal-age DS live-birth risk; the formula/constants live in
+        # chance.MORRIS_PARAMS so the SQL and Python paths cannot drift.
         con.execute(
-            """
+            f"""
             UPDATE us_births
-            SET p_ds_lb_nt = 1 / (1 + exp(7.33 - 4.211 / (1 + exp(-0.2815 * (mage_c - 37.23)))));
+            SET {vars.P_DS_LB_NT} = {chance.ds_lb_nt_probability_sql(vars.MAGE_C)};
             """
         )
 
+        # Per-year surveillance prevalence of DS live births (with terminations).
+        # The last 7 entries (2018-2024) are an intentional flat carry-forward of
+        # 0.001324215; provenance is summarised in docs/data-preparation.md.
         prevalence_df = pd.DataFrame(
             {
                 str(vars.YEAR): list(range(1989, 2025)),
@@ -501,6 +507,10 @@ def combine_all() -> None:
         # set reduction rates
         print("Setting p_ds_lb_wt_mage_reduc")
 
+        # NOTE: despite the "_mage" in the name, this multiplies p_ds_lb_nt (the
+        # Morris maternal-age risk absent terminations) by (1 - reduction[year]),
+        # not p_ds_lb_wt_mage. The reduction series is linearly extrapolated for
+        # 2020-2024 (see docs/data-preparation.md).
         con.execute(
             """
             UPDATE us_births AS b
