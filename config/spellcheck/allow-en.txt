@@ -130,7 +130,10 @@ wallclock
 
 # Tooling
 asis
+bdat
+duckdb
 elif
+getsize
 hatchling
 iloc
 jupytext
@@ -138,7 +141,9 @@ Jupytext
 Matplotlib
 Optuna
 pytest
+resumable
 ruff
+zstd
 
 # Project / repo
 dspop
