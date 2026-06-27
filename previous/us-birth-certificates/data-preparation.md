@@ -83,13 +83,15 @@ MRACE_C(combined)
 
 For 2014 on, we have MRACE15, which is summarised in MRACE6 and where more than one race are broken out in MRACE31.
 
-We set `mrace_c` as follows:
+We set `mrace_c` as follows (target: 1 White, 2 Black, 3 AIAN, 4 Asian or Pacific Islander):
 
-- if `mrace15` is available, use `mrace6`, 1:1, 2:2, 3:3, 4-14:4, otherwise,
-- if `mracerec` is available, use `mracerec`, 1:1, 2:2, 3:3, 4:4, otherwise,
-- if `mbrace` is available, use `mbrace`, 1:1, 2:2, 3:3, 4:4, otherwise,
+- if `mrace15` is available, use **`mrace15`**, 1:1, 2:2, 3:3, 4-14:4, **15 (More than one race) → missing**, otherwise,
+- if `mracerec` is available, use `mracerec`, 1:1, 2:2, 3:3, 4:4 (other → missing), otherwise,
+- if `mbrace` is available, use `mbrace` — the 1-digit 2014-2019 recode 1:1, 2:2, 3:3, 4:4, and the 2-digit 2003-2013 codes 01-03→1/2/3, 04-14→4, bridged-multiple 21:1, 22:2, 23:3, 24:4 (Puerto Rico 0 "Other" → missing), otherwise,
 - if `mrace` is available, use `mrace`, 1:1, 2:2, 3:3, 4-78:4, otherwise,
 - missing.
+
+> Earlier drafts of this note said "use `mrace6`, 4-14:4"; that was wrong (MRACE6 has only codes 1-6). The code keys off **MRACE15** directly. "More than one race" (MRACE15 = 15, MRACE6 = 6, MBRACE bridged-multiple) and any unknown/out-of-range code resolve to **missing (NULL)** — there is no multi-race target category.
 
 
 For Hispanic, we have:

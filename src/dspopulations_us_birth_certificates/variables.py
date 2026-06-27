@@ -31,7 +31,7 @@ class Variables(StrEnum):
     MAGER9 = "mager9"
     """Mother's Age Recode 9 (1 Under 15, 2 15-19, 3 20-24, 4 25-29, 5 30-34, 6 35-39, 7 40-44, 8 45-49, 9 50-54)."""
     MAGE36 = "mage36"
-    """Age of Mother Recode 36 (pre-2004). 01 Under 15, 02 15, 03 16 ... 41 54; single-year bins."""
+    """Age of Mother Recode 36 (pre-2004). 01 Under 15, 02 15, 03 16 ... 41 54; single-year bins. In mage_c the +13 offset maps code 01 ("Under 15", a 10-14 bin) to age 14 - a lower-bound approximation that is immaterial above the lowest analytic age boundary (20)."""
     MAGER12 = "mager12"
     """Age of Mother Recode 12 (pre-2004; named MAGE12 in the source). 01 Under 15, 03 15, 04 16, 05 17, 06 18, 07 19, 08 20-24, 09 25-29, 10 30-34, 11 35-39, 12 40-44, 13 45-49, 14 50-54."""
     MAGER41 = "mager41"
@@ -41,7 +41,7 @@ class Variables(StrEnum):
     RESTATUS = "restatus"
     """Mother's Residence Status. US occurrence: 1 Resident, 2 Intrastate non-resident, 3 Interstate non-resident, 4 Foreign resident. Territories use analogous codes."""
     MBRACE = "mbrace"
-    """Mother's Bridged Race (2003-2013 revised-cert files). 01-14 = single-race codes; 21-24 = multiple-race bridged to a single race; Blank = not on certificate."""
+    """Mother's Bridged Race (2003-2019 revised-cert files; absent from 2020). Two schemes: 2003-2013 uses 2-digit codes (01-14 single-race, 21-24 multiple-race bridged to a single race); from 2014 a 1-digit recode (1 White, 2 Black, 3 AIAN, 4 Asian or Pacific Islander; Puerto Rico 0 Other, 1 White, 2 Black). Blank = not on certificate. In the mrace_c chain MRACEREC/MRACE15 precede MBRACE, so it is only the fallback for Puerto Rico 2014-2019 in practice."""
     MRACE = "mrace"
     """Mother's Race, 1989 cert (available 1989-2013). 01 White, 02 Black, 03 AIAN, 04 Chinese, 05 Japanese, 06 Hawaiian, 07 Filipino, 18/28/38/48/58 Asian Indian/Korean/Samoan/Vietnamese/Guamanian, 68 Other A/PI in areas reporting 18-58, 78 Combined other A/PI (includes 18-68)."""
     MRACEREC = "mracerec"
@@ -61,11 +61,11 @@ class Variables(StrEnum):
     UMHISP = "umhisp"
     """Mother's Hispanic Origin, 1989-cert variant (2004-2013 files). 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central or South American, 5 Other and Unknown Hispanic, 9 Origin unknown or not stated."""
     MHISPX = "mhispx"
-    """Mother's Hispanic Origin (2014+). 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central or South American, 5 Dominican, 6 Other and Unknown Hispanic, 9 Origin unknown or not stated."""
+    """Mother's Hispanic Origin (2018+; positions 112-114 are FILLER 2014-2017). 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central or South American, 5 Dominican, 6 Other and Unknown Hispanic, 9 Origin unknown or not stated. The Dominican (5) breakout was introduced in 2018."""
     MHISP_R = "mhisp_r"
     """Mother's Hispanic Origin Recode (2014+). 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central and South American, 5 Other and Unknown Hispanic origin, 9 Hispanic origin not stated."""
     MRACEHISP = "mracehisp"
-    """Mother's Race/Hispanic Origin (2014+; built from MRACE31/MRACE6/MRACE15). 1 Non-Hispanic White only, 2 NH Black only, 3 NH AIAN only, 4 NH Asian only, 5 NH NHOPI only, 6 NH more than one race, 7 Hispanic, 8 Origin unknown or not stated."""
+    """Mother's Race/Hispanic Origin. NCHS uses two incompatible schemes across eras: 2003-2013 = combined Hispanic-origin-and-race (1-5 Hispanic subgroups, 6 NH White, 7 NH Black, 8 NH Other, 9 unknown); 2014+ = race recode built from MRACE31/MRACE6/MRACE15 (1 NH White only, 2 NH Black only, 3 NH AIAN only, 4 NH Asian only, 5 NH NHOPI only, 6 NH more than one race, 7 Hispanic, 8 Origin unknown or not stated). Absent pre-2003. NOTE: this raw field is NOT used for the combined mracehisp_c, which is reconstructed from mhisp_c + mrace_c for a single consistent 1989-2024 coding (see MRACEHISP_C)."""
     MAR = "mar"
     """Mother's Marital Status (1989-2013 files). US/Virgin Islands/Guam/AS/NMI: 1 Married, 2 Unmarried, 9 Unknown or not stated. Puerto Rico: 1 Married, 2 Unmarried parents living together, 3 Unmarried parents not living together, 9 Unknown or not stated."""
     MAR_P = "mar_p"
@@ -121,7 +121,7 @@ class Variables(StrEnum):
     FRACE15 = "frace15"
     """Father's Race Recode 15 (2014+). 01-15 same structure as MRACE15; 99 Unknown or Not Stated."""
     FHISPX = "fhispx"
-    """Father's Hispanic Origin (2014+). Same codes as MHISPX: 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central or South American, 5 Dominican, 6 Other and Unknown Hispanic, 9 Origin unknown or not stated."""
+    """Father's Hispanic Origin (2018+; position 159 FILLER 2014-2017). Same codes as MHISPX: 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central or South American, 5 Dominican, 6 Other and Unknown Hispanic, 9 Origin unknown or not stated."""
     FHISP_R = "fhisp_r"
     """Father's Hispanic Origin Recode (2014+). Same codes as MHISP_R: 0 Non-Hispanic, 1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Central and South American, 5 Other and Unknown Hispanic origin, 9 Hispanic origin not stated."""
     FEDUC = "feduc"
@@ -205,7 +205,7 @@ class Variables(StrEnum):
     DOWNS = "downs"
     """Down's syndrome, 1989 cert (1989-2002). Checkbox-style item: 1 Anomaly reported, 2 Anomaly not reported, 8 Anomaly not on certificate, 9 Anomaly not classifiable."""
     UCA_DOWNS = "uca_downs"
-    """Down Syndrome, 1989-cert variant (2003-2013 files). Checkbox-style item: 1 Anomaly reported, 2 Anomaly not reported, 9 Anomaly not classifiable, Blank Not on certificate."""
+    """Down Syndrome, 1989-cert variant (2003-2013 files). Checkbox-style item: 1 Anomaly reported, 2 Anomaly not reported, 9 Anomaly not classifiable, Blank Not on certificate. (The 2003 transition file may carry the 1989-standard header with 8 = anomaly not on certificate; 8 is unmatched in the ca_down_c derivation and treated as missing.)"""
     CA_DOWN = "ca_down"
     """Down Syndrome, 2003 cert (2004-2006 and 2014-present; field is CA_DOWNS 2007-2013). C Confirmed, P Pending, N No, U Unknown, Blank Not on certificate."""
     CA_DOWNS = "ca_downs"
@@ -282,8 +282,26 @@ class Variables(StrEnum):
     MAGE_C = "mage_c"
 
     MRACE_C = "mrace_c"
+    """Combined maternal race, harmonised 1989-2024 to 1 White, 2 Black, 3 AIAN,
+    4 Asian or Pacific Islander, via the fallback chain MRACE15 > MRACEREC >
+    MBRACE > MRACE. Asian and NHOPI single-race codes are collapsed into 4.
+    Deliberately NULL (no target category) for "more than one race" (MRACE15=15,
+    MRACE6=6, MBRACE bridged-multiple) and any unknown/out-of-range code; the
+    1989-cert MRACE has no unknown code (race is imputed)."""
+
     MHISP_C = "mhisp_c"
+    """Combined maternal Hispanic origin, harmonised 1989-2024 to 0 Non-Hispanic,
+    1 Mexican, 2 Puerto Rican, 3 Cuban, 4 Other and Unknown Hispanic, 5 Origin
+    unknown or not stated, via the fallback chain MHISP_R > MHISPX > UMHISP >
+    ORRACEM (ORRACEM's non-Hispanic race codes 6-8 map to 0)."""
+
     MRACEHISP_C = "mracehisp_c"
+    """Combined maternal race/Hispanic origin: 1 NH White, 2 NH Black, 3 NH AIAN,
+    4 NH Asian or Pacific Islander, 5 Hispanic. Reconstructed from mhisp_c + mrace_c
+    (NOT the raw NCHS MRACEHISP, which is dual-coded across eras and absent pre-2003)
+    so the coding is consistent across 1989-2024: mhisp_c 1-4 -> 5 (Hispanic);
+    mhisp_c = 5 (origin unknown) -> NULL (race discarded); mhisp_c = 0 or NULL ->
+    mrace_c (non-Hispanic race code)."""
 
     DOWN_IND = "down_ind"  # DS indicated (DOWNS | UCA_DOWNS | CA_DOWNS | CA_DOWN)
 
@@ -315,20 +333,24 @@ class Variables(StrEnum):
 
     P_DS_LB_NT_MAGE = "p_ds_lb_nt_mage"
     """
-    Probability of Down syndrome live birth absent terminations. Estimated from surveillance-based
-    prevalence for the given year and maternal age.
+    Placeholder - declared but NOT yet populated by the pipeline (remains NULL).
+    Intended: probability of Down syndrome live birth absent terminations, estimated
+    from surveillance-based prevalence for the given year and maternal age.
     """
 
     P_DS_LB_WT_ETHN = "p_ds_lb_wt_ethn"
     """
-    Probability of Down syndrome live birth with terminations. Estimated from surveillance-based
-    prevalence for the given year and ethnicity.
+    Placeholder - declared but NOT yet populated by the pipeline (remains NULL). The
+    ethnicity prevalence table (us-births-estimated-prevalence-ethnicity-2000-2018.csv)
+    is loaded but never joined. Intended: probability of Down syndrome live birth with
+    terminations, estimated from surveillance-based prevalence for the given year and ethnicity.
     """
 
     P_DS_LB_NT_ETHN = "p_ds_lb_nt_ethn"
     """
-    Probability of Down syndrome live birth absent terminations. Estimated from surveillance-based
-    prevalence for the given year and ethnicity.
+    Placeholder - declared but NOT yet populated by the pipeline (remains NULL).
+    Intended: probability of Down syndrome live birth absent terminations, estimated
+    from surveillance-based prevalence for the given year and ethnicity.
     """
 
     P_DS_LB_WT_MAGE_REDUC = "p_ds_lb_wt_mage_reduc"
