@@ -200,7 +200,7 @@ uint8_specs = {
     vars.APGAR5R: (1, 5),
     vars.APGAR10: (0, 99),
     vars.APGAR10R: (1, 5),
-    vars.DPLURAL: (1, 4),
+    vars.DPLURAL: (1, 5),
     vars.IMP_PLURAL: (1, 1),
     vars.SETORDER_R: (1, 9),
     vars.GESTREC10: (1, 99),

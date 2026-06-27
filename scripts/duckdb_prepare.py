@@ -252,7 +252,7 @@ def combine_all() -> None:
                 WHEN {vars.UCA_DOWNS} = 9 THEN 'U'
                 WHEN {vars.DOWNS} = 1 THEN 'C'
                 WHEN {vars.DOWNS} = 2 THEN 'N'
-                WHEN {vars.DOWNS} = 9 THEN 'U' -- 8 (not on certificate) treated as unknown
+                WHEN {vars.DOWNS} = 9 THEN 'U' -- 8 (not on certificate) is unmatched and falls through to NULL, distinct from 9 (not classifiable) -> 'U'
                 ELSE NULL
             END;
             """
@@ -385,8 +385,17 @@ def combine_all() -> None:
                         WHEN {vars.MRACEREC} IN(1, 2, 3, 4) THEN {vars.MRACEREC}
                     END
                 WHEN {vars.MBRACE} IS NOT NULL THEN
+                    -- MBRACE uses two schemes: a 1-digit recode (1 White, 2 Black,
+                    -- 3 AIAN, 4 Asian/PI; PR 0 Other/1/2) in 2014-2019, and 2-digit
+                    -- codes (single-race 01-14, bridged-multiple 21-24) in 2003-2013.
+                    -- MRACEREC/MRACE15 precede MBRACE so this branch is normally
+                    -- unreachable, but handle both schemes so it cannot corrupt
+                    -- records if it ever is reached. PR code 0 stays NULL.
                     CASE
-                        WHEN {vars.MBRACE} IN(1, 2, 3, 4) THEN {vars.MBRACE}
+                        WHEN {vars.MBRACE} IN(1, 21) THEN 1
+                        WHEN {vars.MBRACE} IN(2, 22) THEN 2
+                        WHEN {vars.MBRACE} IN(3, 23) THEN 3
+                        WHEN {vars.MBRACE} IN(4, 24) OR {vars.MBRACE} BETWEEN 5 AND 14 THEN 4
                     END
                 WHEN {vars.MRACE} IS NOT NULL THEN
                     CASE
