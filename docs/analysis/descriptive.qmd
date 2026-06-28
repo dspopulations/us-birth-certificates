@@ -1,0 +1,207 @@
+---
+title: "Recorded Down syndrome live births, 1989–2024: a descriptive review"
+
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm:ss Z"
+
+format:
+  html:
+    code-fold: true
+    theme: cosmo
+    number-sections: true
+    toc: true
+    toc-depth: 2
+    code-links:
+      - repo
+---
+
+::: {.callout-note title="AI-assisted"}
+Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
+:::
+
+::: {.callout-warning title="Preliminary output"}
+
+This report is preliminary; all data and estimates in this study are provisional.
+It documents the **recorded** Down syndrome (DS) population only — births with
+`down_ind = 1` (`ca_down_c ∈ {C confirmed, P pending}`). The predicted-missing
+extension and its demographic caveats are in
+[`predicted.qmd`](predicted.qmd); the formal missed-case estimation is the
+selection model. The full methods, query sketches, and benchmark-coverage caveats
+are in the companion spec `docs/analysis/descriptive.md`.
+
+:::
+
+```{python}
+# | echo: false
+import json
+from pathlib import Path
+
+import pandas as pd
+from IPython.display import Markdown
+
+config = json.loads(Path("config.json").read_text())
+
+
+def _table(csv: str) -> pd.DataFrame:
+    return pd.read_csv(csv)
+
+
+def _pct(frac: float) -> str:
+    return f"{frac * 100:.1f}%"
+```
+
+```{python}
+# | echo: false
+Markdown(
+    f"This report covers **{config['total_births']:,}** US live births "
+    f"({config['year_min']}–{config['year_max']}), of which "
+    f"**{config['total_recorded']:,}** were recorded with Down syndrome. "
+    f"Against surveillance-expected counts the overall recording rate is "
+    f"**{_pct(config['overall_recording_rate'])}** — i.e. roughly three in five "
+    f"expected DS live births are absent from the birth certificate. "
+    f"Generated {config['generated_at']}."
+)
+```
+
+# Recorded numbers and trends
+
+Recorded DS births run roughly flat-to-slightly-rising (~1.6k–2.2k per year)
+against a *falling* total-birth denominator, so the rate per 10,000 rises faster
+than the count. **"Pending" (`P`) exists only from 2004**, so the confirmed-only
+line is the era-robust series; the confirmed + pending total has a step at the 2003
+certificate change.
+
+![Recorded DS live births by confirmation status, with the confirmed-only (era-robust) line and the 2003–2013 transition band.](recorded_confirmed_pending.png){#fig-confirmed-pending .lightbox fig-align="center"}
+
+![Recorded DS per 10,000 live births. The level reflects recording completeness, not true prevalence (the surveillance benchmark is ≈ 13–14 per 10,000).](recorded_rate_per_10k.png){#fig-rate .lightbox fig-align="center"}
+
+The "unknown" (`U`) and "not on certificate" (NULL) series are a data-quality
+signal, not epidemiology — both spike around the 2003 cert changeover. The project
+treats `U` and NULL as *not recorded*.
+
+![DS item recorded as Unknown or absent from the certificate.](ds_status_unknown.png){#fig-unknown .lightbox fig-align="center"}
+
+```{python}
+# | echo: false
+# | label: tbl-status
+_status = _table("recorded_by_status.csv")
+_disp = _status[
+    ["year", "confirmed", "pending", "unknown", "not_on_cert", "births",
+     "recorded_ds", "recorded_per_10k"]
+].copy()
+for c in ["confirmed", "pending", "unknown", "not_on_cert", "births", "recorded_ds"]:
+    _disp[c] = _disp[c].map(lambda v: f"{int(v):,}")
+_disp["recorded_per_10k"] = _disp["recorded_per_10k"].map(lambda v: f"{v:.2f}")
+_disp = _disp.rename(columns={
+    "year": "Year", "confirmed": "C", "pending": "P", "unknown": "U",
+    "not_on_cert": "Not on cert", "births": "Births",
+    "recorded_ds": "Recorded DS", "recorded_per_10k": "Per 10k",
+}).set_index("Year")
+_disp
+```
+
+# Recorded vs surveillance-expected
+
+The gap between recorded bars and the expected lines is the under-reporting; the
+ratio is the recording rate (≈ 40%). Expected counts come from the per-year
+surveillance prevalence (`p_ds_lb_wt`) and the maternal-age Morris risk after
+applying the year's termination/reduction rate (`p_ds_lb_nt_reduc`). The
+surveillance tail (2018→2024) is carried forward and the reduction series is
+extrapolated 2020–2024 — see the spec.
+
+![Recorded vs surveillance-expected DS live births. Recorded bars sit well below every expected curve.](recorded_vs_expected.png){#fig-recorded-expected .lightbox fig-align="center"}
+
+![Recording rate (recorded / expected) over time, against a ~36–43% reference band.](recording_rate_by_year.png){#fig-recording-rate .lightbox fig-align="center"}
+
+Recording completeness is **not** uniform across groups. Using each group's
+age-structure-adjusted expected count, recording rates differ markedly — a
+differential-ascertainment signal (the de Graaf ethnicity benchmark, 2000–2018, is
+an alternative external denominator described in the spec).
+
+![Recording rate by maternal race / Hispanic origin over time (3-year rolling mean; age-risk expected denominator). The small AIAN group remains the most volatile.](recording_rate_by_race.png){#fig-recording-race .lightbox fig-align="center"}
+
+# Maternal characteristics
+
+Maternal age is the dominant DS risk axis: recorded DS prevalence rises steeply
+with age, and recorded DS mothers are several years older on average than the
+overall birth cohort — a gap that drifts as the whole cohort ages.
+
+![Recorded DS rate by single-year maternal age.](recorded_ds_by_mage.png){#fig-mage .lightbox fig-align="center"}
+
+![Mean and median maternal age: recorded DS births vs all births.](mean_mage_by_year.png){#fig-mean-age .lightbox fig-align="center"}
+
+![Recorded DS births by maternal race / Hispanic origin (5-category; multi-race is identifiable only from 2014 and is not shown here).](recorded_ds_by_race.png){#fig-race-share .lightbox fig-align="center"}
+
+Maternal education cannot be pooled across the 2003 certificate change (years of
+schooling pre-2003 vs attainment level 2003+), so it is shown as two panels.
+
+![Maternal education of recorded DS births over time — two non-poolable schemes (years of schooling, 1989–2002; attainment level, 2014–2024), each collapsed to four bands.](recorded_ds_by_education.png){#fig-education .lightbox fig-align="center"}
+
+![Marital status of recorded DS mothers: share married (`dmar`/`mar` coalesced).](recorded_ds_by_marital.png){#fig-marital .lightbox fig-align="center"}
+
+![Principal source of payment of recorded DS births over time (2014–2024).](recorded_ds_by_payer.png){#fig-payer .lightbox fig-align="center"}
+
+# Pregnancy and infant characteristics
+
+DS births skew towards lower birth weight and earlier gestation than the overall
+cohort. Birth weight, gestation, and infant sex are 2003-certificate items
+(`DBIRWT`/`GESTAT10`/`CSEX` pre-2003 are not loaded), so these begin in 2003.
+
+![Birth weight: recorded DS vs all births (2003–2024).](recorded_ds_birthweight.png){#fig-birthweight .lightbox fig-align="center"}
+
+![Gestational age: recorded DS vs all births (2003–2024).](recorded_ds_gestation.png){#fig-gestation .lightbox fig-align="center"}
+
+![Infant sex: recorded DS births vs all births (typically developing), share male (2003–2024).](recorded_ds_sex.png){#fig-sex .lightbox fig-align="center"}
+
+```{python}
+# | echo: false
+# | label: tbl-plurality
+_plurality = _table("recorded_ds_plurality.csv")
+_plurality["ds_n"] = _plurality["ds_n"].map(lambda v: f"{int(v):,}")
+_plurality["ds_share"] = _plurality["ds_share"].map(_pct)
+_plurality["all_share"] = _plurality["all_share"].map(_pct)
+_plurality = _plurality.rename(columns={
+    "plurality": "Plurality",
+    "ds_n": "Recorded DS (n)",
+    "ds_share": "Recorded DS (%)",
+    "all_share": "All births / TD (%)",
+})
+_plurality[["Plurality", "Recorded DS (n)", "Recorded DS (%)", "All births / TD (%)"]].set_index("Plurality")
+```
+
+# Co-occurring conditions and newborn morbidity
+
+Among recorded DS cases (2014–2024, `Y`/`N` base), co-occurring conditions are
+noted far less often than clinical series report — birth-certificate checkbox
+reporting under-ascertains, so each percentage is a **lower bound**. Cyanotic
+congenital heart disease appears on a single-digit percentage of certificates,
+against published congenital-heart-defect-in-DS estimates of ~40–50%; the
+comparison is about the direction and magnitude of under-ascertainment, not exact
+agreement.
+
+![Co-occurring conditions among recorded DS births (2014–2024, % of the Y/N base).](recorded_ds_co_occurring.png){#fig-co-occurring .lightbox fig-align="center"}
+
+```{python}
+# | echo: false
+# | label: tbl-co-occurring
+_co = _table("recorded_ds_co_occurring.csv").sort_values("pct", ascending=False)
+_co["pct"] = _co["pct"].map(lambda v: f"{v:.2f}%")
+_co[["condition", "pct"]].rename(
+    columns={"condition": "Condition", "pct": "% of recorded DS"}
+).set_index("Condition")
+```
+
+![Newborn morbidity among recorded DS births over time (2014–2024).](recorded_ds_morbidity.png){#fig-morbidity .lightbox fig-align="center"}
+
+# Limitations
+
+The public-use file carries **no geography** (no state/county); it is **live
+births only** (no terminations, so no antenatal prevalence); it has **no record
+linkage** (no infant-death or longitudinal follow-up) and **no DS subtype**. Most
+clinical detail (birth weight, gestation, sex, APGAR, and every 2003-cert
+checkbox) is absent or non-comparable before 2003. Recorded cases are ≈ 40% of
+expected and are likely severity-selected, so the characteristic distributions of
+recorded cases need not match those of all DS births. See
+`docs/analysis/descriptive.md` for the full limitations and the per-figure query
+provenance, and [`predicted.qmd`](predicted.qmd) for the predicted-missing
+extension.
