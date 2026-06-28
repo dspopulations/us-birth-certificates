@@ -121,6 +121,21 @@ By 2024 ours runs ~10–40% above his for most groups:
 Gert's own 5-race estimated-true total 2016–2024 (col H) is ~43,200 (overall recording
 0.40), between our full-margin posterior (~40.7k) and our prevalence target (45,928).
 
+### Result (indicative, dev preset)
+
+Both fits, variant C / spec full / dev preset (2 chains, 1000+1000; max R-hat ≈ 1.014):
+
+| anchor | total true DS 2016–2024 | 95% CI |
+| --- | --- | --- |
+| production (`--anchor-margin`) | 40,637 | 39,138–42,205 |
+| Gert col-I tail (`--degraaf-tail`) | 40,041 | 38,437–41,607 |
+
+**Effect: −595 (−1.5%).** The headline total is **robust** to the 2020–24 tail-prevalence
+assumption despite the per-year targets differing 10–40%: the full-margin term is a *soft*
+potential (tail σ ≈ 10–40% of prevalence) that the recorded Binomial and η priors outweigh,
+so lowering the tail target only nudges the posterior. Re-run at the reporting preset before
+citing. (Both 4 GB `idata.nc` artefacts live in the session scratch dir, not the repo.)
+
 ## Still open
 
 - **Adopting Gert's fill as the default anchor** (not just a sensitivity) remains the
