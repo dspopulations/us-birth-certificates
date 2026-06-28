@@ -41,9 +41,9 @@ Every file is written under `data/`. The script **skips any file already present
 > [!NOTE]
 > An older `previous/us-birth-certificates/readme.md` instructs `python ./prepare/download_data.py`; that path no longer exists. The script lives at `scripts/download_data.py`.
 
-### Lookup CSVs at the repo root
+### Lookup CSVs in `data/`
 
-Stage 5 reads five lookup CSVs by `./`-relative path. They must sit at the repo root (the first four were moved here out of `previous/us-birth-certificates/`; the surveillance-prevalence series was externalised from an inline table):
+Stage 5 reads five lookup CSVs by `./data/`-relative path. They sit in the `data/` directory (the first four were moved here out of `previous/us-birth-certificates/`; the surveillance-prevalence series was externalised from an inline table). Unlike the rest of `data/`, these derived CSVs are tracked in git — only `*.pdf`, `*.parquet`, `*.db`, and `*.sas7bdat` are ignored:
 
 - `us-births-estimated-prevalence-maternal-age-1989-2018.csv`
 - `us-births-reduction-rates-1989-2024.csv`
@@ -199,7 +199,7 @@ It narrows roughly 130 imported columns: `USMALLINT` for large year/count/weight
 *Second half - per-row derivations and compaction.* A sequence of in-place `UPDATE`s populates the computed columns (see [Derived columns](#derived-columns-stage-5)), joining the five CSVs on `year`. Finally, after `con.close()`, the script deletes `data/us_births.db`, `ATTACH`es both DBs and runs `COPY FROM DATABASE temp_db TO db` to compact into a fresh file, then `shutil.copy2` copies `us_births.db` back over `us_births_temp.db` so both files end identical and compacted.
 
 **Notes/gotchas:**
-- **CWD requirement:** the four `pd.read_csv` calls use `./`-relative paths and the CSVs must be present at the repo root, or the script raises `FileNotFoundError` mid-stage.
+- **CWD requirement:** the `pd.read_csv` calls use `./data/`-relative paths and the CSVs must be present in `data/` (run from the repo root), or the script raises `FileNotFoundError` mid-stage.
 - Choice of `TRY_CAST` vs plain `ALTER TYPE` is load-bearing: `TRY_CAST` silently nulls non-fitting values (can mask data issues); plain retype errors if a stored value does not fit the narrower type.
 - Target types are unsigned and small (`UTINYINT` caps at 255, `USMALLINT` at 65535); width choices assume NVSS recodes/sentinels stay in range.
 - `id` is added without `IF NOT EXISTS`, so re-running stage 5 on a DB that already has `id` errors on that statement.
@@ -227,7 +227,7 @@ Of the seven declared `p_ds_lb_*` columns, only **four are actually populated** 
 
 ## Lookup tables
 
-The five CSVs are read with `pd.read_csv(...).convert_dtypes()` (relative `./` path, repo root) and loaded into DuckDB tables. The four moved out of `previous/` carry a UTF-8 BOM that the pandas C parser strips (so the first column parses as `year`); the surveillance-prevalence CSV was written without a BOM.
+The five CSVs are read with `pd.read_csv(...).convert_dtypes()` (relative `./data/` path, run from the repo root) and loaded into DuckDB tables. The four moved out of `previous/` carry a UTF-8 BOM that the pandas C parser strips (so the first column parses as `year`); the surveillance-prevalence CSV was written without a BOM.
 
 | File | Columns | Year coverage | Feeds |
 | --- | --- | --- | --- |
@@ -278,7 +278,7 @@ python scripts/export_spss.py
 - **Run order matters.** The five core stages are strictly sequential; each consumes the previous stage's output.
 - **`combine_parquet` globs `data/*.parquet` indiscriminately.** Clean any derived parquet outputs (`us_births.parquet`, `us_births_all.parquet`) from `data/` before re-running stage 2, or they will be folded into the combined file.
 - **`prepare_parquet` executes at import** (no `__main__` guard) - importing it triggers the full rewrite of `data/us_births.parquet`.
-- **Stage 5 needs the repo root as CWD and the four CSVs present**, or it fails mid-run with `FileNotFoundError`.
+- **Stage 5 needs the repo root as CWD and the five CSVs present in `data/`**, or it fails mid-run with `FileNotFoundError`.
 - **Time and memory.** Measured end-to-end on the full 1989-2024 dataset (~142.9 M rows): import ~30-40 min (~50 s/year), combine ~30 s, prepare ~6 min, `duckdb_create` ~9 min, `duckdb_prepare` ~13 min (retypes + derivations + compaction) - roughly **~1 hour total**. `import_parquet` reads ~90 GB of SAS one year at a time, so available RAM must comfortably exceed the largest single year.
 - `data/` is gitignored and DUA-restricted - never commit or publish any raw or derived microdata.
 

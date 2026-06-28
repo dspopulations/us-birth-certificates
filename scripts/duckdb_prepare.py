@@ -306,7 +306,7 @@ def combine_all() -> None:
         # The last 7 rows (2018-2024) are an intentional flat carry-forward of the
         # 2018 value; provenance is summarised in docs/data-preparation.md.
         prevalence_df = pd.read_csv(
-            "./us-births-surveillance-prevalence-1989-2024.csv"
+            "./data/us-births-surveillance-prevalence-1989-2024.csv"
         ).convert_dtypes()
 
         print("Setting 'p_ds_lb_wt'")
@@ -431,7 +431,7 @@ def combine_all() -> None:
         print("Reading us-births-estimated-prevalence-maternal-age-1989-2018.csv")
 
         prev_est_age_df = pd.read_csv(
-            "./us-births-estimated-prevalence-maternal-age-1989-2018.csv"
+            "./data/us-births-estimated-prevalence-maternal-age-1989-2018.csv"
         ).convert_dtypes()
 
         con.execute(
@@ -458,7 +458,7 @@ def combine_all() -> None:
         print("Reading us-births-reduction-rates-1989-2024.csv")
 
         reduction_df = pd.read_csv(
-            "./us-births-reduction-rates-1989-2024.csv"
+            "./data/us-births-reduction-rates-1989-2024.csv"
         ).convert_dtypes()
 
         print("Creating table reduction_rate_year")
@@ -487,7 +487,7 @@ def combine_all() -> None:
 
         print("Reading us-births-ds-rec-weights.csv")
 
-        weights_df = pd.read_csv("./us-births-ds-rec-weights.csv").convert_dtypes()
+        weights_df = pd.read_csv("./data/us-births-ds-rec-weights.csv").convert_dtypes()
 
         print("Creating table ds_case_weights")
 
@@ -528,7 +528,7 @@ def combine_all() -> None:
         print("Reading us-births-estimated-prevalence-ethnicity-2000-2018.csv")
 
         prev_ethnicity_df = pd.read_csv(
-            "./us-births-estimated-prevalence-ethnicity-2000-2018.csv"
+            "./data/us-births-estimated-prevalence-ethnicity-2000-2018.csv"
         ).convert_dtypes()
 
         print("Creating table us_births_est_prevalence_ethnicity")

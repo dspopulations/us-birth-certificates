@@ -2,7 +2,12 @@
 /previous/us-birth-certificates/output
 /notebooks/output
 *.ipynb
-/data
+# Data we must not redistribute (NCHS DUA) or that is large/binary.
+# The data/ directory itself is tracked so derived CSVs can be committed.
+*.pdf
+*.parquet
+*.db
+*.sas7bdat
 __pycache__/
 *.pyc
 /.vscode
