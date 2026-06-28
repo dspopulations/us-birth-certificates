@@ -93,11 +93,54 @@ reasoning as the existing committed `us-births-estimated-prevalence-ethnicity-20
 and the [recording-anchor note](20260623-degraaf-recording-anchor.md). Confirm with Frank
 before any external publication.
 
-## Not done here (open modelling decisions)
+## Sensitivity scenario (implemented)
 
-- **Adopting Gert's estimated-true prevalence (column I) for 2015/2017/2019–2024.** His
-  regression fill is an alternative to our backtested survival-ratio imputation in
-  `derive_recording_rates.py`. Whether to switch is the open "how hard to push de Graaf"
-  decision in the [recording-anchor note](20260623-degraaf-recording-anchor.md), not a data fix.
-- **Extending the surveillance comparison past 2018.** Raw surveillance still stops at 2018
-  (2015/2017 absent); only the regression-filled estimate covers 2019–2024.
+Decision: **keep our backtested imputation as the production model anchor**, and run
+Gert's column I as a **sensitivity scenario for 2020–24** (his fill diverges from ours
+mainly in that tail — see the head-to-head below).
+
+- `src/.../selection/degraaf_tail.py` — `DEGRAAF_TAIL_PREV` (col I, named races, 2020–24)
+  and `apply_degraaf_tail()`, which splices that tail onto `recording_anchor.PREV_RACE_YEAR`
+  (2016–2019 and all sigmas unchanged). Unit-tested in `tests/test_degraaf_tail.py`.
+- `scripts/fit_selection_model.py --degraaf-tail` (implies `--anchor-margin`) runs the
+  full-margin fit against the spliced target. Validated end-to-end with `--prior-only`.
+
+### Why the methods diverge (true DS prevalence /10k)
+
+Ours holds net survival flat (prevalence drifts **up** with maternal age); Gert extends the
+recording fraction linearly (prevalence falls **down** as recorded counts drop post-2020).
+By 2024 ours runs ~10–40% above his for most groups:
+
+| group | 2024 ours | 2024 Gert (col I) |
+| --- | --- | --- |
+| NH White | 14.13 | 11.67 |
+| NH Black | 16.27 | 12.69 |
+| NH Asian/PI | 10.38 | 7.39 |
+| Hispanic | 17.44 | 15.74 |
+
+Gert's own 5-race estimated-true total 2016–2024 (col H) is ~43,200 (overall recording
+0.40), between our full-margin posterior (~40.7k) and our prevalence target (45,928).
+
+### Result (indicative, dev preset)
+
+Both fits, variant C / spec full / dev preset (2 chains, 1000+1000; max R-hat ≈ 1.014):
+
+| anchor | total true DS 2016–2024 | 95% CI |
+| --- | --- | --- |
+| production (`--anchor-margin`) | 40,637 | 39,138–42,205 |
+| Gert col-I tail (`--degraaf-tail`) | 40,041 | 38,437–41,607 |
+
+**Effect: −595 (−1.5%).** The headline total is **robust** to the 2020–24 tail-prevalence
+assumption despite the per-year targets differing 10–40%: the full-margin term is a *soft*
+potential (tail σ ≈ 10–40% of prevalence) that the recorded Binomial and η priors outweigh,
+so lowering the tail target only nudges the posterior. Re-run at the reporting preset before
+citing. (Both 4 GB `idata.nc` artefacts live in the session scratch dir, not the repo.)
+
+## Still open
+
+- **Adopting Gert's fill as the default anchor** (not just a sensitivity) remains the
+  "how hard to push de Graaf" decision in the
+  [recording-anchor note](20260623-degraaf-recording-anchor.md).
+- **Extending raw surveillance past 2018.** Surveillance still stops at 2018 (2015/2017
+  absent); only the regression-filled estimate covers 2019–2024.
+- **2015** is in Gert's series but outside our 2016–2024 model window.
