@@ -5,15 +5,20 @@ from estimated DS prevalence (data/reference/ds_prevalence_ethnicity_2000_2023.c
 through livebirth counts:
     true = prevalence/1e4 * births;  s = recorded_DS / true.
 
-S_RACE_YEAR_*  -- recording-rate s(race, year) prior (logit mean/sigma; idx-5
-  Unknown = weak fallback s=0.4).
+S_RACE_YEAR_*  -- recording-rate s(race, year) prior (logit mean/sigma; idx 5
+  Unknown and idx 6 NH Multi-race = weak fallback s=0.4).
 PREV_RACE_YEAR / _SIGMA -- de Graaf TRUE prevalence per 10k (mean/sigma) used as
   the full-margin target that ties the model's N-weighted marginal p_ds_lb per
-  race x year to surveillance; idx-5 Unknown has no target (NaN -> not anchored).
+  race x year to surveillance; idx 5 Unknown and idx 6 Multi-race have no target
+  (NaN -> not anchored).
 
-Rows = race idx 0..5; columns = years 2016-2024. 2019-2024 prevalence
+Rows = race idx 0..6; columns = years 2016-2024. 2019-2024 prevalence
 is imputed (survival ratio held flat; see the script), so sigma widens across the
 tail. Regenerate after a data refresh or when surveillance years fill in.
+
+The idx-6 NH Multi-race row is the deterministic UNKNOWN_S fallback (de Graaf has no
+multi-race category); it was added when multi-race was promoted to its own group and
+will be re-emitted identically on the next regeneration.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ S_RACE_YEAR_LOGIT = np.array([
     [ -0.5549,  -0.6742,  -0.4897,  -0.5650,  -1.0188,  -0.8664,  -0.6013,  -0.7967,  -1.0455],  # NH Asian/Pacific Islander
     [ -0.5139,  -0.4962,  -0.4468,  -0.5159,  -0.5762,  -0.5756,  -0.7883,  -0.7363,  -0.7119],  # Hispanic
     [ -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055],  # Unknown
+    [ -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055,  -0.4055],  # NH Multi-race
 ])
 
 S_RACE_YEAR_SIGMA = np.array([
@@ -38,6 +44,7 @@ S_RACE_YEAR_SIGMA = np.array([
     [  0.1977,   0.2455,   0.2049,   0.2710,   0.2933,   0.3411,   0.4090,   0.4341,   0.4518],  # NH Asian/Pacific Islander
     [  0.1309,   0.2046,   0.1333,   0.2258,   0.2740,   0.3272,   0.3549,   0.4116,   0.4663],  # Hispanic
     [  0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000],  # Unknown
+    [  0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000,   0.5000],  # NH Multi-race
 ])
 
 PREV_RACE_YEAR = np.array([
@@ -47,6 +54,7 @@ PREV_RACE_YEAR = np.array([
     [  9.1007,   9.0369,   8.8714,   9.0640,   9.3922,   9.6860,  10.1167,  10.2674,  10.3753],  # NH Asian/Pacific Islander
     [ 15.9960,  16.4067,  16.7694,  16.8666,  17.0503,  17.1714,  17.4614,  17.5815,  17.4380],  # Hispanic
     [  np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],  # Unknown
+    [  np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],  # NH Multi-race
 ])
 
 PREV_RACE_YEAR_SIGMA = np.array([
@@ -56,4 +64,5 @@ PREV_RACE_YEAR_SIGMA = np.array([
     [  0.6371,   1.0844,   0.6210,   1.2236,   1.5967,   1.9856,   2.4280,   2.8235,   3.2164],  # NH Asian/Pacific Islander
     [  1.1197,   1.9688,   1.1739,   2.2770,   2.8985,   3.5201,   4.1907,   4.8349,   5.4058],  # Hispanic
     [  np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],  # Unknown
+    [  np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],  # NH Multi-race
 ])

@@ -50,6 +50,7 @@ from dse_research_utils.plot import styles  # noqa: E402
 from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection.priors import (  # noqa: E402
     MORRIS_THETA_LB_PER_1000,
+    N_RACE,
     RACE_LEVELS,
     inv_logit,
     logit,
@@ -61,7 +62,7 @@ OUT_CSV = "data/reference/recording_rates_by_race_year.csv"
 ANCHOR_MODULE = "src/dspopulations_us_birth_certificates/selection/recording_anchor.py"
 OUTPUT_DIR = "notes/figures"
 
-UNKNOWN_S = 0.40  # idx-5 "Unknown" race has no de Graaf anchor -> weak neutral fallback
+UNKNOWN_S = 0.40  # idx-5 Unknown AND idx-6 NH Multi-race have no de Graaf anchor -> weak neutral fallback
 UNKNOWN_SIGMA = 0.50
 
 STUDY_YEARS = list(range(2016, 2025))  # model window
@@ -99,7 +100,7 @@ def _load(con: duckdb.DuckDBPyConnection):
         """
         SELECT CAST(year AS INTEGER) AS year,
           CASE mracehisp_c WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2
-               WHEN 4 THEN 3 WHEN 5 THEN 4 ELSE 5 END AS race_idx,
+               WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 ELSE 5 END AS race_idx,
           CASE WHEN mage_c < 20 THEN 0 WHEN mage_c < 25 THEN 1 WHEN mage_c < 30 THEN 2
                WHEN mage_c < 35 THEN 3 WHEN mage_c < 40 THEN 4 WHEN mage_c < 45 THEN 5
                ELSE 6 END AS age_idx,
@@ -112,7 +113,7 @@ def _load(con: duckdb.DuckDBPyConnection):
         """
         SELECT CAST(year AS INTEGER) AS year,
           CASE mracehisp_c WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2
-               WHEN 4 THEN 3 WHEN 5 THEN 4 ELSE 5 END AS race_idx,
+               WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 ELSE 5 END AS race_idx,
           COUNT(*) AS N, SUM(CAST(down_ind AS INTEGER)) AS R
         FROM us_births WHERE year BETWEEN 2016 AND 2024 AND mage_c IS NOT NULL AND down_ind IS NOT NULL
         GROUP BY 1, 2
@@ -222,18 +223,20 @@ def _sigma_logit(s: float, R: float, source: str, year: int, race_idx: int) -> f
 def _write_anchor_module(surf: pd.DataFrame, years: list[int]) -> None:
     """Emit the committed anchor module imported by the selection model.
 
-    Shape [N_RACE=6, n_year]: rows = race idx 0..5 (idx 5 = Unknown), columns = study
-    years. Emits four surfaces:
+    Shape [N_RACE, n_year]: rows = race idx 0..N_RACE-1, columns = study years. The five
+    de Graaf groups (idx 0-4) are anchored from surveillance; idx 5 (Unknown) and idx 6
+    (NH Multi-race) have no de Graaf category, so both carry the weak fallback. Emits four
+    surfaces:
 
-      * S_RACE_YEAR_LOGIT / _SIGMA   -- recording-rate s prior (idx 5 = weak fallback)
+      * S_RACE_YEAR_LOGIT / _SIGMA   -- recording-rate s prior (idx 5, 6 = weak fallback)
       * PREV_RACE_YEAR / _SIGMA      -- de Graaf true-prevalence margin target (per 10k)
-        used by the FULL-MARGIN anchor; idx-5 Unknown has no surveillance target -> NaN.
+        used by the FULL-MARGIN anchor; idx 5/6 have no surveillance target -> NaN.
     """
     n_year = len(years)
-    logit_mat = np.full((6, n_year), float(logit(UNKNOWN_S)))
-    sigma_mat = np.full((6, n_year), float(UNKNOWN_SIGMA))
-    prev_mat = np.full((6, n_year), np.nan)
-    prevsig_mat = np.full((6, n_year), np.nan)
+    logit_mat = np.full((N_RACE, n_year), float(logit(UNKNOWN_S)))
+    sigma_mat = np.full((N_RACE, n_year), float(UNKNOWN_SIGMA))
+    prev_mat = np.full((N_RACE, n_year), np.nan)
+    prevsig_mat = np.full((N_RACE, n_year), np.nan)
     for r in range(5):
         d = surf[surf["race_idx"] == r].set_index("year")
         for j, y in enumerate(years):
@@ -247,7 +250,7 @@ def _write_anchor_module(surf: pd.DataFrame, years: list[int]) -> None:
 
     def _fmt(mat: np.ndarray) -> str:
         lines = []
-        for r in range(6):
+        for r in range(N_RACE):
             label = RACE_LEVELS[r] if r < len(RACE_LEVELS) else "Unknown"
             vals = ", ".join(_v(v) for v in mat[r])
             lines.append(f"    [{vals}],  # {label}")
@@ -259,12 +262,13 @@ def _write_anchor_module(surf: pd.DataFrame, years: list[int]) -> None:
         "from estimated DS prevalence (data/reference/ds_prevalence_ethnicity_2000_2023.csv)\n"
         "through livebirth counts:\n"
         "    true = prevalence/1e4 * births;  s = recorded_DS / true.\n\n"
-        "S_RACE_YEAR_*  -- recording-rate s(race, year) prior (logit mean/sigma; idx-5\n"
-        f"  Unknown = weak fallback s={UNKNOWN_S}).\n"
+        "S_RACE_YEAR_*  -- recording-rate s(race, year) prior (logit mean/sigma; idx 5\n"
+        f"  Unknown and idx 6 NH Multi-race = weak fallback s={UNKNOWN_S}).\n"
         "PREV_RACE_YEAR / _SIGMA -- de Graaf TRUE prevalence per 10k (mean/sigma) used as\n"
         "  the full-margin target that ties the model's N-weighted marginal p_ds_lb per\n"
-        "  race x year to surveillance; idx-5 Unknown has no target (NaN -> not anchored).\n\n"
-        f"Rows = race idx 0..5; columns = years {years[0]}-{years[-1]}. 2019-2024 prevalence\n"
+        "  race x year to surveillance; idx 5 Unknown and idx 6 Multi-race have no target\n"
+        "  (NaN -> not anchored).\n\n"
+        f"Rows = race idx 0..{N_RACE - 1}; columns = years {years[0]}-{years[-1]}. 2019-2024 prevalence\n"
         "is imputed (survival ratio held flat; see the script), so sigma widens across the\n"
         "tail. Regenerate after a data refresh or when surveillance years fill in.\n"
         '"""\n\n'

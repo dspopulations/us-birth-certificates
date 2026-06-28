@@ -13,7 +13,7 @@ The current ``data/us_births.db`` has these relevant columns (DuckDB
 
     ``year`` (USMALLINT), ``mage_c`` (UTINYINT), ``mracehisp_c`` (UTINYINT:
     1 NH White, 2 NH Black, 3 NH AIAN, 4 NH Asian/PI/Other, 5 Hispanic,
-    6 NH more than one race, NULL Unknown; 6 and NULL share the Unknown cell),
+    6 NH more than one race (its own group, race_idx 6), NULL Unknown),
     ``meduc`` (UTINYINT 1-8, 9 or NULL unknown),
     ``pay_rec`` (UTINYINT 1 Medicaid, 2 Private, 3 Self-pay, 4 Other, 9
     Unknown), ``gestrec10`` (UTINYINT 1-5 preterm, 6-10 term, 99/NULL
@@ -59,10 +59,11 @@ AGE_BIN_EDGES: tuple[int, ...] = (20, 25, 30, 35, 40, 45)
 
 # ``mracehisp_c`` -> race_idx (see priors.RACE_LEVELS).
 # 1 NH White -> 0, 2 NH Black -> 1, 3 NH AIAN -> 2, 4 NH Asian/PI/Other -> 3,
-# 5 Hispanic -> 4, 6 NH more than one race -> 5 (Unknown), NULL -> 5 (Unknown).
-# (The race_case SQL ELSE routes both 6 and NULL to RACE_UNKNOWN_IDX, so multi-race
-# currently shares the Unknown cell; promoting it to its own group is a follow-up.)
-RACE_MAP: dict[int, int] = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4}
+# 5 Hispanic -> 4, 6 NH more than one race -> 6 (its own group), NULL -> 5 (Unknown).
+# (The race_case SQL routes code 6 to its own idx 6; only NULL/other falls to the
+# Unknown idx 5. De Graaf has no multi-race anchor, so idx 6 carries the same weak
+# s(race, year) fallback as Unknown - see priors.RACE_LEVELS / recording_anchor.py.)
+RACE_MAP: dict[int, int] = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 6}
 RACE_UNKNOWN_IDX = 5
 
 # ``meduc`` (2003 cert) -> edu_idx (see priors.EDU_LEVELS).
@@ -168,7 +169,7 @@ def _build_sql(
     race_case = (
         f"CASE {c['mracehisp_c']} "
         f"WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2 "
-        f"WHEN 4 THEN 3 WHEN 5 THEN 4 "
+        f"WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 "
         f"ELSE {RACE_UNKNOWN_IDX} END"
     )
     edu_case = (

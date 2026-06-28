@@ -57,11 +57,15 @@ AGE_LEVELS = ["<20", "20-24", "25-29", "30-34", "35-39", "40-44", "45+"]
 # duckdb_prepare.py and consumed by selection.data.RACE_MAP. The codes
 # are: 1=NH White (idx 0), 2=NH Black (1), 3=NH AIAN only (2), 4=NH
 # Asian/Pacific Islander (broad bucket — Asian + NHOPI + Other; 3),
-# 5=Hispanic (4), NULL=Unknown (5). The prior arrays below are indexed
-# in this order — re-derive ETA_TERM_RACE / S_RACE etc. against the
-# published literature if any single demographic's prior magnitude looks
-# off; an earlier version of this label list swapped positions 2 and 3
-# and the values may need a second look.
+# 5=Hispanic (4), NULL=Unknown (5), 6=NH more than one race (idx 6).
+# Unknown stays at idx 5; multi-race is appended at idx 6 (de Graaf has
+# no multi-race anchor, so its s(race, year) is the same weak fallback
+# as Unknown). The prior arrays below are indexed in this order —
+# re-derive ETA_TERM_RACE / S_RACE etc. against the published literature
+# if any single demographic's prior magnitude looks off; an earlier
+# version of this label list swapped positions 2 and 3 and the values
+# may need a second look. The NH Multi-race offsets are unpinned
+# placeholders (no external evidence; neutral, like Unknown).
 RACE_LEVELS = [
     "NH White",
     "NH Black",
@@ -69,6 +73,7 @@ RACE_LEVELS = [
     "NH Asian/Pacific Islander",
     "Hispanic",
     "Unknown",
+    "NH Multi-race",
 ]
 EDU_LEVELS = [
     "<HS",
@@ -153,6 +158,7 @@ ETA_DETECT_RACE = np.array(
         -0.10,  # NH Asian/Pacific Islander
         -0.25,  # Hispanic
         0.00,  # Unknown
+        0.00,  # NH Multi-race (placeholder - no external evidence; neutral)
     ]
 )
 ETA_DETECT_RACE_SIGMA = 0.20
@@ -243,6 +249,7 @@ ETA_TERM_RACE = np.array(
         -0.15,  # NH Asian/Pacific Islander
         -0.40,  # Hispanic
         0.00,  # Unknown
+        0.00,  # NH Multi-race (placeholder - no external evidence; neutral)
     ]
 )
 ETA_TERM_RACE_SIGMA = 0.20

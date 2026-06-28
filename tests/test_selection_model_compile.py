@@ -90,10 +90,12 @@ def test_full_margin_anchor_adds_prevalence_observation(
     """``prev_margin`` ties the marginal p_ds_lb per race×year to a de Graaf target."""
     import pymc as pm
 
-    n_race = 6
-    # One anchored target per race×year for the named races; Unknown (idx 5) is NaN.
+    n_race = 7
+    # One anchored target per race×year for the named races; Unknown (idx 5) and
+    # NH Multi-race (idx 6) are NaN (neither has a de Graaf anchor).
     target = np.full((n_race, N_YEAR), 12.0)
     target[5, :] = np.nan
+    target[6, :] = np.nan
     sigma = np.full((n_race, N_YEAR), 1.0)
 
     model = build_model(
@@ -106,8 +108,14 @@ def test_full_margin_anchor_adds_prevalence_observation(
     obs = {rv.name for rv in model.observed_RVs}
     det = {d.name for d in model.deterministics}
     assert "prev_margin_obs" in obs and "prev_margin" in det
-    # Only the 5 named races are anchored -> 5 × N_YEAR groups (Unknown excluded).
-    assert model["prev_margin"].eval().shape == (5 * N_YEAR,)
+    # Only the 5 named races (idx 0-4, finite target) that actually appear in the
+    # cells are anchored; Unknown (idx 5) and NH Multi-race (idx 6) have NaN targets
+    # and are excluded. (With N_RACE=7 the synthetic cells may not cover every
+    # named race x year, so compute the expected count from the data.)
+    present = set(zip(tiny_cells["race_idx"], tiny_cells["year_idx"], strict=True))
+    n_anchored = sum(1 for r, y in present if r < 5)
+    assert 0 < n_anchored <= 5 * N_YEAR
+    assert model["prev_margin"].eval().shape == (n_anchored,)
 
     with model:
         prior = pm.sample_prior_predictive(draws=5, random_seed=0)
