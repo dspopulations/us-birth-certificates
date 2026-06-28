@@ -51,6 +51,11 @@ Stage 5 reads five lookup CSVs by `./data/`-relative path. They sit in the `data
 - `us-births-estimated-prevalence-ethnicity-2000-2018.csv`
 - `us-births-surveillance-prevalence-1989-2024.csv`
 
+A sixth tracked CSV, `us-births-degraaf-prevalence-recording-2000-2024.csv`, is **reference
+data, not read by Stage 5** — a faithful extraction of de Graaf's corrected workbook
+(surveillance prevalence, recording fractions, and estimated-true prevalence by ethnic group
+× year). See [`notes/20260628-degraaf-corrected-prevalence-extraction.md`](../notes/20260628-degraaf-corrected-prevalence-extraction.md).
+
 ## Pipeline overview
 
 All scripts are run **from the repo root** (paths are CWD-relative). There is currently **no single orchestrator script** for the core chain - run the five stages in order:
