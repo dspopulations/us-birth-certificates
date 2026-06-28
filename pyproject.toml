@@ -93,6 +93,10 @@ ignore = [
 # they appear in SQL (e.g. ``SELECT * FROM prevalence_df``). Ruff can't see
 # those references and flags the assignments as F841 "local variable unused".
 "scripts/duckdb_prepare.py" = ["F841"]
+# This script sets MKL/OpenMP/matplotlib env vars before importing numpy/
+# matplotlib (the import-time MKL crash workaround), which necessarily places
+# imports after module-level statements and splits the import block.
+"scripts/analyse_descriptive.py" = ["E402", "I001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dspopulations_us_birth_certificates"]
