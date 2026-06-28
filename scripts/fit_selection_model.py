@@ -85,6 +85,7 @@ class FitSelectionCliConfig:
     prior_only: bool
     render: bool
     anchor_margin: bool = False
+    degraaf_tail: bool = False
     overrides: dict[str, Any] = field(default_factory=dict)
 
 
@@ -163,6 +164,17 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         ),
     )
     p.add_argument(
+        "--degraaf-tail",
+        action="store_true",
+        help=(
+            "Sensitivity scenario (implies --anchor-margin): replace the 2020-2024 "
+            "full-margin prevalence target for the five named de Graaf races with his "
+            "column-I regression fill (selection.degraaf_tail.DEGRAAF_TAIL_PREV); "
+            "2016-2019 and all sigmas keep the production anchor. Brackets the post-2020 "
+            "NIPS-era imputation uncertainty. Ignored for variant D."
+        ),
+    )
+    p.add_argument(
         "--render",
         action="store_true",
         help=(
@@ -202,7 +214,8 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         output_dir=out_dir,
         prior_only=ns.prior_only,
         render=ns.render,
-        anchor_margin=ns.anchor_margin,
+        anchor_margin=ns.anchor_margin or ns.degraaf_tail,
+        degraaf_tail=ns.degraaf_tail,
         overrides=overrides,
     )
 
@@ -279,8 +292,20 @@ def main(argv: list[str] | None = None) -> int:
             PREV_RACE_YEAR_SIGMA,
         )
 
-        prev_margin = (PREV_RACE_YEAR[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year])
-        cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
+        target = PREV_RACE_YEAR
+        if cli.degraaf_tail:
+            from dspopulations_us_birth_certificates.selection.degraaf_tail import (
+                apply_degraaf_tail,
+            )
+
+            target = apply_degraaf_tail(PREV_RACE_YEAR)
+            cli_output.info(
+                "full-margin de Graaf prevalence anchor: [bold]ON[/bold] "
+                "(Gert col-I tail 2020-2024 sensitivity)"
+            )
+        else:
+            cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
+        prev_margin = (target[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year])
     model = build_model(
         cells, priors, spec=cli.spec, n_year=n_year, prev_margin=prev_margin
     )
