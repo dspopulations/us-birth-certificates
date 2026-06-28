@@ -158,7 +158,7 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         help=(
             "Enable the FULL-MARGIN de Graaf anchor: tie the model's N-weighted marginal "
             "p_ds_lb per race×year to de Graaf surveillance prevalence "
-            "(selection.recording_anchor.PREV_RACE_YEAR). Pins η's race×year level so the "
+            "(selection.recording_anchor.PREV_RACE_YEAR). Pins eta's race×year level so the "
             "literature termination/detection priors cannot drag the total below "
             "surveillance. Ignored for variant D."
         ),
