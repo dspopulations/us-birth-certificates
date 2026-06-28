@@ -83,12 +83,14 @@ backtested
 beeswarm
 sociodemographic
 codings
+dataclass
 dataclasses
 dcor
 distributionally
 downweight
 dtype
 dtypes
+estimability
 numpy
 heteroscedastic
 homoscedastic
