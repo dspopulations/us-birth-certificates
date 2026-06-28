@@ -118,7 +118,7 @@ df = con.execute(
         WHEN COALESCE (ca_down, ca_downs) = 'C' THEN 1
         WHEN COALESCE (ca_down, ca_downs) = 'P' THEN 1
         ELSE 0
-        END) as count_ds_indication, SUM (down_ind) as count_down_ind, SUM (p_ds_lb_nt) as count_ds_lb_nt, SUM (p_ds_lb_wt_mage) as count_ds_lb_wt_mage, SUM (p_ds_lb_wt_mage_reduc) as count_ds_lb_wt_mage_reduc, SUM (down_ind) / COUNT (*) as prob_ds_rec, SUM (down_ind) / SUM (p_ds_lb_nt) as ratio_nt_recorded, SUM (down_ind) / SUM (p_ds_lb_wt_mage) as ratio_wt_mage_recorded, SUM (down_ind) / SUM (p_ds_lb_wt_mage_reduc) as ratio_wt_mage_reduc_recorded,
+        END) as count_ds_indication, SUM (down_ind) as count_down_ind, SUM (p_ds_lb_nt) as count_ds_lb_nt, SUM (p_ds_lb_wt_mage) as count_ds_lb_wt_mage, SUM (p_ds_lb_nt_reduc) as count_ds_lb_wt_mage_reduc, SUM (down_ind) / COUNT (*) as prob_ds_rec, SUM (down_ind) / SUM (p_ds_lb_nt) as ratio_nt_recorded, SUM (down_ind) / SUM (p_ds_lb_wt_mage) as ratio_wt_mage_recorded, SUM (down_ind) / SUM (p_ds_lb_nt_reduc) as ratio_wt_mage_reduc_recorded,
     FROM
         us_births
     GROUP BY

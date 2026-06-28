@@ -41,8 +41,8 @@ mage_df = con.execute(
            COUNT(*)      as lb,
            SUM(down_ind) as count_down_ind,
            AVG(down_ind) as prob_down_ind,
-           SUM(p_ds_lb_wt_mage_reduc) as count_ds_lb_wt_mage_reduc,
-           AVG(p_ds_lb_wt_mage_reduc) as prob_ds_lb_wt_mage_reduc,
+           SUM(p_ds_lb_nt_reduc) as count_ds_lb_wt_mage_reduc,
+           AVG(p_ds_lb_nt_reduc) as prob_ds_lb_wt_mage_reduc,
            SUM(ds_case_weight) as count_ds_case_weight,
            AVG(ds_case_weight) as prob_ds_case_weight,
     FROM us_births

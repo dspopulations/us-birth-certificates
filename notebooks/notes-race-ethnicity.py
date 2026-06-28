@@ -39,7 +39,7 @@ race_hisp_totals_df = (
         mracehisp_c,
         AVG(down_ind) as prob_down_ind,
         AVG(p_ds_lb_nt) as prob_ds_lb_nt,
-        AVG(p_ds_lb_wt_mage_reduc) as prob_ds_lb_wt_mage_reduc,
+        AVG(p_ds_lb_nt_reduc) as prob_ds_lb_wt_mage_reduc,
         AVG(ds_case_weight) as prob_ds_case_weight
         FROM us_births
         GROUP BY mracehisp_c;

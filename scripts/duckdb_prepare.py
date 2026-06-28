@@ -4,6 +4,7 @@ import shutil
 import duckdb
 import pandas as pd
 
+from dspopulations_us_birth_certificates import chance
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
@@ -77,6 +78,7 @@ def combine_all() -> None:
         alter_column_type(vars.MAGER9, "UTINYINT", con)
         alter_column_type(vars.MAGE36, "UTINYINT", con)
         alter_column_type(vars.MAGER12, "UTINYINT", con)
+        alter_try_cast_column_type(vars.MAGER41, "UTINYINT", con)
         alter_column_type(vars.MBSTATE_REC, "UTINYINT", con)
         alter_column_type(vars.RESTATUS, "UTINYINT", con)
         alter_column_type(vars.MBRACE, "UTINYINT", con)
@@ -206,7 +208,7 @@ def combine_all() -> None:
         add_column(vars.P_DS_LB_NT_MAGE, "DOUBLE", con)
         add_column(vars.P_DS_LB_WT_ETHN, "DOUBLE", con)
         add_column(vars.P_DS_LB_NT_ETHN, "DOUBLE", con)
-        add_column(vars.P_DS_LB_WT_MAGE_REDUC, "DOUBLE", con)
+        add_column(vars.P_DS_LB_NT_REDUC, "DOUBLE", con)
 
         print("Adding id column...")
 
@@ -251,7 +253,7 @@ def combine_all() -> None:
                 WHEN {vars.UCA_DOWNS} = 9 THEN 'U'
                 WHEN {vars.DOWNS} = 1 THEN 'C'
                 WHEN {vars.DOWNS} = 2 THEN 'N'
-                WHEN {vars.DOWNS} = 9 THEN 'U' -- 8 (not on certificate) treated as unknown
+                WHEN {vars.DOWNS} = 9 THEN 'U' -- 8 (not on certificate) is unmatched and falls through to NULL, distinct from 9 (not classifiable) -> 'U'
                 ELSE NULL
             END;
             """
@@ -276,65 +278,36 @@ def combine_all() -> None:
 
         print("Setting mage_c...")
 
+        # mager (2004+) -> dmage (<=2002) -> mage36+13 (<=2002 recode) ->
+        # mager41+13 (2003 only; the 2003 transition file carries none of the
+        # first three, so mager41 is the sole single-year age source for 2003,
+        # in the same 41-category coding as mage36).
         con.execute(
             f"""
             UPDATE us_births
-            SET {vars.MAGE_C} = COALESCE({vars.MAGER}, {vars.DMAGE}, ({vars.MAGE36} + 13));
+            SET {vars.MAGE_C} = COALESCE({vars.MAGER}, {vars.DMAGE}, ({vars.MAGE36} + 13), ({vars.MAGER41} + 13));
             """
         )
 
         print("Setting 'p_ds_lb_nt'")
 
+        # Morris maternal-age DS live-birth risk; the formula/constants live in
+        # chance.MORRIS_PARAMS so the SQL and Python paths cannot drift.
         con.execute(
-            """
+            f"""
             UPDATE us_births
-            SET p_ds_lb_nt = 1 / (1 + exp(7.33 - 4.211 / (1 + exp(-0.2815 * (mage_c - 37.23)))));
+            SET {vars.P_DS_LB_NT} = {chance.ds_lb_nt_probability_sql(vars.MAGE_C)};
             """
         )
 
-        prevalence_df = pd.DataFrame(
-            {
-                str(vars.YEAR): list(range(1989, 2025)),
-                str(vars.P_DS_LB_WT): [
-                    0.001038,
-                    0.001055,
-                    0.001077,
-                    0.001083,
-                    0.001093,
-                    0.001102,
-                    0.001121,
-                    0.001099,
-                    0.001124,
-                    0.001136,
-                    0.001153,
-                    0.001149,
-                    0.001179,
-                    0.001216,
-                    0.001219,
-                    0.001218,
-                    0.001236,
-                    0.001244,
-                    0.001261,
-                    0.001257,
-                    0.001262,
-                    0.001244,
-                    0.00127,
-                    0.001265,
-                    0.001283,
-                    0.001302,
-                    0.001265051,
-                    0.001295784,
-                    0.0013375,
-                    0.001324215,
-                    0.001324215,
-                    0.001324215,
-                    0.001324215,
-                    0.001324215,
-                    0.001324215,
-                    0.001324215,
-                ],
-            }
-        )
+        print("Reading us-births-surveillance-prevalence-1989-2024.csv")
+
+        # Per-year surveillance prevalence of DS live births (with terminations).
+        # The last 7 rows (2018-2024) are an intentional flat carry-forward of the
+        # 2018 value; provenance is summarised in docs/data-preparation.md.
+        prevalence_df = pd.read_csv(
+            "./us-births-surveillance-prevalence-1989-2024.csv"
+        ).convert_dtypes()
 
         print("Setting 'p_ds_lb_wt'")
 
@@ -374,14 +347,26 @@ def combine_all() -> None:
                     CASE
                         WHEN {vars.MRACE15} IN(1, 2, 3) THEN {vars.MRACE15}
                         WHEN {vars.MRACE15} BETWEEN 4 AND 14 THEN 4
+                        WHEN {vars.MRACE15} = 15 THEN 5
                     END
                 WHEN {vars.MRACEREC} IS NOT NULL THEN
                     CASE
                         WHEN {vars.MRACEREC} IN(1, 2, 3, 4) THEN {vars.MRACEREC}
                     END
                 WHEN {vars.MBRACE} IS NOT NULL THEN
+                    -- MBRACE uses two schemes: a 1-digit recode (1 White, 2 Black,
+                    -- 3 AIAN, 4 Asian/PI; PR 0 Other/1/2) in 2014-2019, and 2-digit
+                    -- codes (single-race 01-14, bridged-multiple 21-24) in 2003-2013.
+                    -- Single-race -> 1-4, bridged-multiple 21-24 -> 5 (More than one
+                    -- race). MRACEREC/MRACE15 precede MBRACE so this branch is
+                    -- normally unreachable, but handle both schemes so it cannot
+                    -- corrupt records if reached. PR code 0 stays NULL.
                     CASE
-                        WHEN {vars.MBRACE} IN(1, 2, 3, 4) THEN {vars.MBRACE}
+                        WHEN {vars.MBRACE} = 1 THEN 1
+                        WHEN {vars.MBRACE} = 2 THEN 2
+                        WHEN {vars.MBRACE} = 3 THEN 3
+                        WHEN {vars.MBRACE} = 4 OR {vars.MBRACE} BETWEEN 5 AND 14 THEN 4
+                        WHEN {vars.MBRACE} BETWEEN 21 AND 24 THEN 5
                     END
                 WHEN {vars.MRACE} IS NOT NULL THEN
                     CASE
@@ -435,9 +420,10 @@ def combine_all() -> None:
             """
             UPDATE us_births
             SET mracehisp_c = CASE
-                WHEN mhisp_c BETWEEN 1 AND 4 THEN 5
-                WHEN mhisp_c = 5 THEN NULL
-                ELSE mrace_c
+                WHEN mhisp_c BETWEEN 1 AND 4 THEN 5  -- Hispanic (any race)
+                WHEN mhisp_c = 5 THEN NULL           -- origin unknown -> NULL
+                WHEN mrace_c = 5 THEN 6              -- NH more than one race
+                ELSE mrace_c                          -- NH single race 1-4 (or NULL)
             END
             """
         )
@@ -485,12 +471,15 @@ def combine_all() -> None:
         )
 
         # set reduction rates
-        print("Setting p_ds_lb_wt_mage_reduc")
+        print("Setting p_ds_lb_nt_reduc")
 
+        # p_ds_lb_nt_reduc = p_ds_lb_nt (Morris maternal-age risk, no terminations)
+        # * (1 - reduction[year]). The reduction series is linearly extrapolated
+        # for 2020-2024 (see docs/data-preparation.md).
         con.execute(
-            """
+            f"""
             UPDATE us_births AS b
-            SET p_ds_lb_wt_mage_reduc = b.p_ds_lb_nt * (1 - r.reduction)
+            SET {vars.P_DS_LB_NT_REDUC} = b.{vars.P_DS_LB_NT} * (1 - r.reduction)
             FROM reduction_rate_year AS r
             WHERE b.year = r.year;
             """

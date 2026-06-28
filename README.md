@@ -47,6 +47,10 @@ conda env update -f environment.yml
 
 TODO
 
+## Data preparation
+
+The pipeline that turns the raw NCHS/NVSS natality SAS microdata (1989–2024) into the analysis-ready `data/us_births.db` DuckDB database (and matching `data/us_births.parquet`) is documented in [docs/data-preparation.md](./docs/data-preparation.md). Source data is fetched with `scripts/download_data.py` and is subject to the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm); the `data/` directory is gitignored and raw records must never be committed.
+
 ## License
 
 All source code in this repository is licensed under the GNU Affero General Public License v3.0 **(AGPL-3.0-only)**. See `LICENSE`.

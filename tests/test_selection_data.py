@@ -70,7 +70,7 @@ def tiny_db(tmp_path: Path) -> Path:
     }
     for year in (2016, 2020, 2024):
         for age in ages_by_bin.values():
-            for race in (1, 2, 3, 4, 5, None):
+            for race in (1, 2, 3, 4, 5, 6, None):
                 for edu in (1, 2, 3, 4, 5, 6, 7, 8, 9, None):
                     for pay in (1, 2, 3, 4, None):
                         rows.append(
@@ -211,6 +211,9 @@ def test_prepare_cells_emits_unknown_levels(tiny_db: Path) -> None:
     finally:
         con.close()
     assert RACE_UNKNOWN_IDX in set(cells["race_idx"].unique())
+    # NH multi-race (mracehisp_c=6) is its own race_idx, distinct from Unknown.
+    assert RACE_MAP[6] in set(cells["race_idx"].unique())
+    assert RACE_MAP[6] != RACE_UNKNOWN_IDX
     assert EDU_UNKNOWN_IDX in set(cells["edu_idx"].unique())
     assert PAYER_UNKNOWN_IDX in set(cells["payer_idx"].unique())
 
@@ -318,9 +321,9 @@ def test_column_alias_override(tmp_path: Path) -> None:
 
 def test_code_maps_are_complete() -> None:
     """Each map covers every non-Unknown raw code its SQL branches on."""
-    assert set(RACE_MAP) == {1, 2, 3, 4, 5}
+    assert set(RACE_MAP) == {1, 2, 3, 4, 5, 6}
     assert set(EDU_MAP) == set(range(1, 9))
     assert set(PAYER_MAP) == {1, 2, 3, 4}
     assert np.array_equal(
-        sorted(RACE_MAP.values()), sorted({0, 1, 2, 3, 4})
+        sorted(RACE_MAP.values()), sorted({0, 1, 2, 3, 4, 6})
     )
