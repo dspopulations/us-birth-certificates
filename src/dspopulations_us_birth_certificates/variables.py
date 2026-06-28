@@ -283,11 +283,13 @@ class Variables(StrEnum):
 
     MRACE_C = "mrace_c"
     """Combined maternal race, harmonised 1989-2024 to 1 White, 2 Black, 3 AIAN,
-    4 Asian or Pacific Islander, via the fallback chain MRACE15 > MRACEREC >
-    MBRACE > MRACE. Asian and NHOPI single-race codes are collapsed into 4.
-    Deliberately NULL (no target category) for "more than one race" (MRACE15=15,
-    MRACE6=6, MBRACE bridged-multiple) and any unknown/out-of-range code; the
-    1989-cert MRACE has no unknown code (race is imputed)."""
+    4 Asian or Pacific Islander, 5 More than one race, via the fallback chain
+    MRACE15 > MRACEREC > MBRACE > MRACE. Asian and NHOPI single-race codes are
+    collapsed into 4. Category 5 is only identifiable from MRACE15=15 (2014+) and
+    MBRACE bridged-multiple 21-24 (2003-2013; unreachable in practice); MRACEREC
+    and the 1989-cert MRACE carry no multi-race code, so multi-race births in
+    1989-2013 are folded into single-race categories. Unknown/out-of-range codes
+    are NULL (the 1989-cert MRACE has no unknown code - race is imputed)."""
 
     MHISP_C = "mhisp_c"
     """Combined maternal Hispanic origin, harmonised 1989-2024 to 0 Non-Hispanic,
@@ -297,11 +299,14 @@ class Variables(StrEnum):
 
     MRACEHISP_C = "mracehisp_c"
     """Combined maternal race/Hispanic origin: 1 NH White, 2 NH Black, 3 NH AIAN,
-    4 NH Asian or Pacific Islander, 5 Hispanic. Reconstructed from mhisp_c + mrace_c
-    (NOT the raw NCHS MRACEHISP, which is dual-coded across eras and absent pre-2003)
-    so the coding is consistent across 1989-2024: mhisp_c 1-4 -> 5 (Hispanic);
-    mhisp_c = 5 (origin unknown) -> NULL (race discarded); mhisp_c = 0 or NULL ->
-    mrace_c (non-Hispanic race code)."""
+    4 NH Asian or Pacific Islander, 5 Hispanic, 6 NH more than one race. Reconstructed
+    from mhisp_c + mrace_c (NOT the raw NCHS MRACEHISP, which is dual-coded across eras
+    and absent pre-2003) so the coding is consistent across 1989-2024: mhisp_c 1-4 -> 5
+    (Hispanic); mhisp_c = 5 (origin unknown) -> NULL (race discarded); non-Hispanic
+    multi-race (mrace_c = 5) -> 6; mhisp_c = 0 or NULL -> mrace_c (non-Hispanic race 1-4).
+    NB: selection.data and derive_recording_rates currently route code 6 to the
+    'Unknown' race bucket (same cell as NULL); giving multi-race its own model group
+    is a follow-up decision."""
 
     DOWN_IND = "down_ind"  # DS indicated (DOWNS | UCA_DOWNS | CA_DOWNS | CA_DOWN)
 
@@ -353,12 +358,12 @@ class Variables(StrEnum):
     from surveillance-based prevalence for the given year and ethnicity.
     """
 
-    P_DS_LB_WT_MAGE_REDUC = "p_ds_lb_wt_mage_reduc"
+    P_DS_LB_NT_REDUC = "p_ds_lb_nt_reduc"
     """
-    Probability of Down syndrome live birth with terminations. Estimated from surveillance-based
-    reduction rate for the given year applied to probability of DS live birth absent terminations,
-    estimated from maternal age (P_DS_LB_NT * reduc_rate[year]). NB: despite the `_mage` in the
-    name the multiplicand is P_DS_LB_NT (Morris, no terminations), not P_DS_LB_WT_MAGE.
+    Probability of Down syndrome live birth with terminations, estimated as the maternal-age
+    Morris no-terminations risk reduced by the surveillance-based reduction rate for the year:
+    P_DS_LB_NT * (1 - reduction[year]). (Renamed from p_ds_lb_wt_mage_reduc, whose `_mage` was a
+    misnomer - the multiplicand is P_DS_LB_NT, not P_DS_LB_WT_MAGE.)
     """
 
     DS_CASE_WEIGHT = "ds_case_weight"
@@ -392,7 +397,7 @@ COMPUTED: dict[
     str(Variables.P_DS_LB_NT_MAGE): pd.Float64Dtype(),
     str(Variables.P_DS_LB_WT_ETHN): pd.Float64Dtype(),
     str(Variables.P_DS_LB_NT_ETHN): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_WT_MAGE_REDUC): pd.Float64Dtype(),
+    str(Variables.P_DS_LB_NT_REDUC): pd.Float64Dtype(),
 }
 
 IMPORTED: dict[

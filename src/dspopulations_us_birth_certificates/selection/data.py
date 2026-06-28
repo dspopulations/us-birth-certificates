@@ -13,7 +13,8 @@ The current ``data/us_births.db`` has these relevant columns (DuckDB
 
     ``year`` (USMALLINT), ``mage_c`` (UTINYINT), ``mracehisp_c`` (UTINYINT:
     1 NH White, 2 NH Black, 3 NH AIAN, 4 NH Asian/PI/Other, 5 Hispanic,
-    NULL Unknown), ``meduc`` (UTINYINT 1-8, 9 or NULL unknown),
+    6 NH more than one race, NULL Unknown; 6 and NULL share the Unknown cell),
+    ``meduc`` (UTINYINT 1-8, 9 or NULL unknown),
     ``pay_rec`` (UTINYINT 1 Medicaid, 2 Private, 3 Self-pay, 4 Other, 9
     Unknown), ``gestrec10`` (UTINYINT 1-5 preterm, 6-10 term, 99/NULL
     unknown), ``ca_cchd`` / ``ab_nicu`` / ``ab_aven1`` (VARCHAR Y/N/U),
@@ -58,7 +59,9 @@ AGE_BIN_EDGES: tuple[int, ...] = (20, 25, 30, 35, 40, 45)
 
 # ``mracehisp_c`` -> race_idx (see priors.RACE_LEVELS).
 # 1 NH White -> 0, 2 NH Black -> 1, 3 NH AIAN -> 2, 4 NH Asian/PI/Other -> 3,
-# 5 Hispanic -> 4, NULL -> 5 (Unknown).
+# 5 Hispanic -> 4, 6 NH more than one race -> 5 (Unknown), NULL -> 5 (Unknown).
+# (The race_case SQL ELSE routes both 6 and NULL to RACE_UNKNOWN_IDX, so multi-race
+# currently shares the Unknown cell; promoting it to its own group is a follow-up.)
 RACE_MAP: dict[int, int] = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4}
 RACE_UNKNOWN_IDX = 5
 

@@ -43,12 +43,13 @@ Every file is written under `data/`. The script **skips any file already present
 
 ### Lookup CSVs at the repo root
 
-Stage 5 reads four lookup CSVs by `./`-relative path. They must sit at the repo root (they were moved here out of `previous/us-birth-certificates/` for exactly this reason):
+Stage 5 reads five lookup CSVs by `./`-relative path. They must sit at the repo root (the first four were moved here out of `previous/us-birth-certificates/`; the surveillance-prevalence series was externalised from an inline table):
 
 - `us-births-estimated-prevalence-maternal-age-1989-2018.csv`
 - `us-births-reduction-rates-1989-2024.csv`
 - `us-births-ds-rec-weights.csv`
 - `us-births-estimated-prevalence-ethnicity-2000-2018.csv`
+- `us-births-surveillance-prevalence-1989-2024.csv`
 
 ## Pipeline overview
 
@@ -59,7 +60,7 @@ All scripts are run **from the repo root** (paths are CWD-relative). There is cu
 2. combine_parquet.py   data/*.parquet                  -> data/us_births_combined.parquet
 3. prepare_parquet.py   data/us_births_combined.parquet -> data/us_births.parquet
 4. duckdb_create.py     data/us_births.parquet          -> data/us_births_temp.db
-5. duckdb_prepare.py    data/us_births_temp.db + 4 CSVs -> data/us_births.db
+5. duckdb_prepare.py    data/us_births_temp.db + 5 CSVs -> data/us_births.db
 ```
 
 ## Running the pipeline
@@ -195,7 +196,7 @@ Example range specs: uint16 `DATAYEAR`/`BIRYR`/`DOB_YY`=(1989, None), `DOB_TT`/`
 
 It narrows roughly 130 imported columns: `USMALLINT` for large year/count/weight fields (`DATAYEAR`, `BIRYR`, `DOB_YY`, `DBWT`, `DWGT_R`, `BMI_R`, `PWGT_R`), `UTINYINT` for small categorical/recode/age fields (including the race/Hispanic chains `MBRACE`/`MRACE`/`MRACEREC`/`MRACE31`/`MRACE6`/`MRACE15`/`MRACEIMP` and `ORMOTH`/`ORRACEM`/`UMHISP`/`MHISPX`/`MHISP_R`/`MRACEHISP`, plus father equivalents), `VARCHAR` for Y/N/U flag fields (`SEX`, `MAR_P`, `DMAR`, `AB_*`, `CA_*` incl. `CA_DOWN`/`CA_DOWNS`, `RF_*`, `LD_*`, `BFED`, `WIC`), and `FLOAT` for `BMI`. `TRY_CAST` is reserved for columns whose source values may be dirty or out of range (e.g. `DOB_MM`, `MAGER14`, `MRACEHISP`, `MAR`, `DMEDUC`, `MEDUC`, `FAGECOMB`, `DBWT`, `DWGT_R`, `NO_CONGEN`, `DPLURAL`, ...). It then `ADD`s 14 empty computed columns (`year`, `mage_c`, `mrace_c`, `mhisp_c`, `mracehisp_c`, `down_ind`, `ca_down_c`, and the seven `p_ds_lb_*` probability columns as `DOUBLE`) plus a `BIGINT id` column added with a bare `ADD COLUMN` (no `IF NOT EXISTS`).
 
-*Second half - per-row derivations and compaction.* A sequence of in-place `UPDATE`s populates the computed columns (see [Derived columns](#derived-columns-stage-5)), joining the four CSVs and one inline pandas table on `year`. Finally, after `con.close()`, the script deletes `data/us_births.db`, `ATTACH`es both DBs and runs `COPY FROM DATABASE temp_db TO db` to compact into a fresh file, then `shutil.copy2` copies `us_births.db` back over `us_births_temp.db` so both files end identical and compacted.
+*Second half - per-row derivations and compaction.* A sequence of in-place `UPDATE`s populates the computed columns (see [Derived columns](#derived-columns-stage-5)), joining the five CSVs on `year`. Finally, after `con.close()`, the script deletes `data/us_births.db`, `ATTACH`es both DBs and runs `COPY FROM DATABASE temp_db TO db` to compact into a fresh file, then `shutil.copy2` copies `us_births.db` back over `us_births_temp.db` so both files end identical and compacted.
 
 **Notes/gotchas:**
 - **CWD requirement:** the four `pd.read_csv` calls use `./`-relative paths and the CSVs must be present at the repo root, or the script raises `FileNotFoundError` mid-stage.
@@ -214,38 +215,39 @@ Each derivation is an in-place `UPDATE` executed **in order**; later columns dep
 - **`down_ind`** (0/1/NULL): `UPPER(ca_down_c) IN ('C','P')` -> 1; `='N'` -> 0; else `downs=1` -> 1, `downs=2` -> 0; else `uca_downs=1` -> 1, `uca_downs=2` -> 0; else NULL. `ca_down_c='P'` (pending) counts as a case; `ca_down_c='U'` is not caught in the first branch and falls through to the `downs`/`uca_downs` branches (and may end NULL).
 - **`mage_c`**: `COALESCE(mager, dmage, mage36 + 13, mager41 + 13)` - `mager` (2004+ single-year) preferred, `dmage` (<=2002 single-year) next, then the `mage36` recode +13 (<=2002), then the `mager41` recode +13 (2003-only; same 41-category coding as `mage36`). The `mager41` fallback recovers 2003, which carries none of the first three (see [Known data-quality issues](#known-data-quality-issues)). `mage36`/`mager41` code 01 ("Under 15") maps via +13 to age 14 - a lower-bound approximation, immaterial above the lowest analytic age boundary (20).
 - **`p_ds_lb_nt`**: Morris double-logistic in `mage_c`, `1 / (1 + exp(7.33 - 4.211 / (1 + exp(-0.2815 * (mage_c - 37.23)))))` - maternal-age probability of a DS live birth absent terminations.
-- **`p_ds_lb_wt`**: per-year surveillance prevalence from the **inline** pandas `prevalence_df` (years 1989-2024, 36 rows) written to DuckDB table `prevalence_year`, joined on `year`. Values rise from `0.001038` (1989); the trailing value `0.001324215` appears for **2018-2024** (the last 7 entries are identical - intentional carry-forward of the last estimated year).
-- **`mrace_c`** (1-4): `mrace15` (1,2,3 keep; 4-14 -> 4; **15 "More than one race" -> NULL**) -> else `mracerec` (1-4 keep) -> else `mbrace` (1-digit 1-4 keep; 2-digit 01-03 -> 1/2/3, 04-14 -> 4, bridged-multiple 21-24 -> 1/2/3/4; Puerto Rico 0 -> NULL) -> else `mrace` (1,2,3 keep; 4-78 -> 4) -> else NULL. **Multi-race and unknown/out-of-range codes are deliberately dropped to NULL** - there is no multi-race target category. MRACEREC/MRACE15 precede MBRACE, so the MBRACE branch is in practice only the fallback for Puerto Rico 2014-2019.
+- **`p_ds_lb_wt`**: per-year surveillance prevalence from `us-births-surveillance-prevalence-1989-2024.csv` (36 rows) loaded into DuckDB table `prevalence_year`, joined on `year`. Values rise from `0.001038` (1989); the trailing value `0.001324215` appears for **2018-2024** (the last 7 entries are identical - intentional carry-forward of the last estimated year).
+- **`mrace_c`** (1-5): `mrace15` (1,2,3 keep; 4-14 -> 4; **15 "More than one race" -> 5**) -> else `mracerec` (1-4 keep) -> else `mbrace` (1-digit 1-4 keep; 2-digit 01-03 -> 1/2/3, 04-14 -> 4, **bridged-multiple 21-24 -> 5**; Puerto Rico 0 -> NULL) -> else `mrace` (1,2,3 keep; 4-78 -> 4) -> else NULL. Category **5 "More than one race"** is only identifiable from MRACE15=15 (2014+) and MBRACE 21-24 (2003-2013, unreachable); MRACEREC and the 1989-cert MRACE carry no multi-race code, so 1989-2013 multi-race is folded into single-race categories. Unknown/out-of-range -> NULL. MRACEREC/MRACE15 precede MBRACE, so the MBRACE branch is in practice only the fallback for Puerto Rico 2014-2019.
 - **`mhisp_c`** (0-5): `mhisp_r` (0,1,2,3 keep; 4-5 -> 4; 9 -> 5) -> else `mhispx` (0,1,2,3 keep; 4-6 -> 4; 9 -> 5) -> else `umhisp` (0,1,2,3 keep; 4-5 -> 4; 9 -> 5) -> else `orracem` (1,2,3 keep; 6-8 -> 0 non-Hispanic; 4-5 -> 4; 9 -> 5) -> else NULL.
-- **`mracehisp_c`** (1-5 or NULL): **reconstructed from `mhisp_c` + `mrace_c`** - deliberately not the raw NCHS `mracehisp` field, which is dual-coded across eras and absent pre-2003. `mhisp_c BETWEEN 1 AND 4` -> 5 (Hispanic); `mhisp_c = 5` (origin unknown) -> NULL (the row's race is discarded); `mhisp_c = 0` or NULL -> `mrace_c` (non-Hispanic race 1-4). Note the asymmetry: explicit "origin unknown" (5) drops to NULL, whereas *absent* origin (NULL) keeps the race as non-Hispanic.
+- **`mracehisp_c`** (1-6 or NULL): **reconstructed from `mhisp_c` + `mrace_c`** - deliberately not the raw NCHS `mracehisp` field, which is dual-coded across eras and absent pre-2003. `mhisp_c BETWEEN 1 AND 4` -> 5 (Hispanic); `mhisp_c = 5` (origin unknown) -> NULL (the row's race is discarded); non-Hispanic multi-race (`mrace_c = 5`) -> **6 (NH more than one race)**; `mhisp_c = 0` or NULL -> `mrace_c` (non-Hispanic race 1-4). Note the asymmetry: explicit "origin unknown" (5) drops to NULL, whereas *absent* origin (NULL) keeps the race as non-Hispanic. The selection model and `derive_recording_rates` route code 6 to the "Unknown" race cell (same as NULL) - giving multi-race its own group is a follow-up.
 - **`p_ds_lb_wt_mage`**: from `us_births_est_prevalence_age` (maternal-age CSV) joined on `year`; per row `mage_c < 35` -> `p_ds_lb_wt_lt35_sv` else `p_ds_lb_wt_gte35_sv`. The CSV covers 1989-2018, so 2019-2024 rows stay NULL.
-- **`p_ds_lb_wt_mage_reduc`**: `p_ds_lb_nt * (1 - r.reduction)` from `reduction_rate_year` joined on `year`. Note the multiplicand is **`p_ds_lb_nt`** (Morris maternal-age, no-terminations), not `p_ds_lb_wt_mage`, despite the column name's `_mage`.
+- **`p_ds_lb_nt_reduc`**: `p_ds_lb_nt * (1 - r.reduction)` from `reduction_rate_year` joined on `year` (renamed from `p_ds_lb_nt_reduc`; the multiplicand is `p_ds_lb_nt`, the Morris no-terminations risk - the old `_mage` suffix was a misnomer).
 - **`ds_case_weight`** (`DOUBLE`): from `ds_case_weights` joined on `year`. When `down_ind=1`, selected by `mracehisp_c`: 1 -> `nhw`, 2 -> `nhb`, 3 -> `ai_an`, 4 -> `as_pi`, 5 -> `his`, else (`down_ind=1` with `mracehisp_c` NULL/other) -> `total`; otherwise 0 (non-cases and `down_ind != 1` get weight 0). Rows with `mracehisp_c=NULL` (origin unknown) fall to the `total` branch.
 
-Of the seven declared `p_ds_lb_*` columns, only **four are actually populated** by stage-5 `UPDATE`s - `p_ds_lb_nt`, `p_ds_lb_wt`, `p_ds_lb_wt_mage`, and `p_ds_lb_wt_mage_reduc`. The other three (`p_ds_lb_nt_mage`, `p_ds_lb_wt_ethn`, `p_ds_lb_nt_ethn`) are added as `DOUBLE` columns but have no `UPDATE`, so they remain NULL throughout (placeholders for downstream work - the ethnicity prevalence table is loaded but never joined). All computed columns are NULL between the two halves of stage 5, and per-year joins silently leave rows NULL when a year has no matching lookup row.
+Of the seven declared `p_ds_lb_*` columns, only **four are actually populated** by stage-5 `UPDATE`s - `p_ds_lb_nt`, `p_ds_lb_wt`, `p_ds_lb_wt_mage`, and `p_ds_lb_nt_reduc`. The other three (`p_ds_lb_nt_mage`, `p_ds_lb_wt_ethn`, `p_ds_lb_nt_ethn`) are added as `DOUBLE` columns but have no `UPDATE`, so they remain NULL throughout (placeholders for downstream work - the ethnicity prevalence table is loaded but never joined). All computed columns are NULL between the two halves of stage 5, and per-year joins silently leave rows NULL when a year has no matching lookup row.
 
 ## Lookup tables
 
-All four CSVs are read with `pd.read_csv(...).convert_dtypes()` (relative `./` path, repo root) and loaded into a DuckDB table; they carry a UTF-8 BOM that the pandas C parser strips, so the first column parses as `year`.
+The five CSVs are read with `pd.read_csv(...).convert_dtypes()` (relative `./` path, repo root) and loaded into DuckDB tables. The four moved out of `previous/` carry a UTF-8 BOM that the pandas C parser strips (so the first column parses as `year`); the surveillance-prevalence CSV was written without a BOM.
 
 | File | Columns | Year coverage | Feeds |
 | --- | --- | --- | --- |
+| `us-births-surveillance-prevalence-1989-2024.csv` | `year`, `p_ds_lb_wt` (36 rows; 2018 value carried forward to 2024) | 1989-2024 | `p_ds_lb_wt` (via table `prevalence_year`) |
 | `us-births-estimated-prevalence-maternal-age-1989-2018.csv` | `year`, `p_ds_lb_wt_lt35_sv`, `p_ds_lb_wt_gte35_sv`, `p_ds_lb_nt_lt35_sv`, `p_ds_lb_nt_gte35_sv` (30 rows; only the two `p_ds_lb_wt_*` columns are consumed) | 1989-2018 | `p_ds_lb_wt_mage` (via table `us_births_est_prevalence_age`) |
-| `us-births-reduction-rates-1989-2024.csv` | `year`, `reduction` (36 rows) | 1989-2024 | `p_ds_lb_wt_mage_reduc` (via table `reduction_rate_year`) |
+| `us-births-reduction-rates-1989-2024.csv` | `year`, `reduction` (36 rows) | 1989-2024 | `p_ds_lb_nt_reduc` (via table `reduction_rate_year`) |
 | `us-births-ds-rec-weights.csv` | `year`, `nhw`, `nhb`, `his`, `as_pi`, `ai_an`, `total` (36 rows; referenced by name in the SQL) | 1989-2024 | `ds_case_weight` (via table `ds_case_weights`) |
 | `us-births-estimated-prevalence-ethnicity-2000-2018.csv` | `year`, `mracehisp_c`, `prevalence` (95 rows, long format, exactly 5 `mracehisp_c` codes 1-5 per year) | 2000-2018 | none in this script - loaded standalone as table `us_births_est_prevalence_ethnicity` for downstream use |
 
 Notes:
 - The two `p_ds_lb_nt_*` columns in the maternal-age CSV are loaded but never joined (the `_nt` reduction path uses `us_births.p_ds_lb_nt` directly).
 - In the ethnicity CSV, years **2015 and 2017** have blank `prevalence` values for all five codes, which pandas reads as NA.
-- Year-coverage mismatch: the maternal-age and ethnicity tables stop at 2018, while reduction and rec-weights run to 2024. For 2019-2024 rows, `p_ds_lb_wt_mage` stays NULL while `p_ds_lb_wt_mage_reduc` and `ds_case_weight` are populated.
+- Year-coverage mismatch: the maternal-age and ethnicity tables stop at 2018, while reduction and rec-weights run to 2024. For 2019-2024 rows, `p_ds_lb_wt_mage` stays NULL while `p_ds_lb_nt_reduc` and `ds_case_weight` are populated.
 
 ## Provenance of model parameters
 
 The probability and weight series are external statistical estimates, not NCHS codings; their in-repo provenance is currently thin and should be recorded (source, vintage, method):
 
 - **`p_ds_lb_nt`** uses the Morris et al. maternal-age-specific Down-syndrome live-birth risk model (double-logistic; constants 7.33, 4.211, 0.2815, 37.23). The same formula is implemented in `src/dspopulations_us_birth_certificates/chance.py` - consider calling it from one place to avoid drift.
-- **`p_ds_lb_wt`** (inline `prevalence_year` table) is per-year surveillance prevalence. The **2018 value is carried forward unchanged through 2024** (seven identical `0.001324215` entries), and a precision discontinuity at 2014/2015 suggests two spliced source vintages.
+- **`p_ds_lb_wt`** (`us-births-surveillance-prevalence-1989-2024.csv`, table `prevalence_year`) is per-year surveillance prevalence. The **2018 value is carried forward unchanged through 2024** (seven identical `0.001324215` entries), and a precision discontinuity at 2014/2015 suggests two spliced source vintages.
 - **`us-births-reduction-rates-1989-2024.csv`** is **linearly extrapolated for 2020-2024** (constant +0.005965/yr).
 - **`us-births-estimated-prevalence-maternal-age-1989-2018.csv`** and **`us-births-estimated-prevalence-ethnicity-2000-2018.csv`** stop at 2018, so the age-/ethnicity-adjusted estimates are NULL beyond their coverage (and the ethnicity series is loaded but not yet joined).
 
@@ -294,7 +296,7 @@ A truncated file can be completed with a **resumable HTTP Range download** (cont
 
 ## Known data-quality issues
 
-- **2003 maternal age - recovered via `mager41`.** The 2003 natality file uses the intermediate 2003 schema and stores maternal age as `mager41` (plus `mager14`/`umagerpt`), not the `mager`/`dmage`/`mage36` of adjacent years. Before this was handled, `mage_c` - and everything derived from it (`p_ds_lb_nt`, `p_ds_lb_wt_mage`, `p_ds_lb_wt_mage_reduc`) - was NULL for all ~4.1 M 2003 records. `mager41` carries single-year age in the **same 41-category coding as `mage36`** (1 = under 15 … 41 = 54; `umagerpt` is all-99/unknown in 2003), so `mager41` is now in `IMPORTED_VARS` (and the `prepare_parquet`/`duckdb_prepare` type maps) and `mage_c` falls back to `mager41 + 13` for 2003. After the fix, 2003 `mage_c` is populated for all 4,096,092 records (mean 27.4) and total `mage_c` nulls across 1989-2024 drop to 59.
+- **2003 maternal age - recovered via `mager41`.** The 2003 natality file uses the intermediate 2003 schema and stores maternal age as `mager41` (plus `mager14`/`umagerpt`), not the `mager`/`dmage`/`mage36` of adjacent years. Before this was handled, `mage_c` - and everything derived from it (`p_ds_lb_nt`, `p_ds_lb_wt_mage`, `p_ds_lb_nt_reduc`) - was NULL for all ~4.1 M 2003 records. `mager41` carries single-year age in the **same 41-category coding as `mage36`** (1 = under 15 … 41 = 54; `umagerpt` is all-99/unknown in 2003), so `mager41` is now in `IMPORTED_VARS` (and the `prepare_parquet`/`duckdb_prepare` type maps) and `mage_c` falls back to `mager41 + 13` for 2003. After the fix, 2003 `mage_c` is populated for all 4,096,092 records (mean 27.4) and total `mage_c` nulls across 1989-2024 drop to 59.
 - **Expected 2003 cert-transition nulls.** Many other columns are all-NULL for 2003 by design: 1989-cert items (`datayear`, `biryr`, `dmage`, `mage36`, `ormoth`, `orracem`, `dmar`, `downs`, father `dfage`/`orfath`/…) end after 2002, while the new 2003-cert items (`mager`, `fagecomb`, the `ab_*`/`ca_*`/`rf_*`/`ld_*` checkboxes) only phase in from 2004 as states adopt the revised certificate. Race/Hispanic and the Down-syndrome indicator **are** captured for 2003 (via `mracerec`/`mbrace` and `uca_downs`), so `mrace_c`, `mracehisp_c`, and `down_ind` are populated for 2003.
 
 ## Outputs reference
