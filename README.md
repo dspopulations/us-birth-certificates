@@ -43,6 +43,12 @@ Then, to install Python dependencies, from the repository root:
 conda env update -f environment.yml
 ```
 
+For uv/pip-based installs, use the single development extra that CI also uses:
+
+```bash
+uv pip install -e '.[dev]'
+```
+
 #### Creating reports
 
 TODO

@@ -36,7 +36,7 @@ conda env create -f environment.yml   # create env
 conda activate dspop-us-birth-certificates
 ```
 
-The package itself is installed editable (`-e ./`) as part of `environment.yml`. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
+The package itself is installed editable (`-e ./`) as part of `environment.yml`. For uv/pip installs, use the single development extra: `uv pip install -e '.[dev]'`. CI uses the same `.[dev]` extra; do not add a separate CI/test/modelling dependency split. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
 
 ## Shared utilities (`dse_research_utils`)
 
