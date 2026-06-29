@@ -1,6 +1,6 @@
-# GitHub Copilot instructions
+# Repository assistant instructions
 
-This file provides guidance to GitHub Copilot (and Copilot Chat / Copilot coding agent) when working with code in this repository.
+This file provides guidance to agentic coding tools (Codex, Cursor, Aider, and similar) when working with code in this repository.
 
 > **Keep in sync:** `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` share the same body content. When you change one, update the other two so every assistant sees the same guidance.
 
@@ -68,7 +68,7 @@ Matplotlib style for notebooks: `notebook.mplstyle` at repo root.
 - `scripts/` — standalone data-pipeline scripts (run from the repo root)
 - `notebooks/` — jupytext-paired exploratory notebooks (both `.py:percent` and `.ipynb`; only the `.py` is committed)
 - `previous/us-birth-certificates/` — historical artefacts kept as a reference
-- `data/` — **gitignored**. Holds raw `.sas7bdat` files, NCHS user-guide PDFs, and derived `.parquet` / DuckDB files. Never commit anything from here.
+- `data/` — mostly gitignored. Raw `.sas7bdat` files, NCHS user-guide PDFs, derived `.parquet` files, and DuckDB files must never be committed. Small derived/reference CSVs may be tracked when they are aggregate, non-record-level inputs to the analysis.
 
 ## Data access and handling
 

@@ -514,7 +514,7 @@ def optimize_hyperparameters(
 
     study = optuna.create_study(
         direction="maximize",
-        sampler=optuna.samplers.TPESampler(),
+        sampler=optuna.samplers.TPESampler(seed=config.random_seed),
         pruner=optuna.pruners.HyperbandPruner(),
     )
     study.optimize(objective, n_trials=config.optimize_trials, show_progress_bar=True)
@@ -638,6 +638,12 @@ def write_predictions_to_duckdb(
             f"ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
             f"{predictions_column} DOUBLE;"
         )
+        con.execute(
+            f"ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
+            f"{missing_flag_column} BOOLEAN DEFAULT FALSE"
+        )
+        con.execute(f"UPDATE us_births SET {predictions_column} = NULL")
+        con.execute(f"UPDATE us_births SET {missing_flag_column} = FALSE")
         con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
         con.execute(f"CREATE TABLE {tmp_pred} (id BIGINT, p_ds_lb_pred DOUBLE)")
         con.execute(
@@ -652,8 +658,6 @@ def write_predictions_to_duckdb(
             WHERE b.id = p.id;
             """
         )
-        con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
-
         # Flag likely missing DS cases as ``<missing_flag_column>`` using a
         # year×month quota of ceil(1.5 × recorded), picking the top
         # non-recorded births by ``<predictions_column>``. Multiplier 1.5
@@ -666,10 +670,6 @@ def write_predictions_to_duckdb(
         # surveillance-based live-birth estimates — the 60% rate is close to
         # constant but varies slightly by year. Uniform 1.5× is a sufficient
         # v1 approximation.
-        con.execute(
-            f"ALTER TABLE us_births ADD COLUMN IF NOT EXISTS "
-            f"{missing_flag_column} BOOLEAN DEFAULT FALSE"
-        )
         con.execute(f"DROP TABLE IF EXISTS {tmp_flag}")
         con.execute(
             f"""
@@ -678,7 +678,9 @@ def write_predictions_to_duckdb(
                 SELECT year, dob_mm,
                        CAST(CEIL(COUNT(*) * 1.5) AS BIGINT) AS n_select
                 FROM us_births
-                WHERE down_ind = 1 AND {predictions_column} IS NOT NULL
+                WHERE id IN (SELECT id FROM {tmp_pred})
+                  AND down_ind = 1
+                  AND {predictions_column} IS NOT NULL
                 GROUP BY year, dob_mm
             ),
             ranked AS (
@@ -691,12 +693,13 @@ def write_predictions_to_duckdb(
                 FROM us_births b
                 JOIN year_month_quota q
                   ON q.year = b.year AND q.dob_mm = b.dob_mm
-                WHERE b.down_ind = 0 AND b.{predictions_column} IS NOT NULL
+                WHERE b.id IN (SELECT id FROM {tmp_pred})
+                  AND b.down_ind = 0
+                  AND b.{predictions_column} IS NOT NULL
             )
             SELECT id FROM ranked WHERE rn <= n_select
             """
         )
-        con.execute(f"UPDATE us_births SET {missing_flag_column} = FALSE")
         con.execute(
             f"""
             UPDATE us_births b
@@ -706,6 +709,7 @@ def write_predictions_to_duckdb(
             """
         )
         con.execute(f"DROP TABLE {tmp_flag}")
+        con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
     finally:
         con.close()
 

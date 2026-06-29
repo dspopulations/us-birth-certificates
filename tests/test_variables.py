@@ -45,6 +45,10 @@ def test_map_mrace_mrace15_high_codes_collapse_to_4() -> None:
         assert map_mrace(_row(**{vars.MRACE15: v})) == 4
 
 
+def test_map_mrace_mrace15_multi_race_maps_to_5() -> None:
+    assert map_mrace(_row(**{vars.MRACE15: 15})) == 5
+
+
 def test_map_mrace_falls_back_to_mracerec() -> None:
     # No MRACE15 → use MRACEREC.
     row = _row(**{vars.MRACEREC: 3, vars.MBRACE: 2, vars.MRACE: 1})
@@ -54,6 +58,11 @@ def test_map_mrace_falls_back_to_mracerec() -> None:
 def test_map_mrace_falls_back_to_mbrace() -> None:
     row = _row(**{vars.MBRACE: 2, vars.MRACE: 1})
     assert map_mrace(row) == 2
+
+
+def test_map_mrace_mbrace_bridged_multi_race_maps_to_5() -> None:
+    for v in (21, 22, 23, 24):
+        assert map_mrace(_row(**{vars.MBRACE: v})) == 5
 
 
 def test_map_mrace_legacy_mrace_high_codes_collapse_to_4() -> None:

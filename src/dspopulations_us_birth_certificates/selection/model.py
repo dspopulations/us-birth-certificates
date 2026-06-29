@@ -47,6 +47,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
     N_RACE,
     ModelPriors,
 )
+from dspopulations_us_birth_certificates.selection.recording_anchor import ANCHOR_YEARS
 
 if TYPE_CHECKING:
     import pymc as pm
@@ -56,12 +57,29 @@ Spec = Literal["theta_only", "theta_s", "single_eta", "full"]
 SPECS: tuple[Spec, ...] = ("theta_only", "theta_s", "single_eta", "full")
 
 
+def year_slice_for_anchor(start_year: int, n_year: int) -> slice:
+    """Return the anchor-array column slice for a contiguous year window."""
+    if n_year <= 0:
+        raise ValueError(f"n_year must be positive, got {n_year!r}")
+    first = ANCHOR_YEARS[0]
+    last = ANCHOR_YEARS[-1]
+    end_year = start_year + n_year - 1
+    if start_year < first or end_year > last:
+        raise ValueError(
+            f"Year range {start_year}-{end_year} is outside available "
+            f"anchor years {first}-{last}."
+        )
+    offset = start_year - first
+    return slice(offset, offset + n_year)
+
+
 def build_model(
     cells: pd.DataFrame,
     priors: ModelPriors,
     *,
     spec: Spec = "full",
     n_year: int,
+    start_year: int = ANCHOR_YEARS[0],
     prev_margin: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> pm.Model:
     """Build the PyMC model for a given spec.
@@ -72,6 +90,8 @@ def build_model(
             :mod:`priors`.
         spec: Which stages to enable.
         n_year: Number of year levels in the data (e.g. 9 for 2016-2024).
+        start_year: Calendar year corresponding to ``year_idx == 0``. Used to
+            align year-indexed priors/anchors with subset windows.
         prev_margin: Optional full-margin anchor ``(target, sigma)``, each a
             ``[N_RACE, n_year]`` array of de Graaf TRUE prevalence per 10k (NaN where
             unanchored, e.g. the Unknown race). When given, a soft Normal observation
@@ -85,6 +105,8 @@ def build_model(
 
     if spec not in SPECS:
         raise ValueError(f"Unknown spec: {spec!r}. Valid: {SPECS}")
+
+    year_slice = year_slice_for_anchor(start_year, n_year)
 
     age_idx = cells["age_idx"].to_numpy()
     race_idx = cells["race_idx"].to_numpy()
@@ -151,7 +173,7 @@ def build_model(
                 )
                 eta_det_year = pm.Normal(
                     "eta_detect_year",
-                    mu=priors.eta_detect_year_offsets[:n_year],
+                    mu=priors.eta_detect_year_offsets[year_slice],
                     sigma=priors.eta_detect_year_sigma,
                     dims="year",
                 )
@@ -249,8 +271,8 @@ def build_model(
         if spec in ("theta_s", "single_eta", "full"):
             s_race_year = pm.Normal(
                 "s_race_year",
-                mu=priors.s_race_year_logit[:, :n_year],
-                sigma=priors.s_race_year_sigma[:, :n_year],
+                mu=priors.s_race_year_logit[:, year_slice],
+                sigma=priors.s_race_year_sigma[:, year_slice],
                 dims=("race", "year"),
             )
             s_edu = pm.Normal(

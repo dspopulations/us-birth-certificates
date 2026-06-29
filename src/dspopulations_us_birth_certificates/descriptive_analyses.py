@@ -388,7 +388,18 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
         ax.legend(frameon=False, fontsize=7, loc="lower left", ncol=2)
     axes[0].set_ylabel("Share of recorded DS births")
     fig.suptitle("Maternal education of recorded DS births over time (two non-poolable schemes)")
-    _save(fig, out, "recorded_ds_by_education", s2.rename(columns=attain_lbl).reset_index())
+    education_plot_data = pd.concat(
+        [
+            s1.rename(columns=years_lbl)
+            .reset_index()
+            .assign(scheme="1989-2002 (years of schooling)"),
+            s2.rename(columns=attain_lbl)
+            .reset_index()
+            .assign(scheme="2014-2024 (attainment level)"),
+        ],
+        ignore_index=True,
+    )
+    _save(fig, out, "recorded_ds_by_education", education_plot_data)
 
     # C4 — marital status (coalesced dmar/mar), share married by year (no band).
     marital = _q(
