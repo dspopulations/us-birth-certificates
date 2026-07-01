@@ -335,6 +335,38 @@ def print_permutation_importance(df, *, n: int = 15) -> None:
     )
 
 
+def print_grouped_permutation_importance(df, *, n: int = 15) -> None:
+    if df is None or len(df) == 0:
+        warning("No grouped permutation-importance frame available.")
+        return
+    ordered = df.sort_values("importance_mean", ascending=False).head(n)
+    table = Table(
+        title=f"Grouped permutation importance (top {len(ordered)} of {len(df)})",
+        title_style="bold",
+        box=SIMPLE_HEAVY,
+        header_style="bold magenta",
+    )
+    table.add_column("Rank", justify="right", style="dim")
+    table.add_column("Group", style="cyan")
+    table.add_column("Dimension")
+    table.add_column("Features", overflow="fold")
+    table.add_column("Mean AP drop", justify="right")
+    for rank, (_idx, row) in enumerate(ordered.iterrows(), start=1):
+        features = row.get("features", [])
+        if isinstance(features, (list, tuple)):
+            feature_text = ", ".join(str(f) for f in features)
+        else:
+            feature_text = str(features)
+        table.add_row(
+            str(rank),
+            str(row["group"]),
+            str(row.get("dimension_hint", "")),
+            feature_text,
+            f"{row['importance_mean']:,.4g}",
+        )
+    print_table(table)
+
+
 def print_shap_importance(df, *, n: int = 15) -> None:
     if df is None or len(df) == 0:
         warning("No SHAP-importance frame available.")
@@ -467,6 +499,7 @@ __all__ = [
     "print_optuna_search_space",
     "print_optuna_summary",
     "print_params",
+    "print_grouped_permutation_importance",
     "print_permutation_importance",
     "print_run_config",
     "print_run_header",
