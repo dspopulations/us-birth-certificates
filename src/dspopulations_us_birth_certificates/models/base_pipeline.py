@@ -230,7 +230,7 @@ class EstimatorPipeline(ABC):
             configured = train_config.get("num_threads")
             try:
                 configured_int = int(configured) if configured is not None else None
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 configured_int = None
             if configured_int is not None and configured_int > 0:
                 n_jobs = configured_int
