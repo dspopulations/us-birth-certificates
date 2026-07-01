@@ -34,6 +34,7 @@ from sklearn.model_selection import train_test_split
 from dspopulations_us_birth_certificates import (
     cli_output,
     data_utils,
+    feature_groups,
     ml_utils,
     plot_utils,
     stats_utils,
@@ -263,6 +264,36 @@ class EstimatorPipeline(ABC):
         ).sort_values("importance_mean", ascending=False)
         cli_output.print_permutation_importance(perm_df)
 
+        distance, corr = stats_utils.distance_corr_dissimilarity(X_eval)
+        if X_eval.shape[1] > 1:
+            condensed = squareform(distance, checks=True)
+            linkage = hierarchy.linkage(condensed, method="average")
+        else:
+            linkage = np.empty((0, 4))
+        groups = feature_groups.feature_groups_from_linkage(
+            X_eval.columns.to_list(),
+            linkage,
+        )
+        grouped_df = ml_utils.group_permutation_importance(
+            model_wrapped,
+            X_eval,
+            y_eval,
+            groups,
+            n_repeats=5,
+            random_state=ctx.run_config.random_seed,
+        )
+        grouped_df = feature_groups.annotate_grouped_importance(grouped_df)
+        ctx.permutation_importance.update(
+            {
+                "distance": distance,
+                "corr": corr,
+                "linkage": linkage,
+                "feature_groups": groups,
+                "group_permutation_importance": grouped_df,
+            }
+        )
+        cli_output.print_grouped_permutation_importance(grouped_df)
+
     def shap_analysis(self) -> None:
         """Populate ``context.shap_explanation`` subject to ``run_config.shap_mode``."""
         cli_output.section("SHAP analysis")
@@ -364,6 +395,20 @@ class EstimatorPipeline(ABC):
                 }
             ).sort_values("importance_mean", ascending=False)
             perm_df.to_csv(out / "permutation_importance.csv", index=False)
+
+            grouped_df = ctx.permutation_importance.get("group_permutation_importance")
+            if grouped_df is not None:
+                feature_groups.grouped_importance_to_csv_frame(grouped_df).to_csv(
+                    out / "grouped_permutation_importance.csv",
+                    index=False,
+                )
+
+            groups = ctx.permutation_importance.get("feature_groups")
+            if groups is not None:
+                feature_groups.feature_groups_summary_frame(groups).to_csv(
+                    out / "feature_groups.csv",
+                    index=False,
+                )
 
         # SHAP
         if ctx.shap_explanation is not None:
@@ -537,30 +582,51 @@ class EstimatorPipeline(ABC):
                 )
             )
 
+            grouped_df = ctx.permutation_importance.get("group_permutation_importance")
+            if grouped_df is not None and len(grouped_df) > 0:
+                plot_df = feature_groups.grouped_importance_to_csv_frame(grouped_df)
+                figs.append(
+                    plot_utils.plot_grouped_permutation_importances(
+                        plot_df,
+                        0,
+                        save=True,
+                        output_dir=str(plots_dir),
+                        file_name="grouped_permutation_importances",
+                    )
+                )
+
             X_eval = ctx.permutation_importance["X_eval"]
-            distance, corr = stats_utils.distance_corr_dissimilarity(X_eval)
-            condensed = squareform(distance, checks=True)
-            linkage = hierarchy.linkage(condensed, method="average")
-            dendro_fig, dendro = plot_utils.plot_dendrogram(
-                linkage,
-                X_eval.columns.to_list(),
-                0,
-                save=True,
-                output_dir=str(plots_dir),
-                file_name="dendrogram",
-            )
-            figs.append(dendro_fig)
-            figs.append(
-                plot_utils.plot_correlation_heatmap(
-                    corr,
-                    dendro,
-                    label_threshold=0.3,
-                    model_idx=0,
+            corr = ctx.permutation_importance.get("corr")
+            linkage = ctx.permutation_importance.get("linkage")
+            if corr is None or linkage is None:
+                distance, corr = stats_utils.distance_corr_dissimilarity(X_eval)
+                if X_eval.shape[1] > 1:
+                    condensed = squareform(distance, checks=True)
+                    linkage = hierarchy.linkage(condensed, method="average")
+                else:
+                    linkage = np.empty((0, 4))
+
+            if X_eval.shape[1] > 1:
+                dendro_fig, dendro = plot_utils.plot_dendrogram(
+                    linkage,
+                    X_eval.columns.to_list(),
+                    0,
                     save=True,
                     output_dir=str(plots_dir),
-                    file_name="correlation_heatmap",
+                    file_name="dendrogram",
                 )
-            )
+                figs.append(dendro_fig)
+                figs.append(
+                    plot_utils.plot_correlation_heatmap(
+                        corr,
+                        dendro,
+                        label_threshold=0.3,
+                        model_idx=0,
+                        save=True,
+                        output_dir=str(plots_dir),
+                        file_name="correlation_heatmap",
+                    )
+                )
 
         if ctx.shap_explanation is not None:
             figs.append(
