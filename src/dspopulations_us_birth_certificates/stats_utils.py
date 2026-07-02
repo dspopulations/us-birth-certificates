@@ -1,4 +1,3 @@
-import dcor
 import numpy as np
 import pandas as pd
 from scipy.cluster import hierarchy
@@ -8,6 +7,13 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.neighbors import KernelDensity
 
 EPSILON = 1e-10
+
+
+def _distance_correlation(x: np.ndarray, y: np.ndarray) -> float:
+    """Compute distance correlation, importing the optional dependency lazily."""
+    import dcor
+
+    return float(dcor.distance_correlation(x, y))
 
 
 def standardize(x: np.ndarray) -> np.ndarray:
@@ -216,7 +222,7 @@ def _compute_pair_dcor(xi, xj):
     if mask.sum() < 2:
         return 0.0
 
-    dc = dcor.distance_correlation(xi[mask], xj[mask])
+    dc = _distance_correlation(xi[mask], xj[mask])
 
     # Calculation failed (e.g., constant values)
     if not np.isfinite(dc):
@@ -269,7 +275,7 @@ def distance_corr_matrix(X: pd.DataFrame | np.ndarray | list[float]):
             if mask.sum() < 2:
                 val = 0.0
             else:
-                val = dcor.distance_correlation(xi[mask], xj[mask])
+                val = _distance_correlation(xi[mask], xj[mask])
                 # Calculation failed (e.g., constant values)
                 if not np.isfinite(val):
                     val = 0.0

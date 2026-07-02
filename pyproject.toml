@@ -32,25 +32,24 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  # Single pip-resolved development/CI extra. Keep aligned with environment.yml
+  # rather than splitting test, modelling, and data-preparation dependencies
+  # across multiple extras.
+  "dcor>=0.6",
   "ipython>=9.11.0",
   "ipywidgets>=8.1.8",
-  "notebook>=7.5.5",
-  "pytest>=9.0.3",
-  "ruff>=0.15.18"
-]
-modelling = [
-  # Lower bounds track environment.yml (the canonical local conda env). CI
-  # installs `.[dev,modelling]` directly from here (no hand-maintained list),
-  # so this is the single source of truth for pip-resolved test deps.
-  "dcor>=0.6",
   "joblib>=1.4.0",
   "lightgbm>=4.6.0",
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
   # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel.
   "numba>=0.65.0",
+  "notebook>=7.5.5",
   "optuna>=4.8.0",
+  "polars>=1.40.1",
   "pyarrow>=23.0.1",
+  "pytest>=9.0.3",
   "rich>=15.0.0",
+  "ruff>=0.15.18",
   "scikit-learn>=1.8.0",
   "shap>=0.51.0",
 ]

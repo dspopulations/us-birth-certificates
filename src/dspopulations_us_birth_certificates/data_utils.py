@@ -436,9 +436,9 @@ def map_mrace(row):
 
     We set `mrace_c` as follows:
 
-    - if `mrace15` is available, use `mrace15`, 1:1, 2:2, 3:3, 4-14:4, otherwise,
+    - if `mrace15` is available, use `mrace15`, 1:1, 2:2, 3:3, 4-14:4, 15:5, otherwise,
     - if `mracerec` is available, use `mracerec`, 1:1, 2:2, 3:3, 4:4, otherwise,
-    - if `mbrace` is available, use `mbrace`, 1:1, 2:2, 3:3, 4:4, otherwise,
+    - if `mbrace` is available, use `mbrace`, 1:1, 2:2, 3:3, 4-14:4, 21-24:5, otherwise,
     - if `mrace` is available, use `mrace`, 1:1, 2:2, 3:3, 4-78:4, otherwise,
     - missing.
 
@@ -449,14 +449,20 @@ def map_mrace(row):
             return v
         elif 4 <= v <= 14:
             return 4
+        elif v == 15:
+            return 5
     elif not pd.isna(row.get(vars.MRACEREC)):
         v = row[vars.MRACEREC]
         if v in [1, 2, 3, 4]:
             return v
     elif not pd.isna(row.get(vars.MBRACE)):
         v = row[vars.MBRACE]
-        if v in [1, 2, 3, 4]:
+        if v in [1, 2, 3]:
             return v
+        elif 4 <= v <= 14:
+            return 4
+        elif 21 <= v <= 24:
+            return 5
     elif not pd.isna(row.get(vars.MRACE)):
         v = row[vars.MRACE]
         if v in [1, 2, 3]:

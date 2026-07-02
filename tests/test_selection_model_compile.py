@@ -20,6 +20,9 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     simulate_cells,
     variant_C_default,
 )
+from dspopulations_us_birth_certificates.selection.model import (  # noqa: E402
+    year_slice_for_anchor,
+)
 
 N_YEAR = 9
 
@@ -70,6 +73,12 @@ def test_build_model_rejects_unknown_spec(tiny_cells: pd.DataFrame) -> None:
             spec="bogus",  # type: ignore[arg-type]
             n_year=N_YEAR,
         )
+
+
+def test_year_slice_for_anchor_aligns_subset_windows() -> None:
+    assert year_slice_for_anchor(2020, 5) == slice(4, 9)
+    with pytest.raises(ValueError, match="outside available anchor years"):
+        year_slice_for_anchor(2021, 5)
 
 
 def test_full_spec_has_detect_and_term(tiny_cells: pd.DataFrame) -> None:

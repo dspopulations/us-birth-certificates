@@ -66,6 +66,7 @@ from dspopulations_us_birth_certificates.selection import (
     selection_run_config,
     summarise_cells,
 )
+from dspopulations_us_birth_certificates.selection.model import year_slice_for_anchor
 from dspopulations_us_birth_certificates.selection.render import (
     DEFAULT_STRATA,
     RenderOptions,
@@ -259,7 +260,8 @@ def _resolve_prev_margin(
         )
     else:
         cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
-    return target[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year]
+    year_slice = year_slice_for_anchor(cli.start_year, n_year)
+    return target[:, year_slice], PREV_RACE_YEAR_SIGMA[:, year_slice]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -320,7 +322,12 @@ def main(argv: list[str] | None = None) -> int:
     n_year = cells.attrs["n_year"]
     prev_margin = _resolve_prev_margin(cli, n_year)
     model = build_model(
-        cells, priors, spec=cli.spec, n_year=n_year, prev_margin=prev_margin
+        cells,
+        priors,
+        spec=cli.spec,
+        n_year=n_year,
+        start_year=cli.start_year,
+        prev_margin=prev_margin,
     )
 
     cli_output.section("Sample")

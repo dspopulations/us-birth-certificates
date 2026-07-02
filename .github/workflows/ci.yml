@@ -42,15 +42,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Create venv
         run: uv venv --python 3.14
-      - name: Install package (editable) with test + modelling deps
-        # Single source of truth: install the package's real dependencies from
-        # pyproject — [project.dependencies] (incl. the Bayesian stack) plus the
-        # [dev] and [modelling] extras. No hand-maintained CI dep list to drift
-        # out of sync (that drift is what previously let an ancient numba slip
-        # in). dse-research-utils (not on PyPI) resolves from git via
-        # [tool.uv.sources]. The Bayesian stack now installs in CI, so the
-        # pymc-gated tests actually run rather than skip.
-        run: uv pip install --python .venv -e '.[dev,modelling]'
+      - name: Install package (editable) with development deps
+        # Single source of truth for uv/CI: install the package's real
+        # dependencies from pyproject plus the one [dev] extra. Do not add a
+        # separate CI/test/modelling dependency split; it is easy for the local
+        # and CI environments to drift. dse-research-utils (not on PyPI)
+        # resolves from git via [tool.uv.sources].
+        run: uv pip install --python .venv -e '.[dev]'
       - name: Run pytest
         # --no-sync keeps the venv we just installed into. Without it, `uv run`
         # re-resolves against pyproject and can drop the editable install.

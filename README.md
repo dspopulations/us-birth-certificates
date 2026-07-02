@@ -43,13 +43,19 @@ Then, to install Python dependencies, from the repository root:
 conda env update -f environment.yml
 ```
 
+For uv/pip-based installs, use the single development extra that CI also uses:
+
+```bash
+uv pip install -e '.[dev]'
+```
+
 #### Creating reports
 
 TODO
 
 ## Data preparation
 
-The pipeline that turns the raw NCHS/NVSS natality SAS microdata (1989–2024) into the analysis-ready `data/us_births.db` DuckDB database (and matching `data/us_births.parquet`) is documented in [docs/data-preparation.md](./docs/data-preparation.md). Source data is fetched with `scripts/download_data.py` and is subject to the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm); the `data/` directory is gitignored and raw records must never be committed.
+The pipeline that turns the raw NCHS/NVSS natality SAS microdata (1989–2024) into the analysis-ready `data/us_births.db` DuckDB database (and matching `data/us_births.parquet`) is documented in [docs/data-preparation.md](./docs/data-preparation.md). Source data is fetched with `scripts/download_data.py` and is subject to the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm). Raw records, NCHS user-guide PDFs, Parquet files, and DuckDB files are gitignored and must never be committed; small aggregate/reference CSVs under `data/` may be tracked when they are non-record-level inputs to the analysis.
 
 ## License
 
@@ -59,6 +65,6 @@ Some other artifacts are licensed under other licenses:
 
 - **Code**: GNU Affero General Public License v3.0 (AGPL-3.0) — see `LICENSE`.
 - **Documentation, reports and papers**: Creative Commons Attribution 4.0 International (CC BY 4.0) — see `docs/LICENSE`.
-- **Data**: Creative Commons Attribution 4.0 International (CC BY 4.0) — see `data/LICENSE` for details.
+- **Data**: subject to the original data source terms, including the NCHS Data Use Agreement for natality microdata. Data are not covered by the repository's code or documentation licences.
 
 AGPL-3.0 requires that if you modify and run this software to provide a network service, you must offer the corresponding source code to users of that service.
