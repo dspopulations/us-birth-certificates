@@ -14,27 +14,24 @@ from __future__ import annotations
 
 import os
 
-# Headless rendering + the MKL/OpenMP single-thread workaround this Windows box
-# needs to stop numpy/matplotlib from hard-crashing on import. Must precede any
-# numpy/matplotlib import (i.e. the dse_research_utils / descriptive_analyses
-# imports below).
+# Headless rendering: must precede any numpy/matplotlib import (i.e. the
+# dse_research_utils / descriptive_analyses imports below).
 os.environ.setdefault("MPLBACKEND", "Agg")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
 
-import argparse
-import sys
-from datetime import datetime
-from pathlib import Path
+import dspopulations_us_birth_certificates.env_guard  # noqa: E402, F401
 
-import dse_research_utils.environment.setup as setup
+import argparse  # noqa: E402
+import sys  # noqa: E402
+from datetime import datetime  # noqa: E402
+from pathlib import Path  # noqa: E402
 
-from dspopulations_us_birth_certificates import cli_output
-from dspopulations_us_birth_certificates.descriptive_analyses import build_all
-from dspopulations_us_birth_certificates.predicted_analyses import (
+import dse_research_utils.environment.setup as setup  # noqa: E402
+
+from dspopulations_us_birth_certificates import cli_output  # noqa: E402
+from dspopulations_us_birth_certificates.descriptive_analyses import build_all  # noqa: E402
+from dspopulations_us_birth_certificates.predicted_analyses import (  # noqa: E402
     copy_analysis_template,
-    render_quarto,
+    render_report,
     save_config,
 )
 
@@ -104,18 +101,7 @@ def main(argv: list[str] | None = None) -> int:
             "skipping template copy."
         )
 
-    if ns.render and qmd_path is not None:
-        cli_output.section("Render")
-        try:
-            render_quarto(qmd_path)
-            cli_output.success(f"Rendered {qmd_path.with_suffix('.html')}")
-        except FileNotFoundError:
-            cli_output.warning(
-                "`quarto` not found on PATH — install Quarto and retry, "
-                f"or render manually: quarto render {qmd_path}"
-            )
-        except Exception as exc:  # noqa: BLE001 — rendering is optional
-            cli_output.warning(f"Quarto render raised {type(exc).__name__}: {exc}")
+    render_report(qmd_path, do_render=ns.render)
 
     cli_output.section("Done")
     cli_output.success(f"Artefacts in {output_dir}")
