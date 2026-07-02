@@ -26,9 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
 
 import numpy as np
 import pandas as pd
@@ -38,6 +36,7 @@ from dspopulations_us_birth_certificates.selection import (
     EDU_LEVELS,
     PAYER_LEVELS,
     RACE_LEVELS,
+    latest_fit_dir,
 )
 
 # (heading, [(posterior var name, level labels)])
@@ -67,54 +66,42 @@ STAGES = [
 ]
 
 
-def _latest_fit(variant: str) -> str:
-    pattern = f"output/selection/{variant}/full/*"
-    runs = sorted(
-        (d for d in glob.glob(pattern) if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit with idata.nc under {pattern}")
-    return runs[-1]
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("fit_dir", nargs="?", default=None, help="explicit fit directory")
     ap.add_argument("--variant", default="C", help="variant to auto-pick latest of (default C)")
     ns = ap.parse_args(argv)
 
-    fit_dir = ns.fit_dir or _latest_fit(ns.variant)
+    fit_dir = ns.fit_dir or latest_fit_dir(ns.variant)
     print(f"fit: {fit_dir}\n")
     with open(f"{fit_dir}/config.json") as fh:
         priors = json.load(fh)["priors"]
-    post = xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior")
 
     pd.set_option("display.width", 240)
-    for heading, coeffs in STAGES:
-        print(f"=== {heading} ===")
-        for name, levels in coeffs:
-            arr = post[name].values.reshape(-1, len(levels))
-            prior = np.asarray(priors[name], float)
-            sigma = float(priors[f"{name}_sigma"])
-            mean = arr.mean(0)
-            lo = np.quantile(arr, 0.025, axis=0)
-            hi = np.quantile(arr, 0.975, axis=0)
-            moved = (prior < lo) | (prior > hi)
-            tab = pd.DataFrame(
-                {
-                    "level": levels,
-                    "prior": prior,
-                    "post_mean": mean,
-                    "lo95": lo,
-                    "hi95": hi,
-                    "moved": ["yes" if m else "" for m in moved],
-                }
-            )
-            print(f"\n{name}  (prior sigma {sigma:g})")
-            print(tab.to_string(index=False, float_format="{:+.2f}".format))
-        print()
-    post.close()
+    with xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior") as post:
+        for heading, coeffs in STAGES:
+            print(f"=== {heading} ===")
+            for name, levels in coeffs:
+                arr = post[name].values.reshape(-1, len(levels))
+                prior = np.asarray(priors[name], float)
+                sigma = float(priors[f"{name}_sigma"])
+                mean = arr.mean(0)
+                lo = np.quantile(arr, 0.025, axis=0)
+                hi = np.quantile(arr, 0.975, axis=0)
+                moved = (prior < lo) | (prior > hi)
+                tab = pd.DataFrame(
+                    {
+                        "level": levels,
+                        "prior": prior,
+                        "post_mean": mean,
+                        "lo95": lo,
+                        "hi95": hi,
+                        "moved": ["yes" if m else "" for m in moved],
+                    }
+                )
+                print(f"\n{name}  (prior sigma {sigma:g})")
+                print(tab.to_string(index=False, float_format="{:+.2f}".format))
+            print()
 
     print(
         "moved = prior mean lies outside the 95% CI (data overrode the prior).\n"

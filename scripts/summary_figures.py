@@ -15,20 +15,12 @@ Usage:
     python scripts/summary_figures.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-# This Windows/conda environment aborts inside MKL's threadpool (OSError
-# WinError 0xc06d007f) on numpy/numba paths unless MKL threading is tamed. This
-# must run before numpy is imported; setdefault keeps any caller override and is
-# a harmless thread cap on other machines.
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
-
-import glob  # noqa: E402
 import json  # noqa: E402
+import os  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -37,53 +29,38 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
     EDU_LEVELS,
     RACE_LEVELS,
+    inv_logit,
+    latest_fit_dir,
 )
 
 OUTPUT_DIR = "notes/figures"
-AGE_MID = np.array([18, 22, 27, 32, 37, 42, 47.0])
 # Short ethnicity labels for axis ticks.
 RACE_SHORT = ["White", "Black", "AIAN", "Asian/PI", "Hispanic", "Unknown"]
 
 
-def _inv_logit(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
-
-
-def _latest_fit(variant: str) -> str:
-    runs = sorted(
-        (
-            d
-            for d in glob.glob(f"output/selection/{variant}/full/*")
-            if os.path.isfile(f"{d}/idata.nc")
-        ),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit for variant {variant}")
-    return runs[-1]
-
-
 def load_variant(variant: str) -> dict:
     """Posterior-mean per-cell quantities + aggregates for one converged fit."""
-    fit_dir = _latest_fit(variant)
-    cells = pd.read_parquet(f"{fit_dir}/cells.parquet")
+    fit_dir = latest_fit_dir(variant)
+    cells = pd.read_parquet(fit_dir / "cells.parquet")
     n = cells["N_cell"].to_numpy(float)
     r = cells["R_cell"].to_numpy(float)
     race = cells["race_idx"].to_numpy()
     age = cells["age_idx"].to_numpy()
-    with open(f"{fit_dir}/config.json") as fh:
-        fpr = float(json.load(fh)["priors"]["false_positive_rate"])
+    with open(fit_dir / "config.json") as fh:
+        config = json.load(fh)
+    fpr = float(config["priors"]["false_positive_rate"])
 
-    post = xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior")
-    p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
-    theta = _inv_logit(post["theta_lb_age"].values.reshape(-1, len(AGE_LEVELS)).mean(0))
-    ete = post["eta_term_edu"].values.reshape(-1, len(EDU_LEVELS))
-    post.close()
+    with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
+        p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
+        theta = inv_logit(
+            post["theta_lb_age"].values.reshape(-1, len(AGE_LEVELS)).mean(0)
+        )
+        ete = post["eta_term_edu"].values.reshape(-1, len(EDU_LEVELS))
 
     theta_cell = theta[age]
     # Per maternal-age termination reduction (1 - eta).
@@ -111,9 +88,7 @@ def load_variant(variant: str) -> dict:
         "ete_mean": ete.mean(0),
         "ete_lo": np.quantile(ete, 0.025, axis=0),
         "ete_hi": np.quantile(ete, 0.975, axis=0),
-        "ete_prior": np.asarray(
-            json.load(open(f"{fit_dir}/config.json"))["priors"]["eta_term_edu"], float
-        ),
+        "ete_prior": np.asarray(config["priors"]["eta_term_edu"], float),
     }
 
 
@@ -172,7 +147,7 @@ def fig_funnel(c: dict, b: dict) -> None:
             "count": [natural, c["total_true"], b["total_true"], c["recorded_corrected"], c["recorded_raw"]],
         }
     )
-    _save_fig(fig, OUTPUT_DIR, "ascertainment_funnel", data=data)
+    save_fig(fig, OUTPUT_DIR, "ascertainment_funnel", data=data)
     plt.close(fig)
 
 
@@ -191,7 +166,7 @@ def fig_age_reduction(c: dict, b: dict) -> None:
     data = pd.DataFrame(
         {"age_band": AGE_LEVELS, "reduction_C": c["age_reduction"], "reduction_B": b["age_reduction"]}
     )
-    _save_fig(fig, OUTPUT_DIR, "age_termination_reduction", data=data)
+    save_fig(fig, OUTPUT_DIR, "age_termination_reduction", data=data)
     plt.close(fig)
 
 
@@ -216,7 +191,7 @@ def fig_ethnicity(c: dict, b: dict) -> None:
             "true_per10k_B": b["true10k"],
         }
     )
-    _save_fig(fig, OUTPUT_DIR, "ds_rate_by_ethnicity", data=data)
+    save_fig(fig, OUTPUT_DIR, "ds_rate_by_ethnicity", data=data)
     plt.close(fig)
 
 
@@ -243,7 +218,7 @@ def fig_education(c: dict) -> None:
             "hi95": c["ete_hi"],
         }
     )
-    _save_fig(fig, OUTPUT_DIR, "education_termination_gradient", data=data)
+    save_fig(fig, OUTPUT_DIR, "education_termination_gradient", data=data)
     plt.close(fig)
 
 

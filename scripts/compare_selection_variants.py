@@ -1,6 +1,6 @@
 """Aggregate posterior summaries across selection-model variants.
 
-Reads the three variant fit directories (A/B/C) produced by
+Reads the variant fit directories (A/B/C/D) produced by
 ``scripts/fit_selection_model.py --spec full --profile reporting`` and
 builds a side-by-side comparison CSV + forest-plot figure of the
 headline posterior quantities:
@@ -17,7 +17,7 @@ data-identified structure (plan §4.4).
 Examples
 --------
     # Default: pick the most recent variant run from each of
-    # output/selection/{A,B,C}/full/
+    # output/selection/{A,B,C,D}/full/ that has a completed fit
     python scripts/compare_selection_variants.py \\
         --output-dir output/selection/_compare_$(date +%Y%m%d-%H%M%S)
 
@@ -42,10 +42,15 @@ import numpy as np
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
-from dspopulations_us_birth_certificates.selection import AGE_LEVELS, RACE_LEVELS
+from dspopulations_us_birth_certificates.selection import (
+    AGE_LEVELS,
+    RACE_LEVELS,
+    inv_logit,
+    latest_fit_dir,
+)
 
 DEFAULT_ROOT = Path("output/selection")
-VARIANTS: tuple[str, ...] = ("A", "B", "C")
+VARIANTS: tuple[str, ...] = ("A", "B", "C", "D")
 
 
 @dataclass
@@ -56,14 +61,11 @@ class CompareCliConfig:
 
 
 def _latest_full_run(root: Path, variant: str) -> Path | None:
-    """Return the most recent ``<root>/<variant>/full/<ts>/`` directory."""
-    parent = root / variant / "full"
-    if not parent.exists():
+    """Return the most recent completed ``<root>/<variant>/full/<ts>/`` directory."""
+    try:
+        return latest_fit_dir(variant, root=root)
+    except FileNotFoundError:
         return None
-    candidates = [p for p in parent.iterdir() if p.is_dir()]
-    if not candidates:
-        return None
-    return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
 def _parse_args(argv: list[str] | None) -> CompareCliConfig:
@@ -81,7 +83,8 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
         default=None,
         help=(
             "Explicit variant fit directories (one per variant). If omitted, "
-            "the most recent run under <root>/{A,B,C}/full/ is used."
+            "the most recent completed run under <root>/{A,B,C,D}/full/ is "
+            "used for whichever variants have one."
         ),
     )
     p.add_argument(
@@ -134,20 +137,12 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
 # --------------------------------------------------------------------------- #
 
 
-def _inv_logit(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
+def _load_fit_arrays(fit_dir: Path) -> tuple[dict[str, np.ndarray], pd.DataFrame, float]:
+    """Load one fit's posterior draws + cells needed for aggregation.
 
-
-def _extract_aggregates(
-    fit_dir: Path,
-) -> tuple[dict[str, dict[str, float]], pd.DataFrame]:
-    """Posterior aggregates + per-age decomposition from one idata load.
-
-    Returns ``(aggregates, age_df)``. ``aggregates`` maps ``total_true`` /
-    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (95% CI).
-    ``age_df`` is the per-maternal-age decomposition used as an age
-    posterior-predictive check: ``obs_rate`` vs ``pred_rate`` (close = the
-    model fits that band), N-weighted ``eta``/``reduction``, and implied ``s``.
+    Returns ``(arrays, cells, fpr)``. ``arrays`` holds ``p`` (``p_ds_lb``),
+    ``theta_cell`` (per-cell ``theta_lb``), and ``p_rec`` (``p_recorded``) —
+    each reshaped to ``(draws, cell)`` (chain and draw flattened together).
     """
     import arviz as az
 
@@ -162,10 +157,28 @@ def _extract_aggregates(
     p = np.asarray(post["p_ds_lb"].values)
     p = p.reshape(-1, p.shape[-1])  # (draws, cell)
     tla = np.asarray(post["theta_lb_age"].values).reshape(p.shape[0], -1)
+    age = cells["age_idx"].to_numpy()
+    theta_cell = inv_logit(tla[:, age])  # (draws, cell)
+    p_rec = np.asarray(post["p_recorded"].values).reshape(p.shape[0], -1)
+    return {"p": p, "theta_cell": theta_cell, "p_rec": p_rec}, cells, fpr
+
+
+def _mean_ci(a: np.ndarray) -> dict[str, float]:
+    """Posterior mean + 95% CI as a ``{mean, lo, hi}`` dict."""
+    return {
+        "mean": float(a.mean()),
+        "lo": float(np.quantile(a, 0.025)),
+        "hi": float(np.quantile(a, 0.975)),
+    }
+
+
+def _scalar_aggregates(
+    arrays: dict[str, np.ndarray], cells: pd.DataFrame, fpr: float
+) -> dict[str, dict[str, float]]:
+    """Total true DS, eta, reduction, and s — each a posterior mean + 95% CI."""
+    p, theta_cell = arrays["p"], arrays["theta_cell"]
     N = cells["N_cell"].to_numpy(dtype=float)
     R = cells["R_cell"].to_numpy(dtype=float)
-    age = cells["age_idx"].to_numpy()
-    theta_cell = _inv_logit(tla[:, age])  # (draws, cell)
 
     total = (p * N).sum(axis=1)
     natural = (theta_cell * N).sum(axis=1)
@@ -173,25 +186,31 @@ def _extract_aggregates(
     fp = fpr * ((1.0 - p) * N).sum(axis=1)
     agg_s = (R.sum() - fp) / total
 
-    def s3(a: np.ndarray) -> dict[str, float]:
-        return {
-            "mean": float(a.mean()),
-            "lo": float(np.quantile(a, 0.025)),
-            "hi": float(np.quantile(a, 0.975)),
-        }
-
-    aggregates = {
-        "total_true": s3(total),
-        "agg_eta": s3(eta),
-        "reduction": s3(1.0 - eta),
-        "agg_s": s3(agg_s),
+    return {
+        "total_true": _mean_ci(total),
+        "agg_eta": _mean_ci(eta),
+        "reduction": _mean_ci(1.0 - eta),
+        "agg_s": _mean_ci(agg_s),
     }
+
+
+def _age_decomposition(
+    arrays: dict[str, np.ndarray], cells: pd.DataFrame, fpr: float
+) -> pd.DataFrame:
+    """Per-maternal-age posterior-predictive table.
+
+    ``obs_rate`` vs ``pred_rate`` (close = the model fits that band),
+    N-weighted ``eta``/``reduction``, and implied ``s``.
+    """
+    p, theta_cell, p_rec = arrays["p"], arrays["theta_cell"], arrays["p_rec"]
+    N = cells["N_cell"].to_numpy(dtype=float)
+    R = cells["R_cell"].to_numpy(dtype=float)
+    age = cells["age_idx"].to_numpy()
 
     p_mean = p.mean(axis=0)
     theta_mean = theta_cell.mean(axis=0)
-    p_rec = (
-        np.asarray(post["p_recorded"].values).reshape(p.shape[0], -1).mean(axis=0)
-    )
+    p_rec_mean = p_rec.mean(axis=0)
+
     rows: list[dict] = []
     for a in range(len(AGE_LEVELS)):
         m = age == a
@@ -208,14 +227,31 @@ def _extract_aggregates(
                 "N_frac": Na / float(N.sum()),
                 "R": int(Ra),
                 "obs_rate": Ra / Na,
-                "pred_rate": float((p_rec[m] * N[m]).sum()) / Na,
+                "pred_rate": float((p_rec_mean[m] * N[m]).sum()) / Na,
                 "theta_lb": tlb,
                 "eta": true_ct / (tlb * Na),
                 "reduction": 1.0 - true_ct / (tlb * Na),
                 "s": (Ra - fp_a) / true_ct,
             }
         )
-    return aggregates, pd.DataFrame(rows)
+    return pd.DataFrame(rows)
+
+
+def _extract_aggregates(
+    fit_dir: Path,
+) -> tuple[dict[str, dict[str, float]], pd.DataFrame]:
+    """Posterior aggregates + per-age decomposition from one idata load.
+
+    Returns ``(aggregates, age_df)``. ``aggregates`` maps ``total_true`` /
+    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (95% CI).
+    ``age_df`` is the per-maternal-age decomposition used as an age
+    posterior-predictive check: ``obs_rate`` vs ``pred_rate`` (close = the
+    model fits that band), N-weighted ``eta``/``reduction``, and implied ``s``.
+    """
+    arrays, cells, fpr = _load_fit_arrays(fit_dir)
+    aggregates = _scalar_aggregates(arrays, cells, fpr)
+    age_df = _age_decomposition(arrays, cells, fpr)
+    return aggregates, age_df
 
 
 def _extract_summary_rows(summary: pd.DataFrame, prefix: str) -> pd.DataFrame:
@@ -244,7 +280,9 @@ def _load_identifiability(fit_dir: Path) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 
 
-def build_comparison(fit_dirs: dict[str, Path]) -> pd.DataFrame:
+def build_comparison(
+    fit_dirs: dict[str, Path],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build the variant comparison: a long-format metric frame + per-age table.
 
     Returns ``(comparison, age_decomposition)``.

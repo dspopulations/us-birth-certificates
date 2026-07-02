@@ -11,15 +11,11 @@ Usage:
     python scripts/totals_triangulation.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
-
-import glob  # noqa: E402
+import os  # noqa: E402
 
 import duckdb  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
@@ -29,29 +25,19 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.selection import latest_fit_dir  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
 SURVEILLANCE = 48000  # de Graaf et al., external published estimate (approximate)
 
 
-def _latest_fit(variant: str) -> str:
-    runs = sorted(
-        (d for d in glob.glob(f"output/selection/{variant}/full/*") if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit for variant {variant}")
-    return runs[-1]
-
-
 def total_true(variant: str) -> float:
-    fit = _latest_fit(variant)
-    cells = pd.read_parquet(f"{fit}/cells.parquet")
+    fit = latest_fit_dir(variant)
+    cells = pd.read_parquet(fit / "cells.parquet")
     n = cells["N_cell"].to_numpy(float)
-    post = xr.open_dataset(f"{fit}/idata.nc", group="posterior")
-    p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
-    post.close()
+    with xr.open_dataset(fit / "idata.nc", group="posterior") as post:
+        p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
     return float((p * n).sum())
 
 
@@ -97,7 +83,7 @@ def main() -> int:
     ax.set_xlabel("Estimated true DS livebirths, 2016–2024")
     ax.set_title("Triangulating the DS livebirth total across methods")
     ax.set_xlim(0, max(vals) * 1.18)
-    _save_fig(fig, OUTPUT_DIR, "totals_triangulation",
+    save_fig(fig, OUTPUT_DIR, "totals_triangulation",
               data=pd.DataFrame({"estimate": labels, "total": vals, "note": notes}))
     plt.close(fig)
 

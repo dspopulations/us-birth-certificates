@@ -1,7 +1,7 @@
 """Fit the three-stage Bayesian selection model.
 
 Thin CLI over ``dspopulations_us_birth_certificates.selection``. Given a
-variant (A/B/C), spec (theta_only / theta_s / single_eta / full), and
+variant (A/B/C/D), spec (theta_only / theta_s / single_eta / full), and
 run profile, this script:
 
     1. Aggregates ``us_births`` into selection cells via
@@ -47,6 +47,7 @@ import duckdb
 import numpy as np
 
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
+from dspopulations_us_birth_certificates.models import MODELS
 from dspopulations_us_birth_certificates.selection import (
     MODEL_ID,
     SPECS,
@@ -58,7 +59,7 @@ from dspopulations_us_birth_certificates.selection import (
     diagnostics,
     prepare_cells,
     preset_names,
-    render_quarto,
+    render_report,
     sample,
     save_artefacts,
     save_summary,
@@ -70,6 +71,13 @@ from dspopulations_us_birth_certificates.selection.render import (
     RenderOptions,
     render_all,
 )
+
+# Variant D fits a GB-bias-corrected DS total against the calibrated expected
+# DS count (recorded + summed predicted probability over unrecorded) from the
+# C-only, demographically-blind USBC11_M1_CN model — see
+# variant_D_recording_off's docstring. Sourced from the model registry rather
+# than a bare column-name literal so a rename there can't silently diverge.
+VARIANT_D_PREDICTIONS_MODEL_ID = "usbc11_m1_cn"
 
 
 @dataclass
@@ -110,7 +118,7 @@ def parse_args(argv: list[str] | None = None) -> FitSelectionCliConfig:
         "--variant",
         required=True,
         choices=sorted(VARIANTS),
-        help="Prior-sensitivity variant (A/B/C).",
+        help=f"Prior-sensitivity variant ({'/'.join(sorted(VARIANTS))}).",
     )
     p.add_argument(
         "--spec",
@@ -227,6 +235,33 @@ def _build_run_config(cli: FitSelectionCliConfig):
     return replace(base, **cli.overrides)
 
 
+def _resolve_prev_margin(
+    cli: FitSelectionCliConfig, n_year: int
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Build the full-margin de Graaf anchor when requested; ``None`` for variant D."""
+    if not cli.anchor_margin or cli.variant == "D":
+        return None
+    from dspopulations_us_birth_certificates.selection.recording_anchor import (
+        PREV_RACE_YEAR,
+        PREV_RACE_YEAR_SIGMA,
+    )
+
+    target = PREV_RACE_YEAR
+    if cli.degraaf_tail:
+        from dspopulations_us_birth_certificates.selection.degraaf_tail import (
+            apply_degraaf_tail,
+        )
+
+        target = apply_degraaf_tail(PREV_RACE_YEAR)
+        cli_output.info(
+            "full-margin de Graaf prevalence anchor: [bold]ON[/bold] "
+            "(Gert col-I tail 2020-2024 sensitivity)"
+        )
+    else:
+        cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
+    return target[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year]
+
+
 def main(argv: list[str] | None = None) -> int:
     cli = parse_args(argv)
     setup.init_script()
@@ -254,13 +289,11 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.info(f"output_dir=[blue]{cli.output_dir}[/blue]")
 
     cli_output.section("Load cells")
-    # Variant D fits a GB-bias-corrected DS total with recording pinned ~off (see
-    # variant_D_recording_off). The target is the *calibrated expected* DS count from
-    # the C-only, demographically-blind USBC11_M1_CN model: recorded + summed
-    # predicted probability over unrecorded, per cell. This avoids the quota/multiplier
-    # artefacts of the ds_pred_missing flag. "Predicted" is the GB prediction, not a
-    # C+P training label.
-    predictions_col = "p_ds_lb_pred_14" if cli.variant == "D" else None
+    predictions_col = (
+        MODELS[VARIANT_D_PREDICTIONS_MODEL_ID].predictions_column
+        if cli.variant == "D"
+        else None
+    )
     con = duckdb.connect(str(cli.duckdb_path), read_only=True)
     try:
         cells = prepare_cells(
@@ -285,27 +318,7 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Build model")
     priors = VARIANTS[cli.variant]()
     n_year = cells.attrs["n_year"]
-    prev_margin = None
-    if cli.anchor_margin and cli.variant != "D":
-        from dspopulations_us_birth_certificates.selection.recording_anchor import (
-            PREV_RACE_YEAR,
-            PREV_RACE_YEAR_SIGMA,
-        )
-
-        target = PREV_RACE_YEAR
-        if cli.degraaf_tail:
-            from dspopulations_us_birth_certificates.selection.degraaf_tail import (
-                apply_degraaf_tail,
-            )
-
-            target = apply_degraaf_tail(PREV_RACE_YEAR)
-            cli_output.info(
-                "full-margin de Graaf prevalence anchor: [bold]ON[/bold] "
-                "(Gert col-I tail 2020-2024 sensitivity)"
-            )
-        else:
-            cli_output.info("full-margin de Graaf prevalence anchor: [bold]ON[/bold]")
-        prev_margin = (target[:, :n_year], PREV_RACE_YEAR_SIGMA[:, :n_year])
+    prev_margin = _resolve_prev_margin(cli, n_year)
     model = build_model(
         cells, priors, spec=cli.spec, n_year=n_year, prev_margin=prev_margin
     )
@@ -373,20 +386,7 @@ def main(argv: list[str] | None = None) -> int:
         options=RenderOptions(strata=DEFAULT_STRATA),
     )
 
-    if cli.render and qmd_path is not None:
-        cli_output.section("Render")
-        try:
-            render_quarto(qmd_path)
-            cli_output.success(f"Rendered {qmd_path.with_suffix('.html')}")
-        except FileNotFoundError:
-            cli_output.warning(
-                "`quarto` not on PATH — render manually: "
-                f"quarto render {qmd_path}"
-            )
-        except Exception as exc:  # noqa: BLE001
-            cli_output.warning(
-                f"Quarto render raised {type(exc).__name__}: {exc}"
-            )
+    render_report(qmd_path, do_render=cli.render)
 
     cli_output.section("Done")
     return 0
