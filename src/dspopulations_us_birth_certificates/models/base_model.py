@@ -8,9 +8,6 @@ Feature-selection history is reconstructed by walking the MRO from the
 root ancestor down to the concrete subclass and concatenating each class's
 ``selection_steps``. Variants therefore inherit the full decision history
 of their parent without duplication.
-
-Implementation is populated in refactor step 3 (see
-``docs/refactor-plan.md``).
 """
 
 from __future__ import annotations

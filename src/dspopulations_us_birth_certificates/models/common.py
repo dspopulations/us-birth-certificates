@@ -6,6 +6,7 @@ Public API:
     - ShapScatterSpec — declarative spec for a SHAP scatter plot.
     - ModelConfig — serialisable snapshot of a ``ModelDefinition``.
     - ModelFitContext — mutable state threaded through pipeline steps.
+    - prune_features — drop a set of names from a feature tuple, order preserved.
 """
 
 from __future__ import annotations
@@ -18,6 +19,18 @@ from typing import Any, Literal
 RunConfigName = Literal["dev", "test", "reporting"]
 
 ShapMode = Literal["skip", "subsample", "full"]
+
+
+def prune_features(
+    source: tuple[str, ...], removed: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Return ``source`` with every name in ``removed`` dropped, order preserved.
+
+    Shared by the model-variant definitions (``usbc10.py``, ``usbc11.py``, and
+    their confirmed-only variants) for deriving a pruned feature tuple from a
+    parent variant's feature set plus a ``SelectionStep``'s removal list.
+    """
+    return tuple(f for f in source if f not in removed)
 
 
 # Preset values for each named run configuration. See docs/refactor-plan.md

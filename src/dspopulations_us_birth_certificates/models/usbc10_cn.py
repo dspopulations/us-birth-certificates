@@ -23,7 +23,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from dspopulations_us_birth_certificates.models.common import SelectionStep
+from dspopulations_us_birth_certificates.models.common import (
+    SelectionStep,
+    prune_features,
+)
 from dspopulations_us_birth_certificates.models.usbc10 import USBC10_M0
 
 # Hyperparameters from output/tuning/usbc10_m1_cn/best_params.json — Optuna
@@ -93,11 +96,11 @@ _M1_CN_FEATURES_REMOVED: tuple[str, ...] = (
     "rf_phype",
 )
 
-_M1_CN_CATEGORICAL: tuple[str, ...] = tuple(
-    f for f in USBC10_M0.categorical_features if f not in _M1_CN_FEATURES_REMOVED
+_M1_CN_CATEGORICAL: tuple[str, ...] = prune_features(
+    USBC10_M0.categorical_features, _M1_CN_FEATURES_REMOVED
 )
-_M1_CN_NUMERIC: tuple[str, ...] = tuple(
-    f for f in USBC10_M0.numeric_features if f not in _M1_CN_FEATURES_REMOVED
+_M1_CN_NUMERIC: tuple[str, ...] = prune_features(
+    USBC10_M0.numeric_features, _M1_CN_FEATURES_REMOVED
 )
 
 

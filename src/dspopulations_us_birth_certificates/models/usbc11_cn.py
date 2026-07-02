@@ -14,7 +14,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from dspopulations_us_birth_certificates.models.common import SelectionStep
+from dspopulations_us_birth_certificates.models.common import (
+    SelectionStep,
+    prune_features,
+)
 from dspopulations_us_birth_certificates.models.usbc11 import USBC11_M0
 
 # Hyperparameters from output/tuning/usbc11_m0_base_cn/best_params.json —
@@ -89,11 +92,11 @@ _M1_CN_FEATURES_REMOVED: tuple[str, ...] = (
     "ca_hypo",
 )
 
-_M1_CN_NUMERIC: tuple[str, ...] = tuple(
-    f for f in USBC11_M0.numeric_features if f not in _M1_CN_FEATURES_REMOVED
+_M1_CN_NUMERIC: tuple[str, ...] = prune_features(
+    USBC11_M0.numeric_features, _M1_CN_FEATURES_REMOVED
 )
-_M1_CN_CATEGORICAL: tuple[str, ...] = tuple(
-    f for f in USBC11_M0.categorical_features if f not in _M1_CN_FEATURES_REMOVED
+_M1_CN_CATEGORICAL: tuple[str, ...] = prune_features(
+    USBC11_M0.categorical_features, _M1_CN_FEATURES_REMOVED
 )
 
 
