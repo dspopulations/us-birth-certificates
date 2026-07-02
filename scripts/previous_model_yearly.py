@@ -12,20 +12,18 @@ Usage:
     python scripts/previous_model_yearly.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
+import os  # noqa: E402
 
 import duckdb  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
 DB = "data/us_births.db"
@@ -77,7 +75,7 @@ def main() -> int:
     ax1.text(EXTRAP_FROM + 1.2, ax1.get_ylim()[1] * 0.08,
              "extrapolated\n(prevalence flat,\nreduction linear)",
              fontsize=7, color=styles.TEXT_COLOUR)
-    _save_fig(fig, OUTPUT_DIR, "previous_model_ds_by_year", data=df)
+    save_fig(fig, OUTPUT_DIR, "previous_model_ds_by_year", data=df)
     plt.close(fig)
 
     peak = df.loc[df["est_ds_livebirths"].idxmax()]

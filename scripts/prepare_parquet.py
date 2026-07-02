@@ -5,13 +5,6 @@ import pyarrow.parquet as pq
 
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
-
-def _any_true(mask: pa.Array) -> bool:
-    # pc.any can be null if all null; treat as False
-    s = pc.any(mask)
-    return bool(s.as_py() or False)
-
-
 _NUMERIC_RE = r"^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$"
 
 
@@ -265,10 +258,8 @@ float16_cols = [
     vars.BMI,
 ]
 
-stats = {}
 
-
-def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
+def process_batch(batch: pa.RecordBatch, stats: dict) -> pa.RecordBatch:
     arrays = []
     fields = []
 
@@ -281,8 +272,8 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
                 U8,
                 min=mn,
                 max=mx,
-                non_integer="null",
-                range_invalid="null",
+                non_integer=INVALID_POLICY,
+                range_invalid=INVALID_POLICY,
                 stats=stats,
                 stat_key=name,
             )
@@ -296,8 +287,8 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
                 U16,
                 min=mn,
                 max=mx,
-                non_integer="null",
-                range_invalid="null",
+                non_integer=INVALID_POLICY,
+                range_invalid=INVALID_POLICY,
                 stats=stats,
                 stat_key=name,
             )
@@ -321,32 +312,42 @@ def process_batch(batch: pa.RecordBatch) -> pa.RecordBatch:
     return pa.RecordBatch.from_arrays(arrays, schema=pa.schema(fields))
 
 
-in_path = "data/us_births_combined.parquet"
-out_path = "data/us_births.parquet"
+def main() -> None:
+    in_path = "data/us_births_combined.parquet"
+    out_path = "data/us_births.parquet"
 
-dataset = ds.dataset(in_path, format="parquet")
+    dataset = ds.dataset(in_path, format="parquet")
 
-# adjust batch_size as needed based on available memory
-scanner = dataset.scanner(batch_size=2_097_152, use_threads=True)
+    # adjust batch_size as needed based on available memory
+    scanner = dataset.scanner(batch_size=2_097_152, use_threads=True)
 
-writer = None
-try:
-    for batch in scanner.to_batches():
-        out_batch = process_batch(batch)
-        table = pa.Table.from_batches([out_batch])
+    stats: dict = {}
+    writer = None
+    try:
+        for batch in scanner.to_batches():
+            out_batch = process_batch(batch, stats)
+            table = pa.Table.from_batches([out_batch])
 
-        if writer is None:
-            writer = pq.ParquetWriter(
-                out_path,
-                table.schema,
-                compression="zstd",
-                use_dictionary=True,
-                write_statistics=True,
-            )
+            if writer is None:
+                writer = pq.ParquetWriter(
+                    out_path,
+                    table.schema,
+                    compression="zstd",
+                    use_dictionary=True,
+                    write_statistics=True,
+                )
 
-        writer.write_table(table, row_group_size=500_000)
-finally:
-    if writer is not None:
-        writer.close()
+            writer.write_table(table, row_group_size=500_000)
+    finally:
+        if writer is not None:
+            writer.close()
 
-print("Done.")
+    if stats:
+        print("Invalid-value counts by column:")
+        for name, counts in stats.items():
+            print(f"  {name}: {counts}")
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()
