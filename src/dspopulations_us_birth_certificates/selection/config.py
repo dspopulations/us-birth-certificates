@@ -26,14 +26,14 @@ from typing import Any, Literal
 
 import numpy as np
 
+from dspopulations_us_birth_certificates.selection.model import Spec
 from dspopulations_us_birth_certificates.selection.priors import (
     VARIANTS,
     ModelPriors,
 )
 
 SelectionRunConfigName = Literal["dev", "reporting"]
-Variant = Literal["A", "B", "C"]
-Spec = Literal["theta_only", "theta_s", "single_eta", "full"]
+Variant = Literal["A", "B", "C", "D"]
 
 MODEL_ID = "selection"
 

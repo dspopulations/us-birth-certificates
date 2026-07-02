@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from dse_research_utils.plot import styles
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig
+from dspopulations_us_birth_certificates.plot_utils import save_fig
 
 # ---------------------------------------------------------------------------
 # Shared constants / helpers
@@ -85,7 +85,7 @@ def _cycle_colours(n: int) -> list:
 
 
 def _save(fig: plt.Figure, out: Path, name: str, data: pd.DataFrame) -> None:
-    _save_fig(fig, str(out), name, data=data)
+    save_fig(fig, str(out), name, data=data)
     plt.close(fig)
 
 

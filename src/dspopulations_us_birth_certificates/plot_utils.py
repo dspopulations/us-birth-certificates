@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
 
 
-def _save_fig(
+def save_fig(
     fig: Figure,
     output_dir: str,
     file_name: str,
@@ -47,7 +47,7 @@ def plot_roc_curve(
     ax.legend(loc="lower right")
     if save:
         data = pd.DataFrame({"fpr": np.asarray(fpr), "tpr": np.asarray(tpr)})
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -70,10 +70,8 @@ def plot_precision_recall_curve(
     if save:
         # Callers pass (recall, precision) as the positional args — keep the
         # historical parameter names but label the CSV columns correctly.
-        data = pd.DataFrame(
-            {"recall": np.asarray(fpr), "precision": np.asarray(tpr)}
-        )
-        _save_fig(fig, output_dir, file_name, data=data)
+        data = pd.DataFrame({"recall": np.asarray(fpr), "precision": np.asarray(tpr)})
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -105,7 +103,40 @@ def plot_permutation_importances(
         data = importances.melt(var_name="feature", value_name="importance")
         data["repeat"] = data.groupby("feature").cumcount()
         data = data[["feature", "repeat", "importance"]]
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
+    return fig
+
+
+def plot_grouped_permutation_importances(
+    grouped_importance: pd.DataFrame,
+    model_idx: int,
+    *,
+    max_display: int = 25,
+    save: bool = False,
+    output_dir: str = ".",
+    file_name: str = "grouped_permutation_importances",
+) -> Figure:
+    """Plot grouped permutation importance as a horizontal bar chart."""
+    display = (
+        grouped_importance.sort_values("importance_mean", ascending=False)
+        .head(max_display)
+        .copy()
+    )
+    display = display.iloc[::-1]
+    labels = display["group"].astype(str)
+    if "dimension_hint" in display:
+        labels = labels + " (" + display["dimension_hint"].astype(str) + ")"
+
+    y_size = max(4, min(10, 0.35 * max(len(display), 1)))
+    fig, ax = plt.subplots(figsize=(8, y_size))
+    ax.barh(labels, display["importance_mean"])
+    ax.axvline(x=0, color="k", linestyle="--")
+    ax.set_title(f"Model {model_idx}: grouped permutation importances")
+    ax.set_xlabel("Decrease in average precision")
+    ax.set_ylabel("Feature group")
+
+    if save:
+        save_fig(fig, output_dir, file_name, data=grouped_importance)
     return fig
 
 
@@ -162,7 +193,7 @@ def plot_dendrogram(
             ],
             ignore_index=True,
         )
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig, dendro
 
 
@@ -220,7 +251,7 @@ def plot_correlation_heatmap(
             data = pd.DataFrame(C, index=labels, columns=labels)
             data.index.name = "feature"
             data = data.reset_index()
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -241,7 +272,7 @@ def plot_shap_bar(
         shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
         if save:
             data = _shap_bar_data(explanation)
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -265,7 +296,7 @@ def plot_shap_beeswarm(
         fig.suptitle(f"Model {model_idx}: SHAP values for predictor variables")
         if save:
             data = _shap_beeswarm_data(explanation)
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -287,7 +318,7 @@ def plot_shap_scatter(
     fig = plt.gcf()
     if save:
         data = _shap_scatter_data(explanation, feature_x, feature_color)
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -339,9 +370,7 @@ def _shap_beeswarm_data(explanation) -> pd.DataFrame:
     return frame
 
 
-def _shap_scatter_data(
-    explanation, feature_x: str, feature_color: str
-) -> pd.DataFrame:
+def _shap_scatter_data(explanation, feature_x: str, feature_color: str) -> pd.DataFrame:
     names = _shap_feature_names(explanation)
     values = np.asarray(explanation.values)
     data_vals = getattr(explanation, "data", None)

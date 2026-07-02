@@ -14,7 +14,9 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -146,6 +148,65 @@ def test_pipeline_preserves_train_valid_shapes(
     rate_train = float(ctx.y_train.mean())
     rate_valid = float(ctx.y_valid.mean())
     assert abs(rate_train - rate_valid) < 0.01
+
+
+def test_grouped_permutation_importance_outputs(
+    synthetic_predictors_frame: pd.DataFrame,
+    tmp_output_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Grouped importance is derived and saved alongside permutation output."""
+
+    class _FakePermutationResult:
+        def __init__(self, n_features: int) -> None:
+            self.importances_mean = np.linspace(0.01, 0.001, n_features)
+            self.importances_std = np.zeros(n_features)
+            self.importances = np.tile(self.importances_mean, (3, 1)).T
+
+    def _fake_permutation_importance(
+        estimator: Any,
+        X: pd.DataFrame,
+        y: pd.Series,
+        **kwargs: Any,
+    ) -> _FakePermutationResult:
+        return _FakePermutationResult(X.shape[1])
+
+    monkeypatch.setattr(
+        "dspopulations_us_birth_certificates.models.base_pipeline."
+        "permutation_importance",
+        _fake_permutation_importance,
+    )
+
+    model_config = _smoke_config()
+    base_rc = RunConfig.from_name("dev", random_seed=0)
+    run_config = replace(
+        base_rc,
+        num_boost_round=50,
+        early_stopping_rounds=10,
+        shap_mode="skip",
+    )
+    pipeline = LGBMClassifierPipeline(
+        config=model_config, run_config=run_config, output_dir=tmp_output_dir
+    )
+    pipeline.prepare_features(synthetic_predictors_frame)
+    pipeline.train_final()
+    pipeline.compute_metrics()
+    pipeline.permutation_importance_analysis()
+    pipeline.save_artefacts(save_plots=False)
+
+    grouped = pipeline.context.permutation_importance["group_permutation_importance"]
+    assert {"group", "features", "dimension_hint", "importance_mean"}.issubset(
+        grouped.columns
+    )
+    assert len(grouped) > 0
+
+    grouped_path = tmp_output_dir / "grouped_permutation_importance.csv"
+    groups_path = tmp_output_dir / "feature_groups.csv"
+    assert grouped_path.is_file()
+    assert groups_path.is_file()
+
+    grouped_csv = pd.read_csv(grouped_path)
+    assert {"candidate_stage", "interpretation_flag"}.issubset(grouped_csv.columns)
 
 
 def test_cross_validate_not_implemented_in_step4(

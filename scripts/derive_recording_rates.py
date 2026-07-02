@@ -32,13 +32,11 @@ Usage:
     python scripts/derive_recording_rates.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
+import os  # noqa: E402
 
 import duckdb  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
@@ -47,7 +45,12 @@ import pandas as pd  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.selection.data import (  # noqa: E402
+    RACE_MAP,
+    RACE_UNKNOWN_IDX,
+    case_from_map,
+)
 from dspopulations_us_birth_certificates.selection.priors import (  # noqa: E402
     MORRIS_THETA_LB_PER_1000,
     N_RACE,
@@ -55,6 +58,10 @@ from dspopulations_us_birth_certificates.selection.priors import (  # noqa: E402
     inv_logit,
     logit,
 )
+
+# Shared with selection.data.prepare_cells's race_idx CASE — same RACE_MAP,
+# so a future coding change only needs to happen in one place.
+RACE_IDX_CASE = case_from_map("mracehisp_c", RACE_MAP, default=RACE_UNKNOWN_IDX)
 
 DB = "data/us_births.db"
 CSV = "data/reference/ds_prevalence_ethnicity_2000_2023.csv"
@@ -97,10 +104,9 @@ SIGMA_LOGIT_FLOOR_AIAN = 0.50
 
 def _load(con: duckdb.DuckDBPyConnection):
     age = con.execute(
-        """
+        f"""
         SELECT CAST(year AS INTEGER) AS year,
-          CASE mracehisp_c WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2
-               WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 ELSE 5 END AS race_idx,
+          {RACE_IDX_CASE} AS race_idx,
           CASE WHEN mage_c < 20 THEN 0 WHEN mage_c < 25 THEN 1 WHEN mage_c < 30 THEN 2
                WHEN mage_c < 35 THEN 3 WHEN mage_c < 40 THEN 4 WHEN mage_c < 45 THEN 5
                ELSE 6 END AS age_idx,
@@ -110,10 +116,9 @@ def _load(con: duckdb.DuckDBPyConnection):
         """
     ).df()
     rec = con.execute(
-        """
+        f"""
         SELECT CAST(year AS INTEGER) AS year,
-          CASE mracehisp_c WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2
-               WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 ELSE 5 END AS race_idx,
+          {RACE_IDX_CASE} AS race_idx,
           COUNT(*) AS N, SUM(CAST(down_ind AS INTEGER)) AS R
         FROM us_births WHERE year BETWEEN 2016 AND 2024 AND mage_c IS NOT NULL AND down_ind IS NOT NULL
         GROUP BY 1, 2
@@ -397,7 +402,7 @@ def main() -> int:
     print(pooled.round({"s_pooled": 3, "true": 0}).to_string())
 
     fig = _figure(sr, surf)
-    _save_fig(fig, OUTPUT_DIR, "recording_rates_anchor", data=surf)
+    save_fig(fig, OUTPUT_DIR, "recording_rates_anchor", data=surf)
     plt.close(fig)
     print(f"\nwrote {OUT_CSV}")
     print(f"wrote recording_rates_anchor to {OUTPUT_DIR}/")

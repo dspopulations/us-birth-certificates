@@ -383,7 +383,16 @@ def group_permutation_importance(
             # Apply permutation to each column in the group
             X_perm = X_work.copy()
             for c in cols:
-                X_perm[c] = X_work[c].to_numpy()[perm]
+                source = X_work[c]
+                values = source.to_numpy()[perm]
+                if isinstance(source.dtype, pd.CategoricalDtype):
+                    X_perm[c] = pd.Categorical(
+                        values,
+                        categories=source.cat.categories,
+                        ordered=source.cat.ordered,
+                    )
+                else:
+                    X_perm[c] = values
 
             if use_predict_proba:
                 p_perm = estimator.predict_proba(X_perm)[:, 1]
@@ -407,9 +416,20 @@ def group_permutation_importance(
             }
         )
 
-    out = (
-        pd.DataFrame(results)
-        .sort_values("importance_mean", ascending=False)
-        .reset_index(drop=True)
-    )
+    if not results:
+        return pd.DataFrame(
+            columns=[
+                "rank",
+                "group",
+                "n_features",
+                "features",
+                "baseline_score",
+                "importance_mean",
+                "importance_std",
+            ]
+        )
+
+    out = pd.DataFrame(results).sort_values("importance_mean", ascending=False)
+    out = out.reset_index(drop=True)
+    out.insert(0, "rank", np.arange(1, len(out) + 1))
     return out

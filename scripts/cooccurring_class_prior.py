@@ -36,13 +36,11 @@ Usage:
     python scripts/cooccurring_class_prior.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
+import os  # noqa: E402
 
 import duckdb  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
@@ -51,7 +49,7 @@ import pandas as pd  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
 DB = "data/us_births.db"
@@ -121,7 +119,7 @@ def main() -> int:
 
     fig.suptitle("Co-occurring conditions in the full true-DS population: class prior vs GB prediction")
     df = pd.DataFrame(rows)
-    _save_fig(fig, OUTPUT_DIR, "cooccurring_class_prior", data=df)
+    save_fig(fig, OUTPUT_DIR, "cooccurring_class_prior", data=df)
     plt.close(fig)
 
     pd.set_option("display.width", 180)

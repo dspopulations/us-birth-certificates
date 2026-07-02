@@ -128,6 +128,8 @@ DEFAULT_BASE_PARAMS: dict = {
     "force_col_wise": True,
 }
 
+DEFAULT_TARGET_VAR = "ca_down_c_p_n"
+
 DEFAULT_PRIOR_BEST_PARAMS: dict = {
     "learning_rate": 0.009461164726049449,
     "num_leaves": 180,
@@ -358,14 +360,57 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
     )
 
 
+@dataclass(frozen=True)
+class _FeatureSpec:
+    """Target/feature/year-range resolution shared by tuning and model-config building."""
+
+    target_var: str
+    numeric: tuple[str, ...]
+    categorical: tuple[str, ...]
+    year_range: tuple[int, int]
+    include_unknown: bool
+    confirmed_only: bool
+
+
+def _resolve_feature_spec(config: FitConfig) -> _FeatureSpec:
+    """Resolve target/features/year-range from a ``--model-id`` or CLI ad-hoc args.
+
+    Single source for the model-id-vs-ad-hoc decision that both
+    ``_build_model_config`` and ``_load_xy_for_tuning`` need, so the two
+    can't drift out of sync with each other.
+    """
+    if config.model_id is not None:
+        definition = MODELS[config.model_id]
+        return _FeatureSpec(
+            target_var=definition.target_var,
+            numeric=tuple(definition.numeric_features),
+            categorical=tuple(definition.categorical_features),
+            year_range=definition.year_range,
+            include_unknown=definition.include_unknown,
+            confirmed_only=definition.confirmed_only,
+        )
+    # --drop-features is ignored under --model-id (see CLI help), so it only
+    # applies to the ad-hoc feature lists here.
+    return _FeatureSpec(
+        target_var=DEFAULT_TARGET_VAR,
+        numeric=tuple(f for f in DEFAULT_NUMERIC if f not in config.drop_features),
+        categorical=tuple(
+            f for f in DEFAULT_CATEGORICAL if f not in config.drop_features
+        ),
+        year_range=(config.start_year, config.end_year),
+        include_unknown=config.include_unknown,
+        confirmed_only=False,
+    )
+
+
 def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
     """Build a ModelConfig from either a named variant or CLI ad-hoc args.
 
     When ``config.model_id`` is set, the definition from ``MODELS`` provides
     the base model identity and metadata from ``definition.to_config()``,
-    including ``target_var``, numeric/categorical features, ``base_params``,
-    ``year_range``, ``include_unknown``, ``selection_history``,
-    ``shap_scatter_specs``, and ``notes``. Tuned ``params`` and the CLI's
+    including ``base_params``, ``selection_history``, ``shap_scatter_specs``,
+    and ``notes`` — fields with no ad-hoc equivalent, so this branch stays
+    separate from ``_resolve_feature_spec``. Tuned ``params`` and the CLI's
     ``training_split`` / ``num_threads`` still override the definition's
     training defaults because those are tuning-time knobs, not part of the
     variant's identity.
@@ -396,8 +441,7 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
             missing_flag_column=base.missing_flag_column,
         )
 
-    numeric = tuple(f for f in DEFAULT_NUMERIC if f not in config.drop_features)
-    categorical = tuple(f for f in DEFAULT_CATEGORICAL if f not in config.drop_features)
+    spec = _resolve_feature_spec(config)
     train_config: dict = {
         "training_split": config.training_split,
         "verbosity": 1,
@@ -408,14 +452,14 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
     return ModelConfig(
         model_id=f"fit_model_{config.profile or 'default'}",
         variant_of=None,
-        target_var="ca_down_c_p_n",
-        numeric_features=numeric,
-        categorical_features=categorical,
+        target_var=spec.target_var,
+        numeric_features=spec.numeric,
+        categorical_features=spec.categorical,
         base_params=dict(DEFAULT_BASE_PARAMS),
         params=dict(params),
         train_config=train_config,
-        year_range=(config.start_year, config.end_year),
-        include_unknown=config.include_unknown,
+        year_range=spec.year_range,
+        include_unknown=spec.include_unknown,
         selection_history=(),
         shap_scatter_specs=(),
         notes=f"Run produced by scripts/fit_model.py with profile={config.profile!r}.",
@@ -560,41 +604,21 @@ def _load_xy_for_tuning(
 ) -> tuple[pd.DataFrame, pd.Series, list[str]]:
     """Load the predictors frame once for tuning (outside the pipeline).
 
-    Resolves ``target_var`` / ``confirmed_only`` / feature lists from the
-    named ``--model-id`` definition when set, so tuning operates on the
-    same data the pipeline will see. Falls back to ``DEFAULT_NUMERIC`` /
-    ``DEFAULT_CATEGORICAL`` and the ``ca_down_c_p_n`` target for ad-hoc
-    runs (``--model-id`` omitted).
+    Resolves target/features/year-range via ``_resolve_feature_spec`` so
+    tuning operates on the same data the pipeline will see.
     """
-    if config.model_id is not None:
-        definition = MODELS[config.model_id]
-        target_var = definition.target_var
-        confirmed_only = definition.confirmed_only
-        start_year, end_year = definition.year_range
-        include_unknown = definition.include_unknown
-        # --drop-features is ignored under --model-id (see CLI help), so the
-        # feature lists come straight from the definition.
-        numeric = list(definition.numeric_features)
-        categorical = list(definition.categorical_features)
-    else:
-        target_var = "ca_down_c_p_n"
-        confirmed_only = False
-        start_year = config.start_year
-        end_year = config.end_year
-        include_unknown = config.include_unknown
-        numeric = [f for f in DEFAULT_NUMERIC if f not in config.drop_features]
-        categorical = [f for f in DEFAULT_CATEGORICAL if f not in config.drop_features]
-
+    spec = _resolve_feature_spec(config)
     df = data_utils.load_predictors_data(
-        from_year=start_year,
-        to_year=end_year,
-        include_unknown=include_unknown,
-        confirmed_only=confirmed_only,
+        from_year=spec.year_range[0],
+        to_year=spec.year_range[1],
+        include_unknown=spec.include_unknown,
+        confirmed_only=spec.confirmed_only,
         db_path=str(config.duckdb_path),
     )
-    features = categorical + numeric
+    categorical = list(spec.categorical)
+    features = categorical + list(spec.numeric)
     X = df[features].copy()
-    y = df[target_var].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
+    y = df[spec.target_var].replace({pd.NA: 0, np.nan: 0}).astype(np.int32)
     X[categorical] = X[categorical].astype("category")
     return X, y, categorical
 
@@ -645,15 +669,15 @@ def write_predictions_to_duckdb(
         con.execute(f"UPDATE us_births SET {predictions_column} = NULL")
         con.execute(f"UPDATE us_births SET {missing_flag_column} = FALSE")
         con.execute(f"DROP TABLE IF EXISTS {tmp_pred}")
-        con.execute(f"CREATE TABLE {tmp_pred} (id BIGINT, p_ds_lb_pred DOUBLE)")
+        con.execute(f"CREATE TABLE {tmp_pred} (id BIGINT, {predictions_column} DOUBLE)")
         con.execute(
-            f"INSERT INTO {tmp_pred} (id, p_ds_lb_pred) "
+            f"INSERT INTO {tmp_pred} (id, {predictions_column}) "
             f"SELECT id, {predictions_column} FROM df"
         )
         con.execute(
             f"""
             UPDATE us_births b
-            SET {predictions_column} = p.p_ds_lb_pred
+            SET {predictions_column} = p.{predictions_column}
             FROM {tmp_pred} p
             WHERE b.id = p.id;
             """
@@ -714,6 +738,75 @@ def write_predictions_to_duckdb(
         con.close()
 
 
+def _resolve_best_params(config: FitConfig) -> dict:
+    """Resolve the LightGBM hyperparameters to fit with.
+
+    One of three mutually exclusive paths: reuse a loaded model's own
+    params (``--load-model``), run an Optuna search (``--optimize``, the
+    default), or load a prior ``best_params.json`` (``--no-optimize``).
+    """
+    if config.load_model is not None:
+        cli_output.section("Loading saved model")
+        cli_output.info(
+            f"Loading [blue]{config.load_model}[/blue]; skipping tuning + fit."
+        )
+        # Surface the hyperparameters actually used by the loaded booster so
+        # ``best_params.json``, ``config.json``, and the manifest describe the
+        # run faithfully. Prefer a sibling ``best_params.json`` if present
+        # (richer than whatever LightGBM echoes back via booster.params).
+        best_params = _recover_loaded_params(config.load_model)
+        cli_output.print_params("Recovered params", best_params)
+        return best_params
+
+    if config.select_hyperparameters:
+        X, y, categorical = _load_xy_for_tuning(config)
+        ad_hoc = _build_model_config(config, params={})
+        return optimize_hyperparameters(X, y, categorical, ad_hoc, config)
+
+    best_params = load_prior_best_params(config.prior_best_params_path)
+    cli_output.section("Using prior best params")
+    cli_output.print_params("Prior best params", best_params)
+    return best_params
+
+
+def _run_post_fit_steps(
+    pipeline: LGBMClassifierPipeline,
+    config: FitConfig,
+    model_config: ModelConfig,
+    df: pd.DataFrame,
+) -> None:
+    """Metrics, importance, SHAP, artefacts, manifest, report, and optional DuckDB writeback."""
+    pipeline.compute_metrics()
+    if config.run_permutation:
+        pipeline.permutation_importance_analysis()
+    pipeline.shap_analysis()
+    pipeline.save_artefacts(save_plots=config.save_plots)
+    pipeline.write_manifest()
+    pipeline.report(render=config.render)
+
+    if not config.write_predictions:
+        return
+    cli_output.section("Write predictions to DuckDB")
+    gbm = pipeline.context.final_model
+    features = list(model_config.categorical_features) + list(
+        model_config.numeric_features
+    )
+    write_predictions_to_duckdb(
+        df,
+        gbm,
+        features,
+        list(model_config.categorical_features),
+        config.duckdb_path,
+        predictions_column=model_config.predictions_column,
+        missing_flag_column=model_config.missing_flag_column,
+    )
+    cli_output.success(
+        f"Wrote predictions to {config.duckdb_path} "
+        f"(columns {model_config.predictions_column}, "
+        f"{model_config.missing_flag_column})"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     config = parse_args(argv)
     setup.init_script()
@@ -734,27 +827,10 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Fit configuration")
     cli_output.print_fit_config(config)
 
-    # Tuning (still inline — moves to scripts/tune_model.py in step 6). Skip
-    # when --load-model is set: we're regenerating diagnostics, not fitting.
-    if config.load_model is not None:
-        cli_output.section("Loading saved model")
-        cli_output.info(
-            f"Loading [blue]{config.load_model}[/blue]; skipping tuning + fit."
-        )
-        # Surface the hyperparameters actually used by the loaded booster so
-        # ``best_params.json``, ``config.json``, and the manifest describe the
-        # run faithfully. Prefer a sibling ``best_params.json`` if present
-        # (richer than whatever LightGBM echoes back via booster.params).
-        best_params = _recover_loaded_params(config.load_model)
-        cli_output.print_params("Recovered params", best_params)
-    elif config.select_hyperparameters:
-        X, y, categorical = _load_xy_for_tuning(config)
-        ad_hoc = _build_model_config(config, params={})
-        best_params = optimize_hyperparameters(X, y, categorical, ad_hoc, config)
-    else:
-        best_params = load_prior_best_params(config.prior_best_params_path)
-        cli_output.section("Using prior best params")
-        cli_output.print_params("Prior best params", best_params)
+    # --load-model regenerates diagnostics from a saved booster rather than
+    # tuning + fitting; see _resolve_best_params for the other two paths
+    # (Optuna search, or a prior best_params.json).
+    best_params = _resolve_best_params(config)
 
     (config.output_dir / "best_params.json").write_text(
         json.dumps(best_params, indent=2)
@@ -779,34 +855,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         pipeline.train_final()
 
-    pipeline.compute_metrics()
-    if config.run_permutation:
-        pipeline.permutation_importance_analysis()
-    pipeline.shap_analysis()
-    pipeline.save_artefacts(save_plots=config.save_plots)
-    pipeline.write_manifest()
-    pipeline.report(render=config.render)
-
-    if config.write_predictions:
-        cli_output.section("Write predictions to DuckDB")
-        gbm = pipeline.context.final_model
-        features = list(model_config.categorical_features) + list(
-            model_config.numeric_features
-        )
-        write_predictions_to_duckdb(
-            df,
-            gbm,
-            features,
-            list(model_config.categorical_features),
-            config.duckdb_path,
-            predictions_column=model_config.predictions_column,
-            missing_flag_column=model_config.missing_flag_column,
-        )
-        cli_output.success(
-            f"Wrote predictions to {config.duckdb_path} "
-            f"(columns {model_config.predictions_column}, "
-            f"{model_config.missing_flag_column})"
-        )
+    _run_post_fit_steps(pipeline, config, model_config, df)
 
     # Persist the full resolved config alongside artefacts for reproducibility.
     (config.output_dir / "run_config.json").write_text(

@@ -31,33 +31,22 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-from dspopulations_us_birth_certificates.selection import AGE_LEVELS, RACE_LEVELS
+from dspopulations_us_birth_certificates.selection import (
+    AGE_LEVELS,
+    RACE_LEVELS,
+    inv_logit,
+    latest_fit_dir,
+)
 
 # Age-band midpoints used only to report a mean maternal age (45+ -> 47).
 AGE_MID = np.array([18, 22, 27, 32, 37, 42, 47.0])
-
-
-def _inv_logit(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
-
-
-def _latest_fit(variant: str) -> str:
-    pattern = f"output/selection/{variant}/full/*"
-    runs = sorted(
-        (d for d in glob.glob(pattern) if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit with idata.nc under {pattern}")
-    return runs[-1]
 
 
 def _coeff_table(post: xr.Dataset, name: str) -> pd.DataFrame:
@@ -79,24 +68,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--variant", default="C", help="variant to auto-pick latest of (default C)")
     ns = ap.parse_args(argv)
 
-    fit_dir = ns.fit_dir or _latest_fit(ns.variant)
+    fit_dir = Path(ns.fit_dir) if ns.fit_dir else latest_fit_dir(ns.variant)
     print(f"fit: {fit_dir}\n")
 
-    cells = pd.read_parquet(f"{fit_dir}/cells.parquet")
+    cells = pd.read_parquet(fit_dir / "cells.parquet")
     n_cell = cells["N_cell"].to_numpy(float)
     r_cell = cells["R_cell"].to_numpy(float)
     race = cells["race_idx"].to_numpy()
     age = cells["age_idx"].to_numpy()
-    with open(f"{fit_dir}/config.json") as fh:
+    with open(fit_dir / "config.json") as fh:
         fpr = float(json.load(fh)["priors"]["false_positive_rate"])
 
-    post = xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior")
-    # Posterior-mean true-DS-livebirth probability per cell (theta * eta).
-    p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
-    theta = _inv_logit(post["theta_lb_age"].values.reshape(-1, 7).mean(0))[age]
-    eta_term_race = _coeff_table(post, "eta_term_race")
-    s_race = _coeff_table(post, "s_race")
-    post.close()
+    with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
+        # Posterior-mean true-DS-livebirth probability per cell (theta * eta).
+        p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
+        theta = inv_logit(post["theta_lb_age"].values.reshape(-1, 7).mean(0))[age]
+        eta_term_race = _coeff_table(post, "eta_term_race")
+        s_race = _coeff_table(post, "s_race")
 
     n_age, n_race = len(AGE_LEVELS), len(RACE_LEVELS)
 

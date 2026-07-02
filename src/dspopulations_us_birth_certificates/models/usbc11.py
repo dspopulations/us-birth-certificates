@@ -43,17 +43,13 @@ from datetime import date
 from dspopulations_us_birth_certificates.models.common import (
     SelectionStep,
     ShapScatterSpec,
+    prune_features,
 )
-from dspopulations_us_birth_certificates.models.usbc10 import USBC10_M0
-
-_USBC11_BASE_PARAMS: dict = {
-    "objective": "binary",
-    "metric": ["average_precision", "binary_logloss"],
-    "boosting_type": "gbdt",
-    "max_bin": 255,
-    "scale_pos_weight": 1,
-    "force_col_wise": True,
-}
+from dspopulations_us_birth_certificates.models.usbc10 import (
+    DEFAULT_BASE_PARAMS,
+    DEFAULT_TRAIN_CONFIG,
+    USBC10_M0,
+)
 
 # Hyperparameters from output/tuning/usbc11_m0_base/best_params.json —
 # Optuna test-profile search on the post-PR-#26 USBC11_M0 42-feature set.
@@ -87,13 +83,6 @@ _USBC11_M1_PARAMS: dict = {
     "lambda_l2": 1.5712030842124038,
 }
 
-_USBC11_TRAIN_CONFIG: dict = {
-    "training_split": 0.8,
-    "verbosity": 1,
-    "log_period": 10,
-}
-
-
 # Sociodemographic features excluded vs. USBC10_M0.
 _SOCIODEMO_FEATURES_REMOVED: tuple[str, ...] = (
     "mracehisp",
@@ -104,11 +93,11 @@ _SOCIODEMO_FEATURES_REMOVED: tuple[str, ...] = (
     "fagecomb",
 )
 
-_M0_NUMERIC: tuple[str, ...] = tuple(
-    f for f in USBC10_M0.numeric_features if f not in _SOCIODEMO_FEATURES_REMOVED
+_M0_NUMERIC: tuple[str, ...] = prune_features(
+    USBC10_M0.numeric_features, _SOCIODEMO_FEATURES_REMOVED
 )
-_M0_CATEGORICAL: tuple[str, ...] = tuple(
-    f for f in USBC10_M0.categorical_features if f not in _SOCIODEMO_FEATURES_REMOVED
+_M0_CATEGORICAL: tuple[str, ...] = prune_features(
+    USBC10_M0.categorical_features, _SOCIODEMO_FEATURES_REMOVED
 )
 
 
@@ -141,11 +130,9 @@ _M1_FEATURES_REMOVED: tuple[str, ...] = (
     "wic",
 )
 
-_M1_NUMERIC: tuple[str, ...] = tuple(
-    f for f in _M0_NUMERIC if f not in _M1_FEATURES_REMOVED
-)
-_M1_CATEGORICAL: tuple[str, ...] = tuple(
-    f for f in _M0_CATEGORICAL if f not in _M1_FEATURES_REMOVED
+_M1_NUMERIC: tuple[str, ...] = prune_features(_M0_NUMERIC, _M1_FEATURES_REMOVED)
+_M1_CATEGORICAL: tuple[str, ...] = prune_features(
+    _M0_CATEGORICAL, _M1_FEATURES_REMOVED
 )
 
 
@@ -162,9 +149,9 @@ class USBC11_M0(USBC10_M0):
     variant_of = "usbc10_m0"
     numeric_features = _M0_NUMERIC
     categorical_features = _M0_CATEGORICAL
-    base_params = _USBC11_BASE_PARAMS
+    base_params = DEFAULT_BASE_PARAMS
     params = _USBC11_PARAMS
-    train_config = _USBC11_TRAIN_CONFIG
+    train_config = DEFAULT_TRAIN_CONFIG
     predictions_column = "p_ds_lb_pred_02"
     missing_flag_column = "ds_pred_missing_02"
     selection_steps = (

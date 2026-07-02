@@ -30,7 +30,7 @@ import dse_research_utils.environment.setup as setup
 from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.predicted_analyses import (
     copy_analysis_template,
-    render_quarto,
+    render_report,
     stage_compare_artefacts,
 )
 
@@ -125,20 +125,7 @@ def main(argv: list[str] | None = None) -> int:
             "skipping template copy."
         )
 
-    if ns.render and qmd_path is not None:
-        cli_output.section("Render")
-        try:
-            render_quarto(qmd_path)
-            cli_output.success(f"Rendered {qmd_path.with_suffix('.html')}")
-        except FileNotFoundError:
-            cli_output.warning(
-                "`quarto` not found on PATH — install Quarto and retry, "
-                f"or render manually: quarto render {qmd_path}"
-            )
-        except Exception as exc:  # noqa: BLE001 — rendering is optional
-            cli_output.warning(
-                f"Quarto render raised {type(exc).__name__}: {exc}"
-            )
+    render_report(qmd_path, do_render=ns.render)
 
     cli_output.section("Done")
     cli_output.success(f"Artefacts in {output_dir}")
