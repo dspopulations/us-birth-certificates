@@ -19,16 +19,14 @@ Usage:
     python scripts/year_age_interaction.py [FIT_DIR]
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
-
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
 import argparse  # noqa: E402
 import json  # noqa: E402
+import os  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -37,20 +35,13 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
-from dspopulations_us_birth_certificates.selection import AGE_LEVELS  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.selection import (  # noqa: E402
+    AGE_LEVELS,
+    latest_fit_dir,
+)
 
 OUTPUT_DIR = "notes/figures"
-def _latest_c() -> str:
-    import glob
-
-    runs = sorted(
-        (d for d in glob.glob("output/selection/C/full/*") if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit("no converged C fit found under output/selection/C/full/")
-    return runs[-1]
 
 
 def _q(a: np.ndarray, lo: float, axis=0) -> np.ndarray:
@@ -64,15 +55,17 @@ def main(argv: list[str] | None = None) -> int:
     setup.init_script()
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    fit_dir = ns.fit_dir or _latest_c()
-    cfg = json.load(open(f"{fit_dir}/config.json"))
+    fit_dir = Path(ns.fit_dir) if ns.fit_dir else latest_fit_dir("C")
+    with open(fit_dir / "config.json") as fh:
+        cfg = json.load(fh)
     y0 = int(cfg["year_range"][0])
-    post = xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior")
-    if "eta_detect_year_age" not in post.data_vars:
-        raise SystemExit(f"{fit_dir} has no eta_detect_year_age (re-fit with the interaction)")
-    ixn = post["eta_detect_year_age"].values  # (chain, draw, year, age)
-    ixn = ixn.reshape(-1, ixn.shape[-2], ixn.shape[-1])  # (draws, year, age)
-    post.close()
+    with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
+        if "eta_detect_year_age" not in post.data_vars:
+            raise SystemExit(
+                f"{fit_dir} has no eta_detect_year_age (re-fit with the interaction)"
+            )
+        ixn = post["eta_detect_year_age"].values  # (chain, draw, year, age)
+        ixn = ixn.reshape(-1, ixn.shape[-2], ixn.shape[-1])  # (draws, year, age)
 
     n_year, n_age = ixn.shape[1], ixn.shape[2]
     years = y0 + np.arange(n_year)
@@ -116,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     ax.set_ylabel("Extra screening rise (log-odds)\nlate vs early period")
     ax.set_xlabel("Maternal age band")
     ax.set_title("Year-by-age interaction in screening detection (extra rise by age)")
-    _save_fig(fig, OUTPUT_DIR, "year_age_interaction", data=tab)
+    save_fig(fig, OUTPUT_DIR, "year_age_interaction", data=tab)
     plt.close(fig)
     print(f"\nwrote year_age_interaction (png/svg/csv) to {OUTPUT_DIR}/")
     return 0

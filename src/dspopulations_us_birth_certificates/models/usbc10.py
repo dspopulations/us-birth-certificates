@@ -21,10 +21,13 @@ from dspopulations_us_birth_certificates.models.base_model import ModelDefinitio
 from dspopulations_us_birth_certificates.models.common import (
     SelectionStep,
     ShapScatterSpec,
+    prune_features,
 )
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
-_USBC10_BASE_PARAMS: dict = {
+# Shared with usbc11.py: both families are binary LightGBM classifiers with
+# the same objective-level configuration; only the tuned params differ.
+DEFAULT_BASE_PARAMS: dict = {
     "objective": "binary",
     "metric": ["average_precision", "binary_logloss"],
     "boosting_type": "gbdt",
@@ -52,7 +55,8 @@ _USBC10_PARAMS: dict = {
 }
 
 
-_USBC10_TRAIN_CONFIG: dict = {
+# Shared with usbc11.py — same training-loop knobs across both families.
+DEFAULT_TRAIN_CONFIG: dict = {
     "training_split": 0.8,
     "verbosity": 1,
     "log_period": 10,
@@ -149,12 +153,8 @@ _M1_FEATURES_REMOVED: tuple[str, ...] = (
     "fagecomb",
 )
 
-_M1_CATEGORICAL: tuple[str, ...] = tuple(
-    f for f in _M0_CATEGORICAL if f not in _M1_FEATURES_REMOVED
-)
-_M1_NUMERIC: tuple[str, ...] = tuple(
-    f for f in _M0_NUMERIC if f not in _M1_FEATURES_REMOVED
-)
+_M1_CATEGORICAL: tuple[str, ...] = prune_features(_M0_CATEGORICAL, _M1_FEATURES_REMOVED)
+_M1_NUMERIC: tuple[str, ...] = prune_features(_M0_NUMERIC, _M1_FEATURES_REMOVED)
 
 
 class USBC10_M0(ModelDefinition):
@@ -165,9 +165,9 @@ class USBC10_M0(ModelDefinition):
     target_var = "ca_down_c_p_n"
     numeric_features = _M0_NUMERIC
     categorical_features = _M0_CATEGORICAL
-    base_params = _USBC10_BASE_PARAMS
+    base_params = DEFAULT_BASE_PARAMS
     params = _USBC10_PARAMS
-    train_config = _USBC10_TRAIN_CONFIG
+    train_config = DEFAULT_TRAIN_CONFIG
     year_range = (2016, 2024)
     include_unknown = True
     selection_steps = (

@@ -33,7 +33,8 @@ import pandas as pd
 from dse_research_utils.plot import styles
 from matplotlib.figure import Figure
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig
+from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.plot_utils import save_fig
 
 DOCS_TEMPLATE_ROOT = Path("docs/analysis")
 
@@ -902,7 +903,7 @@ def plot_stacked_proportions(
 
     if save:
         data = _tidy_plot_data(counts, proportions, bottoms, tops)
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
 
     return fig
 
@@ -1014,6 +1015,30 @@ def copy_analysis_template(
 def render_quarto(qmd_path: Path) -> None:
     """Invoke ``quarto render`` on a QMD file."""
     subprocess.run(["quarto", "render", str(qmd_path)], check=True)
+
+
+def render_report(qmd_path: Path | None, *, do_render: bool) -> None:
+    """Render ``qmd_path`` via Quarto when requested, reporting but not raising on failure.
+
+    No-ops quietly if ``do_render`` is False or no template was copied
+    (``qmd_path is None``, e.g. the docs/analysis/<name>.qmd template is
+    missing). A missing ``quarto`` on PATH or a render failure is logged as
+    a warning rather than raised, so report-generation scripts still
+    complete without a rendered HTML.
+    """
+    if not do_render or qmd_path is None:
+        return
+    cli_output.section("Render")
+    try:
+        render_quarto(qmd_path)
+        cli_output.success(f"Rendered {qmd_path.with_suffix('.html')}")
+    except FileNotFoundError:
+        cli_output.warning(
+            "`quarto` not found on PATH — install Quarto and retry, "
+            f"or render manually: quarto render {qmd_path}"
+        )
+    except Exception as exc:  # noqa: BLE001 — rendering is optional
+        cli_output.warning(f"Quarto render raised {type(exc).__name__}: {exc}")
 
 
 # ---------------------------------------------------------------------------

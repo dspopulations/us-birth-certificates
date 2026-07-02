@@ -26,18 +26,12 @@ Usage:
     python scripts/year_trends.py
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
-# This Windows/conda environment aborts inside MKL's threadpool (OSError WinError
-# 0xc06d007f) on numpy paths unless MKL threading is tamed; must precede numpy.
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
-
-import glob  # noqa: E402
 import json  # noqa: E402
+import os  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -46,67 +40,59 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
-from dspopulations_us_birth_certificates.selection import AGE_LEVELS  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.selection import (  # noqa: E402
+    AGE_LEVELS,
+    inv_logit,
+    latest_fit_dir,
+)
 
 OUTPUT_DIR = "notes/figures"
 
 
-def _inv_logit(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
-
-
-def _latest_fit(variant: str) -> str:
-    runs = sorted(
-        (d for d in glob.glob(f"output/selection/{variant}/full/*") if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit for variant {variant}")
-    return runs[-1]
-
-
 def load_variant(variant: str, with_ci: bool = False) -> dict:
-    fit_dir = _latest_fit(variant)
-    cells = pd.read_parquet(f"{fit_dir}/cells.parquet")
-    cfg = json.load(open(f"{fit_dir}/config.json"))
+    fit_dir = latest_fit_dir(variant)
+    cells = pd.read_parquet(fit_dir / "cells.parquet")
+    with open(fit_dir / "config.json") as fh:
+        cfg = json.load(fh)
     y0 = int(cfg["year_range"][0])
     n = cells["N_cell"].to_numpy(float)
     r = cells["R_cell"].to_numpy(float)
     idx = {k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")}
 
-    post = xr.open_dataset(f"{fit_dir}/idata.nc", group="posterior")
-    years = post["year"].values
-    n_year, n_age = len(years), post.sizes["age"]
-    p_draws = post["p_ds_lb"].values.reshape(-1, len(cells))  # (draws, cells)
-    p = p_draws.mean(0)
-    tla_draws = _inv_logit(post["theta_lb_age"].values.reshape(-1, n_age))  # (draws, age)
-    theta = tla_draws.mean(0)[idx["age"]]
+    with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
+        years = post["year"].values
+        n_year, n_age = len(years), post.sizes["age"]
+        p_draws = post["p_ds_lb"].values.reshape(-1, len(cells))  # (draws, cells)
+        p = p_draws.mean(0)
+        tla_draws = inv_logit(
+            post["theta_lb_age"].values.reshape(-1, n_age)
+        )  # (draws, age)
+        theta = tla_draws.mean(0)[idx["age"]]
 
-    def cmean(name: str) -> np.ndarray:
-        return post[name].values.reshape(-1, post[name].shape[-1]).mean(0)
+        def cmean(name: str) -> np.ndarray:
+            return post[name].values.reshape(-1, post[name].shape[-1]).mean(0)
 
-    def cscalar(name: str) -> float:
-        return float(post[name].values.mean())
+        def cscalar(name: str) -> float:
+            return float(post[name].values.mean())
 
-    det = _inv_logit(
-        cscalar("eta_detect_int")
-        + cmean("eta_detect_year")[idx["year"]]
-        + cmean("eta_detect_age")[idx["age"]]
-        + cmean("eta_detect_race")[idx["race"]]
-        + cmean("eta_detect_edu")[idx["edu"]]
-        + cmean("eta_detect_payer")[idx["payer"]]
-    )
-    term = _inv_logit(
-        cscalar("eta_term_int")
-        + cmean("eta_term_year")[idx["year"]]
-        + cmean("eta_term_age")[idx["age"]]
-        + cmean("eta_term_race")[idx["race"]]
-        + cmean("eta_term_edu")[idx["edu"]]
-    )
-    edy = post["eta_detect_year"].values.reshape(-1, n_year)
-    ety = post["eta_term_year"].values.reshape(-1, n_year)
-    post.close()
+        det = inv_logit(
+            cscalar("eta_detect_int")
+            + cmean("eta_detect_year")[idx["year"]]
+            + cmean("eta_detect_age")[idx["age"]]
+            + cmean("eta_detect_race")[idx["race"]]
+            + cmean("eta_detect_edu")[idx["edu"]]
+            + cmean("eta_detect_payer")[idx["payer"]]
+        )
+        term = inv_logit(
+            cscalar("eta_term_int")
+            + cmean("eta_term_year")[idx["year"]]
+            + cmean("eta_term_age")[idx["age"]]
+            + cmean("eta_term_race")[idx["race"]]
+            + cmean("eta_term_edu")[idx["edu"]]
+        )
+        edy = post["eta_detect_year"].values.reshape(-1, n_year)
+        ety = post["eta_term_year"].values.reshape(-1, n_year)
 
     # Births and recorded DS by (age, year) -- raw data for the age-split probe.
     n_ay = np.zeros((n_age, n_year))
@@ -174,7 +160,7 @@ def fig_year(c: dict, b: dict) -> None:
     data["reduction_lo95"] = c["red_lo"]
     data["reduction_hi95"] = c["red_hi"]
     data["reduction_B"] = b["df"]["reduction"].to_numpy()
-    _save_fig(fig, OUTPUT_DIR, "year_detection_termination", data=data)
+    save_fig(fig, OUTPUT_DIR, "year_detection_termination", data=data)
     plt.close(fig)
 
 
@@ -196,7 +182,7 @@ def fig_age_split(c: dict) -> None:
     data = pd.DataFrame(
         {"age_band": AGE_LEVELS, "early_2016_18": early, "late_2022_24": late, "pct_change": pct}
     )
-    _save_fig(fig, OUTPUT_DIR, "recorded_rate_by_age_change", data=data)
+    save_fig(fig, OUTPUT_DIR, "recorded_rate_by_age_change", data=data)
     plt.close(fig)
 
 

@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
 
 
-def _save_fig(
+def save_fig(
     fig: Figure,
     output_dir: str,
     file_name: str,
@@ -47,7 +47,7 @@ def plot_roc_curve(
     ax.legend(loc="lower right")
     if save:
         data = pd.DataFrame({"fpr": np.asarray(fpr), "tpr": np.asarray(tpr)})
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -71,7 +71,7 @@ def plot_precision_recall_curve(
         # Callers pass (recall, precision) as the positional args — keep the
         # historical parameter names but label the CSV columns correctly.
         data = pd.DataFrame({"recall": np.asarray(fpr), "precision": np.asarray(tpr)})
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -103,7 +103,7 @@ def plot_permutation_importances(
         data = importances.melt(var_name="feature", value_name="importance")
         data["repeat"] = data.groupby("feature").cumcount()
         data = data[["feature", "repeat", "importance"]]
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -136,7 +136,7 @@ def plot_grouped_permutation_importances(
     ax.set_ylabel("Feature group")
 
     if save:
-        _save_fig(fig, output_dir, file_name, data=grouped_importance)
+        save_fig(fig, output_dir, file_name, data=grouped_importance)
     return fig
 
 
@@ -193,7 +193,7 @@ def plot_dendrogram(
             ],
             ignore_index=True,
         )
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig, dendro
 
 
@@ -251,7 +251,7 @@ def plot_correlation_heatmap(
             data = pd.DataFrame(C, index=labels, columns=labels)
             data.index.name = "feature"
             data = data.reset_index()
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -272,7 +272,7 @@ def plot_shap_bar(
         shap.plots.bar(explanation, max_display=max_display, ax=ax, show=False)
         if save:
             data = _shap_bar_data(explanation)
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -296,7 +296,7 @@ def plot_shap_beeswarm(
         fig.suptitle(f"Model {model_idx}: SHAP values for predictor variables")
         if save:
             data = _shap_beeswarm_data(explanation)
-            _save_fig(fig, output_dir, file_name, data=data)
+            save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 
@@ -318,7 +318,7 @@ def plot_shap_scatter(
     fig = plt.gcf()
     if save:
         data = _shap_scatter_data(explanation, feature_x, feature_color)
-        _save_fig(fig, output_dir, file_name, data=data)
+        save_fig(fig, output_dir, file_name, data=data)
     return fig
 
 

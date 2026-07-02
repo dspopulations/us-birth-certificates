@@ -103,6 +103,17 @@ DEFAULT_COLUMNS: dict[str, str] = {
 }
 
 
+def case_from_map(column: str, mapping: dict[int, int], *, default: int) -> str:
+    """Build a SQL ``CASE column WHEN k THEN v ... ELSE default END`` from a dict.
+
+    Keeps a coding map (e.g. ``RACE_MAP``) the single source of truth for
+    both the SQL aggregation and its Python-side consumers/tests, instead of
+    hand-duplicating the mapping as a literal CASE expression at every use.
+    """
+    arms = " ".join(f"WHEN {k} THEN {v}" for k, v in sorted(mapping.items()))
+    return f"CASE {column} {arms} ELSE {default} END"
+
+
 def _build_sql(
     *,
     table: str,
@@ -166,24 +177,9 @@ def _build_sql(
         f"WHEN {c['mage_c']} < 45 THEN 5 "
         f"ELSE 6 END"
     )
-    race_case = (
-        f"CASE {c['mracehisp_c']} "
-        f"WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2 "
-        f"WHEN 4 THEN 3 WHEN 5 THEN 4 WHEN 6 THEN 6 "
-        f"ELSE {RACE_UNKNOWN_IDX} END"
-    )
-    edu_case = (
-        f"CASE {c['meduc']} "
-        f"WHEN 1 THEN 0 WHEN 2 THEN 0 WHEN 3 THEN 1 "
-        f"WHEN 4 THEN 2 WHEN 5 THEN 2 WHEN 6 THEN 3 "
-        f"WHEN 7 THEN 4 WHEN 8 THEN 4 "
-        f"ELSE {EDU_UNKNOWN_IDX} END"
-    )
-    payer_case = (
-        f"CASE {c['pay_rec']} "
-        f"WHEN 1 THEN 0 WHEN 2 THEN 1 WHEN 3 THEN 2 WHEN 4 THEN 2 "
-        f"ELSE {PAYER_UNKNOWN_IDX} END"
-    )
+    race_case = case_from_map(c["mracehisp_c"], RACE_MAP, default=RACE_UNKNOWN_IDX)
+    edu_case = case_from_map(c["meduc"], EDU_MAP, default=EDU_UNKNOWN_IDX)
+    payer_case = case_from_map(c["pay_rec"], PAYER_MAP, default=PAYER_UNKNOWN_IDX)
     # gestrec10 1-5 preterm, 6-10 term, 99 unknown (drop).
     preterm_case = (
         f"CASE WHEN {c['gestrec10']} BETWEEN 1 AND 5 THEN 1 "

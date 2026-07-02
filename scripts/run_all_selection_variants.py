@@ -22,11 +22,10 @@ Examples
 
 Resumability
 ------------
-``--skip-existing`` skips a variant when
-``output/selection/<V>/<spec>/latest/idata.nc`` is already present
-(``latest`` is a symlink or the most recent timestamped run under
-``output/selection/<V>/<spec>/``). This lets you resume an interrupted
-overnight batch without re-running completed variants.
+``--skip-existing`` skips a variant when any timestamped run directory
+under ``output/selection/<V>/<spec>/`` already has an ``idata.nc`` on
+disk. This lets you resume an interrupted overnight batch without
+re-running completed variants.
 """
 
 from __future__ import annotations
@@ -44,7 +43,7 @@ from pathlib import Path
 import dse_research_utils.environment.setup as setup
 
 from dspopulations_us_birth_certificates import cli_output
-from dspopulations_us_birth_certificates.selection import SPECS, VARIANTS
+from dspopulations_us_birth_certificates.selection import SPECS, VARIANTS, preset_names
 
 LOG_ROOT = Path("output/selection/_run_logs")
 OUTPUT_ROOT = Path("output/selection")
@@ -85,7 +84,7 @@ def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
     p.add_argument(
         "--profile",
         default="reporting",
-        choices=("dev", "reporting"),
+        choices=list(preset_names()),
         help="Run-config preset.",
     )
     p.add_argument(

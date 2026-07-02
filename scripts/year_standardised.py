@@ -17,17 +17,13 @@ Usage:
     python scripts/year_standardised.py [--variant C]
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
-import os
-
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_THREADING_LAYER", "SEQUENTIAL")
+import dspopulations_us_birth_certificates.env_guard  # noqa: F401
 
 import argparse  # noqa: E402
-import glob  # noqa: E402
 import json  # noqa: E402
+import os  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -36,23 +32,10 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
-from dspopulations_us_birth_certificates.plot_utils import _save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.selection import inv_logit, latest_fit_dir  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
-
-
-def _inv_logit(x: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-x))
-
-
-def _latest_fit(variant: str) -> str:
-    runs = sorted(
-        (d for d in glob.glob(f"output/selection/{variant}/full/*") if os.path.isfile(f"{d}/idata.nc")),
-        key=os.path.getmtime,
-    )
-    if not runs:
-        raise SystemExit(f"no converged fit for variant {variant}")
-    return runs[-1]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -62,28 +45,34 @@ def main(argv: list[str] | None = None) -> int:
     setup.init_script()
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    fit = _latest_fit(ns.variant)
-    cells = pd.read_parquet(f"{fit}/cells.parquet")
-    y0 = int(json.load(open(f"{fit}/config.json"))["year_range"][0])
+    fit = latest_fit_dir(ns.variant)
+    cells = pd.read_parquet(fit / "cells.parquet")
+    with open(fit / "config.json") as fh:
+        y0 = int(json.load(fh)["year_range"][0])
     n = cells["N_cell"].to_numpy(float)
     idx = {k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")}
 
-    post = xr.open_dataset(f"{fit}/idata.nc", group="posterior")
-    n_year = post.sizes["year"]
+    with xr.open_dataset(fit / "idata.nc", group="posterior") as post:
+        n_year = post.sizes["year"]
 
-    def cm(name: str) -> np.ndarray:
-        return post[name].values.reshape(-1, post[name].shape[-1]).mean(0)
+        def cm(name: str) -> np.ndarray:
+            return post[name].values.reshape(-1, post[name].shape[-1]).mean(0)
 
-    def cs(name: str) -> float:
-        return float(post[name].values.mean())
+        def cs(name: str) -> float:
+            return float(post[name].values.mean())
 
-    theta = _inv_logit(post["theta_lb_age"].values.reshape(-1, post.sizes["age"]).mean(0))
-    edi, edy, eda = cs("eta_detect_int"), cm("eta_detect_year"), cm("eta_detect_age")
-    edya = post["eta_detect_year_age"].values.reshape(-1, n_year, post.sizes["age"]).mean(0)
-    edr, ede, edp = cm("eta_detect_race"), cm("eta_detect_edu"), cm("eta_detect_payer")
-    eti, ety, eta_age = cs("eta_term_int"), cm("eta_term_year"), cm("eta_term_age")
-    etr, ete = cm("eta_term_race"), cm("eta_term_edu")
-    post.close()
+        theta = inv_logit(
+            post["theta_lb_age"].values.reshape(-1, post.sizes["age"]).mean(0)
+        )
+        edi, edy, eda = cs("eta_detect_int"), cm("eta_detect_year"), cm("eta_detect_age")
+        edya = (
+            post["eta_detect_year_age"]
+            .values.reshape(-1, n_year, post.sizes["age"])
+            .mean(0)
+        )
+        edr, ede, edp = cm("eta_detect_race"), cm("eta_detect_edu"), cm("eta_detect_payer")
+        eti, ety, eta_age = cs("eta_term_int"), cm("eta_term_year"), cm("eta_term_age")
+        etr, ete = cm("eta_term_race"), cm("eta_term_edu")
 
     a, r, e, p, yc = idx["age"], idx["race"], idx["edu"], idx["payer"], idx["year"]
     w = theta[a] * n  # DS-pregnancy weight per cell (fixed reference composition)
@@ -98,15 +87,15 @@ def main(argv: list[str] | None = None) -> int:
         return float((vv * ww).sum() / ww.sum())
 
     # As-observed: each cell at its OWN year (full arrays), averaged within year below.
-    det_obs = _inv_logit(base_d + edy[yc] + edya[yc, a])
-    term_obs = _inv_logit(base_t + ety[yc])
+    det_obs = inv_logit(base_d + edy[yc] + edya[yc, a])
+    term_obs = inv_logit(base_t + ety[yc])
     reduc_obs = det_obs * term_obs
 
     rows = []
     for y in range(n_year):
         # Standardised: every cell evaluated at year y, pooled composition held fixed.
-        det_s = _inv_logit(base_d + edy[y] + edya[y, a])
-        term_s = _inv_logit(base_t + ety[y])
+        det_s = inv_logit(base_d + edy[y] + edya[y, a])
+        term_s = inv_logit(base_t + ety[y])
         m = yc == y
         rows.append({
             "year": y0 + y,
@@ -132,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     ax.set_ylim(0, 1)
     ax.set_title(f"Screening & termination by year, composition-standardised (variant {ns.variant})")
     ax.legend(fontsize=6, ncol=2, loc="center left")
-    _save_fig(fig, OUTPUT_DIR, "year_standardised", data=df)
+    save_fig(fig, OUTPUT_DIR, "year_standardised", data=df)
     plt.close(fig)
 
     pd.set_option("display.width", 160)

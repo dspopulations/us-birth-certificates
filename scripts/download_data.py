@@ -82,21 +82,22 @@ us_data_files_sas = [
     "https://data.nber.org/nvss/natality/sas/2024/natality2024us.sas7bdat",
 ]
 
-us_data_files_stata = [
-    "https://data.nber.org/nvss/natality/dta/2012/natality2012us.dta"
-]
+def download_if_absent(urls: list[str]) -> None:
+    """Download each URL into ``data/`` unless a same-named file already exists."""
+    for url in urls:
+        filename = "data/" + url.rsplit("/", maxsplit=1)[-1]
+        if not os.path.exists(filename):
+            print(f"Downloading {url}")
+            urllib.request.urlretrieve(url, filename)
 
-if not os.path.exists("data"):
-    os.makedirs("data")
 
-for user_guide in user_guides:
-    filename = "data/" + user_guide.rsplit("/", maxsplit=1)[-1]
-    if not os.path.exists(filename):
-        print(f"Downloading {user_guide}")
-        urllib.request.urlretrieve(user_guide, filename)
+def main() -> None:
+    if not os.path.exists("data"):
+        os.makedirs("data")
 
-for data_file in us_data_files_sas:
-    filename = "data/" + data_file.rsplit("/", maxsplit=1)[-1]
-    if not os.path.exists(filename):
-        print(f"Downloading {data_file}")
-        urllib.request.urlretrieve(data_file, filename)
+    download_if_absent(user_guides)
+    download_if_absent(us_data_files_sas)
+
+
+if __name__ == "__main__":
+    main()

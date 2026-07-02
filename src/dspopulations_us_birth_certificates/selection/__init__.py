@@ -35,7 +35,9 @@ from dspopulations_us_birth_certificates.selection.data import (
 )
 from dspopulations_us_birth_certificates.selection.io import (
     copy_docs_template,
+    latest_fit_dir,
     render_quarto,
+    render_report,
     save_artefacts,
     save_summary,
 )
@@ -93,11 +95,13 @@ __all__ = [
     "diagnostics",
     "extract_true_counts",
     "inv_logit",
+    "latest_fit_dir",
     "logit",
     "posterior_subgroup_rate",
     "prepare_cells",
     "preset_names",
     "render_quarto",
+    "render_report",
     "sample",
     "save_artefacts",
     "save_summary",

@@ -64,6 +64,87 @@ def _quantile(arr: np.ndarray, q: float) -> np.ndarray:
     return np.quantile(arr.reshape(-1, *arr.shape[2:]), q, axis=0)
 
 
+def _identifiability_correlations(
+    idata: xr.DataTree,
+) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
+    """Per-race ``eta_term_race``/``s_race`` draws, labels, and correlation array.
+
+    Shared by :func:`identifiability_pairplot` and :func:`identifiability_table`
+    so both read the same posterior arrays and compute ``r`` once per race.
+    """
+    post = idata.posterior
+    if "eta_term_race" not in post.data_vars or "s_race" not in post.data_vars:
+        raise ValueError(
+            "InferenceData must carry 'eta_term_race' and 's_race'. "
+            "Re-fit with spec='full' or spec='single_eta'."
+        )
+    eta = np.asarray(post["eta_term_race"].values)  # (chain, draw, race)
+    s = np.asarray(post["s_race"].values)
+    n_race = eta.shape[-1]
+    labels = [
+        RACE_LEVELS[i] if i < len(RACE_LEVELS) else f"idx_{i}" for i in range(n_race)
+    ]
+    corr = np.array(
+        [
+            float(np.corrcoef(eta[..., i].ravel(), s[..., i].ravel())[0, 1])
+            for i in range(n_race)
+        ]
+    )
+    return eta, s, labels, corr
+
+
+def _eta_term_year_stats(
+    idata: xr.DataTree, *, hdi_prob: float = 0.94
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Per-year ``eta_term_year`` posterior mean/lo/hi.
+
+    Shared by :func:`eta_term_year_trajectory_plot` and
+    :func:`eta_term_year_trajectory_table`.
+    """
+    post = idata.posterior
+    if "eta_term_year" not in post.data_vars:
+        raise ValueError(
+            "InferenceData is missing 'eta_term_year' — fit with spec='full'."
+        )
+    year_arr = np.asarray(post["eta_term_year"].values)  # (chain, draw, year)
+    mean = year_arr.mean(axis=(0, 1))
+    lo = _quantile(year_arr, (1 - hdi_prob) / 2)
+    hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
+    return mean, lo, hi
+
+
+def _cchd_prevalence_draws(idata: xr.DataTree, cells: pd.DataFrame) -> np.ndarray:
+    """Flattened posterior draws of CCHD prevalence among true DS livebirths.
+
+    Shared by :func:`cchd_consistency_check` and :func:`cchd_consistency_summary`.
+    """
+    p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (c, d, cell)
+    N = cells["N_cell"].to_numpy(dtype=float)
+    cchd = cells["cchd"].to_numpy(dtype=float)
+    true_counts = p_ds_lb * N[None, None, :]  # (c, d, cell)
+    numerator = (true_counts * cchd[None, None, :]).sum(axis=-1)
+    denominator = true_counts.sum(axis=-1)
+    prevalence = numerator / np.clip(denominator, 1e-12, None)
+    return prevalence.ravel()
+
+
+def _age_curve_stats(
+    idata: xr.DataTree, *, hdi_prob: float = 0.94
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """``theta_LB`` per 1,000 livebirths: posterior mean/lo/hi + Morris reference.
+
+    Shared by :func:`age_curve_check` and :func:`age_curve_table`.
+    """
+    theta_logit = np.asarray(idata.posterior["theta_lb_age"].values)  # (c, d, age)
+    theta = inv_logit(theta_logit) * 1000.0  # per 1,000 livebirths
+    n_age = theta.shape[-1]
+    mean = theta.mean(axis=(0, 1))
+    lo = _quantile(theta, (1 - hdi_prob) / 2)
+    hi = _quantile(theta, 1 - (1 - hdi_prob) / 2)
+    morris = MORRIS_THETA_LB_PER_1000[:n_age]
+    return mean, lo, hi, morris
+
+
 # --------------------------------------------------------------------------- #
 # 1. Identifiability pair-plot                                                #
 # --------------------------------------------------------------------------- #
@@ -82,17 +163,8 @@ def identifiability_pairplot(
     import matplotlib.pyplot as plt
 
     styles = _styles()
-    post = idata.posterior
-    if "eta_term_race" not in post.data_vars or "s_race" not in post.data_vars:
-        raise ValueError(
-            "InferenceData must carry 'eta_term_race' and 's_race'. "
-            "Re-fit with spec='full' or spec='single_eta'."
-        )
-
-    eta = np.asarray(post["eta_term_race"].values)  # (chain, draw, race)
-    s = np.asarray(post["s_race"].values)
+    eta, s, labels, corr = _identifiability_correlations(idata)
     n_race = eta.shape[-1]
-    labels = RACE_LEVELS[:n_race]
 
     n_cols = min(3, n_race)
     n_rows = int(np.ceil(n_race / n_cols))
@@ -111,7 +183,7 @@ def identifiability_pairplot(
         x = eta[..., idx].ravel()
         y = s[..., idx].ravel()
         ax.scatter(x, y, s=2, alpha=0.2, color=styles.COLOUR_BLUE)
-        r = float(np.corrcoef(x, y)[0, 1])
+        r = corr[idx]
         prior_driven = "prior-driven" if abs(r) > 0.7 else "data-informed"
         ax.set_title(f"{labels[idx]}\n|r|={abs(r):.2f} ({prior_driven})")
         ax.set_xlabel(r"$\eta_{term}$ race effect")
@@ -135,27 +207,19 @@ def identifiability_table(idata: xr.DataTree) -> pd.DataFrame:
     Returned as a tidy DataFrame so the rendering CLI can save it
     alongside the figure.
     """
-    post = idata.posterior
-    eta = np.asarray(post["eta_term_race"].values)
-    s = np.asarray(post["s_race"].values)
-    n_race = eta.shape[-1]
-    rows = []
-    for idx in range(n_race):
-        x = eta[..., idx].ravel()
-        y = s[..., idx].ravel()
-        r = float(np.corrcoef(x, y)[0, 1])
-        rows.append(
+    _eta, _s, labels, corr = _identifiability_correlations(idata)
+    return pd.DataFrame(
+        [
             {
                 "race_idx": idx,
-                "race": RACE_LEVELS[idx] if idx < len(RACE_LEVELS) else f"idx_{idx}",
+                "race": labels[idx],
                 "correlation": r,
                 "abs_correlation": abs(r),
-                "interpretation": (
-                    "prior-driven" if abs(r) > 0.7 else "data-informed"
-                ),
+                "interpretation": "prior-driven" if abs(r) > 0.7 else "data-informed",
             }
-        )
-    return pd.DataFrame(rows)
+            for idx, r in enumerate(corr)
+        ]
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -177,18 +241,8 @@ def eta_term_year_trajectory_plot(
     import matplotlib.pyplot as plt
 
     styles = _styles()
-    post = idata.posterior
-    if "eta_term_year" not in post.data_vars:
-        raise ValueError(
-            "InferenceData is missing 'eta_term_year' — fit with spec='full'."
-        )
-
-    year_arr = np.asarray(post["eta_term_year"].values)  # (chain, draw, year)
-    n_year = year_arr.shape[-1]
-
-    mean = year_arr.mean(axis=(0, 1))
-    lo = _quantile(year_arr, (1 - hdi_prob) / 2)
-    hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
+    mean, lo, hi = _eta_term_year_stats(idata, hdi_prob=hdi_prob)
+    n_year = mean.shape[-1]
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     x = np.arange(n_year)
@@ -216,12 +270,7 @@ def eta_term_year_trajectory_table(
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
     """Per-year ``eta_term_year`` posterior summary."""
-    post = idata.posterior
-    year_arr = np.asarray(post["eta_term_year"].values)
-    mean = year_arr.mean(axis=(0, 1))
-    lo = _quantile(year_arr, (1 - hdi_prob) / 2)
-    hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
-
+    mean, lo, hi = _eta_term_year_stats(idata, hdi_prob=hdi_prob)
     rows = [
         {
             "year_idx": int(i),
@@ -230,7 +279,7 @@ def eta_term_year_trajectory_table(
             "hi": float(hi[i]),
             "hdi_prob": hdi_prob,
         }
-        for i in range(year_arr.shape[-1])
+        for i in range(mean.shape[-1])
     ]
     return pd.DataFrame(rows)
 
@@ -256,16 +305,7 @@ def cchd_consistency_check(
     import matplotlib.pyplot as plt
 
     styles = _styles()
-    p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (c, d, cell)
-    N = cells["N_cell"].to_numpy(dtype=float)
-    cchd = cells["cchd"].to_numpy(dtype=float)
-
-    true_counts = p_ds_lb * N[None, None, :]  # (c, d, cell)
-    numerator = (true_counts * cchd[None, None, :]).sum(axis=-1)
-    denominator = true_counts.sum(axis=-1)
-    prevalence = numerator / np.clip(denominator, 1e-12, None)
-
-    flat = prevalence.ravel()
+    flat = _cchd_prevalence_draws(idata, cells)
     mean = float(flat.mean())
     lo = float(np.quantile(flat, 0.025))
     hi = float(np.quantile(flat, 0.975))
@@ -297,14 +337,7 @@ def cchd_consistency_summary(
     published_cchd_prevalence: float = 0.225,
 ) -> pd.DataFrame:
     """Numeric summary row for the CCHD consistency check."""
-    p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)
-    N = cells["N_cell"].to_numpy(dtype=float)
-    cchd = cells["cchd"].to_numpy(dtype=float)
-    true_counts = p_ds_lb * N[None, None, :]
-    numerator = (true_counts * cchd[None, None, :]).sum(axis=-1)
-    denominator = true_counts.sum(axis=-1)
-    prevalence = numerator / np.clip(denominator, 1e-12, None)
-    flat = prevalence.ravel()
+    flat = _cchd_prevalence_draws(idata, cells)
     return pd.DataFrame(
         {
             "posterior_mean": [float(flat.mean())],
@@ -528,17 +561,11 @@ def age_curve_check(
     import matplotlib.pyplot as plt
 
     styles = _styles()
-    post = idata.posterior
-    if "theta_lb_age" not in post.data_vars:
+    if "theta_lb_age" not in idata.posterior.data_vars:
         raise ValueError("theta_lb_age missing from posterior")
-    theta_logit = np.asarray(post["theta_lb_age"].values)  # (c, d, age)
-    theta = inv_logit(theta_logit) * 1000.0  # per 1,000 livebirths
-    n_age = theta.shape[-1]
+    mean, lo, hi, morris = _age_curve_stats(idata, hdi_prob=hdi_prob)
+    n_age = mean.shape[-1]
     labels = AGE_LEVELS[:n_age]
-    mean = theta.mean(axis=(0, 1))
-    lo = _quantile(theta, (1 - hdi_prob) / 2)
-    hi = _quantile(theta, 1 - (1 - hdi_prob) / 2)
-    morris = MORRIS_THETA_LB_PER_1000[:n_age]
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     x = np.arange(n_age)
@@ -568,16 +595,15 @@ def age_curve_table(
     hdi_prob: float = 0.94,
 ) -> pd.DataFrame:
     """Tidy per-age-band summary of ``theta_LB`` posterior vs Morris."""
-    theta_logit = np.asarray(idata.posterior["theta_lb_age"].values)
-    theta = inv_logit(theta_logit) * 1000.0
-    n_age = theta.shape[-1]
+    mean, lo, hi, morris = _age_curve_stats(idata, hdi_prob=hdi_prob)
+    n_age = mean.shape[-1]
     return pd.DataFrame(
         {
             "age_band": AGE_LEVELS[:n_age],
-            "posterior_mean_per_1000": theta.mean(axis=(0, 1)),
-            "lo": _quantile(theta, (1 - hdi_prob) / 2),
-            "hi": _quantile(theta, 1 - (1 - hdi_prob) / 2),
-            "morris_per_1000": MORRIS_THETA_LB_PER_1000[:n_age],
+            "posterior_mean_per_1000": mean,
+            "lo": lo,
+            "hi": hi,
+            "morris_per_1000": morris,
         }
     )
 
