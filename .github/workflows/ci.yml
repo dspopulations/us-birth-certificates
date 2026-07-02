@@ -35,21 +35,33 @@ jobs:
 
   test:
     name: Tests (pytest)
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Native Windows is intentionally omitted: jax/jaxlib have no conda-forge
+        # win-64 build, so the compiled stack cannot solve there. Windows users
+        # work in Ubuntu on WSL (linux-64), which the ubuntu runner covers.
+        os: [ubuntu-26.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v7.0.0
 
-      - uses: astral-sh/setup-uv@v7
-      - name: Create venv
-        run: uv venv --python 3.14
-      - name: Install package (editable) with development deps
-        # Single source of truth for uv/CI: install the package's real
-        # dependencies from pyproject plus the one [dev] extra. Do not add a
-        # separate CI/test/modelling dependency split; it is easy for the local
-        # and CI environments to drift. dse-research-utils (not on PyPI)
-        # resolves from git via [tool.uv.sources].
-        run: uv pip install --python .venv -e '.[dev]'
+      - name: Setup conda environment
+        # Hybrid env: conda-forge compiled core + a pip layer that installs
+        # dse-research-utils from the public git tag and the editable package.
+        # This replaces the uv/pip-only install so the compiled scientific stack
+        # comes from conda-forge and stays consistent across DSE research repos.
+        uses: mamba-org/setup-micromamba@v3.0.0
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Verify environment core matches the canonical spec
+        run: dse-check-env environment.yml
+
       - name: Run pytest
-        # --no-sync keeps the venv we just installed into. Without it, `uv run`
-        # re-resolves against pyproject and can drop the editable install.
-        run: uv run --no-sync --python .venv pytest
+        run: pytest

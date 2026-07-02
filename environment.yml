@@ -2,59 +2,68 @@ name: dspop-us-birth-certificates
 channels:
   - conda-forge
 dependencies:
-  - python=3.14
+  # ── shared conda-forge compiled core (canonical) ──────────────────────────
+  # Must match dse-research-utils' data/environment-core.yml exactly. Verify:
+  #   dse-check-env environment.yml
+  - python=3.14.6
+  - numpy>=2.4.6,<2.5 # numba 0.65.1 requires numpy <2.5; lift the cap when numba supports 2.5
+  - scipy>=1.18.0
+  - pandas>=3.0.3
+  - numba>=0.65.1
+  - matplotlib>=3.11.0
+  - scikit-learn>=1.9.0
+  - statsmodels>=0.14.6
+  - pymc>=6.0.1 # pulls pytensor + a C toolchain from conda-forge
+  - nutpie>=0.16.11
+  - numpyro>=0.21.0
+  - jax>=0.10.2 # CPU build; GPU acceleration via an environment-gpu.yml overlay
   - arviz>=1.2.0
   - arviz-base>=1.2.0
   - arviz-stats>=1.2.0
   - arviz-plots>=1.2.0
-  - h5netcdf
+  - preliz>=0.27.0
+  - h5py>=3.12.0
+  - h5netcdf>=1.3.0
   - graphviz>=14.1.2
+  - python-graphviz>=0.20
+  # ── UBC add-ons (gradient boosting + columnar / statistical data) ─────────
   - lightgbm>=4.6.0
-  - numba>=0.65.0
-  - numpy>=2.4.5
-  - numpyro>=0.21.0
-  - nutpie>=0.16.10
-  - optuna>=4.8.0
-  - optuna-integration[lightgbm,shap,scikit-learn,xgboost]
-  - pandas-stubs
-  - pandas>=3.0.1
-  - polars>=1.40.1
-  - pyarrow>=23.0.1
-  - pymc>=6.0.1
-  - scikit-learn>=1.8.0
-  - shap>=0.51.0
+  - xgboost>=3.3.0
+  - shap>=0.52.0
+  - polars>=1.42.1
+  - pyarrow>=24.0.0
+  - duckdb>=1.5.4
+  - pyreadstat>=1.3.5
+  - fastparquet
+  - zarr
   - xarray>=2026.4.0
-  - xgboost>=3.2.0
   - pip
   - pip:
-      - dcor
-      - duckdb>=1.5.2
-      - fastparquet
+      # Shared library from the public git tag (no auth; PyPI is a later
+      # graduation). Its extras pull the pure-Python tail: notebook
+      # (ipython/ipywidgets/notebook/jupytext), dependence (dcor), tuning
+      # (optuna, optuna-integration), io (orjson/tabulate). This also pulls the
+      # library's own runtime deps (azure-identity/-storage-blob, rich, psutil,
+      # pyyaml, …) — no need to list them here.
+      - dse-research-utils[notebook,dependence,tuning,io] @ git+https://github.com/dseinternational/research.git@v0.5.0#subdirectory=src/python
+      - -e ./
+      # Local-dev override — to develop against a sibling checkout of research
+      # (note ../../ — this repo lives under dspopulations/, not dseinternational/),
+      # comment the git line above and uncomment this instead:
+      # - -e ../../dseinternational/research/src/python[notebook,dependence,tuning,io]
+      # repo-only pure-Python tail
       - formulaic
-      - hatch
-      - ipython>=9.13.0
-      - ipywidgets>=8.1.8
-      - jupytext
-      - matplotlib>=3.10.9
       - mpmath
       - networkx
-      - notebook>=7.5.6
-      - orjson>=3.11.9
       - pingouin
       - plotly
-      - preliz
-      - pyreadstat>=1.3.4
-      - pytest>=9.0.3
       - pyxlsb
-      - rich>=15.0.0
-      - ruff>=0.15.18
-      - scipy-stubs
-      - scipy>=1.18.0
-      - seaborn>=0.13.2
-      - setuptools>=82.0.1
-      - statsmodels
-      - tabulate
       - truststore
-      - zarr
-      - -e ../../dseinternational/research/src/python
-      - -e ./
+      # typing stubs + dev / build tooling
+      - pandas-stubs
+      - scipy-stubs
+      - hatch
+      - build
+      - pytest>=9.1.1
+      - ruff>=0.15.20
+      - setuptools>=82.0.1

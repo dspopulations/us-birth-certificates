@@ -27,14 +27,14 @@ dependencies = [
   "preliz>=0.18.0",
   "pymc>=6.0.1",
   "scipy>=1.18.0",
-  "dse-research-utils>=0.2.0",
+  "dse-research-utils>=0.5.0",
 ]
 
 [project.optional-dependencies]
 dev = [
   # Single pip-resolved development/CI extra. Keep aligned with environment.yml
   # rather than splitting test, modelling, and data-preparation dependencies
-  # across multiple extras.
+  # across multiple extras. Floors track the shared reconciled spec.
   "dcor>=0.6",
   "ipython>=9.11.0",
   "ipywidgets>=8.1.8",
@@ -42,23 +42,23 @@ dev = [
   "lightgbm>=4.6.0",
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
   # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel.
-  "numba>=0.65.0",
+  "numba>=0.65.1",
   "notebook>=7.5.5",
-  "optuna>=4.8.0",
-  "polars>=1.40.1",
-  "pyarrow>=23.0.1",
+  "optuna>=4.9.0",
+  "polars>=1.42.1",
+  "pyarrow>=24.0.0",
   "pytest>=9.0.3",
   "rich>=15.0.0",
   "ruff>=0.15.18",
-  "scikit-learn>=1.8.0",
-  "shap>=0.51.0",
+  "scikit-learn>=1.9.0",
+  "shap>=0.52.0",
 ]
 
 [tool.uv.sources]
-# dse-research-utils isn't published to PyPI — resolve it from the sibling repo.
-# (The conda env in environment.yml installs it editable from a relative path
-# instead; this entry is only consumed by uv, e.g. in CI.)
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", branch = "main" }
+# dse-research-utils isn't published to PyPI — resolve it from the public git
+# tag. (The conda env in environment.yml installs it from the same tag in its
+# pip layer; this entry is only consumed by uv.)
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.5.0" }
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"

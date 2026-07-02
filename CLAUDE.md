@@ -29,7 +29,7 @@ Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 
 ## Environment and commands
 
-Python **3.14** via conda (env name: `dspop-us-birth-certificates`):
+Python **3.14** via a hybrid conda/pip environment (env name: `dspop-us-birth-certificates`). The compiled scientific core (`numpy`/`scipy`/`pandas`/`pymc`/`nutpie`/`jax`/`arviz`, …) comes from **conda-forge** and must match the canonical spec shared across DSE research repos (verify with `dse-check-env environment.yml`); the pure-Python tail and `dse-research-utils` install in the pip layer. On Windows there is no conda-forge `jax`/`jaxlib` win-64 build, so use **WSL** (Ubuntu, linux-64); GPU is an opt-in `jax[cuda]` overlay.
 
 ```bash
 conda env create -f environment.yml   # create env
@@ -42,7 +42,7 @@ The package itself is installed editable (`-e ./`) as part of `environment.yml`.
 
 Notebooks and scripts reference a shared external package (`dse_research_utils`) from the sibling [`research`](https://github.com/dseinternational/research) repository for environment setup, plot styling, and metadata reporting. Import paths start with `dse_research_utils.*`.
 
-- `environment.yml` installs it editable from a relative path: `-e ../../dseinternational/research/src/python` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`). The sibling repo must be cloned alongside this one.
+- `environment.yml` installs it from the public git tag `v0.5.0` in its pip layer: `dse-research-utils[notebook,dependence,tuning,io] @ git+https://github.com/dseinternational/research.git@v0.5.0#subdirectory=src/python`. A commented local-dev override installs it editable from the sibling checkout instead — `-e ../../dseinternational/research/src/python[...]` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`), which must be cloned alongside this one.
 - Scripts call `dse_research_utils.environment.setup.init_script()` at the top of `main()` to apply the default matplotlib style.
 - Notebooks call `dse_research_utils.environment.setup.init_workbook()` (style + environment summary) followed by `dse_research_utils.metadata.packages.report_package_versions(PACKAGE_LIST)` for reproducibility.
 - Plotting code imports `dse_research_utils.plot.styles` and uses its `FIGSIZE_*`, `COLOUR_*`, `DPI_*` constants instead of hardcoded literals.
