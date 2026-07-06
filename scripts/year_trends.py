@@ -16,9 +16,9 @@ Identifiability / structure notes (printed):
   - recording s has NO year term, so the year TREND in the combined reduction is
     data-identified; the detection-vs-termination split of it is prior-driven
     (eta_detect_year pinned to the NIPT-adoption curve, eta_term_year free residual).
-  - eta_detect has NO year-by-age interaction (it is additive in year and age), so
-    the model cannot itself resolve whether screening reached older mothers first.
-    The raw recorded-DS-rate-by-age trend is the empirical signal for that question.
+  - eta_detect includes a year-by-age interaction. This lets the model express
+    age-specific screening expansion, while the detection-vs-termination split still
+    depends strongly on the structural priors.
 
 Figures (-> notes/figures/): year_detection_termination, recorded_rate_by_age_change.
 
@@ -48,6 +48,7 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 OUTPUT_DIR = "notes/figures"
+RECON_TOL = 1e-8
 
 
 def load_variant(variant: str, with_ci: bool = False) -> dict:
@@ -58,41 +59,60 @@ def load_variant(variant: str, with_ci: bool = False) -> dict:
     y0 = int(cfg["year_range"][0])
     n = cells["N_cell"].to_numpy(float)
     r = cells["R_cell"].to_numpy(float)
-    idx = {k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")}
+    idx = {
+        k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")
+    }
 
     with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
         years = post["year"].values
         n_year, n_age = len(years), post.sizes["age"]
         p_draws = post["p_ds_lb"].values.reshape(-1, len(cells))  # (draws, cells)
+        n_draws = p_draws.shape[0]
         p = p_draws.mean(0)
-        tla_draws = inv_logit(
-            post["theta_lb_age"].values.reshape(-1, n_age)
-        )  # (draws, age)
+        tla_draws = inv_logit(post["theta_lb_age"].values.reshape(n_draws, n_age))
         theta = tla_draws.mean(0)[idx["age"]]
 
-        def cmean(name: str) -> np.ndarray:
-            return post[name].values.reshape(-1, post[name].shape[-1]).mean(0)
+        def draw_vector(name: str) -> np.ndarray:
+            return post[name].values.reshape(n_draws, post[name].shape[-1])
 
-        def cscalar(name: str) -> float:
-            return float(post[name].values.mean())
+        def draw_scalar(name: str) -> np.ndarray:
+            return post[name].values.reshape(n_draws)
 
-        det = inv_logit(
-            cscalar("eta_detect_int")
-            + cmean("eta_detect_year")[idx["year"]]
-            + cmean("eta_detect_age")[idx["age"]]
-            + cmean("eta_detect_race")[idx["race"]]
-            + cmean("eta_detect_edu")[idx["edu"]]
-            + cmean("eta_detect_payer")[idx["payer"]]
+        eta_detect_year = draw_vector("eta_detect_year")
+        eta_detect_age = draw_vector("eta_detect_age")
+        eta_detect_year_age = post["eta_detect_year_age"].values.reshape(
+            n_draws, n_year, n_age
         )
-        term = inv_logit(
-            cscalar("eta_term_int")
-            + cmean("eta_term_year")[idx["year"]]
-            + cmean("eta_term_age")[idx["age"]]
-            + cmean("eta_term_race")[idx["race"]]
-            + cmean("eta_term_edu")[idx["edu"]]
+        eta_detect_race = draw_vector("eta_detect_race")
+        eta_detect_edu = draw_vector("eta_detect_edu")
+        eta_detect_payer = draw_vector("eta_detect_payer")
+        eta_term_year = draw_vector("eta_term_year")
+        eta_term_age = draw_vector("eta_term_age")
+        eta_term_race = draw_vector("eta_term_race")
+        eta_term_edu = draw_vector("eta_term_edu")
+
+        det_draws = inv_logit(
+            draw_scalar("eta_detect_int")[:, None]
+            + eta_detect_year[:, idx["year"]]
+            + eta_detect_age[:, idx["age"]]
+            + eta_detect_year_age[:, idx["year"], idx["age"]]
+            + eta_detect_race[:, idx["race"]]
+            + eta_detect_edu[:, idx["edu"]]
+            + eta_detect_payer[:, idx["payer"]]
         )
-        edy = post["eta_detect_year"].values.reshape(-1, n_year)
-        ety = post["eta_term_year"].values.reshape(-1, n_year)
+        term_draws = inv_logit(
+            draw_scalar("eta_term_int")[:, None]
+            + eta_term_year[:, idx["year"]]
+            + eta_term_age[:, idx["age"]]
+            + eta_term_race[:, idx["race"]]
+            + eta_term_edu[:, idx["edu"]]
+        )
+        det = det_draws.mean(0)
+        term = term_draws.mean(0)
+        edy = eta_detect_year
+        ety = eta_term_year
+        recon_draws = tla_draws[:, idx["age"]] * (1.0 - det_draws * term_draws)
+        recon_max_err = float(np.abs(recon_draws - p_draws).max())
 
     # Births and recorded DS by (age, year) -- raw data for the age-split probe.
     n_ay = np.zeros((n_age, n_year))
@@ -127,8 +147,6 @@ def load_variant(variant: str, with_ci: bool = False) -> dict:
     df = pd.DataFrame(rows).T
     df.index.name = "year"
 
-    recon_max_err = float(np.abs(theta * (1.0 - det * term) - p).max())
-
     return {
         "variant": variant,
         "fit_dir": fit_dir,
@@ -146,11 +164,43 @@ def load_variant(variant: str, with_ci: bool = False) -> dict:
 def fig_year(c: dict, b: dict) -> None:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     yr = c["years"]
-    ax.plot(yr, c["df"]["eta_detect"], "-o", color=styles.COLOUR_BLUE, label="Screening detection")
-    ax.plot(yr, c["df"]["eta_term"], "-^", color=styles.COLOUR_GREEN, label="Termination if detected")
-    ax.plot(yr, c["df"]["reduction"], "-s", color=styles.COLOUR_RED, label="Reduction = not born alive (variant C)")
-    ax.fill_between(yr, c["red_lo"], c["red_hi"], color=styles.COLOUR_RED, alpha=0.2, label="Reduction 95% CI (C)")
-    ax.plot(yr, b["df"]["reduction"], "--s", color=styles.COLOUR_ORANGE, alpha=0.8, label="Reduction (variant B)")
+    ax.plot(
+        yr,
+        c["df"]["eta_detect"],
+        "-o",
+        color=styles.COLOUR_BLUE,
+        label="Screening detection",
+    )
+    ax.plot(
+        yr,
+        c["df"]["eta_term"],
+        "-^",
+        color=styles.COLOUR_GREEN,
+        label="Termination if detected",
+    )
+    ax.plot(
+        yr,
+        c["df"]["reduction"],
+        "-s",
+        color=styles.COLOUR_RED,
+        label="Reduction = not born alive (variant C)",
+    )
+    ax.fill_between(
+        yr,
+        c["red_lo"],
+        c["red_hi"],
+        color=styles.COLOUR_RED,
+        alpha=0.2,
+        label="Reduction 95% CI (C)",
+    )
+    ax.plot(
+        yr,
+        b["df"]["reduction"],
+        "--s",
+        color=styles.COLOUR_ORANGE,
+        alpha=0.8,
+        label="Reduction (variant B)",
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("Probability")
     ax.set_ylim(0, 1)
@@ -172,7 +222,12 @@ def fig_age_split(c: dict) -> None:
     late = rate[:, -3:].mean(1)  # 2022-2024
     pct = (late / early - 1.0) * 100.0
     x = np.arange(len(AGE_LEVELS))
-    ax.bar(x, pct, color=[styles.COLOUR_RED if v < 0 else styles.COLOUR_BLUE for v in pct], alpha=0.85)
+    ax.bar(
+        x,
+        pct,
+        color=[styles.COLOUR_RED if v < 0 else styles.COLOUR_BLUE for v in pct],
+        alpha=0.85,
+    )
     ax.axhline(0, color=styles.TEXT_COLOUR, lw=0.6)
     ax.set_xticks(x)
     ax.set_xticklabels(AGE_LEVELS, rotation=45, ha="right")
@@ -180,7 +235,12 @@ def fig_age_split(c: dict) -> None:
     ax.set_xlabel("Maternal age band")
     ax.set_title("Recorded DS rate fell more in older mothers (raw data)")
     data = pd.DataFrame(
-        {"age_band": AGE_LEVELS, "early_2016_18": early, "late_2022_24": late, "pct_change": pct}
+        {
+            "age_band": AGE_LEVELS,
+            "early_2016_18": early,
+            "late_2022_24": late,
+            "pct_change": pct,
+        }
     )
     save_fig(fig, OUTPUT_DIR, "recorded_rate_by_age_change", data=data)
     plt.close(fig)
@@ -193,6 +253,12 @@ def main() -> int:
     b = load_variant("B", with_ci=False)
     print(f"C: {c['fit_dir']}\nB: {b['fit_dir']}")
     print(f"reconstruction max |recon_p - p_ds_lb| = {c['recon_max_err']:.2e} (C)\n")
+    for variant in (c, b):
+        if variant["recon_max_err"] > RECON_TOL:
+            raise RuntimeError(
+                f"Variant {variant['variant']} reconstruction mismatch: "
+                f"{variant['recon_max_err']:.2e} > {RECON_TOL:.1e}"
+            )
 
     pd.set_option("display.width", 200)
     show = c["df"].copy()
@@ -211,13 +277,15 @@ def main() -> int:
 
     fig_year(c, b)
     fig_age_split(c)
-    print(f"\nwrote year_detection_termination, recorded_rate_by_age_change to {OUTPUT_DIR}/")
+    print(
+        f"\nwrote year_detection_termination, recorded_rate_by_age_change to {OUTPUT_DIR}/"
+    )
     print(
         "\nNote: the combined-reduction TREND is data-identified (s has no year term);\n"
         "the detection-vs-termination split is prior-driven (detection pinned to NIPT).\n"
-        "eta_detect has no year-by-age interaction, so the model cannot itself say whether\n"
-        "screening reached older mothers first -- the raw recorded-rate-by-age trend above\n"
-        "is the empirical signal, and would need an interaction term to model explicitly."
+        "eta_detect includes a year-by-age interaction, so age-specific screening expansion\n"
+        "can appear in the model; the raw recorded-rate-by-age trend remains a useful\n"
+        "empirical check on that structure."
     )
     return 0
 

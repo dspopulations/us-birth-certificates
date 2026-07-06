@@ -111,6 +111,8 @@ def test_fit_on_synthetic_fixture(
     assert "average_precision" in metrics
     assert metrics["n_valid"] > 0
     assert metrics["n_positive_valid"] > 0
+    assert metrics["evaluation_split_role"] == "early_stopping_and_reported_metrics"
+    assert metrics["validation_independent_of_hyperparameter_tuning"] is True
     base_rate = metrics["n_positive_valid"] / metrics["n_valid"]
     # AP should beat the base rate by a comfortable margin given the
     # injected signal (num_age and cat_risk both drive the target).
@@ -175,6 +177,22 @@ def test_grouped_permutation_importance_outputs(
         "dspopulations_us_birth_certificates.models.base_pipeline."
         "permutation_importance",
         _fake_permutation_importance,
+    )
+    monkeypatch.setattr(
+        "dspopulations_us_birth_certificates.models.base_pipeline."
+        "_distance_corr_linkage",
+        lambda X_eval: (
+            np.zeros((X_eval.shape[1], X_eval.shape[1])),
+            np.eye(X_eval.shape[1]),
+            np.empty((0, 4)),
+        ),
+    )
+    monkeypatch.setattr(
+        "dspopulations_us_birth_certificates.models.base_pipeline."
+        "feature_groups.feature_groups_from_linkage",
+        lambda names, linkage: {
+            f"cluster_{i:02d}": [name] for i, name in enumerate(names, start=1)
+        },
     )
 
     model_config = _smoke_config()
