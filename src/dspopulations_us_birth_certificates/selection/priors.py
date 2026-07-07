@@ -11,7 +11,7 @@ Stage 3 — birth-certificate sensitivity ``s`` from Boulet (2011) and Salemi
 
 Each prior is an informative Normal on the logit scale. Sigmas reflect the
 precision of the external evidence. Three sensitivity variants follow
-(A/B/C) — see ``docs/bayesian_selection_model.md`` section 8.
+(A/B/C) — see ``notes/20260622-predictors-bayesian-model.md``.
 
 References
 ----------

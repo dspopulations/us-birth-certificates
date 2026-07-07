@@ -2,8 +2,7 @@
 
 Decomposes observed recording into baseline livebirth rate × screening-
 and-termination pass-through × birth-certificate sensitivity. See
-``plans/20260420-selection-model.md`` and
-``plans/docs/bayesian_selection_model.md`` for the design rationale.
+``notes/20260622-predictors-bayesian-model.md`` for the design rationale.
 
 Public surface
 --------------

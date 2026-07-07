@@ -40,7 +40,7 @@ absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
 pass-through (Kuppermann / Natoli), $s$ is birth-certificate
 sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
 is a fixed false-positive rate (Ohio/NY validation). See
-`plans/docs/bayesian_selection_model.md` for the full design.
+`notes/20260622-predictors-bayesian-model.md` for the full design.
 
 ```{python}
 # | echo: false
@@ -359,4 +359,4 @@ Interpretation notes:
   quality posteriors require `--profile reporting`.
 - The false-positive rate $f$ is fixed at 7.8e-5 (Ohio/NY) and not
   estimated. Sensitivity to $f$ requires re-fitting at a different
-  constant; see `plans/docs/bayesian_selection_model.md` §8.
+  constant; see `notes/20260622-predictors-bayesian-model.md`.

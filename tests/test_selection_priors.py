@@ -2,9 +2,8 @@
 
 These tests guard against silent drift in the published-literature values
 that anchor the three-stage model. If any numeric is changed here, the
-corresponding section of ``plans/docs/bayesian_selection_model.md`` (and
-``plans/20260420-selection-model.md`` §10) should be updated in the same
-commit.
+corresponding discussion in ``notes/20260622-predictors-bayesian-model.md``
+should be updated in the same commit.
 """
 
 from __future__ import annotations

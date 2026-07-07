@@ -206,3 +206,8 @@ writeback
 
 # Modelling terms
 reanchor
+caveated
+counterintuitive
+
+# Clinical terms
+Apgars
