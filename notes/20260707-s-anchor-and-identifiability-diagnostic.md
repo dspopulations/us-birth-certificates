@@ -12,7 +12,9 @@
 interpretation is stale relative to the anchored `s`); §3 (parameter recovery validates
 the machinery, not the science — its `θ`/`s` checks are near-vacuous); §5 (`year_trends.py`
 reconstruction omits the year×age interaction and its docstring contradicts the model —
-**already fixed** on the `dev/codex/issue-67-model-review-fixes` branch).
+**already fixed** on the `dev/codex/issue-67-model-review-fixes` branch); §6 (diagnostics
+audit — four of eight selection diagnostics carry stale or vacuous interpretations after the
+June pin/anchor restructuring).
 **Scope:** `scripts/derive_recording_rates.py` (the anchor generator), the
 `identifiability_*` diagnostics in `selection/diagnostics.py`, the parameter-recovery test
 (`tests/test_selection_parameter_recovery.py` + `selection/simulate.py`), the sampling/run
@@ -270,7 +272,62 @@ and `year_standardised.py` still duplicate the (now-correct) reconstruction. Rec
 land the issue-67 branch rather than re-fixing; add the regression test + shared helper as an
 optional follow-up.
 
-## 6. Related internal notes
+## 6. Diagnostics audit — several interpretations are stale after the restructuring
+
+Tracing all eight functions in `selection/diagnostics.py` against the *current* model
+(θ pinned σ=0.001; `s` anchored to de Graaf; clinical flags removed from `s`) surfaces one
+theme: four diagnostics were designed for the pre-pin, pre-anchor, clinical-flags-in-`s`
+model and have not been re-reasoned since. The code runs; the *interpretations* are stale.
+
+| Diagnostic | Status |
+|---|---|
+| `posterior_predictive_by_stratum` (`:363-431`) | Legitimate, but **in-sample fit only** — the model is fit to these counts, so reproducing them is near-guaranteed and says nothing about missed cases. Uses the posterior of the expected count (`p_recorded·N`), not a full Binomial PPC, so bands slightly understate predictive spread. |
+| `eta_term_year_trajectory` (`:230-284`) | Informative, one caveat: `eta_detect_year` is pinned to the NIPT S-curve and `eta_term_year` is the only *free* year term, so detection-curve misfit leaks into the termination residual. A flat residual is consistent both with "termination flat" and "pinned detection curve happens to be right." |
+| `summary_table` / `convergence_health` (`:616-658`) | Sound, standard R̂/ESS rollup. |
+| `age_curve_check` (`:549-608`) | **Vacuous.** Docstring calls it a check that Stage 1 "is not being pulled around," but θ pinned at σ=0.001 *cannot* move — the pass is guaranteed by construction. The plot-level twin of the near-vacuous `theta_lb_age` recovery assertion (§3.2). |
+| `identifiability_*` (`:67-222`) | **Stale** — see §2.3. Low `\|r\|` now reflects the tightly-anchored (near-constant) `s`, not data-identification. |
+| `cchd_consistency_check` (`:292-355`) | **Stale + structurally cannot match its target.** See below. |
+| `decomposition_by_race` (`:439-541`) | **Presentation risk.** See below. |
+
+### 6.1 `cchd_consistency_check`
+
+Computes CCHD prevalence among true DS livebirths as `Σ(p_ds_lb·N·cchd)/Σ(p_ds_lb·N)`
+(`_cchd_prevalence_draws`, `:116-128`) vs EUROCAT ~22.5%. Two problems:
+
+- **Stale interpretation.** Docstring/qmd say a posterior near 22.5% is "evidence that the
+  clinical-marker effects on `s` are well-calibrated." There are no clinical-marker effects
+  on `s` any more (removed 2026-06-21). This is the diagnostic-level consequence of issue #67
+  P3 (which flags the matching stale qmd text).
+- **Structurally cannot approach 22.5% (pending confirmation against a fit).** `cchd` enters
+  no stage, so `p_ds_lb ⊥ cchd` by construction: two cells identical except for `cchd` get
+  identical `p_ds_lb` weight. The weighted average therefore reduces to the
+  `p_ds_lb`-reweighted **general-population** cyanotic-CHD rate (~0.2–1%), an order of
+  magnitude below 22.5%. So the check most likely shows a large gap by design. What it
+  actually measures is the size of the model's DS⊥CCHD independence error — which is exactly
+  why the real co-occurrence analysis moved to the class-prior method
+  (`scripts/cooccurring_class_prior.py`). As a "calibration" check it is misleading; as a
+  "here is how wrong independence is" demonstration it is valid but mislabelled.
+
+### 6.2 `decomposition_by_race`
+
+The arithmetic is correct — recorded + missed = true per race, with implied prenatally
+terminated via `θ_LB·N − p_ds_lb·N` (the combined reduction, `:495-498`), reconstructing
+`θ_lb` from `theta_lb_age[age_idx]` and clamping `max(true−recorded, 0)` for the
+false-positive edge case. The risk is presentational: **it shows posterior means only — no
+CIs, no A↔B band.** For the anchored races the per-race *missed* level is essentially the
+anchor's racial `s` gradient and the *terminated* level is set by the `eta_term_race` prior
+(+ full-margin anchor), so the split is largely the priors' story presented as settled point
+estimates — the same failure mode as §2.3, in chart form. Add CIs, ideally the A↔B spread.
+
+### Recommendation
+
+This is an interpretation pass, not new code. Minimum: correct the `age_curve` and
+`cchd_consistency` docstrings + the selection qmd (fold into the issue #67 P3 fix), and add
+uncertainty (A↔B) to `decomposition_by_race`. The `identifiability` rework is in §2.4.
+Verifying the §6.1 structural claim against a committed `idata.nc` would let the note state a
+measured gap rather than a structural prediction.
+
+## 7. Related internal notes
 
 - `notes/20260623-degraaf-recording-anchor.md` — anchor motivation, full-margin term, results.
 - `notes/20260628-degraaf-corrected-prevalence-extraction.md` — `--degraaf-tail` sensitivity.

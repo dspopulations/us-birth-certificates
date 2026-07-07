@@ -208,6 +208,7 @@ writeback
 reanchor
 caveated
 counterintuitive
+reweighted
 
 # Clinical terms
 Apgars
