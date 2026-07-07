@@ -9,12 +9,16 @@
 
 **Date:** 2026-07-07
 **Status:** Review. Actionable findings: §2.3 (identifiability diagnostic's
-interpretation is stale relative to the anchored `s`) and §3 (parameter recovery validates
-the machinery, not the science — and its `θ`/`s` checks are near-vacuous).
+interpretation is stale relative to the anchored `s`); §3 (parameter recovery validates
+the machinery, not the science — its `θ`/`s` checks are near-vacuous); §5 (`year_trends.py`
+reconstruction omits the year×age interaction and its docstring contradicts the model —
+**already fixed** on the `dev/codex/issue-67-model-review-fixes` branch).
 **Scope:** `scripts/derive_recording_rates.py` (the anchor generator), the
 `identifiability_*` diagnostics in `selection/diagnostics.py`, the parameter-recovery test
-(`tests/test_selection_parameter_recovery.py` + `selection/simulate.py`), and the
-sampling/run config (`selection/config.py`, `selection/sampling.py`).
+(`tests/test_selection_parameter_recovery.py` + `selection/simulate.py`), the sampling/run
+config (`selection/config.py`, `selection/sampling.py`), and the trend-reconstruction
+scripts (`year_trends.py`, `year_standardised.py`, `year_age_interaction.py`) that replaced
+the removed HSGP outcomes model.
 **Relates to:** `notes/20260623-degraaf-recording-anchor.md` (the anchor's motivation and
 results), `notes/20260707-modelling-review-and-writeup-options.md` §5.1 (where this was
 first flagged).
@@ -214,7 +218,59 @@ purely modelling choices. Consequence for interpretation: the tight `eta_detect_
 posterior should not be read as data-driven confidence — it is a sampler accommodation. State
 this wherever that parameter is reported.
 
-## 5. Related internal notes
+## 5. The trend-reconstruction layer (and a scoped `year_trends.py` bug)
+
+### 5.1 Architecture correction — one Bayesian model, not two
+
+The separate HSGP outcomes regression was **removed** on 2026-04-21 (commit 733161e,
+"Remove Bayesian regression model") as redundant once the selection model covered the same
+goal "with a more identifiable decomposition." Its shared fit infrastructure (`sample`,
+`io`, `RunConfig`, `FitContext`) moved into the `selection` package. So the current
+architecture is: **one Bayesian inference model** (selection) + **three deterministic
+reconstruction scripts** that read its posterior (`year_trends.py`, `year_standardised.py`,
+`year_age_interaction.py`) + **one non-Bayesian prevalence lookup** (`previous_model_yearly.py`,
+1989–2024 context). The year/trend results are post-hoc reconstructions, not a second model.
+
+### 5.2 `year_trends.py` reconstruction bug (= issue #67 P1), scoped
+
+On `main`, `load_variant` reconstructs `det` (`year_trends.py:79-86`) from
+`eta_detect_int + year + age + race + edu + payer` — **omitting `eta_detect_year_age`**,
+which the fitted `eta_detect` includes (`model.py:189-194`). The docstring (`:19-21`) and
+closing note (`:216-221`) assert the opposite of the model ("eta_detect has NO year-by-age
+interaction"), contradicting the sibling `year_age_interaction.py` (which exists to analyse
+that very term and errors if a fit lacks it, `:63-65`) and `year_standardised.py` (which
+reads `eta_detect_year_age`, `:67-69`). Classic staleness after the interaction was added.
+
+**Impact, scoped** (narrower than a code-only read suggests):
+
+- **The headline `reduction`/`true_per10k` are correct** — computed from the *saved*
+  `p_ds_lb` posterior (`:115-116, 121-124`), which was fitted *with* the interaction.
+- **Only the displayed `eta_detect`/`eta_term` split lines are affected** (`:117-118`),
+  and since the interaction is **flat** (June finding: +0.015 log-odds/band, CI crosses
+  zero) even those are barely off — approximately right by luck, not correctness.
+- **The guardrail exists but doesn't fire:** `recon_max_err` (`:130`) is printed (`:195`)
+  but never asserted, so a future non-flat interaction would silently corrupt the split.
+- **Secondary:** the split takes posterior means of each component then applies `inv_logit`
+  (`cmean`/`cscalar`), so by Jensen the reported `eta_detect`/`eta_term` *levels* carry a
+  small bias independent of the interaction. The reduction avoids this (uses `p_ds_lb` draws).
+
+### 5.3 Overlap with the issue-67 branch — do not duplicate
+
+`dev/codex/issue-67-model-review-fixes` **fully fixes this**, and goes further:
+- adds `eta_detect_year_age` to the reconstruction;
+- switches to **per-draw** reconstruction (`draw_vector`/`draw_scalar` → mean), which also
+  removes the §5.2 Jensen bias as a bonus;
+- corrects the docstring and closing note ("eta_detect includes a year-by-age interaction");
+- adds `RECON_TOL = 1e-8` and a fail-fast `RuntimeError` in `main()` for either variant.
+
+**Residual gaps** (vs issue #67's acceptance criteria, if we want to close them): no
+dedicated **regression test** constructing a posterior with non-zero `eta_detect_year_age`
+and checking the reconstruction; and no **shared reconstruction helper** — `year_trends.py`
+and `year_standardised.py` still duplicate the (now-correct) reconstruction. Recommendation:
+land the issue-67 branch rather than re-fixing; add the regression test + shared helper as an
+optional follow-up.
+
+## 6. Related internal notes
 
 - `notes/20260623-degraaf-recording-anchor.md` — anchor motivation, full-margin term, results.
 - `notes/20260628-degraaf-corrected-prevalence-extraction.md` — `--degraaf-tail` sensitivity.
