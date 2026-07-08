@@ -15,9 +15,9 @@ P(R=1 | X) = θ_LB(age) · η(X) · s(X) + (1 − θ_LB·η) · f
   / Salemi 2017). Stage 3.
 - `f` — false-positive rate, fixed at 7.8e-5 (Ohio/NY validation).
 
-The design is documented at `plans/docs/bayesian_selection_model.md`;
-the implementation plan and status are at
-`plans/20260420-selection-model.md`.
+The design and current results are documented in
+`notes/20260622-predictors-bayesian-model.md`, with supporting design
+notes (η re-anchoring, the de Graaf recording anchor) under `notes/`.
 
 ## Public API
 
@@ -92,7 +92,8 @@ output/selection/<variant>/<spec>/<timestamp>/
 
 ## Important invariants
 
-See `plans/20260420-selection-model.md` §12 for the full list. Summary:
+These invariants are load-bearing; their rationale is documented across the
+`notes/` corpus, chiefly `notes/20260622-predictors-bayesian-model.md`:
 
 1. Morris θ_LB and `s` are **pinned hard** (σ=0.001 on logit, not 0.10) — at 33.5M
    rows a σ=0.10 prior is overwhelmed and θ_LB/`s` escape along the η·s ridge

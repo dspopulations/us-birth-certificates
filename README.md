@@ -9,7 +9,7 @@ Accurate assessments of the numbers and characteristics of babies born with Down
 
 This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing births and how they may be changing over time.
 
-- [Current plans](./plans/readme.md)
+Recorded Down syndrome births in these data are systematically under-reported, and not at random. Because recording depends on the same characteristics we want to measure, we do not attempt to identify *which* individual births were missed; instead we estimate the *number* of missed cases and its distribution at the population level, using a structural Bayesian selection model, and use the machine-learning strand to characterise the recording process rather than to recover individuals. See [current plans](./plans/readme.md) for the detailed aims and the methodological rationale.
 
 ## Analyses
 
@@ -19,8 +19,9 @@ A Bayesian selection model sits alongside the LightGBM classifier:
   selection model decomposing observed recording into baseline
   livebirth rate × screening/termination pass-through × birth-
   certificate sensitivity. Driver: `scripts/fit_selection_model.py`.
-  Template: `docs/models/selection/index.qmd`. Design doc:
-  [`plans/docs/bayesian_selection_model.md`](./plans/docs/bayesian_selection_model.md).
+  Template: `docs/models/selection/index.qmd`. Design notes:
+  [`notes/20260622-predictors-bayesian-model.md`](./notes/20260622-predictors-bayesian-model.md)
+  (with supporting design notes under `notes/`).
   Variant-comparison aggregator: `scripts/compare_selection_variants.py`.
 
 ## Getting started
