@@ -44,9 +44,8 @@ absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
 pass-through (Kuppermann / Natoli), $s$ is birth-certificate
 sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
 is a fixed false-positive rate (Ohio/NY validation). See
-`notes/20260622-predictors-bayesian-model.md` for the full design and
 `src/dspopulations_us_birth_certificates/selection/README.md` for the
-implementation.
+implementation design.
 
 This decomposition is a prior-informed structural model. Birth
 certificate counts alone do not separately identify baseline DS
