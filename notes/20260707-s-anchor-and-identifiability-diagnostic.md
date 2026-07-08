@@ -12,7 +12,7 @@
 interpretation is stale relative to the anchored `s`); §3 (parameter recovery validates
 the machinery, not the science — its `θ`/`s` checks are near-vacuous); §5 (`year_trends.py`
 reconstruction omits the year×age interaction and its docstring contradicts the model —
-**already fixed** on the `dev/codex/issue-67-model-review-fixes` branch); §6 (diagnostics
+**fixed in #68**, merged 2026-07-08); §6 (diagnostics
 audit — four of eight selection diagnostics carry stale or vacuous interpretations after the
 June pin/anchor restructuring).
 **Scope:** `scripts/derive_recording_rates.py` (the anchor generator), the
@@ -256,9 +256,10 @@ reads `eta_detect_year_age`, `:67-69`). Classic staleness after the interaction 
   (`cmean`/`cscalar`), so by Jensen the reported `eta_detect`/`eta_term` *levels* carry a
   small bias independent of the interaction. The reduction avoids this (uses `p_ds_lb` draws).
 
-### 5.3 Overlap with the issue-67 branch — do not duplicate
+### 5.3 Fixed in #68 (merged) — do not re-fix
 
-`dev/codex/issue-67-model-review-fixes` **fully fixes this**, and goes further:
+PR #68 (`dev/codex/issue-67-model-review-fixes`, merged 2026-07-08 and now carried by this
+branch via the merge) **fully fixes this**, and goes further:
 - adds `eta_detect_year_age` to the reconstruction;
 - switches to **per-draw** reconstruction (`draw_vector`/`draw_scalar` → mean), which also
   removes the §5.2 Jensen bias as a bonus;
@@ -269,8 +270,7 @@ reads `eta_detect_year_age`, `:67-69`). Classic staleness after the interaction 
 dedicated **regression test** constructing a posterior with non-zero `eta_detect_year_age`
 and checking the reconstruction; and no **shared reconstruction helper** — `year_trends.py`
 and `year_standardised.py` still duplicate the (now-correct) reconstruction. Recommendation:
-land the issue-67 branch rather than re-fixing; add the regression test + shared helper as an
-optional follow-up.
+the fix has landed via #68; the regression test + shared helper remain optional follow-ups.
 
 ## 6. Diagnostics audit — several interpretations are stale after the restructuring
 
@@ -294,10 +294,10 @@ model and have not been re-reasoned since. The code runs; the *interpretations* 
 Computes CCHD prevalence among true DS livebirths as `Σ(p_ds_lb·N·cchd)/Σ(p_ds_lb·N)`
 (`_cchd_prevalence_draws`, `:116-128`) vs EUROCAT ~22.5%. Two problems:
 
-- **Stale interpretation.** Docstring/qmd say a posterior near 22.5% is "evidence that the
-  clinical-marker effects on `s` are well-calibrated." There are no clinical-marker effects
-  on `s` any more (removed 2026-06-21). This is the diagnostic-level consequence of issue #67
-  P3 (which flags the matching stale qmd text).
+- **Stale interpretation (qmd since fixed by #68).** The selection qmd said a posterior near
+  22.5% was "evidence that the clinical-marker effects on `s` are well-calibrated" — but there
+  are no clinical-marker effects on `s` any more (removed 2026-06-21). #68 (merged 2026-07-08)
+  corrected that qmd text; the substantive point stands: this is not an `s`-calibration test.
 - **Structurally cannot approach 22.5% (pending confirmation against a fit).** `cchd` enters
   no stage, so `p_ds_lb ⊥ cchd` by construction: two cells identical except for `cchd` get
   identical `p_ds_lb` weight. The weighted average therefore reduces to the
@@ -322,7 +322,7 @@ estimates — the same failure mode as §2.3, in chart form. Add CIs, ideally th
 ### Recommendation
 
 This is an interpretation pass, not new code. Minimum: correct the `age_curve` and
-`cchd_consistency` docstrings + the selection qmd (fold into the issue #67 P3 fix), and add
+`cchd_consistency` docstrings (the selection qmd CCHD/Morris text was already fixed by #68), and add
 uncertainty (A↔B) to `decomposition_by_race`. The `identifiability` rework is in §2.4.
 Verifying the §6.1 structural claim against a committed `idata.nc` would let the note state a
 measured gap rather than a structural prediction.

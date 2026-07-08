@@ -159,7 +159,7 @@ list.
    (`cross_validate` unimplemented), so AP/Brier are tuning-set-optimistic; and
    `scripts/year_trends.py` reconstructs the year decomposition **without** the
    `eta_detect_year_age` interaction the fitted model contains — a live reporting bug
-   (model right, reported trend wrong). These are on the `dev/codex/issue-67-*` branch.
+   (model right, reported trend wrong). These were fixed in #68 (merged 2026-07-08).
 
 ## 6. The state-data constraint and what it forecloses
 
@@ -295,5 +295,5 @@ Three units rather than one omnibus paper:
 - `notes/20260628-degraaf-corrected-prevalence-extraction.md` — corrected surveillance
   extraction + `--degraaf-tail` sensitivity.
 - `notes/20260514-status-review.md` — prior status review (pre-anchor).
-- GitHub issue #67 — model/methodology/reporting review follow-ups (branch
-  `dev/codex/issue-67-model-review-fixes`).
+- GitHub issue #67 / PR #68 (`dev/codex/issue-67-model-review-fixes`, merged 2026-07-08) —
+  model/methodology/reporting review follow-ups.
