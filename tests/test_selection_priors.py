@@ -75,7 +75,7 @@ def test_logit_round_trip() -> None:
 def test_morris_sigma_is_tight() -> None:
     """Morris sigma must remain tight (plan §10 #1: loosening lets the data
     drag theta_LB around, absorbing variation that belongs to eta/s)."""
-    assert P.MORRIS_SIGMA <= 0.15
+    assert P.MORRIS_SIGMA == pytest.approx(0.001)
 
 
 def test_false_positive_rate_fixed() -> None:

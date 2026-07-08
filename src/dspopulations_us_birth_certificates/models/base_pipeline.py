@@ -134,7 +134,12 @@ class EstimatorPipeline(ABC):
         return df
 
     def prepare_features(self, df: pd.DataFrame) -> None:
-        """Populate ``X_train/y_train/X_valid/y_valid`` on the context."""
+        """Populate ``X_train/y_train/X_valid/y_valid`` on the context.
+
+        The validation split is used for LightGBM early stopping and reported metrics.
+        When ``scripts/fit_model.py --optimize`` is used, Optuna also uses the same
+        deterministic split unless a future cross-validation path replaces it.
+        """
         cli_output.section("Prepare features")
         cfg = self.context.config
         numeric = list(cfg.numeric_features)
@@ -172,6 +177,11 @@ class EstimatorPipeline(ABC):
         self.context.y_valid = y_valid
 
         cli_output.print_split_summary(X_train, X_valid, y_train, y_valid)
+        if cfg.train_config.get("hyperparameter_tuning_uses_validation_split"):
+            cli_output.warning(
+                "Validation metrics use the same stratified split as Optuna tuning; "
+                "treat them as tuning-set diagnostics, not an untouched test-set estimate."
+            )
 
     # ---- training ------------------------------------------------------------
 
@@ -211,6 +221,7 @@ class EstimatorPipeline(ABC):
         ctx.p_valid = p_valid
 
         y_valid = np.asarray(ctx.y_valid)
+        train_config = ctx.config.train_config
         metrics = {
             "average_precision": float(average_precision_score(y_valid, p_valid)),
             "roc_auc": float(roc_auc_score(y_valid, p_valid)),
@@ -222,8 +233,20 @@ class EstimatorPipeline(ABC):
             ),
             "n_valid": int(len(y_valid)),
             "n_positive_valid": int(y_valid.sum()),
+            "evaluation_split_role": train_config.get(
+                "evaluation_split_role", "early_stopping_and_reported_metrics"
+            ),
+            "validation_independent_of_hyperparameter_tuning": bool(
+                train_config.get(
+                    "validation_independent_of_hyperparameter_tuning", True
+                )
+            ),
         }
         ctx.metrics = metrics
+        if not metrics["validation_independent_of_hyperparameter_tuning"]:
+            cli_output.warning(
+                "These metrics are not independent of hyperparameter tuning."
+            )
         cli_output.print_metrics_table(metrics)
 
     def permutation_importance_analysis(self) -> None:
@@ -251,7 +274,7 @@ class EstimatorPipeline(ABC):
             configured = train_config.get("num_threads")
             try:
                 configured_int = int(configured) if configured is not None else None
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 configured_int = None
             if configured_int is not None and configured_int > 0:
                 n_jobs = configured_int

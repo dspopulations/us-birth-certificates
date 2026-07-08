@@ -34,9 +34,7 @@ def fitted() -> tuple[pd.DataFrame, object]:
     """Tiny synthetic full-spec fit (fast, under-converged on purpose)."""
     import pymc as pm
 
-    truth = TrueParams.from_priors(
-        variant_C_default(), n_year=N_YEAR, seed=0
-    )
+    truth = TrueParams.from_priors(variant_C_default(), n_year=N_YEAR, seed=0)
     cells = simulate_cells(
         truth,
         n_cells_per_month=3,
@@ -44,9 +42,7 @@ def fitted() -> tuple[pd.DataFrame, object]:
         n_cells_mean=2000,
         seed=0,
     )
-    model = build_model(
-        cells, variant_C_default(), spec="full", n_year=N_YEAR
-    )
+    model = build_model(cells, variant_C_default(), spec="full", n_year=N_YEAR)
     with model:
         idata = pm.sample(
             draws=80,
@@ -123,9 +119,7 @@ def test_decomposition_by_race(fitted) -> None:
     fig = diagnostics.decomposition_by_race(idata, cells)
     _assert_has_axes(fig)
     summary = fig._selection_data  # type: ignore[attr-defined]
-    assert {"race", "true_livebirths", "recorded", "missed"}.issubset(
-        summary.columns
-    )
+    assert {"race", "true_livebirths", "recorded", "missed"}.issubset(summary.columns)
     assert (summary["recorded"] <= summary["true_livebirths"] + 1e-6).all()
 
 
@@ -139,10 +133,8 @@ def test_age_curve_check(fitted) -> None:
         table.columns
     )
     # Posterior means should land roughly near the Morris anchor given the
-    # tight sigma=0.10 logit prior.
-    diffs = np.log10(
-        table["posterior_mean_per_1000"] / table["morris_per_1000"]
-    )
+    # tightly pinned sigma=0.001 logit prior.
+    diffs = np.log10(table["posterior_mean_per_1000"] / table["morris_per_1000"])
     assert (diffs.abs() < 0.5).all(), (
         f"theta_LB posterior diverged from Morris beyond half a log10: {diffs.tolist()!r}"
     )
@@ -150,9 +142,7 @@ def test_age_curve_check(fitted) -> None:
 
 def test_summary_table_and_convergence_health(fitted) -> None:
     _, idata = fitted
-    summary = diagnostics.summary_table(
-        idata, var_names=("theta_lb_age", "s_race")
-    )
+    summary = diagnostics.summary_table(idata, var_names=("theta_lb_age", "s_race"))
     health = diagnostics.convergence_health(summary)
     for key in (
         "max_rhat",

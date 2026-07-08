@@ -154,18 +154,19 @@ def _build_sql(
         if predictions_column
         else "0.0"
     )
+    down_alias = "down_ind"
     if predictions_column:
         # Calibrated expected DS per cell (float): recorded contribute 1, unrecorded
         # contribute the model's predicted DS probability. Integerised by
         # largest-remainder rounding in prepare_cells (preserves the total); a per-cell
         # ROUND here would bias the total down ~9% via the many sub-0.5 cells.
-        r_cell_expr = "SUM(CASE WHEN down_ind = 1 THEN 1.0 ELSE prob END)"
+        r_cell_expr = f"SUM(CASE WHEN {down_alias} = 1 THEN 1.0 ELSE prob END)"
     elif missing_flag_column:
         r_cell_expr = (
-            "SUM(CASE WHEN down_ind = 1 OR pred_missing = 1 THEN 1 ELSE 0 END)"
+            f"SUM(CASE WHEN {down_alias} = 1 OR pred_missing = 1 THEN 1 ELSE 0 END)"
         )
     else:
-        r_cell_expr = "SUM(down_ind)"
+        r_cell_expr = f"SUM({down_alias})"
     # ``mage_c`` binning — last edge is the 45+ open bin.
     age_case = (
         f"CASE "
@@ -185,20 +186,14 @@ def _build_sql(
         f"CASE WHEN {c['gestrec10']} BETWEEN 1 AND 5 THEN 1 "
         f"WHEN {c['gestrec10']} BETWEEN 6 AND 10 THEN 0 END"
     )
-    cchd_case = (
-        f"CASE UPPER({c['ca_cchd']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
-    )
-    nicu_case = (
-        f"CASE UPPER({c['ab_nicu']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
-    )
-    aven_case = (
-        f"CASE UPPER({c['ab_aven1']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
-    )
+    cchd_case = f"CASE UPPER({c['ca_cchd']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
+    nicu_case = f"CASE UPPER({c['ab_nicu']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
+    aven_case = f"CASE UPPER({c['ab_aven1']}) WHEN 'Y' THEN 1 WHEN 'N' THEN 0 END"
 
     return f"""
         WITH coded AS (
             SELECT
-                CAST({c['year']} AS INTEGER) - {from_year} AS year_idx,
+                CAST({c["year"]} AS INTEGER) - {from_year} AS year_idx,
                 {age_case}    AS age_idx,
                 {race_case}   AS race_idx,
                 {edu_case}    AS edu_idx,
@@ -207,13 +202,13 @@ def _build_sql(
                 {cchd_case}    AS cchd,
                 {nicu_case}    AS nicu,
                 {aven_case}    AS aven,
-                CAST({c['down_ind']} AS INTEGER) AS down_ind,
+                CAST({c["down_ind"]} AS INTEGER) AS down_ind,
                 {pred_missing_expr} AS pred_missing,
                 {prob_expr} AS prob
             FROM {table}
-            WHERE {c['year']} BETWEEN {from_year} AND {to_year}
-              AND {c['mage_c']} IS NOT NULL
-              AND {c['down_ind']} IS NOT NULL
+            WHERE {c["year"]} BETWEEN {from_year} AND {to_year}
+              AND {c["mage_c"]} IS NOT NULL
+              AND {c["down_ind"]} IS NOT NULL
         )
         SELECT
             year_idx, age_idx, race_idx, edu_idx, payer_idx,

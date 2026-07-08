@@ -24,6 +24,10 @@ bands are more approximate than a full run would give.
 
 :::
 
+::: {.callout-note title="AI-assisted"}
+Drafted by a LLM-based AI tool (Codex/GPT-5).
+:::
+
 This report summarises a fit of the three-stage Bayesian selection
 model for recorded Down-syndrome livebirth ascertainment in U.S. birth
 certificate data (2016–2024). The model decomposes observed recording
@@ -40,7 +44,16 @@ absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
 pass-through (Kuppermann / Natoli), $s$ is birth-certificate
 sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
 is a fixed false-positive rate (Ohio/NY validation). See
-`notes/20260622-predictors-bayesian-model.md` for the full design.
+`notes/20260622-predictors-bayesian-model.md` for the full design and
+`src/dspopulations_us_birth_certificates/selection/README.md` for the
+implementation.
+
+This decomposition is a prior-informed structural model. Birth
+certificate counts alone do not separately identify baseline DS
+livebirth prevalence, screening/termination, recording sensitivity, and
+false positives. The Morris/de Graaf livebirth curve, the recording
+anchors, and the fixed false-positive rate therefore act as external
+anchors; subcomponent estimates should be interpreted in that light.
 
 ```{python}
 # | echo: false
@@ -135,7 +148,7 @@ else:
 
 Posterior baseline DS livebirth rate $\theta_\text{LB}$ per 1,000
 livebirths, by maternal age band, against the Morris / de Graaf prior
-means. The Morris prior is tight ($\sigma = 0.10$ on logit) so
+means. The Morris prior is tightly pinned ($\sigma = 0.001$ on logit) so
 posterior means should track the anchors closely — large deviations
 indicate the age coding or cell aggregation has drifted.
 
@@ -189,11 +202,11 @@ if eta_year_table.exists():
 ## CCHD consistency
 
 Posterior CCHD prevalence among true DS livebirths vs the EUROCAT
-target (~22.5%). A posterior mean landing inside the target's plausible
-range is evidence that the clinical-marker effects on $s$ are
-well-calibrated; a systematic offset suggests the
-"workup-not-complete-at-certificate-submission" mechanism differs in
-magnitude from what Boulet found.
+target (~22.5%). The current recording model does not include clinical
+marker effects in $s$; this is an external consistency check on the
+posterior true-DS composition. A posterior mean far outside the target's
+plausible range suggests the structural model or the clinical-marker
+coding needs further scrutiny.
 
 ```{python}
 # | echo: false
