@@ -6,6 +6,11 @@ and artefact saving. This script just resolves configuration from CLI
 flags and profile presets, runs optional Optuna tuning, and invokes the
 pipeline.
 
+When Optuna tuning is enabled, the current implementation uses the same
+deterministic stratified split for tuning, early stopping, and reported
+validation metrics. Treat those metrics as tuning-set diagnostics rather
+than as an untouched test-set estimate.
+
 Configuration profiles
 ----------------------
 Pick a profile with ``--profile {dev,test,reporting}``. Presets are
@@ -420,6 +425,7 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
         base = definition.to_config()
         train_config = dict(base.train_config)
         train_config["training_split"] = config.training_split
+        train_config.update(_evaluation_split_metadata(config))
         if config.num_threads is not None:
             train_config["num_threads"] = config.num_threads
         return ModelConfig(
@@ -446,6 +452,7 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
         "training_split": config.training_split,
         "verbosity": 1,
         "log_period": 10,
+        **_evaluation_split_metadata(config),
     }
     if config.num_threads is not None:
         train_config["num_threads"] = config.num_threads
@@ -464,6 +471,21 @@ def _build_model_config(config: FitConfig, params: dict) -> ModelConfig:
         shap_scatter_specs=(),
         notes=f"Run produced by scripts/fit_model.py with profile={config.profile!r}.",
     )
+
+
+def _evaluation_split_metadata(config: FitConfig) -> dict[str, object]:
+    """Describe how the train/validation split should be interpreted."""
+    tuning_uses_split = bool(
+        config.select_hyperparameters and config.load_model is None
+    )
+    role = "early_stopping_and_reported_metrics"
+    if tuning_uses_split:
+        role = "optuna_tuning_early_stopping_and_reported_metrics"
+    return {
+        "evaluation_split_role": role,
+        "hyperparameter_tuning_uses_validation_split": tuning_uses_split,
+        "validation_independent_of_hyperparameter_tuning": not tuning_uses_split,
+    }
 
 
 def _build_run_config(config: FitConfig) -> RunConfig:
@@ -588,7 +610,7 @@ def _recover_loaded_params(model_path: Path) -> dict:
         try:
             with sibling.open() as f:
                 return json.load(f)
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             pass
 
     try:

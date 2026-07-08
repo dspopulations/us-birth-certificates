@@ -11,7 +11,8 @@ Captures the provenance needed to reconstitute a result:
 - input row count and positive count
 - ``random_seed`` (shared by the model and the split; widen this if we
   decouple them in a follow-up)
-- final validation metrics
+- validation metrics from the split used for early stopping; when Optuna tuning
+  is enabled, these are tuning-set diagnostics rather than an untouched test set
 """
 
 from __future__ import annotations
@@ -85,7 +86,7 @@ def _git_info(repo_root: Path | None = None) -> dict[str, Any]:
             .strip()
         )
         return {"sha": sha, "branch": branch, "dirty": bool(status.strip())}
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return {"sha": None, "branch": None, "dirty": None}
 
 

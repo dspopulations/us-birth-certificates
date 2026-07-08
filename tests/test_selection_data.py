@@ -85,12 +85,8 @@ def tiny_db(tmp_path: Path) -> Path:
     # Add a handful of DS-positive rows and unknown-gestation / unknown-flag
     # rows that should be dropped.
     rows.append(_make_row(year=2020, mage_c=40, down_ind=1))
-    rows.append(
-        _make_row(year=2020, mage_c=40, gestrec10=99, down_ind=1)
-    )  # dropped
-    rows.append(
-        _make_row(year=2020, mage_c=40, ca_cchd="U", down_ind=1)
-    )  # dropped
+    rows.append(_make_row(year=2020, mage_c=40, gestrec10=99, down_ind=1))  # dropped
+    rows.append(_make_row(year=2020, mage_c=40, ca_cchd="U", down_ind=1))  # dropped
     rows.append(_make_row(year=2015, mage_c=40))  # out of range
     rows.append(_make_row(year=2025, mage_c=40))  # out of range
     rows.append(_make_row(year=2020, mage_c=None))  # mage null
@@ -177,6 +173,48 @@ def test_prepare_cells_prob_sum(tmp_path: Path) -> None:
             )
     finally:
         con.close()
+
+
+def test_prepare_cells_down_indicator_override_in_adjusted_counts(
+    tmp_path: Path,
+) -> None:
+    """Configured DS indicator names work for probability and missing-flag modes."""
+    rows = [
+        _make_row(year=2020, mage_c=30, down_ind=1),
+        _make_row(year=2020, mage_c=30, down_ind=1),
+        _make_row(year=2020, mage_c=30, down_ind=0),
+        _make_row(year=2020, mage_c=30, down_ind=0),
+    ]
+    df = pd.DataFrame(rows).rename(columns={"down_ind": "ds_alt"})
+    df["p_ds_lb_pred_14"] = [0.9, 0.1, 0.7, 0.3]
+    df["ds_pred_missing_14"] = [False, False, True, False]
+    db = tmp_path / "override.db"
+    con = duckdb.connect(str(db))
+    con.register("_r", df)
+    con.execute("CREATE TABLE us_births AS SELECT * FROM _r")
+    con.unregister("_r")
+    con.close()
+
+    columns = {**DEFAULT_COLUMNS, "down_ind": "ds_alt"}
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        prob_cells = prepare_cells(
+            con,
+            year_range=(2020, 2020),
+            columns=columns,
+            predictions_column="p_ds_lb_pred_14",
+        )
+        missing_cells = prepare_cells(
+            con,
+            year_range=(2020, 2020),
+            columns=columns,
+            missing_flag_column="ds_pred_missing_14",
+        )
+    finally:
+        con.close()
+
+    assert prob_cells["R_cell"].sum() == 3
+    assert missing_cells["R_cell"].sum() == 3
 
 
 def test_prepare_cells_year_filter(tiny_db: Path) -> None:
@@ -324,6 +362,4 @@ def test_code_maps_are_complete() -> None:
     assert set(RACE_MAP) == {1, 2, 3, 4, 5, 6}
     assert set(EDU_MAP) == set(range(1, 9))
     assert set(PAYER_MAP) == {1, 2, 3, 4}
-    assert np.array_equal(
-        sorted(RACE_MAP.values()), sorted({0, 1, 2, 3, 4, 6})
-    )
+    assert np.array_equal(sorted(RACE_MAP.values()), sorted({0, 1, 2, 3, 4, 6}))

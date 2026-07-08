@@ -26,6 +26,10 @@ surveillance studies.
 
 :::
 
+::: {.callout-note title="AI-assisted"}
+Drafted by a LLM-based AI tool (Codex/GPT-5).
+:::
+
 This report compares the distributions of three populations of Down
 syndrome live births across maternal characteristics:
 
@@ -35,6 +39,13 @@ syndrome live births across maternal characteristics:
   year×month by predicted probability.
 - **Recorded + predicted** — the union (`R'`), i.e. recorded cases plus
   the predicted missing cases.
+
+The LightGBM score should be read as a ranking signal, not as a
+calibrated probability that an individual unrecorded birth truly had
+Down syndrome. The training labels are positive-unlabelled: recorded
+cases are observed positives, while unrecorded births mix true
+non-cases with possible missed cases. The `ds_pred_missing` cohort is
+therefore a quota-selected sensitivity proxy.
 
 Each section contains a three-column stacked-proportion plot
 (**predicted missing** | **recorded** | **recorded + predicted**) with
