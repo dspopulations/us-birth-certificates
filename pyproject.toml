@@ -42,7 +42,7 @@ dev = [
   "lightgbm>=4.6.0",
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
   # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel.
-  "numba>=0.65.1",
+  "numba>=0.65.1,<=0.65.1",
   "notebook>=7.5.5",
   "optuna>=4.9.0",
   "polars>=1.42.1",
@@ -58,7 +58,7 @@ dev = [
 # dse-research-utils isn't published to PyPI — resolve it from the public git
 # tag. (The conda env in environment.yml installs it from the same tag in its
 # pip layer; this entry is only consumed by uv.)
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.5.0" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.7.1" }
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"
