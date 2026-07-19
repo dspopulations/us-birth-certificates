@@ -42,7 +42,7 @@ dev = [
   "lightgbm>=4.6.0",
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
   # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel.
-  "numba>=0.65.1",
+  "numba>=0.65.1,<=0.65.1",
   "notebook>=7.5.5",
   "optuna>=4.9.0",
   "polars>=1.42.1",
