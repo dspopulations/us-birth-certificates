@@ -48,7 +48,7 @@ dev = [
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
   # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel. Held at
   # 0.65.1 rather than the current 0.66.0 because pytensor 3.2.x caps it there.
-  "numba>=0.65.1,<=0.65.1",
+  "numba>=0.65.1,<=0.66.0",
   "notebook>=7.5.5",
   "optuna>=4.9.0",
   "polars>=1.43.1",
