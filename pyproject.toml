@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.30.1"]
+requires = ["hatchling>=1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -15,19 +15,24 @@ dependencies = [
   "arviz-plots>=1.2.0",
   "arviz-stats>=1.2.0",
   "arviz>=1.2.0",
-  "duckdb>=1.5.2",
-  "h5netcdf>=1.3.0",  # NetCDF backend arviz/xarray use to write idata.nc
-  "h5py>=3.12.0",     # h5netcdf's HDF5 engine (not pulled automatically via pip)
-  "jaxlib>=0.9.2",
-  "matplotlib>=3.10.8",
-  "numpy>=2.4.3",
-  "numpyro>=0.20.0",
-  "nutpie>=0.16.8",
-  "pandas>=3.0.1",
-  "preliz>=0.18.0",
-  "pymc>=6.0.1",
+  "duckdb>=1.5.5",
+  "h5netcdf>=1.8.1",  # NetCDF backend arviz/xarray use to write idata.nc
+  "h5py>=3.16.0",     # h5netcdf's HDF5 engine (not pulled automatically via pip)
+  # jaxlib is conda-owned but only arrives transitively via jax; environment.yml
+  # does not declare it. Keep this floor at or below what the conda layer may
+  # solve to — conda's jax 0.10.2 admits jaxlib >=0.10.1,<=0.10.2 — or
+  # `conda env update` makes pip try to take ownership of a conda package and
+  # fails with "no RECORD file".
+  "jaxlib>=0.10.1",
+  "matplotlib>=3.11.1",
+  "numpy>=2.4.6,<2.5",  # pymc -> pytensor -> numba pins numpy <2.5; matches the shared conda core
+  "numpyro>=0.21.0",
+  "nutpie>=0.16.11",
+  "pandas>=3.0.5",
+  "preliz>=0.27.1",
+  "pymc>=6.2.0",
   "scipy>=1.18.0",
-  "dse-research-utils>=0.8.0",
+  "dse-research-utils>=0.9.0",
 ]
 
 [project.optional-dependencies]
@@ -39,17 +44,18 @@ dev = [
   "ipython>=9.11.0",
   "ipywidgets>=8.1.8",
   "joblib>=1.4.0",
-  "lightgbm>=4.6.0",
+  "lightgbm>=4.7.0",
   # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
-  # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel.
+  # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel. Held at
+  # 0.65.1 rather than the current 0.66.0 because pytensor 3.2.x caps it there.
   "numba>=0.65.1,<=0.65.1",
   "notebook>=7.5.5",
   "optuna>=4.9.0",
-  "polars>=1.42.1",
+  "polars>=1.43.1",
   "pyarrow>=24.0.0",
-  "pytest>=9.0.3",
+  "pytest>=9.1.1",
   "rich>=15.0.0",
-  "ruff>=0.15.18",
+  "ruff>=0.16.1",
   "scikit-learn>=1.9.0",
   "shap>=0.52.0",
 ]
@@ -58,7 +64,7 @@ dev = [
 # dse-research-utils isn't published to PyPI — resolve it from the public git
 # tag. (The conda env in environment.yml installs it from the same tag in its
 # pip layer; this entry is only consumed by uv.)
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.8.0" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.9.0" }
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"
