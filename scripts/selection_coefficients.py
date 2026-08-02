@@ -2,8 +2,8 @@
 
 For each stage (detection / termination / recording) and demographic dimension
 (maternal race, education, insurance payer) prints the prior mean, the posterior
-mean and 95 % credible interval (log-odds offset), and flags whether the data
-moved the coefficient off its prior (prior mean outside the 95 % CI).
+mean and 89% ETI (log-odds offset), and flags whether the data moved the
+coefficient off its prior (prior mean outside the 89% ETI).
 
 How to read it (also printed):
   - eta_detect_* (race, education, PAYER) are PINNED at sigma 0.20 and are NOT
@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from dspopulations_us_birth_certificates.intervals import equal_tail_interval
 from dspopulations_us_birth_certificates.selection import (
     EDU_LEVELS,
     PAYER_LEVELS,
@@ -69,7 +70,9 @@ STAGES = [
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("fit_dir", nargs="?", default=None, help="explicit fit directory")
-    ap.add_argument("--variant", default="C", help="variant to auto-pick latest of (default C)")
+    ap.add_argument(
+        "--variant", default="C", help="variant to auto-pick latest of (default C)"
+    )
     ns = ap.parse_args(argv)
 
     fit_dir = ns.fit_dir or latest_fit_dir(ns.variant)
@@ -86,16 +89,15 @@ def main(argv: list[str] | None = None) -> int:
                 prior = np.asarray(priors[name], float)
                 sigma = float(priors[f"{name}_sigma"])
                 mean = arr.mean(0)
-                lo = np.quantile(arr, 0.025, axis=0)
-                hi = np.quantile(arr, 0.975, axis=0)
+                lo, hi = equal_tail_interval(arr, axis=0)
                 moved = (prior < lo) | (prior > hi)
                 tab = pd.DataFrame(
                     {
                         "level": levels,
                         "prior": prior,
                         "post_mean": mean,
-                        "lo95": lo,
-                        "hi95": hi,
+                        "lo89": lo,
+                        "hi89": hi,
                         "moved": ["yes" if m else "" for m in moved],
                     }
                 )
@@ -104,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
             print()
 
     print(
-        "moved = prior mean lies outside the 95% CI (data overrode the prior).\n"
+        "moved = prior mean lies outside the 89% ETI (data overrode the prior).\n"
         "Positive offset => higher probability at that stage for that level.\n"
         "Detection offsets are pinned screening-access inputs; payer is detection-"
         "only. Termination\noffsets carry the data-identified residual on eta. "

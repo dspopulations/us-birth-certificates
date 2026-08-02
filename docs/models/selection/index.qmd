@@ -294,12 +294,13 @@ Side-by-side headline numbers for this fit vs the LightGBM classifier's
 ``recorded_plus_predicted`` dataset (see ``docs/analysis/predicted.qmd``).
 The classifier uses a fixed year×month quota of
 ``ceil(1.5 × recorded)`` top non-recorded births by ``p_ds_lb_pred_01``;
-the Bayesian posterior places probabilistic CIs on the same quantities.
+the Bayesian posterior places probabilistic intervals on the same quantities.
 
 ```{python}
 # | echo: false
 import numpy as np
 import arviz as az
+from dspopulations_us_birth_certificates.intervals import equal_tail_interval
 
 idata = az.from_netcdf("idata.nc")
 cells_full = pd.read_parquet("cells.parquet")
@@ -313,8 +314,7 @@ p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (chain, draw, cell)
 true_counts_draws = (p_ds_lb * N[None, None, :]).sum(axis=-1)
 total_recorded = int(R.sum())
 total_true_mean = float(true_counts_draws.mean())
-total_true_lo = float(np.quantile(true_counts_draws, 0.025))
-total_true_hi = float(np.quantile(true_counts_draws, 0.975))
+total_true_lo, total_true_hi = equal_tail_interval(true_counts_draws)
 
 # Missed = true − recorded, per cell, sampled from the posterior.
 missed_draws = p_ds_lb * N[None, None, :] - R[None, None, :]
@@ -326,8 +326,7 @@ nhb_share_draws = (
     / np.clip(missed_draws.sum(axis=-1), 1.0, None)
 )
 nhb_share_mean = float(nhb_share_draws.mean())
-nhb_share_lo = float(np.quantile(nhb_share_draws, 0.025))
-nhb_share_hi = float(np.quantile(nhb_share_draws, 0.975))
+nhb_share_lo, nhb_share_hi = equal_tail_interval(nhb_share_draws)
 
 # Posterior CCHD co-occurrence among missed DS.
 cchd = cells_full["cchd"].to_numpy(dtype=float)
@@ -336,8 +335,7 @@ cchd_missed_share_draws = (
     / np.clip(missed_draws.sum(axis=-1), 1.0, None)
 )
 cchd_missed_mean = float(cchd_missed_share_draws.mean())
-cchd_missed_lo = float(np.quantile(cchd_missed_share_draws, 0.025))
-cchd_missed_hi = float(np.quantile(cchd_missed_share_draws, 0.975))
+cchd_missed_lo, cchd_missed_hi = equal_tail_interval(cchd_missed_share_draws)
 ```
 
 ```{python}
@@ -357,7 +355,7 @@ comparison = pd.DataFrame(
             "See predicted.qmd — classifier NH Black share is ~flat",
             "≈ 25.6% (from predicted.qmd)",
         ],
-        "Bayesian posterior (this fit)": [
+        "Bayesian posterior (this fit; 89% ETI)": [
             _ci_count(total_true_mean, total_true_lo, total_true_hi),
             _ci(nhb_share_mean, nhb_share_lo, nhb_share_hi),
             _ci(cchd_missed_mean, cchd_missed_lo, cchd_missed_hi),

@@ -26,6 +26,7 @@ import arviz as az
 import pandas as pd
 import matplotlib.pyplot as plt
 from dspopulations_us_birth_certificates.chance import get_ds_lb_nt_probability_array
+from dspopulations_us_birth_certificates.intervals import DEFAULT_HPDI_PROB
 from graphviz import Digraph
 from sympy.physics.units import magnetic_density
 
@@ -192,7 +193,7 @@ y_ppc = ppc.posterior_predictive["y_obs"]
 
 y_mean = y_ppc.mean(dim=("chain", "draw"))
 
-hdi = az.hdi(y_ppc, hdi_prob=0.95)
+hdi = az.hdi(y_ppc, hdi_prob=DEFAULT_HPDI_PROB)
 lower = hdi.sel(hdi="lower")
 upper = hdi.sel(hdi="higher")
 
@@ -216,8 +217,8 @@ score_post = m_post * n_max   # broadcast over chain/draw/obs
 # Posterior mean latent score per observation
 score_mean = score_post.mean(dim=("chain", "draw"))
 
-# 95% HDI for latent mean score per observation
-score_hdi = az.hdi(score_post, hdi_prob=0.95)
+# 89% HPDI for latent mean score per observation
+score_hdi = az.hdi(score_post, hdi_prob=DEFAULT_HPDI_PROB)
 
 m_lower = score_hdi.sel(hdi="lower")
 m_upper = score_hdi.sel(hdi="higher")
@@ -225,4 +226,3 @@ m_upper = score_hdi.sel(hdi="higher")
 score_mean_sorted  = score_mean.values[order]
 m_lower_sorted = m_lower["m"][order]
 m_upper_sorted = m_upper["m"][order]
-

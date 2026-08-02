@@ -23,6 +23,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates.intervals import posterior_mean_eti
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_COLUMNS,
     DEFAULT_YEAR_RANGE,
@@ -360,10 +361,10 @@ def core_year_summary(idata: Any, cells: pd.DataFrame) -> pd.DataFrame:
             "true_count_year",
             "recorded_count_year_mu",
         ):
-            draws = idata.posterior[var].sel(year=y).values.reshape(-1)
-            row[f"{var}_mean"] = float(np.mean(draws))
-            row[f"{var}_lo"] = float(np.quantile(draws, 0.025))
-            row[f"{var}_hi"] = float(np.quantile(draws, 0.975))
+            stats = posterior_mean_eti(idata.posterior[var].sel(year=y).values)
+            row[f"{var}_mean"] = stats["mean"]
+            row[f"{var}_lo"] = stats["lo"]
+            row[f"{var}_hi"] = stats["hi"]
         rows.append(row)
     return pd.DataFrame(rows)
 

@@ -126,6 +126,20 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
 
     # CLI computes summary.csv on the fly when one isn't already present.
     assert (out_dir / "summary.csv").is_file()
+    summary = pd.read_csv(out_dir / "summary.csv", nrows=0)
+    assert {"hdi89_lb", "hdi89_ub"}.issubset(summary.columns)
+
+
+def test_summary_interval_cache_check() -> None:
+    mod = _load_cli_module()
+    assert mod._summary_has_interval(
+        pd.DataFrame(columns=["mean", "hdi89_lb", "hdi89_ub"]),
+        0.89,
+    )
+    assert not mod._summary_has_interval(
+        pd.DataFrame(columns=["mean", "hdi94_lb", "hdi94_ub"]),
+        0.89,
+    )
 
 
 def test_cli_rejects_missing_paths(tmp_path: Path) -> None:

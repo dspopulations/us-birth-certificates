@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from statistics import NormalDist
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates.intervals import (
+    DEFAULT_ETI_PROB,
+    interval_label,
+    normal_interval_z,
+    posterior_mean_eti,
+)
 from dspopulations_us_birth_certificates.selection.priors import AGE_LEVELS, logit
 
-DEFAULT_HDI_PROB = 0.95
+DEFAULT_INTERVAL_PROB = DEFAULT_ETI_PROB
 
 
 def _inv_logit(x: np.ndarray | float) -> np.ndarray:
@@ -19,21 +24,10 @@ def _inv_logit(x: np.ndarray | float) -> np.ndarray:
 
 
 def _summary(
-    draws: np.ndarray, *, hdi_prob: float = DEFAULT_HDI_PROB
+    draws: np.ndarray, *, interval_prob: float = DEFAULT_INTERVAL_PROB
 ) -> dict[str, float]:
     """Mean and equal-tail interval for a draw array."""
-    flat = np.asarray(draws, dtype=float).reshape(-1)
-    alpha = (1.0 - hdi_prob) / 2.0
-    return {
-        "mean": float(np.mean(flat)),
-        "lo": float(np.quantile(flat, alpha)),
-        "hi": float(np.quantile(flat, 1.0 - alpha)),
-    }
-
-
-def _normal_interval_z(prob: float) -> float:
-    alpha = (1.0 - prob) / 2.0
-    return NormalDist().inv_cdf(1.0 - alpha)
+    return posterior_mean_eti(draws, prob=interval_prob)
 
 
 def _year_labels(cells: pd.DataFrame, year_range: tuple[int, int] | None) -> list[int]:
@@ -95,12 +89,12 @@ def _natural_expected_by_year(
 def _prior_rho_table(
     priors_config: dict[str, object],
     *,
-    hdi_prob: float,
+    interval_prob: float,
 ) -> pd.DataFrame:
     mu = np.asarray(priors_config["reduction_logit"], dtype=float)
     sigma = np.asarray(priors_config["reduction_sigma"], dtype=float)
     mean = np.asarray(priors_config["reduction_mean"], dtype=float)
-    z = _normal_interval_z(hdi_prob)
+    z = normal_interval_z(interval_prob)
     return pd.DataFrame(
         {
             "rho_prior_mean": mean,
@@ -121,7 +115,7 @@ def accounting_by_year_table(
     priors_config: dict[str, object],
     *,
     year_range: tuple[int, int] | None,
-    hdi_prob: float = DEFAULT_HDI_PROB,
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> pd.DataFrame:
     """Build the main by-year accounting table."""
     years = _year_labels(cells, year_range)
@@ -132,7 +126,7 @@ def accounting_by_year_table(
     births = cells.groupby("year_idx", observed=True)["N_cell"].sum()
     prior = _prior_rho_table(
         {**priors_config, "year_start": years[0] if years else 0},
-        hdi_prob=hdi_prob,
+        interval_prob=interval_prob,
     )
 
     rows = []
@@ -142,6 +136,7 @@ def accounting_by_year_table(
             "births": int(births.get(y, 0)),
             "recorded_ds": int(observed.get(y, 0)),
             "natural_expected_ds": natural[y],
+            "interval_prob": interval_prob,
         }
         for var in (
             "rho_year",
@@ -149,7 +144,10 @@ def accounting_by_year_table(
             "true_count_year",
             "recorded_count_year_mu",
         ):
-            stats = _summary(idata.posterior[var].sel(year=y).values, hdi_prob=hdi_prob)
+            stats = _summary(
+                idata.posterior[var].sel(year=y).values,
+                interval_prob=interval_prob,
+            )
             row[f"{var}_mean"] = stats["mean"]
             row[f"{var}_lo"] = stats["lo"]
             row[f"{var}_hi"] = stats["hi"]
@@ -165,11 +163,17 @@ def headline_table(
     accounting: pd.DataFrame,
     priors_config: dict[str, object],
     *,
-    hdi_prob: float = DEFAULT_HDI_PROB,
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> pd.DataFrame:
     """One-row-per-headline summary for the report top section."""
-    total_true = _summary(idata.posterior["true_count_total"].values, hdi_prob=hdi_prob)
-    recording_s = _summary(idata.posterior["recording_s"].values, hdi_prob=hdi_prob)
+    total_true = _summary(
+        idata.posterior["true_count_total"].values,
+        interval_prob=interval_prob,
+    )
+    recording_s = _summary(
+        idata.posterior["recording_s"].values,
+        interval_prob=interval_prob,
+    )
     total_births = int(cells["N_cell"].sum())
     total_recorded = int(cells["R_cell"].sum())
     natural_total = float(accounting["natural_expected_ds"].sum())
@@ -203,7 +207,10 @@ def headline_table(
             {
                 "metric": "true_ds_livebirths",
                 **total_true,
-                "notes": "Posterior true DS livebirth total",
+                "notes": (
+                    f"Posterior true DS livebirth total ({interval_label(interval_prob)}"
+                    " ETI)"
+                ),
             },
             {
                 "metric": "aggregate_reduction",
@@ -217,7 +224,8 @@ def headline_table(
                 **recording_s,
                 "notes": (
                     "Overall certificate recording sensitivity; prior mean "
-                    f"{recording_prior_mean:.3f}"
+                    f"{recording_prior_mean:.3f}; "
+                    f"{interval_label(interval_prob)} ETI"
                 ),
             },
         ]
@@ -247,13 +255,16 @@ def recording_s_table(
     idata: Any,
     priors_config: dict[str, object],
     *,
-    hdi_prob: float = DEFAULT_HDI_PROB,
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> pd.DataFrame:
     """Prior/posterior summary for the single recording sensitivity parameter."""
-    post = _summary(idata.posterior["recording_s"].values, hdi_prob=hdi_prob)
+    post = _summary(
+        idata.posterior["recording_s"].values,
+        interval_prob=interval_prob,
+    )
     mu = float(priors_config.get("recording_s_logit", logit(0.5)))
     sigma = float(priors_config.get("recording_s_sigma", 1.0))
-    z = _normal_interval_z(hdi_prob)
+    z = normal_interval_z(interval_prob)
     return pd.DataFrame(
         [
             {
@@ -265,6 +276,7 @@ def recording_s_table(
                 "posterior_mean": post["mean"],
                 "posterior_lo": post["lo"],
                 "posterior_hi": post["hi"],
+                "interval_prob": interval_prob,
             }
         ]
     )
@@ -276,7 +288,7 @@ def posterior_predictive_table(
     *,
     group_col: str,
     labels: list[str | int],
-    hdi_prob: float = DEFAULT_HDI_PROB,
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> pd.DataFrame:
     """Aggregate posterior predictive recorded DS counts by one cell column."""
     ppc = _require_posterior_predictive(idata)
@@ -288,7 +300,7 @@ def posterior_predictive_table(
         if not np.any(mask):
             continue
         draws = ppc[:, :, mask].sum(dim="cell").values
-        stats = _summary(draws, hdi_prob=hdi_prob)
+        stats = _summary(draws, interval_prob=interval_prob)
         rows.append(
             {
                 group_col: idx,
@@ -297,6 +309,7 @@ def posterior_predictive_table(
                 "predicted_mean": stats["mean"],
                 "predicted_lo": stats["lo"],
                 "predicted_hi": stats["hi"],
+                "interval_prob": interval_prob,
                 "observed_in_interval": bool(
                     stats["lo"] <= observed.get(idx, 0) <= stats["hi"]
                 ),
@@ -343,7 +356,7 @@ def _errorbar_plot(
     return fig
 
 
-def _accounting_plot(df: pd.DataFrame):
+def _accounting_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL_PROB):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -354,7 +367,13 @@ def _accounting_plot(df: pd.DataFrame):
     true_mean = df["true_count_year_mean"].to_numpy(dtype=float)
     true_lo = df["true_count_year_lo"].to_numpy(dtype=float)
     true_hi = df["true_count_year_hi"].to_numpy(dtype=float)
-    ax.fill_between(x, true_lo, true_hi, alpha=0.18, label="true DS 95% interval")
+    ax.fill_between(
+        x,
+        true_lo,
+        true_hi,
+        alpha=0.18,
+        label=f"true DS {interval_label(interval_prob)} ETI",
+    )
     ax.plot(x, true_mean, marker="o", label="true DS posterior mean")
     ax.bar(x, df["recorded_ds"], width=0.45, alpha=0.45, label="recorded DS")
     ax.set_xticks(x)
@@ -366,7 +385,7 @@ def _accounting_plot(df: pd.DataFrame):
     return fig
 
 
-def _reduction_plot(df: pd.DataFrame):
+def _reduction_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL_PROB):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -376,7 +395,7 @@ def _reduction_plot(df: pd.DataFrame):
         df["rho_prior_lo"],
         df["rho_prior_hi"],
         alpha=0.16,
-        label="prior 95% interval",
+        label=f"prior {interval_label(interval_prob)} ETI",
     )
     ax.plot(x, df["rho_prior_mean"], "--", label="prior mean")
     post = df["rho_year_mean"].to_numpy(dtype=float)
@@ -432,7 +451,7 @@ def render_core_all(
     *,
     priors_config: dict[str, object],
     year_range: tuple[int, int] | None = None,
-    hdi_prob: float = DEFAULT_HDI_PROB,
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> dict[str, pd.DataFrame]:
     """Write all prespecified core-model report figures and tables."""
     out_dir = Path(out_dir)
@@ -444,30 +463,30 @@ def render_core_all(
         cells,
         priors_config,
         year_range=year_range,
-        hdi_prob=hdi_prob,
+        interval_prob=interval_prob,
     )
     headlines = headline_table(
         idata,
         cells,
         accounting,
         priors_config,
-        hdi_prob=hdi_prob,
+        interval_prob=interval_prob,
     )
     reduction = reduction_prior_posterior_table(accounting)
-    recording = recording_s_table(idata, priors_config, hdi_prob=hdi_prob)
+    recording = recording_s_table(idata, priors_config, interval_prob=interval_prob)
     ppc_year = posterior_predictive_table(
         idata,
         cells,
         group_col="year_idx",
         labels=list(accounting["year"]),
-        hdi_prob=hdi_prob,
+        interval_prob=interval_prob,
     )
     ppc_age = posterior_predictive_table(
         idata,
         cells,
         group_col="age_idx",
         labels=AGE_LEVELS,
-        hdi_prob=hdi_prob,
+        interval_prob=interval_prob,
     )
 
     tables = {
@@ -481,8 +500,16 @@ def render_core_all(
     for stem, df in tables.items():
         _write_table(df, out_dir, stem)
 
-    _save_figure(_accounting_plot(accounting), out_dir, "core_accounting_by_year")
-    _save_figure(_reduction_plot(reduction), out_dir, "core_reduction_prior_posterior")
+    _save_figure(
+        _accounting_plot(accounting, interval_prob=interval_prob),
+        out_dir,
+        "core_accounting_by_year",
+    )
+    _save_figure(
+        _reduction_plot(reduction, interval_prob=interval_prob),
+        out_dir,
+        "core_reduction_prior_posterior",
+    )
     _save_figure(
         _recording_s_plot(idata, recording, priors_config), out_dir, "core_recording_s"
     )

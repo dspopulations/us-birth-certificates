@@ -117,10 +117,11 @@ def test_cchd_consistency_check(fitted) -> None:
     summary = diagnostics.cchd_consistency_summary(idata, cells)
     assert {
         "posterior_mean",
-        "lo_95",
-        "hi_95",
+        "lo_89",
+        "hi_89",
+        "interval_prob",
         "target",
-        "target_in_95_ci",
+        "target_in_interval",
         "diagnostic_role",
         "interpretation",
     }.issubset(summary.columns)

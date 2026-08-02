@@ -34,10 +34,12 @@ from pathlib import Path
 
 import pandas as pd
 from IPython.display import Image, Markdown
+from dspopulations_us_birth_certificates.intervals import interval_label
 
 config = json.loads(Path("config.json").read_text())
 run_config = json.loads(Path("run_config.json").read_text())
 cells = pd.read_parquet("cells.parquet")
+interval = interval_label()
 ```
 
 The model is deliberately simple:
@@ -116,7 +118,8 @@ max_rhat = summary[rhat_col].max() if rhat_col in summary.columns else float("na
 min_ess = summary[ess_cols].min().min() if ess_cols else float("nan")
 Markdown(
     f"- **max Rhat**: {max_rhat:.4f} (target < 1.01)\n"
-    f"- **min ESS**: {min_ess:.0f} (target >= 400)"
+    f"- **min ESS**: {min_ess:.0f} (target >= 400)\n"
+    f"- **posterior intervals**: {interval} ETIs unless labelled otherwise"
 )
 ```
 

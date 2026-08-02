@@ -106,8 +106,8 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
                 {
                     "mean": mean,
                     "sd": half_width / 2,
-                    "hdi_3%": mean - half_width,
-                    "hdi_97%": mean + half_width,
+                    "hdi89_lb": mean - half_width,
+                    "hdi89_ub": mean + half_width,
                     "ess_bulk": 1500,
                     "ess_tail": 1000,
                     "r_hat": 1.00,

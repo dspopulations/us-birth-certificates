@@ -8,8 +8,8 @@ the *extra* change in screening detection between the early (first 3 years) and 
 shared, age-averaged rollout. A positive gradient with age means screening expanded
 faster in older mothers.
 
-Outputs: a printed table (extra log-odds rise + 95% CI per age band, and the
-age-gradient slope with CI), and a figure (year_age_interaction) to notes/figures/.
+Outputs: a printed table (extra log-odds rise + 89% ETI per age band, and the
+age-gradient slope with ETI), and a figure (year_age_interaction) to notes/figures/.
 
 The interaction is data-identified: recording ``s`` has no year term, so year-to-year
 movement in recorded rates maps onto screening/termination, and only one channel
@@ -35,6 +35,9 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.intervals import (  # noqa: E402
+    equal_tail_interval,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
@@ -42,10 +45,6 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 OUTPUT_DIR = "notes/figures"
-
-
-def _q(a: np.ndarray, lo: float, axis=0) -> np.ndarray:
-    return np.quantile(a, lo, axis=axis)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,22 +75,26 @@ def main(argv: list[str] | None = None) -> int:
     # Age-gradient of the extra rise: slope of delta vs centred age-band index.
     a_idx = np.arange(n_age) - (n_age - 1) / 2.0
     slope = (delta * a_idx).sum(1) / (a_idx**2).sum()  # (draws,)
+    delta_lo, delta_hi = equal_tail_interval(delta, axis=0)
+    slope_lo, slope_hi = equal_tail_interval(slope)
 
     tab = pd.DataFrame(
         {
             "age_band": AGE_LEVELS,
             "extra_rise": delta.mean(0),
-            "lo95": _q(delta, 0.025),
-            "hi95": _q(delta, 0.975),
+            "lo89": delta_lo,
+            "hi89": delta_hi,
         }
     )
     pd.set_option("display.width", 160)
     print(f"fit: {fit_dir}  years {years[0]}-{years[-1]}\n")
-    print("=== Extra screening rise by age (late vs early period; eta_detect log-odds) ===")
+    print(
+        "=== Extra screening rise by age (late vs early period; eta_detect log-odds) ==="
+    )
     print(tab.to_string(index=False, float_format="{:+.3f}".format))
     print(
         f"\nAge gradient of the extra rise: {slope.mean():+.3f} "
-        f"[{np.quantile(slope, 0.025):+.3f}, {np.quantile(slope, 0.975):+.3f}] "
+        f"[{slope_lo:+.3f}, {slope_hi:+.3f}] "
         "log-odds per age band"
     )
     p_pos = float((slope > 0).mean())
@@ -99,10 +102,14 @@ def main(argv: list[str] | None = None) -> int:
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     x = np.arange(n_age)
-    err = np.vstack([tab["extra_rise"] - tab["lo95"], tab["hi95"] - tab["extra_rise"]])
-    colors = [styles.COLOUR_BLUE if v >= 0 else styles.COLOUR_RED for v in tab["extra_rise"]]
+    err = np.vstack([tab["extra_rise"] - tab["lo89"], tab["hi89"] - tab["extra_rise"]])
+    colors = [
+        styles.COLOUR_BLUE if v >= 0 else styles.COLOUR_RED for v in tab["extra_rise"]
+    ]
     ax.bar(x, tab["extra_rise"], color=colors, alpha=0.85)
-    ax.errorbar(x, tab["extra_rise"], yerr=err, fmt="none", ecolor=styles.TEXT_COLOUR, capsize=3)
+    ax.errorbar(
+        x, tab["extra_rise"], yerr=err, fmt="none", ecolor=styles.TEXT_COLOUR, capsize=3
+    )
     ax.axhline(0, color=styles.TEXT_COLOUR, lw=0.6)
     ax.set_xticks(x)
     ax.set_xticklabels(AGE_LEVELS, rotation=45, ha="right")

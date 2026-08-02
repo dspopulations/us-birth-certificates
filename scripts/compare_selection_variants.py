@@ -5,8 +5,8 @@ Reads the variant fit directories (A/B/C/D) produced by
 builds a side-by-side comparison CSV + forest-plot figure of the
 headline posterior quantities:
 
-- Total true DS livebirths 2016–2024 (posterior mean + 95% CI)
-- Per-race ``eta_term_race`` and ``s_race`` posterior means + CIs
+- Total true DS livebirths 2016–2024 (posterior mean + 89% ETI)
+- Per-race ``eta_term_race`` and ``s_race`` posterior means + HPDIs/ETIs
 - Per-race eta/s ridge correlation ``|r|`` between ``eta_term_race``
   and ``s_race`` (from each fit's ``tables/identifiability.csv``)
 
@@ -42,6 +42,10 @@ import numpy as np
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.intervals import (
+    interval_label,
+    posterior_mean_eti,
+)
 from dspopulations_us_birth_certificates.selection import (
     AGE_LEVELS,
     RACE_LEVELS,
@@ -163,18 +167,14 @@ def _load_fit_arrays(
 
 
 def _mean_ci(a: np.ndarray) -> dict[str, float]:
-    """Posterior mean + 95% CI as a ``{mean, lo, hi}`` dict."""
-    return {
-        "mean": float(a.mean()),
-        "lo": float(np.quantile(a, 0.025)),
-        "hi": float(np.quantile(a, 0.975)),
-    }
+    """Posterior mean + project-standard ETI as a ``{mean, lo, hi}`` dict."""
+    return posterior_mean_eti(a)
 
 
 def _scalar_aggregates(
     arrays: dict[str, np.ndarray], cells: pd.DataFrame, fpr: float
 ) -> dict[str, dict[str, float]]:
-    """Total true DS, eta, reduction, and s — each a posterior mean + 95% CI."""
+    """Total true DS, eta, reduction, and s - posterior mean + 89% ETI."""
     p, theta_cell = arrays["p"], arrays["theta_cell"]
     N = cells["N_cell"].to_numpy(dtype=float)
     R = cells["R_cell"].to_numpy(dtype=float)
@@ -242,7 +242,7 @@ def _extract_aggregates(
     """Posterior aggregates + per-age decomposition from one idata load.
 
     Returns ``(aggregates, age_df)``. ``aggregates`` maps ``total_true`` /
-    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (95% CI).
+    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (89% ETI).
     ``age_df`` is the per-maternal-age decomposition used as an age
     posterior-predictive check: ``obs_rate`` vs ``pred_rate`` (close = the
     model fits that band), N-weighted ``eta``/``reduction``, and implied ``s``.
@@ -253,17 +253,46 @@ def _extract_aggregates(
     return aggregates, age_df
 
 
+def _hdi_columns(summary: pd.DataFrame) -> tuple[str, str] | None:
+    """Return lower/upper ArviZ HDI columns, regardless of interval probability."""
+    hdi_cols: list[tuple[float, str]] = []
+    lower_col: str | None = None
+    upper_col: str | None = None
+    for col in summary.columns:
+        if col.startswith("hdi") and col.endswith("_lb"):
+            lower_col = col
+            continue
+        if col.startswith("hdi") and col.endswith("_ub"):
+            upper_col = col
+            continue
+        if not col.startswith("hdi_") or not col.endswith("%"):
+            continue
+        try:
+            pct = float(col.removeprefix("hdi_").removesuffix("%"))
+        except ValueError:
+            continue
+        hdi_cols.append((pct, col))
+    if lower_col is not None and upper_col is not None:
+        return lower_col, upper_col
+    if len(hdi_cols) < 2:
+        return None
+    hdi_cols = sorted(hdi_cols)
+    return hdi_cols[0][1], hdi_cols[-1][1]
+
+
 def _extract_summary_rows(summary: pd.DataFrame, prefix: str) -> pd.DataFrame:
-    """Pull mean + hdi_3%/hdi_97% columns for rows matching a name prefix."""
+    """Pull mean + HPDI columns for rows matching a name prefix."""
     rows = summary[summary.index.str.startswith(prefix)].copy()
     rows.index = rows.index.str.extract(r"\[(\d+)\]", expand=False).astype(int)
     rows = rows.sort_index()
     keep = {}
     if "mean" in rows.columns:
         keep["mean"] = rows["mean"]
-    if "hdi_3%" in rows.columns and "hdi_97%" in rows.columns:
-        keep["lo"] = rows["hdi_3%"]
-        keep["hi"] = rows["hdi_97%"]
+    hdi_cols = _hdi_columns(rows)
+    if hdi_cols is not None:
+        lo_col, hi_col = hdi_cols
+        keep["lo"] = rows[lo_col]
+        keep["hi"] = rows[hi_col]
     return pd.DataFrame(keep)
 
 
@@ -300,7 +329,7 @@ def build_comparison(
     for variant, fit_dir in sorted(fit_dirs.items()):
         cli_output.info(f"Variant {variant}: reading {fit_dir}")
 
-        # Aggregates: total true DS, eta, reduction, s (+95% CI) + per-age table.
+        # Aggregates: total true DS, eta, reduction, s (+89% ETI) + per-age table.
         aggregates, age_df = _extract_aggregates(fit_dir)
         for metric, vals in aggregates.items():
             rows.append(
@@ -454,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Headline")
     totals = comparison[comparison["metric"] == "total_true"].set_index("variant")
     cli_output.print_kv(
-        "Total true DS livebirths (posterior mean [95% CI])",
+        f"Total true DS livebirths (posterior mean [{interval_label()} ETI])",
         [
             (v, f"{r['mean']:,.0f}  [{r['lo']:,.0f}, {r['hi']:,.0f}]")
             for v, r in totals.iterrows()
@@ -463,14 +492,14 @@ def main(argv: list[str] | None = None) -> int:
     red = comparison[comparison["metric"] == "reduction"].set_index("variant")
     s_agg = comparison[comparison["metric"] == "agg_s"].set_index("variant")
     cli_output.print_kv(
-        "Elective-termination reduction (1 - eta) [95% CI]",
+        f"Elective-termination reduction (1 - eta) [{interval_label()} ETI]",
         [
             (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
             for v, r in red.iterrows()
         ],
     )
     cli_output.print_kv(
-        "Aggregate BC sensitivity s [95% CI]",
+        f"Aggregate BC sensitivity s [{interval_label()} ETI]",
         [
             (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
             for v, r in s_agg.iterrows()

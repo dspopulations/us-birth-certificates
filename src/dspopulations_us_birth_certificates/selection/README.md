@@ -82,6 +82,16 @@ output/selection/<variant>/<spec>/<timestamp>/
   nutpie. Publication-quality posteriors; ≥ 1 h wall-clock per variant
   at full spec.
 
+## Posterior intervals
+
+Use 89% intervals throughout current reporting:
+
+- ArviZ summaries use 89% highest posterior density intervals (`ci_prob=0.89`,
+  `ci_kind="hdi"`).
+- Direct posterior quantiles use 89% equal-tail intervals, i.e. 5.5% to 94.5%.
+- The shared constants and helpers live in
+  `dspopulations_us_birth_certificates.intervals`.
+
 ## Variants
 
 - **A (tight s)** — tight priors on `s` race/edu effects, loose on

@@ -162,6 +162,13 @@ Artefacts were written locally to:
 output/selection_core_reduction/20260802-135419
 ```
 
+A later run with the same reporting sampler settings and the Quarto report
+enabled was written locally to:
+
+```text
+output/selection_core_reduction/20260802-143559
+```
+
 Input scale:
 
 - 63 age-year cells covering 2016-2024.
@@ -177,10 +184,10 @@ Sampling diagnostics passed on the saved summary:
 Headline posterior, conditional on the current Morris/de Graaf age curve, the
 surveillance-derived reduction prior, and the weak overall recording prior:
 
-- True DS livebirths, 2016-2024: mean `43,828`, 95% interval
-  `40,899-46,658`.
-- Overall certificate recording sensitivity: mean `0.344`, 95% interval
-  `0.322-0.368`.
+- True DS livebirths, 2016-2024: mean `43,828`, 89% ETI
+  `41,444-46,130`.
+- Overall certificate recording sensitivity: mean `0.344`, 89% ETI
+  `0.326-0.363`.
 - Combined reduction before livebirth: about `0.326` in 2016 and `0.452` in
   2024.
 

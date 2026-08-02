@@ -31,6 +31,11 @@ import dse_research_utils.environment.setup as setup
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.intervals import (
+    DEFAULT_ETI_PROB,
+    eti_quantiles,
+    interval_percent,
+)
 from dspopulations_us_birth_certificates.selection import diagnostics
 from dspopulations_us_birth_certificates.selection.render import (
     DEFAULT_STRATA,
@@ -65,6 +70,17 @@ def _load_config(config_path: Path | None) -> dict:
     return config
 
 
+def _summary_has_interval(summary: pd.DataFrame, hdi_prob: float) -> bool:
+    """Whether a cached ArviZ summary appears to use the requested HPDI width."""
+    pct = interval_percent(hdi_prob)
+    if {f"hdi{pct}_lb", f"hdi{pct}_ub"}.issubset(summary.columns):
+        return True
+    lo_q, hi_q = eti_quantiles(hdi_prob)
+    lo_pct = f"{lo_q * 100:g}"
+    hi_pct = f"{hi_q * 100:g}"
+    return {f"hdi_{lo_pct}%", f"hdi_{hi_pct}%"}.issubset(summary.columns)
+
+
 def _parse_args(argv: list[str] | None) -> RenderCliConfig:
     p = argparse.ArgumentParser(
         description="Render posterior diagnostics for a selection-model fit.",
@@ -96,8 +112,8 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
     p.add_argument(
         "--hdi-prob",
         type=float,
-        default=0.94,
-        help="Credible-interval width for forest plots and PPC bars.",
+        default=DEFAULT_ETI_PROB,
+        help="Credible-interval width for HPDI summaries and ETI plot bands.",
     )
     p.add_argument(
         "--strata",
@@ -193,10 +209,17 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = cli.out_dir / "summary.csv"
     if summary_path.exists():
         summary = pd.read_csv(summary_path, index_col=0)
-        cli_output.info(f"Loaded cached summary from {summary_path}")
+        if _summary_has_interval(summary, cli.hdi_prob):
+            cli_output.info(f"Loaded cached summary from {summary_path}")
+        else:
+            cli_output.info(
+                "Cached summary uses a different HPDI width; recomputing..."
+            )
+            summary = diagnostics.summary_table(idata, hdi_prob=cli.hdi_prob)
+            summary.to_csv(summary_path)
     else:
         cli_output.info("Computing posterior summary (no cached summary.csv)...")
-        summary = diagnostics.summary_table(idata)
+        summary = diagnostics.summary_table(idata, hdi_prob=cli.hdi_prob)
         summary.to_csv(summary_path)
     health = diagnostics.convergence_health(summary)
     cli_output.info(

@@ -1,7 +1,7 @@
 """Parameter-recovery validation for the three-stage selection model.
 
 Simulates cells from a known ground truth, fits the full spec, and
-checks that the posterior 95% credible interval covers the true value
+checks that the posterior 89% ETI covers the true value
 for the main identifiable parameter families at the rate a
 well-specified model should.
 
@@ -28,6 +28,11 @@ import pytest
 pytest.importorskip("pymc")
 pytest.importorskip("arviz")
 
+from dspopulations_us_birth_certificates.intervals import (  # noqa: E402
+    DEFAULT_HPDI_PROB,
+    eti_quantiles,
+    interval_label,
+)
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     TrueParams,
     build_model,
@@ -39,6 +44,7 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 # configuration in Phase 4.
 N_YEAR = 9
 SEED = 42
+ETI_LO_Q, ETI_HI_Q = eti_quantiles()
 
 
 def _pick_sampler() -> str:
@@ -85,13 +91,11 @@ def recovery_fit() -> tuple[TrueParams, object]:
     return truth, idata
 
 
-def _coverage_95(
-    idata, name: str, true_values: np.ndarray
-) -> float:
-    """Fraction of true values falling inside the posterior 95% CI."""
+def _coverage_eti(idata, name: str, true_values: np.ndarray) -> float:
+    """Fraction of true values falling inside the project-standard ETI."""
     post = idata.posterior[name]
-    lo = post.quantile(0.025, dim=("chain", "draw")).values
-    hi = post.quantile(0.975, dim=("chain", "draw")).values
+    lo = post.quantile(ETI_LO_Q, dim=("chain", "draw")).values
+    hi = post.quantile(ETI_HI_Q, dim=("chain", "draw")).values
     true_values = np.asarray(true_values)
     # Broadcasting handles both scalar and array-valued parameters.
     covered = (true_values >= lo) & (true_values <= hi)
@@ -103,7 +107,7 @@ def _coverage_95(
     ("param", "truth_attr", "min_coverage"),
     [
         # Array parameters: 70% threshold absorbs the finite-sample
-        # variance of the coverage statistic on small arrays. 95% CIs
+        # variance of the coverage statistic on small arrays. 89% ETIs
         # over N∈{6, 7, 9} hit discrete coverage levels (7/9 = 78%,
         # 5/6 = 83%, 6/7 = 86%); requiring 80% would make the test fail
         # about 10% of the time on a correctly-specified model through
@@ -117,15 +121,15 @@ def _coverage_95(
         ("s_race", "s_race", 0.7),
     ],
 )
-def test_parameter_recovery_95_ci_coverage(
+def test_parameter_recovery_89_eti_coverage(
     recovery_fit, param: str, truth_attr: str, min_coverage: float
 ) -> None:
     truth, idata = recovery_fit
     true_values = getattr(truth, truth_attr)
-    coverage = _coverage_95(idata, param, true_values)
+    coverage = _coverage_eti(idata, param, true_values)
     assert coverage >= min_coverage, (
         f"{param}: only {coverage:.0%} of true values fall inside the "
-        f"posterior 95% CI (need >= {min_coverage:.0%})"
+        f"posterior {interval_label()} ETI (need >= {min_coverage:.0%})"
     )
 
 
@@ -134,7 +138,7 @@ def test_parameter_recovery_95_ci_coverage(
     ("param", "truth_attr", "tol"),
     [
         # Scalar intercepts are checked by posterior-mean offset in logit
-        # units, not by CI coverage (a single point can't support the
+        # units, not by interval coverage (a single point can't support the
         # coverage statistic). 0.5 on logit is a loose band covering
         # typical MCMC variance under these sample sizes.
         ("eta_term_int", "eta_term_int", 0.5),
@@ -167,6 +171,8 @@ def test_sampler_converged(recovery_fit) -> None:
             "eta_term_year",
             "s_race",
         ],
+        ci_prob=DEFAULT_HPDI_PROB,
+        ci_kind="hdi",
     )
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     max_rhat = float(summary[rhat_col].max())

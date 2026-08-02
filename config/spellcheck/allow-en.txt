@@ -208,6 +208,7 @@ writeback
 caveated
 compiledir
 counterintuitive
+HPDI
 MPLCONFIGDIR
 nowcasts
 reanchor

@@ -40,6 +40,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates.intervals import (
+    DEFAULT_ETI_PROB,
+    DEFAULT_HPDI_PROB,
+    interval_label,
+    interval_percent,
+    posterior_mean_eti,
+)
 from dspopulations_us_birth_certificates.selection.priors import (
     AGE_LEVELS,
     MORRIS_THETA_LB_PER_1000,
@@ -72,13 +79,8 @@ def _quantile(arr: np.ndarray, q: float) -> np.ndarray:
 
 
 def _draw_summary(arr: np.ndarray) -> dict[str, float]:
-    """Posterior mean + 95% quantile interval for a flattened draw array."""
-    flat = np.asarray(arr, dtype=float).ravel()
-    return {
-        "mean": float(np.nanmean(flat)),
-        "lo": float(np.nanquantile(flat, 0.025)),
-        "hi": float(np.nanquantile(flat, 0.975)),
-    }
+    """Posterior mean + equal-tail interval for a flattened draw array."""
+    return posterior_mean_eti(arr, nan=True)
 
 
 def _year_labels(n_year: int, year_range: tuple[int, int] | None) -> list[int]:
@@ -181,7 +183,7 @@ def _identifiability_correlations(
 
 
 def _eta_term_year_stats(
-    idata: xr.DataTree, *, hdi_prob: float = 0.94
+    idata: xr.DataTree, *, hdi_prob: float = DEFAULT_ETI_PROB
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Per-year ``eta_term_year`` posterior mean/lo/hi.
 
@@ -216,7 +218,7 @@ def _cchd_prevalence_draws(idata: xr.DataTree, cells: pd.DataFrame) -> np.ndarra
 
 
 def _age_curve_stats(
-    idata: xr.DataTree, *, hdi_prob: float = 0.94
+    idata: xr.DataTree, *, hdi_prob: float = DEFAULT_ETI_PROB
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """``theta_LB`` per 1,000 livebirths: posterior mean/lo/hi + Morris reference.
 
@@ -435,13 +437,13 @@ def s_anchor_shrinkage_plot(
 def eta_term_year_trajectory_plot(
     idata: xr.DataTree,
     *,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_ETI_PROB,
 ) -> Figure:
     """Posterior trajectory of ``eta_term_year`` by year.
 
     Year effects on termination are modelled with a single
     homoscedastic sigma; this plot shows the per-year posterior means
-    with credible intervals so any residual year drift is visible.
+    with 89% ETIs so any residual year drift is visible.
     """
     import matplotlib.pyplot as plt
 
@@ -472,7 +474,7 @@ def eta_term_year_trajectory_plot(
 def eta_term_year_trajectory_table(
     idata: xr.DataTree,
     *,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_ETI_PROB,
 ) -> pd.DataFrame:
     """Per-year ``eta_term_year`` posterior summary."""
     mean, lo, hi = _eta_term_year_stats(idata, hdi_prob=hdi_prob)
@@ -513,9 +515,10 @@ def cchd_consistency_check(
 
     styles = _styles()
     flat = _cchd_prevalence_draws(idata, cells)
-    mean = float(flat.mean())
-    lo = float(np.quantile(flat, 0.025))
-    hi = float(np.quantile(flat, 0.975))
+    stats = posterior_mean_eti(flat)
+    mean = stats["mean"]
+    lo = stats["lo"]
+    hi = stats["hi"]
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     ax.hist(flat, bins=40, color=styles.COLOUR_BLUE, alpha=0.75)
@@ -529,7 +532,8 @@ def cchd_consistency_check(
     ax.set_xlabel("CCHD prevalence implied by posterior true DS weights")
     ax.set_ylabel("Posterior draws")
     ax.set_title(
-        f"CCHD structural stress check: posterior mean {mean:.1%} "
+        f"CCHD structural stress check: posterior mean {mean:.1%}, "
+        f"{interval_label()} ETI "
         f"[{lo:.1%}, {hi:.1%}] vs {published_cchd_prevalence:.1%}"
     )
     ax.legend()
@@ -545,15 +549,18 @@ def cchd_consistency_summary(
 ) -> pd.DataFrame:
     """Numeric summary row for the CCHD structural stress check."""
     flat = _cchd_prevalence_draws(idata, cells)
-    lo = float(np.quantile(flat, 0.025))
-    hi = float(np.quantile(flat, 0.975))
+    stats = posterior_mean_eti(flat)
+    interval_pct = interval_percent()
     return pd.DataFrame(
         {
-            "posterior_mean": [float(flat.mean())],
-            "lo_95": [lo],
-            "hi_95": [hi],
+            "posterior_mean": [stats["mean"]],
+            f"lo_{interval_pct}": [stats["lo"]],
+            f"hi_{interval_pct}": [stats["hi"]],
+            "interval_prob": [DEFAULT_ETI_PROB],
             "target": [float(published_cchd_prevalence)],
-            "target_in_95_ci": [bool(lo <= published_cchd_prevalence <= hi)],
+            "target_in_interval": [
+                bool(stats["lo"] <= published_cchd_prevalence <= stats["hi"])
+            ],
             "diagnostic_role": ["structural_stress_check"],
             "interpretation": [
                 "not s calibration; CCHD is not a selection-model covariate"
@@ -572,7 +579,7 @@ def posterior_predictive_by_stratum(
     cells: pd.DataFrame,
     *,
     stratum_col: str,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_ETI_PROB,
 ) -> Figure:
     """Observed vs posterior-predicted recorded counts, aggregated by stratum.
 
@@ -630,7 +637,7 @@ def posterior_predictive_by_stratum(
     ax.set_xlabel(stratum_col)
     ax.set_ylabel("Recorded DS count")
     ax.set_title(
-        f"Posterior predictive check by {stratum_col} ({int(hdi_prob * 100)}% CI)"
+        f"Posterior predictive check by {stratum_col} ({interval_label(hdi_prob)} ETI)"
     )
     ax.legend()
     fig.tight_layout()
@@ -749,7 +756,7 @@ def decomposition_by_race(
         fmt="none",
         ecolor=styles.TEXT_COLOUR,
         capsize=3,
-        label="True livebirths 95% CI",
+        label=f"True livebirths {interval_label()} ETI",
     )
     if has_full_eta:
         ax.errorbar(
@@ -769,7 +776,9 @@ def decomposition_by_race(
     ax.set_xticks(x)
     ax.set_xticklabels(summary["race"], rotation=30, ha="right")
     ax.set_ylabel("Posterior mean count")
-    ax.set_title("DS livebirth decomposition by race (means with 95% intervals)")
+    ax.set_title(
+        f"DS livebirth decomposition by race (means with {interval_label()} ETIs)"
+    )
     ax.legend()
     fig.tight_layout()
     # Attach the tidy data as an attribute for the rendering CLI to save.
@@ -786,7 +795,7 @@ def age_curve_check(
     idata: xr.DataTree,
     cells: pd.DataFrame | None = None,  # noqa: ARG001 — reserved for future use
     *,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_ETI_PROB,
 ) -> Figure:
     """Pinned ``theta_LB`` age curve vs Morris/de Graaf prior means.
 
@@ -830,7 +839,7 @@ def age_curve_check(
 def age_curve_table(
     idata: xr.DataTree,
     *,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_ETI_PROB,
 ) -> pd.DataFrame:
     """Tidy per-age-band summary of pinned ``theta_LB`` vs Morris."""
     mean, lo, hi, morris = _age_curve_stats(idata, hdi_prob=hdi_prob)
@@ -858,7 +867,7 @@ def summary_table(
     idata: xr.DataTree,
     *,
     var_names: tuple[str, ...] | None = None,
-    hdi_prob: float = 0.94,
+    hdi_prob: float = DEFAULT_HPDI_PROB,
 ) -> pd.DataFrame:
     """Return ``az.summary`` as a DataFrame (optionally filtered)."""
     import arviz as az

@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.intervals import DEFAULT_ETI_PROB
 from dspopulations_us_birth_certificates.selection import diagnostics
 
 if TYPE_CHECKING:
@@ -46,7 +47,7 @@ class RenderOptions:
     """Options for :func:`render_all`."""
 
     cchd_target: float = 0.225
-    hdi_prob: float = 0.94
+    hdi_prob: float = DEFAULT_ETI_PROB
     strata: tuple[str, ...] = DEFAULT_STRATA
     priors_config: Mapping[str, object] | None = None
     year_range: tuple[int, int] | None = None
