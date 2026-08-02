@@ -143,13 +143,15 @@ else:
     Markdown("*(prior-only run — no posterior convergence summary available)*")
 ```
 
-## Age curve — Stage 1 sanity check
+## Age curve — pinned Stage 1 anchor
 
 Posterior baseline DS livebirth rate $\theta_\text{LB}$ per 1,000
 livebirths, by maternal age band, against the Morris / de Graaf prior
 means. The Morris prior is tightly pinned ($\sigma = 0.001$ on logit) so
 posterior means should track the anchors closely — large deviations
-indicate the age coding or cell aggregation has drifted.
+indicate the age coding or cell aggregation has drifted. This is an
+anchor-propagation check, not evidence that the birth-certificate data
+estimated the biological age curve.
 
 ```{python}
 # | echo: false
@@ -161,14 +163,14 @@ if age_table.exists():
     display(pd.read_csv(age_table).round(3))
 ```
 
-## Identifiability: η_term vs s race effects
+## Ridge correlation: η_term vs s race effects
 
 Per-race posterior scatter of the $\eta_\text{term}$ race effect
-against the $s$ race effect. A posterior correlation $|r| > 0.7$ on a
-race panel indicates the decomposition is prior-driven — the data
-cannot distinguish lower termination from lower birth-certificate
-sensitivity. $|r| < 0.7$ suggests meaningful identification from the
-data.
+against the $s$ race effect. A high posterior correlation $|r| > 0.7$
+is evidence of a remaining eta/s trade-off. A low correlation is not, by
+itself, evidence that the data identified the split: under the current
+anchored model, $s$ can be nearly fixed by the de Graaf prior surface,
+which mechanically suppresses covariance with $\eta_\text{term}$.
 
 ```{python}
 # | echo: false
@@ -180,6 +182,41 @@ if id_table.exists():
     id_df = pd.read_csv(id_table)
     display(id_df.assign(correlation=id_df["correlation"].round(3),
                          abs_correlation=id_df["abs_correlation"].round(3)))
+```
+
+## Recording-anchor shrinkage
+
+The primary check on the recording surface is the prior-to-posterior
+readout for $s(\text{race}, \text{year})$. `sd_ratio` is posterior
+standard deviation divided by prior standard deviation. `shift_in_prior_sd`
+is the posterior mean's movement away from the prior mean, measured in
+prior standard deviations. Values near `sd_ratio = 1` with little shift
+mean the result is mostly anchor-carried; large shifts indicate tension
+between the anchor and the fitted likelihood.
+
+```{python}
+# | echo: false
+s_shrinkage_plot = Path("plots/s_anchor_shrinkage.png")
+if s_shrinkage_plot.exists():
+    display(Image(str(s_shrinkage_plot)))
+s_shrinkage_table = Path("tables/s_anchor_shrinkage.csv")
+if s_shrinkage_table.exists():
+    shrink = pd.read_csv(s_shrinkage_table)
+    display(
+        shrink[
+            [
+                "race",
+                "year",
+                "anchor_source",
+                "sd_ratio",
+                "shift_in_prior_sd",
+                "interpretation",
+            ]
+        ].assign(
+            sd_ratio=lambda d: d["sd_ratio"].round(2),
+            shift_in_prior_sd=lambda d: d["shift_in_prior_sd"].round(2),
+        )
+    )
 ```
 
 ## Termination year trajectory
@@ -198,14 +235,15 @@ if eta_year_table.exists():
     display(pd.read_csv(eta_year_table).round(3))
 ```
 
-## CCHD consistency
+## CCHD structural stress check
 
-Posterior CCHD prevalence among true DS livebirths vs the EUROCAT
-target (~22.5%). The current recording model does not include clinical
-marker effects in $s$; this is an external consistency check on the
-posterior true-DS composition. A posterior mean far outside the target's
-plausible range suggests the structural model or the clinical-marker
-coding needs further scrutiny.
+Posterior CCHD prevalence implied by the model's true-DS cell weights,
+shown against an external reference. The current selection model does
+not include CCHD in $\theta_\text{LB}$, $\eta$, or $s$, so this is not a
+calibration test for recording sensitivity. It is a stress check of the
+model's structural independence assumption for clinical co-occurrence.
+The separate class-prior co-occurrence analysis is the appropriate route
+for estimating full-population condition rates.
 
 ```{python}
 # | echo: false
@@ -220,10 +258,11 @@ if cchd_table.exists():
 ## Decomposition by race
 
 Posterior estimate of true DS livebirths per race (stacked into
-recorded vs missed), with the implied number of prenatal terminations
-shown as a reference line above each bar. This is the model's
-selection story in a single figure: how much of the population-level
-decomposition sits in $\eta_\text{term}$ vs $s$ vs baseline.
+recorded vs missed), with intervals for the true-livebirth total and the
+implied number of prenatal terminations. This is a single-variant
+decomposition, so race-level interpretation should be checked against
+the A/B sensitivity spread and the recording-anchor shrinkage table
+before being treated as a substantive demographic finding.
 
 ```{python}
 # | echo: false
@@ -255,12 +294,13 @@ Side-by-side headline numbers for this fit vs the LightGBM classifier's
 ``recorded_plus_predicted`` dataset (see ``docs/analysis/predicted.qmd``).
 The classifier uses a fixed year×month quota of
 ``ceil(1.5 × recorded)`` top non-recorded births by ``p_ds_lb_pred_01``;
-the Bayesian posterior places probabilistic CIs on the same quantities.
+the Bayesian posterior places probabilistic intervals on the same quantities.
 
 ```{python}
 # | echo: false
 import numpy as np
 import arviz as az
+from dspopulations_us_birth_certificates.intervals import equal_tail_interval
 
 idata = az.from_netcdf("idata.nc")
 cells_full = pd.read_parquet("cells.parquet")
@@ -274,8 +314,7 @@ p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (chain, draw, cell)
 true_counts_draws = (p_ds_lb * N[None, None, :]).sum(axis=-1)
 total_recorded = int(R.sum())
 total_true_mean = float(true_counts_draws.mean())
-total_true_lo = float(np.quantile(true_counts_draws, 0.025))
-total_true_hi = float(np.quantile(true_counts_draws, 0.975))
+total_true_lo, total_true_hi = equal_tail_interval(true_counts_draws)
 
 # Missed = true − recorded, per cell, sampled from the posterior.
 missed_draws = p_ds_lb * N[None, None, :] - R[None, None, :]
@@ -287,8 +326,7 @@ nhb_share_draws = (
     / np.clip(missed_draws.sum(axis=-1), 1.0, None)
 )
 nhb_share_mean = float(nhb_share_draws.mean())
-nhb_share_lo = float(np.quantile(nhb_share_draws, 0.025))
-nhb_share_hi = float(np.quantile(nhb_share_draws, 0.975))
+nhb_share_lo, nhb_share_hi = equal_tail_interval(nhb_share_draws)
 
 # Posterior CCHD co-occurrence among missed DS.
 cchd = cells_full["cchd"].to_numpy(dtype=float)
@@ -297,8 +335,7 @@ cchd_missed_share_draws = (
     / np.clip(missed_draws.sum(axis=-1), 1.0, None)
 )
 cchd_missed_mean = float(cchd_missed_share_draws.mean())
-cchd_missed_lo = float(np.quantile(cchd_missed_share_draws, 0.025))
-cchd_missed_hi = float(np.quantile(cchd_missed_share_draws, 0.975))
+cchd_missed_lo, cchd_missed_hi = equal_tail_interval(cchd_missed_share_draws)
 ```
 
 ```{python}
@@ -318,7 +355,7 @@ comparison = pd.DataFrame(
             "See predicted.qmd — classifier NH Black share is ~flat",
             "≈ 25.6% (from predicted.qmd)",
         ],
-        "Bayesian posterior (this fit)": [
+        "Bayesian posterior (this fit; 89% ETI)": [
             _ci_count(total_true_mean, total_true_lo, total_true_hi),
             _ci(nhb_share_mean, nhb_share_lo, nhb_share_hi),
             _ci(cchd_missed_mean, cchd_missed_lo, cchd_missed_hi),
@@ -326,7 +363,7 @@ comparison = pd.DataFrame(
         "Note": [
             "Bayesian is total true livebirths (recorded + implied missed).",
             "Classifier inherits BC demographic bias; Bayesian decomposes η_term vs s.",
-            "EUROCAT target ≈ 22.5%; see CCHD consistency plot above.",
+            "Model does not condition on CCHD; see structural stress check above.",
         ],
     },
     index=[
@@ -346,27 +383,28 @@ Interpretation notes:
   rather than the epidemiological under-reporting gradient. The
   Bayesian posterior separates η_term (termination rate variation,
   which differs by race per Kuppermann) from s (birth-certificate
-  sensitivity, which differs by race per Boulet) — so its missed-share
-  by race should skew higher for NH Black if the priors are
-  data-supported.
+  sensitivity, which differs by race per Boulet), but that split depends
+  on external anchors and should be read with the shrinkage and variant
+  sensitivity diagnostics.
 - Disagreement on **CCHD co-occurrence in missed** is expected by
   construction. The classifier up-weights CCHD-positive non-recorded
   births (hence ≈ 25.6%), which is higher than the EUROCAT-published
-  22.5% prevalence among true DS livebirths. The Bayesian model
-  constrains CCHD through the `s_cchd` prior, so its posterior should
-  sit closer to 22.5% if the prior is well-calibrated.
+  22.5% prevalence among true DS livebirths. The Bayesian selection
+  model does not condition on CCHD, so this row is a structural
+  implication of the true-DS weights, not a calibrated co-occurrence
+  estimate.
 - The total estimate is where the methods agree or disagree most
-  transparently: both estimate roughly recorded ÷ ~0.4 = ~2.5× recorded
-  as the true livebirth count. CI width is the Bayesian's honest cost
-  of uncertainty.
+  transparently. The Bayesian total is an aggregate reconstruction
+  conditional on the recording-rate anchor; the classifier total is a
+  feature-ranked quota and should not be read as an unbiased population
+  total.
 
 ## Caveats
 
 - The project DuckDB has no state-level column. `eta_term_year` is a
   national year effect absorbing residual year-over-year drift in
-  termination rates. State-level granularity would let the model
-  separate access-to-care variation from national trends; revisit when
-  such data becomes available.
+  termination rates. State-level granularity would be needed to separate
+  access-to-care variation from national demographic associations.
 - The `dev` profile is for iteration, not reporting. Publication-
   quality posteriors require `--profile reporting`.
 - The false-positive rate $f$ is fixed at 7.8e-5 (Ohio/NY) and not

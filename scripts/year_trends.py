@@ -6,7 +6,7 @@ reports, by calendar year, the population (DS-pregnancy-weighted) values of:
   - eta_detect : prenatal screening detection reach,
   - eta_term   : termination given detection,
   - reduction  = eta_detect * eta_term = 1 - eta : DS pregnancies not born alive,
-    with a per-year 95% credible interval (variant C),
+    with a per-year 89% ETI (variant C),
 
 plus the recorded vs model true DS livebirth rate per 10,000, the raw
 eta_detect_year / eta_term_year log-odds offsets, and a raw recorded-DS-rate-by-age
@@ -41,6 +41,10 @@ from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
+from dspopulations_us_birth_certificates.intervals import (  # noqa: E402
+    equal_tail_interval,
+    interval_label,
+)
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
     inv_logit,
@@ -142,8 +146,7 @@ def load_variant(variant: str, with_ci: bool = False) -> dict:
             tot = (p_draws[:, m] * n[m]).sum(1)  # (draws,)
             nat = tla_draws[:, idx["age"][m]] @ n[m]  # (draws,)
             rd = 1.0 - tot / nat
-            red_lo[y] = np.quantile(rd, 0.025)
-            red_hi[y] = np.quantile(rd, 0.975)
+            red_lo[y], red_hi[y] = equal_tail_interval(rd)
     df = pd.DataFrame(rows).T
     df.index.name = "year"
 
@@ -155,8 +158,8 @@ def load_variant(variant: str, with_ci: bool = False) -> dict:
         "red_lo": red_lo,
         "red_hi": red_hi,
         "rec_rate_ay": r_ay / n_ay * 1e4,  # (age, year) recorded DS per 10k
-        "edy": (edy.mean(0), np.quantile(edy, 0.025, 0), np.quantile(edy, 0.975, 0)),
-        "ety": (ety.mean(0), np.quantile(ety, 0.025, 0), np.quantile(ety, 0.975, 0)),
+        "edy": (edy.mean(0), *equal_tail_interval(edy, axis=0)),
+        "ety": (ety.mean(0), *equal_tail_interval(ety, axis=0)),
         "recon_max_err": recon_max_err,
     }
 
@@ -191,7 +194,7 @@ def fig_year(c: dict, b: dict) -> None:
         c["red_hi"],
         color=styles.COLOUR_RED,
         alpha=0.2,
-        label="Reduction 95% CI (C)",
+        label=f"Reduction {interval_label()} ETI (C)",
     )
     ax.plot(
         yr,
@@ -207,8 +210,8 @@ def fig_year(c: dict, b: dict) -> None:
     ax.set_title("Prenatal screening and termination of DS pregnancies, 2016–2024")
     ax.legend(fontsize=7, loc="center left")
     data = c["df"].reset_index()[["year", "eta_detect", "eta_term", "reduction"]].copy()
-    data["reduction_lo95"] = c["red_lo"]
-    data["reduction_hi95"] = c["red_hi"]
+    data["reduction_lo89"] = c["red_lo"]
+    data["reduction_hi89"] = c["red_hi"]
     data["reduction_B"] = b["df"]["reduction"].to_numpy()
     save_fig(fig, OUTPUT_DIR, "year_detection_termination", data=data)
     plt.close(fig)
@@ -262,10 +265,12 @@ def main() -> int:
 
     pd.set_option("display.width", 200)
     show = c["df"].copy()
-    show["red_lo95"] = c["red_lo"]
-    show["red_hi95"] = c["red_hi"]
+    show["red_lo89"] = c["red_lo"]
+    show["red_hi89"] = c["red_hi"]
     show["reduction_B"] = b["df"]["reduction"]
-    print("=== By year (variant C; reduction 95% CI; reduction_B = variant B) ===")
+    print(
+        f"=== By year (variant C; reduction {interval_label()} ETI; reduction_B = variant B) ==="
+    )
     print(show.to_string(float_format="{:.3f}".format))
 
     print("\n=== Recorded DS rate per 10k by maternal-age band x year (raw data) ===")

@@ -1,0 +1,251 @@
+---
+title: "Core reduction-recording model: DS livebirth accounting"
+
+date: last-modified
+date-format: "YYYY-MM-DD HH:mm:ss Z"
+
+format:
+  html:
+    code-fold: true
+    theme: cosmo
+    number-sections: true
+    toc: true
+    toc-depth: 2
+    code-links:
+      - repo
+---
+
+::: {.callout-warning title="Preliminary model output"}
+
+This output is preliminary. It is a baseline accounting model intended to
+stabilise the central story before adding race, education, payer, or a
+detection-versus-termination decomposition.
+
+:::
+
+::: {.callout-note title="AI-assisted"}
+Drafted by a LLM-based AI tool (Codex/GPT-5).
+:::
+
+```{python}
+#| echo: false
+import json
+from pathlib import Path
+
+import pandas as pd
+from IPython.display import Image, Markdown
+from dspopulations_us_birth_certificates.intervals import interval_label
+
+config = json.loads(Path("config.json").read_text())
+run_config = json.loads(Path("run_config.json").read_text())
+cells = pd.read_parquet("cells.parquet")
+interval = interval_label()
+```
+
+The model is deliberately simple:
+
+$$
+P(R = 1 \mid y, a) =
+\theta_\text{age}(a) \cdot (1 - \rho_y) \cdot s
+ + \{1 - \theta_\text{age}(a)(1-\rho_y)\}\cdot f
+$$
+
+where $\theta_\text{age}$ is the external maternal-age Down syndrome
+livebirth probability absent prenatal selection, $\rho_y$ is the combined
+pre-livebirth reduction in year $y$, $s$ is overall certificate recording
+sensitivity, and $f$ is the fixed false-positive rate.
+
+::: {.callout-note title="Model at a glance"}
+
+- **Unit:** age-by-year cells.
+- **Observed outcome:** recorded DS births in each cell.
+- **External age anchor:** Morris/de Graaf maternal-age curve.
+- **Reduction prior:** surveillance-derived `rho_year`, widened in the
+  extrapolated tail.
+- **Recording model:** one overall certificate sensitivity `s`.
+- **Role:** baseline accounting model before adding demographic modifiers.
+
+:::
+
+```{python}
+#| echo: false
+year_range = config["year_range"]
+profile = run_config["name"]
+Markdown(
+    f"- **year range**: {year_range[0]}-{year_range[1]}\n"
+    f"- **sampling profile**: `{profile}` "
+    f"({run_config['chains']} chains x {run_config['draws']} draws, "
+    f"tune={run_config['tune']}, "
+    f"target_accept={run_config['target_accept']}, "
+    f"sampler={run_config['nuts_sampler']})"
+)
+```
+
+## Input Scale
+
+```{python}
+#| echo: false
+n_total = int(cells["N_cell"].sum())
+r_total = int(cells["R_cell"].sum())
+pd.DataFrame(
+    {
+        "value": [
+            len(cells),
+            f"{n_total:,}",
+            f"{r_total:,}",
+            f"{r_total / max(n_total, 1):.3e}",
+            f"{year_range[0]}-{year_range[1]}",
+        ],
+    },
+    index=[
+        "age-year cells",
+        "total livebirths",
+        "recorded DS births",
+        "overall recorded rate",
+        "year range",
+    ],
+)
+```
+
+## Convergence
+
+```{python}
+#| echo: false
+summary = pd.read_csv("summary.csv", index_col=0)
+rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
+ess_cols = [c for c in ("ess_bulk", "ess_tail") if c in summary.columns]
+max_rhat = summary[rhat_col].max() if rhat_col in summary.columns else float("nan")
+min_ess = summary[ess_cols].min().min() if ess_cols else float("nan")
+Markdown(
+    f"- **max Rhat**: {max_rhat:.4f} (target < 1.01)\n"
+    f"- **min ESS**: {min_ess:.0f} (target >= 400)\n"
+    f"- **posterior intervals**: {interval} ETIs unless labelled otherwise"
+)
+```
+
+## Headline Accounting
+
+```{python}
+#| echo: false
+headlines = pd.read_csv("tables/core_headlines.csv")
+display(
+    headlines.assign(
+        mean=lambda d: d["mean"].round(3),
+        lo=lambda d: d["lo"].round(3),
+        hi=lambda d: d["hi"].round(3),
+    )
+)
+```
+
+The headline total is conditional on the current age curve, reduction prior,
+and recording prior. The model still mainly observes the product
+`theta_age * (1 - rho_year) * s`; this report makes that dependence visible
+rather than claiming the components are identified from birth certificates
+alone.
+
+## Year-By-Year Accounting
+
+![Core accounting by year](plots/core_accounting_by_year.png){#fig-core-accounting .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+accounting = pd.read_csv("tables/core_accounting_by_year.csv")
+display(
+    accounting[
+        [
+            "year",
+            "births",
+            "recorded_ds",
+            "natural_expected_ds",
+            "rho_year_mean",
+            "true_count_year_mean",
+            "true_count_year_lo",
+            "true_count_year_hi",
+            "recorded_count_year_mu_mean",
+        ]
+    ].round(3)
+)
+```
+
+## Reduction Prior And Posterior
+
+![Reduction prior vs posterior](plots/core_reduction_prior_posterior.png){#fig-core-reduction .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+reduction = pd.read_csv("tables/core_reduction_prior_posterior.csv")
+display(
+    reduction[
+        [
+            "year",
+            "rho_prior_mean",
+            "rho_prior_lo",
+            "rho_prior_hi",
+            "rho_year_mean",
+            "rho_year_lo",
+            "rho_year_hi",
+            "extrapolated",
+        ]
+    ].round(3)
+)
+```
+
+Recent years are nowcasts conditional on the extrapolated reduction trend, not
+direct surveillance observations.
+
+## Recording Sensitivity
+
+![Recording sensitivity](plots/core_recording_s.png){#fig-core-recording .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+recording = pd.read_csv("tables/core_recording_s.csv")
+display(recording.round(3))
+```
+
+## Posterior Predictive Checks
+
+These checks ask whether the fitted model can reproduce the observed recorded
+DS counts after aggregating cell-level posterior predictive draws.
+
+### By Year
+
+![Posterior predictive check by year](plots/core_ppc_by_year.png){#fig-core-ppc-year .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+display(pd.read_csv("tables/core_ppc_by_year.csv").round(3))
+```
+
+### By Maternal-Age Band
+
+![Posterior predictive check by maternal age band](plots/core_ppc_by_age.png){#fig-core-ppc-age .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+display(pd.read_csv("tables/core_ppc_by_age.csv").round(3))
+```
+
+## Interpretation
+
+This baseline supports the simple publication spine:
+
+```text
+Recorded DS births
+= maternal-age-expected DS births
+  x survival after prenatal selection
+  x certificate recording sensitivity.
+```
+
+It is ready to compare against the first extension, `s_year`, but not yet to
+carry race/ethnicity, education, payer, or detection/termination claims.
+
+## Caveats
+
+- The model estimates aggregate counts, not missed individual births.
+- Surveillance-derived reduction priors and certificate recording sensitivity
+  are not independently identified from certificate counts alone.
+- The 2020-2024 reduction values are treated as extrapolated and therefore
+  receive wider prior uncertainty.
+- A good aggregate fit is necessary but not sufficient for demographic
+  decompositions.

@@ -12,7 +12,7 @@ the latest reporting variant C) plus its cell frame and reports, per ethnicity:
   - implied recording sensitivity s.
 
 Also prints the maternal-age distribution by ethnicity and the model's race
-coefficients (eta_term_race, s_race) with 95 % credible intervals.
+coefficients (eta_term_race, s_race) with 89% ETIs.
 
 CAVEATS (also printed):
   - reduction = termination share is the data-identified end-quantity, but the
@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from dspopulations_us_birth_certificates.intervals import equal_tail_interval
 from dspopulations_us_birth_certificates.selection import (
     AGE_LEVELS,
     RACE_LEVELS,
@@ -50,14 +51,15 @@ AGE_MID = np.array([18, 22, 27, 32, 37, 42, 47.0])
 
 
 def _coeff_table(post: xr.Dataset, name: str) -> pd.DataFrame:
-    """Posterior mean and 95% CI for a race-dimensioned coefficient."""
+    """Posterior mean and project-standard ETI for a race-dimensioned coefficient."""
     arr = post[name].values.reshape(-1, len(RACE_LEVELS))
+    lo, hi = equal_tail_interval(arr, axis=0)
     return pd.DataFrame(
         {
             "ethnicity": RACE_LEVELS,
             "mean": arr.mean(0),
-            "lo": np.quantile(arr, 0.025, axis=0),
-            "hi": np.quantile(arr, 0.975, axis=0),
+            "lo": lo,
+            "hi": hi,
         }
     )
 
@@ -65,7 +67,9 @@ def _coeff_table(post: xr.Dataset, name: str) -> pd.DataFrame:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("fit_dir", nargs="?", default=None, help="explicit fit directory")
-    ap.add_argument("--variant", default="C", help="variant to auto-pick latest of (default C)")
+    ap.add_argument(
+        "--variant", default="C", help="variant to auto-pick latest of (default C)"
+    )
     ns = ap.parse_args(argv)
 
     fit_dir = Path(ns.fit_dir) if ns.fit_dir else latest_fit_dir(ns.variant)

@@ -26,6 +26,17 @@ from dspopulations_us_birth_certificates.selection.config import (
     preset_names,
     selection_run_config,
 )
+from dspopulations_us_birth_certificates.selection.core_reduction import (
+    CORE_REDUCTION_MODEL_ID,
+    CoreReductionModelConfig,
+    CoreReductionPriors,
+    build_core_reduction_model,
+    core_year_summary,
+    prepare_core_age_year_cells,
+)
+from dspopulations_us_birth_certificates.selection.core_reporting import (
+    render_core_all,
+)
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_DB_PATH,
     DEFAULT_YEAR_RANGE,
@@ -72,6 +83,7 @@ from dspopulations_us_birth_certificates.selection.simulate import (
 
 __all__ = [
     "AGE_LEVELS",
+    "CORE_REDUCTION_MODEL_ID",
     "DEFAULT_DB_PATH",
     "DEFAULT_YEAR_RANGE",
     "EDU_LEVELS",
@@ -87,10 +99,14 @@ __all__ = [
     "RunConfig",
     "SPECS",
     "SelectionModelConfig",
+    "CoreReductionModelConfig",
+    "CoreReductionPriors",
     "TrueParams",
     "VARIANTS",
     "build_model",
+    "build_core_reduction_model",
     "copy_docs_template",
+    "core_year_summary",
     "diagnostics",
     "extract_true_counts",
     "inv_logit",
@@ -98,8 +114,10 @@ __all__ = [
     "logit",
     "posterior_subgroup_rate",
     "prepare_cells",
+    "prepare_core_age_year_cells",
     "preset_names",
     "render_quarto",
+    "render_core_all",
     "render_report",
     "sample",
     "save_artefacts",

@@ -3,7 +3,7 @@
 Given a fit directory (containing ``idata.nc`` + ``cells.parquet``) or
 explicit ``--idata`` / ``--cells`` paths, this script calls
 :func:`dspopulations_us_birth_certificates.selection.render.render_all`
-to produce the six diagnostic figures plus their CSV companions.
+to produce the diagnostic figures plus their CSV companions.
 
 The shared rendering loop lives in ``selection.render`` so the fit CLI
 can call the same code path inline after NUTS.
@@ -22,6 +22,7 @@ Examples
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,11 @@ import dse_research_utils.environment.setup as setup
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.intervals import (
+    DEFAULT_ETI_PROB,
+    eti_quantiles,
+    interval_percent,
+)
 from dspopulations_us_birth_certificates.selection import diagnostics
 from dspopulations_us_birth_certificates.selection.render import (
     DEFAULT_STRATA,
@@ -43,9 +49,36 @@ class RenderCliConfig:
     idata_path: Path
     cells_path: Path
     out_dir: Path
+    config_path: Path | None
     cchd_target: float
     hdi_prob: float
     strata: tuple[str, ...]
+
+
+def _load_config(config_path: Path | None) -> dict:
+    """Read an optional fit config, warning and continuing if it is malformed."""
+    if config_path is None:
+        return {}
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        cli_output.warning(f"Could not parse {config_path}: {exc}")
+        return {}
+    if not isinstance(config, dict):
+        cli_output.warning(f"Ignoring non-object config at {config_path}")
+        return {}
+    return config
+
+
+def _summary_has_interval(summary: pd.DataFrame, hdi_prob: float) -> bool:
+    """Whether a cached ArviZ summary appears to use the requested HPDI width."""
+    pct = interval_percent(hdi_prob)
+    if {f"hdi{pct}_lb", f"hdi{pct}_ub"}.issubset(summary.columns):
+        return True
+    lo_q, hi_q = eti_quantiles(hdi_prob)
+    lo_pct = f"{lo_q * 100:g}"
+    hi_pct = f"{hi_q * 100:g}"
+    return {f"hdi_{lo_pct}%", f"hdi_{hi_pct}%"}.issubset(summary.columns)
 
 
 def _parse_args(argv: list[str] | None) -> RenderCliConfig:
@@ -79,8 +112,8 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
     p.add_argument(
         "--hdi-prob",
         type=float,
-        default=0.94,
-        help="Credible-interval width for forest plots and PPC bars.",
+        default=DEFAULT_ETI_PROB,
+        help="Credible-interval width for HPDI summaries and ETI plot bands.",
     )
     p.add_argument(
         "--strata",
@@ -94,6 +127,12 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
     idata = ns.idata or (fit_dir / "idata.nc" if fit_dir else None)
     cells = ns.cells or (fit_dir / "cells.parquet" if fit_dir else None)
     out_dir = ns.out_dir or fit_dir
+    config_path = fit_dir / "config.json" if fit_dir else None
+    if config_path is None and idata is not None:
+        sibling_config = idata.parent / "config.json"
+        config_path = sibling_config if sibling_config.is_file() else None
+    if config_path is not None and not config_path.is_file():
+        config_path = None
 
     if idata is None or cells is None or out_dir is None:
         raise SystemExit(
@@ -108,6 +147,7 @@ def _parse_args(argv: list[str] | None) -> RenderCliConfig:
         idata_path=idata,
         cells_path=cells,
         out_dir=out_dir,
+        config_path=config_path,
         cchd_target=ns.cchd_target,
         hdi_prob=ns.hdi_prob,
         strata=tuple(ns.strata),
@@ -128,12 +168,20 @@ def main(argv: list[str] | None = None) -> int:
 
     idata = az.from_netcdf(str(cli.idata_path))
     cells = pd.read_parquet(cli.cells_path)
+    config = _load_config(cli.config_path)
+    year_range = config.get("year_range")
+    parsed_year_range = (
+        (int(year_range[0]), int(year_range[1]))
+        if isinstance(year_range, (list, tuple)) and len(year_range) == 2
+        else None
+    )
     cli_output.print_kv(
         "Paths & settings",
         [
             ("idata", cli.idata_path),
             ("cells", cli.cells_path),
             ("out_dir", cli.out_dir),
+            ("config", cli.config_path or "(none)"),
             ("n_cells", len(cells)),
             ("cchd_target", cli.cchd_target),
             ("hdi_prob", cli.hdi_prob),
@@ -150,6 +198,8 @@ def main(argv: list[str] | None = None) -> int:
             cchd_target=cli.cchd_target,
             hdi_prob=cli.hdi_prob,
             strata=cli.strata,
+            priors_config=config.get("priors"),
+            year_range=parsed_year_range,
         ),
     )
 
@@ -159,10 +209,17 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = cli.out_dir / "summary.csv"
     if summary_path.exists():
         summary = pd.read_csv(summary_path, index_col=0)
-        cli_output.info(f"Loaded cached summary from {summary_path}")
+        if _summary_has_interval(summary, cli.hdi_prob):
+            cli_output.info(f"Loaded cached summary from {summary_path}")
+        else:
+            cli_output.info(
+                "Cached summary uses a different HPDI width; recomputing..."
+            )
+            summary = diagnostics.summary_table(idata, hdi_prob=cli.hdi_prob)
+            summary.to_csv(summary_path)
     else:
         cli_output.info("Computing posterior summary (no cached summary.csv)...")
-        summary = diagnostics.summary_table(idata)
+        summary = diagnostics.summary_table(idata, hdi_prob=cli.hdi_prob)
         summary.to_csv(summary_path)
     health = diagnostics.convergence_health(summary)
     cli_output.info(
@@ -174,9 +231,7 @@ def main(argv: list[str] | None = None) -> int:
     if health["all_ok"]:
         cli_output.success("Convergence checks passed.")
     else:
-        cli_output.warning(
-            "Convergence flags — inspect summary.csv."
-        )
+        cli_output.warning("Convergence flags — inspect summary.csv.")
 
     cli_output.section("Done")
     cli_output.info(f"plots -> [blue]{cli.out_dir / 'plots'}[/blue]")

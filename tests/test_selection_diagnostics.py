@@ -69,10 +69,34 @@ def test_identifiability_pairplot(fitted) -> None:
     _assert_has_axes(fig)
 
     table = diagnostics.identifiability_table(idata)
-    assert {"race_idx", "correlation", "abs_correlation"}.issubset(table.columns)
+    assert {"race_idx", "correlation", "abs_correlation", "interpretation"}.issubset(
+        table.columns
+    )
     assert len(table) >= 1
     assert (table["abs_correlation"] >= 0).all()
     assert (table["abs_correlation"] <= 1).all()
+    assert not table["interpretation"].str.contains("data-informed").any()
+
+
+def test_s_anchor_shrinkage(fitted) -> None:
+    _, idata = fitted
+    fig = diagnostics.s_anchor_shrinkage_plot(idata)
+    _assert_has_axes(fig)
+
+    table = diagnostics.s_anchor_shrinkage_table(idata)
+    assert {
+        "race_idx",
+        "race",
+        "year_idx",
+        "prior_sd_logit",
+        "posterior_sd_logit",
+        "sd_ratio",
+        "shift_in_prior_sd",
+        "interpretation",
+    }.issubset(table.columns)
+    assert len(table) >= N_YEAR
+    assert (table["prior_sd_logit"] > 0).all()
+    assert np.isfinite(table["sd_ratio"]).all()
 
 
 def test_eta_term_year_trajectory_plot(fitted) -> None:
@@ -91,10 +115,18 @@ def test_cchd_consistency_check(fitted) -> None:
     _assert_has_axes(fig)
 
     summary = diagnostics.cchd_consistency_summary(idata, cells)
-    assert {"posterior_mean", "lo_95", "hi_95", "target", "target_in_95_ci"} == set(
-        summary.columns
-    )
+    assert {
+        "posterior_mean",
+        "lo_89",
+        "hi_89",
+        "interval_prob",
+        "target",
+        "target_in_interval",
+        "diagnostic_role",
+        "interpretation",
+    }.issubset(summary.columns)
     assert 0 <= summary["posterior_mean"].iloc[0] <= 1
+    assert summary["diagnostic_role"].iloc[0] == "structural_stress_check"
 
 
 def test_posterior_predictive_by_stratum(fitted) -> None:
@@ -119,7 +151,16 @@ def test_decomposition_by_race(fitted) -> None:
     fig = diagnostics.decomposition_by_race(idata, cells)
     _assert_has_axes(fig)
     summary = fig._selection_data  # type: ignore[attr-defined]
-    assert {"race", "true_livebirths", "recorded", "missed"}.issubset(summary.columns)
+    assert {
+        "race",
+        "true_livebirths",
+        "true_livebirths_lo",
+        "true_livebirths_hi",
+        "recorded",
+        "missed",
+        "missed_lo",
+        "missed_hi",
+    }.issubset(summary.columns)
     assert (summary["recorded"] <= summary["true_livebirths"] + 1e-6).all()
 
 

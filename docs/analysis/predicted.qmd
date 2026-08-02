@@ -795,7 +795,7 @@ corrected):
    as a new `predicted_analyses.recording_rate_by_stratum()` helper.
 
 2. **Temporal stability check.** Plot `recorded / R'` by year,
-   2005–2024, with HDI bands. Salemi et al. (2017) and Boulet et al.
+   2005–2024, with 89% HPDI bands. Salemi et al. (2017) and Boulet et al.
    (2011) predict structural stability — a visible trend or a 2003
    break-point would be notable. Implementation: small CLI extension
    to emit `recording_rate_by_year.csv` alongside the current

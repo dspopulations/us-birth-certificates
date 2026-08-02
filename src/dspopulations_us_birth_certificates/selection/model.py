@@ -40,6 +40,10 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates.intervals import (
+    eti_quantiles,
+    interval_label,
+)
 from dspopulations_us_birth_certificates.selection.priors import (
     N_AGE,
     N_EDU,
@@ -55,6 +59,7 @@ if TYPE_CHECKING:
 Spec = Literal["theta_only", "theta_s", "single_eta", "full"]
 
 SPECS: tuple[Spec, ...] = ("theta_only", "theta_s", "single_eta", "full")
+ETI_LO_Q, ETI_HI_Q = eti_quantiles()
 
 
 def year_slice_for_anchor(start_year: int, n_year: int) -> slice:
@@ -162,9 +167,7 @@ def build_model(
                     sigma=priors.eta_term_edu_sigma,
                     dims="edu",
                 )
-                eta = pm.math.invlogit(
-                    eta_int + eta_race[race_idx] + eta_edu[edu_idx]
-                )
+                eta = pm.math.invlogit(eta_int + eta_race[race_idx] + eta_edu[edu_idx])
             else:
                 eta_det_int = pm.Normal(
                     "eta_detect_int",
@@ -282,9 +285,7 @@ def build_model(
                 dims="edu",
             )
             pm.Deterministic("s_race", s_race_year.mean(axis=1), dims="race")
-            s = pm.math.invlogit(
-                s_race_year[race_idx, year_idx] + s_edu[edu_idx]
-            )
+            s = pm.math.invlogit(s_race_year[race_idx, year_idx] + s_edu[edu_idx])
         else:
             s = pt.ones_like(theta_lb)
 
@@ -317,7 +318,9 @@ def build_model(
                     w = np.where((race_idx == r) & (year_idx == y), N_cell, 0.0)
                     if w.sum() <= 0:
                         continue
-                    rows.append(w / w.sum())  # N-weighted average over the cell's age/edu/...
+                    rows.append(
+                        w / w.sum()
+                    )  # N-weighted average over the cell's age/edu/...
                     tvec.append(t)
                     svec.append(sigma_mat[r, y])
             if rows:
@@ -344,7 +347,7 @@ def build_model(
 
 
 def extract_true_counts(idata, cells: pd.DataFrame) -> pd.DataFrame:
-    """Per-cell posterior mean + 95% CI of true DS livebirth counts."""
+    """Per-cell posterior mean + project-standard ETI of true DS livebirth counts."""
     p_ds_lb = idata.posterior["p_ds_lb"]
     N = cells["N_cell"].to_numpy()
     true_counts = p_ds_lb * N
@@ -352,10 +355,10 @@ def extract_true_counts(idata, cells: pd.DataFrame) -> pd.DataFrame:
         {
             "true_count_mean": true_counts.mean(dim=("chain", "draw")).values,
             "true_count_lo": true_counts.quantile(
-                0.025, dim=("chain", "draw")
+                ETI_LO_Q, dim=("chain", "draw")
             ).values,
             "true_count_hi": true_counts.quantile(
-                0.975, dim=("chain", "draw")
+                ETI_HI_Q, dim=("chain", "draw")
             ).values,
             "N_cell": N,
             "R_cell": cells["R_cell"].to_numpy(),
@@ -401,8 +404,9 @@ def posterior_subgroup_rate(
             {
                 group_col: g,
                 "mean": group_rate.mean().item(),
-                "lo": group_rate.quantile(0.025).item(),
-                "hi": group_rate.quantile(0.975).item(),
+                "lo": group_rate.quantile(ETI_LO_Q).item(),
+                "hi": group_rate.quantile(ETI_HI_Q).item(),
+                "interval": interval_label(),
             }
         )
     return pd.DataFrame(out)

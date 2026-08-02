@@ -6,7 +6,7 @@ into ``notes/figures/`` (PNG + SVG + companion CSV per figure):
   1. ascertainment_funnel   -- natural -> born-alive (C..B bound) -> recorded.
   2. age_termination_reduction -- termination share by maternal-age band (C, B).
   3. ds_rate_by_ethnicity   -- recorded vs true DS livebirth rate /10k, C..B bound.
-  4. education_termination_gradient -- eta_term_edu posterior (mean + 95% CI) vs prior.
+  4. education_termination_gradient -- eta_term_edu posterior (mean + 89% ETI) vs prior.
 
 Variant C pins recording (~0.40); variant B frees it (~0.32). The C..B spread is
 the recording-vs-termination sensitivity bound, not sampling noise.
@@ -29,6 +29,7 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.intervals import equal_tail_interval  # noqa: E402
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
@@ -73,6 +74,7 @@ def load_variant(variant: str) -> dict:
             post["theta_lb_age"].values.reshape(-1, len(AGE_LEVELS)).mean(0)
         )
         ete = post["eta_term_edu"].values.reshape(-1, len(EDU_LEVELS))
+        ete_lo, ete_hi = equal_tail_interval(ete, axis=0)
 
     theta_cell = theta[age]
     # Per maternal-age termination reduction (1 - eta).
@@ -105,8 +107,8 @@ def load_variant(variant: str) -> dict:
         "rec10k": rec10k,
         "true10k": true10k,
         "ete_mean": ete.mean(0),
-        "ete_lo": np.quantile(ete, 0.025, axis=0),
-        "ete_hi": np.quantile(ete, 0.975, axis=0),
+        "ete_lo": ete_lo,
+        "ete_hi": ete_hi,
         "ete_prior": np.asarray(config["priors"]["eta_term_edu"], float),
     }
 
@@ -287,8 +289,8 @@ def fig_education(c: dict) -> None:
             "education": EDU_LEVELS,
             "prior": c["ete_prior"],
             "post_mean": c["ete_mean"],
-            "lo95": c["ete_lo"],
-            "hi95": c["ete_hi"],
+            "lo89": c["ete_lo"],
+            "hi89": c["ete_hi"],
         }
     )
     save_fig(fig, OUTPUT_DIR, "education_termination_gradient", data=data)

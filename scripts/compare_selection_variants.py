@@ -5,14 +5,14 @@ Reads the variant fit directories (A/B/C/D) produced by
 builds a side-by-side comparison CSV + forest-plot figure of the
 headline posterior quantities:
 
-- Total true DS livebirths 2016–2024 (posterior mean + 95% CI)
-- Per-race ``eta_term_race`` and ``s_race`` posterior means + CIs
-- Per-race identifiability correlation ``|r|`` between ``eta_term_race``
+- Total true DS livebirths 2016–2024 (posterior mean + 89% ETI)
+- Per-race ``eta_term_race`` and ``s_race`` posterior means + HPDIs/ETIs
+- Per-race eta/s ridge correlation ``|r|`` between ``eta_term_race``
   and ``s_race`` (from each fit's ``tables/identifiability.csv``)
 
 A material spread across variants on any row indicates prior-driven
-decomposition for that quantity; tight agreement indicates
-data-identified structure (plan §4.4).
+decomposition for that quantity. Tight agreement is useful but is not,
+by itself, proof that the decomposition is data-identified.
 
 Examples
 --------
@@ -42,6 +42,10 @@ import numpy as np
 import pandas as pd
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.intervals import (
+    interval_label,
+    posterior_mean_eti,
+)
 from dspopulations_us_birth_certificates.selection import (
     AGE_LEVELS,
     RACE_LEVELS,
@@ -110,9 +114,7 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
                 raise SystemExit(f"Missing config.json in {fd}")
             variant = json.loads(cfg_path.read_text()).get("variant")
             if variant not in VARIANTS:
-                raise SystemExit(
-                    f"{fd}/config.json has unexpected variant={variant!r}"
-                )
+                raise SystemExit(f"{fd}/config.json has unexpected variant={variant!r}")
             fit_dirs[variant] = fd
     else:
         for v in VARIANTS:
@@ -122,8 +124,7 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
     if not fit_dirs:
         raise SystemExit("No variant fits found — pass --fit-dirs explicitly.")
     output_dir = ns.output_dir or (
-        ns.root
-        / f"_compare_{pd.Timestamp.now(tz='UTC').strftime('%Y%m%d-%H%M%S')}"
+        ns.root / f"_compare_{pd.Timestamp.now(tz='UTC').strftime('%Y%m%d-%H%M%S')}"
     )
     return CompareCliConfig(
         fit_dirs=fit_dirs,
@@ -137,7 +138,9 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
 # --------------------------------------------------------------------------- #
 
 
-def _load_fit_arrays(fit_dir: Path) -> tuple[dict[str, np.ndarray], pd.DataFrame, float]:
+def _load_fit_arrays(
+    fit_dir: Path,
+) -> tuple[dict[str, np.ndarray], pd.DataFrame, float]:
     """Load one fit's posterior draws + cells needed for aggregation.
 
     Returns ``(arrays, cells, fpr)``. ``arrays`` holds ``p`` (``p_ds_lb``),
@@ -164,18 +167,14 @@ def _load_fit_arrays(fit_dir: Path) -> tuple[dict[str, np.ndarray], pd.DataFrame
 
 
 def _mean_ci(a: np.ndarray) -> dict[str, float]:
-    """Posterior mean + 95% CI as a ``{mean, lo, hi}`` dict."""
-    return {
-        "mean": float(a.mean()),
-        "lo": float(np.quantile(a, 0.025)),
-        "hi": float(np.quantile(a, 0.975)),
-    }
+    """Posterior mean + project-standard ETI as a ``{mean, lo, hi}`` dict."""
+    return posterior_mean_eti(a)
 
 
 def _scalar_aggregates(
     arrays: dict[str, np.ndarray], cells: pd.DataFrame, fpr: float
 ) -> dict[str, dict[str, float]]:
-    """Total true DS, eta, reduction, and s — each a posterior mean + 95% CI."""
+    """Total true DS, eta, reduction, and s - posterior mean + 89% ETI."""
     p, theta_cell = arrays["p"], arrays["theta_cell"]
     N = cells["N_cell"].to_numpy(dtype=float)
     R = cells["R_cell"].to_numpy(dtype=float)
@@ -243,7 +242,7 @@ def _extract_aggregates(
     """Posterior aggregates + per-age decomposition from one idata load.
 
     Returns ``(aggregates, age_df)``. ``aggregates`` maps ``total_true`` /
-    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (95% CI).
+    ``agg_eta`` / ``reduction`` / ``agg_s`` to ``{mean, lo, hi}`` (89% ETI).
     ``age_df`` is the per-maternal-age decomposition used as an age
     posterior-predictive check: ``obs_rate`` vs ``pred_rate`` (close = the
     model fits that band), N-weighted ``eta``/``reduction``, and implied ``s``.
@@ -254,17 +253,46 @@ def _extract_aggregates(
     return aggregates, age_df
 
 
+def _hdi_columns(summary: pd.DataFrame) -> tuple[str, str] | None:
+    """Return lower/upper ArviZ HDI columns, regardless of interval probability."""
+    hdi_cols: list[tuple[float, str]] = []
+    lower_col: str | None = None
+    upper_col: str | None = None
+    for col in summary.columns:
+        if col.startswith("hdi") and col.endswith("_lb"):
+            lower_col = col
+            continue
+        if col.startswith("hdi") and col.endswith("_ub"):
+            upper_col = col
+            continue
+        if not col.startswith("hdi_") or not col.endswith("%"):
+            continue
+        try:
+            pct = float(col.removeprefix("hdi_").removesuffix("%"))
+        except ValueError:
+            continue
+        hdi_cols.append((pct, col))
+    if lower_col is not None and upper_col is not None:
+        return lower_col, upper_col
+    if len(hdi_cols) < 2:
+        return None
+    hdi_cols = sorted(hdi_cols)
+    return hdi_cols[0][1], hdi_cols[-1][1]
+
+
 def _extract_summary_rows(summary: pd.DataFrame, prefix: str) -> pd.DataFrame:
-    """Pull mean + hdi_3%/hdi_97% columns for rows matching a name prefix."""
+    """Pull mean + HPDI columns for rows matching a name prefix."""
     rows = summary[summary.index.str.startswith(prefix)].copy()
     rows.index = rows.index.str.extract(r"\[(\d+)\]", expand=False).astype(int)
     rows = rows.sort_index()
     keep = {}
     if "mean" in rows.columns:
         keep["mean"] = rows["mean"]
-    if "hdi_3%" in rows.columns and "hdi_97%" in rows.columns:
-        keep["lo"] = rows["hdi_3%"]
-        keep["hi"] = rows["hdi_97%"]
+    hdi_cols = _hdi_columns(rows)
+    if hdi_cols is not None:
+        lo_col, hi_col = hdi_cols
+        keep["lo"] = rows[lo_col]
+        keep["hi"] = rows[hi_col]
     return pd.DataFrame(keep)
 
 
@@ -289,7 +317,7 @@ def build_comparison(
 
     ``comparison`` columns: ``variant``, ``metric``, ``level``, ``mean``,
     ``lo``, ``hi``. ``metric`` ∈ {``total_true``, ``agg_eta``, ``reduction``,
-    ``agg_s``, ``eta_term_race``, ``s_race``, ``identifiability_abs_r``};
+    ``agg_s``, ``eta_term_race``, ``s_race``, ``eta_s_corr_abs``};
     ``level`` is the race label (where applicable) or "(all)" for scalars.
 
     ``age_decomposition`` is the per-maternal-age posterior-predictive table
@@ -301,7 +329,7 @@ def build_comparison(
     for variant, fit_dir in sorted(fit_dirs.items()):
         cli_output.info(f"Variant {variant}: reading {fit_dir}")
 
-        # Aggregates: total true DS, eta, reduction, s (+95% CI) + per-age table.
+        # Aggregates: total true DS, eta, reduction, s (+89% ETI) + per-age table.
         aggregates, age_df = _extract_aggregates(fit_dir)
         for metric, vals in aggregates.items():
             rows.append(
@@ -325,20 +353,22 @@ def build_comparison(
                             "variant": variant,
                             "metric": metric,
                             "level": (
-                                RACE_LEVELS[idx] if idx < len(RACE_LEVELS)
+                                RACE_LEVELS[idx]
+                                if idx < len(RACE_LEVELS)
                                 else f"race_{idx}"
                             ),
                             **row.to_dict(),
                         }
                     )
 
-        # Identifiability |r| per race.
+        # Eta/s ridge-correlation |r| per race. Under anchored s, this is
+        # not a stand-alone identification metric.
         ident = _load_identifiability(fit_dir)
         for _, r in ident.iterrows():
             rows.append(
                 {
                     "variant": variant,
-                    "metric": "identifiability_abs_r",
+                    "metric": "eta_s_corr_abs",
                     "level": r.get("race", f"race_{int(r['race_idx'])}"),
                     "mean": float(r["abs_correlation"]),
                     "lo": float("nan"),
@@ -446,18 +476,14 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Render forest plot")
     try:
         render_forest(comparison, cli.output_dir / "comparison_forest")
-        cli_output.success(
-            f"comparison_forest.png/.svg -> {cli.output_dir}"
-        )
+        cli_output.success(f"comparison_forest.png/.svg -> {cli.output_dir}")
     except Exception as exc:  # noqa: BLE001
-        cli_output.warning(
-            f"Forest plot failed: {type(exc).__name__}: {exc}"
-        )
+        cli_output.warning(f"Forest plot failed: {type(exc).__name__}: {exc}")
 
     cli_output.section("Headline")
     totals = comparison[comparison["metric"] == "total_true"].set_index("variant")
     cli_output.print_kv(
-        "Total true DS livebirths (posterior mean [95% CI])",
+        f"Total true DS livebirths (posterior mean [{interval_label()} ETI])",
         [
             (v, f"{r['mean']:,.0f}  [{r['lo']:,.0f}, {r['hi']:,.0f}]")
             for v, r in totals.iterrows()
@@ -466,14 +492,14 @@ def main(argv: list[str] | None = None) -> int:
     red = comparison[comparison["metric"] == "reduction"].set_index("variant")
     s_agg = comparison[comparison["metric"] == "agg_s"].set_index("variant")
     cli_output.print_kv(
-        "Elective-termination reduction (1 - eta) [95% CI]",
+        f"Elective-termination reduction (1 - eta) [{interval_label()} ETI]",
         [
             (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
             for v, r in red.iterrows()
         ],
     )
     cli_output.print_kv(
-        "Aggregate BC sensitivity s [95% CI]",
+        f"Aggregate BC sensitivity s [{interval_label()} ETI]",
         [
             (v, f"{r['mean']:.3f}  [{r['lo']:.3f}, {r['hi']:.3f}]")
             for v, r in s_agg.iterrows()
