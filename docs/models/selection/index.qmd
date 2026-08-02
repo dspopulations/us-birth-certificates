@@ -180,8 +180,8 @@ if id_plot.exists():
 id_table = Path("tables/identifiability.csv")
 if id_table.exists():
     id_df = pd.read_csv(id_table)
-	    display(id_df.assign(correlation=id_df["correlation"].round(3),
-	                         abs_correlation=id_df["abs_correlation"].round(3)))
+    display(id_df.assign(correlation=id_df["correlation"].round(3),
+                         abs_correlation=id_df["abs_correlation"].round(3)))
 ```
 
 ## Recording-anchor shrinkage

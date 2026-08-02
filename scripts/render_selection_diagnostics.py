@@ -50,6 +50,21 @@ class RenderCliConfig:
     strata: tuple[str, ...]
 
 
+def _load_config(config_path: Path | None) -> dict:
+    """Read an optional fit config, warning and continuing if it is malformed."""
+    if config_path is None:
+        return {}
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        cli_output.warning(f"Could not parse {config_path}: {exc}")
+        return {}
+    if not isinstance(config, dict):
+        cli_output.warning(f"Ignoring non-object config at {config_path}")
+        return {}
+    return config
+
+
 def _parse_args(argv: list[str] | None) -> RenderCliConfig:
     p = argparse.ArgumentParser(
         description="Render posterior diagnostics for a selection-model fit.",
@@ -137,11 +152,7 @@ def main(argv: list[str] | None = None) -> int:
 
     idata = az.from_netcdf(str(cli.idata_path))
     cells = pd.read_parquet(cli.cells_path)
-    config = (
-        json.loads(cli.config_path.read_text(encoding="utf-8"))
-        if cli.config_path is not None
-        else {}
-    )
+    config = _load_config(cli.config_path)
     year_range = config.get("year_range")
     parsed_year_range = (
         (int(year_range[0]), int(year_range[1]))

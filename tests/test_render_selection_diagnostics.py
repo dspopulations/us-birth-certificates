@@ -143,6 +143,14 @@ def test_cli_rejects_missing_paths(tmp_path: Path) -> None:
         )
 
 
+def test_cli_ignores_malformed_config(tmp_path: Path) -> None:
+    mod = _load_cli_module()
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{not valid json", encoding="utf-8")
+
+    assert mod._load_config(config_path) == {}
+
+
 def test_cli_fit_dir_discovery(fit_dir: Path, tmp_path: Path) -> None:
     mod = _load_cli_module()
     exit_code = mod.main(
