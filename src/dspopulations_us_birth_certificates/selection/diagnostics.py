@@ -876,9 +876,9 @@ def summary_table(
         "ci_prob": hdi_prob,
         "ci_kind": "hdi",
         # Convergence gates use this frame directly.  ArviZ's display-oriented
-        # default can round an R-hat below 1.01 up to 1.01 and create a false
-        # failure at the strict threshold.
-        "round_to": 6,
+        # default can move R-hat or ESS across a strict threshold.  The literal
+        # string is required: Python ``None`` falls back to configured rounding.
+        "round_to": "none",
     }
     if var_names is None:
         return az.summary(idata, **summary_kwargs)

@@ -283,7 +283,16 @@ def prepare_core_age_year_cells(
         age_select = f"{_age_case(cols['mage_c'])} AS age_idx"
         age_columns = "age_idx"
     else:
-        age_select = f"CAST({cols['mage_c']} AS INTEGER) AS maternal_age"
+        # ``mage_c`` is era-dependent: recent NCHS data already use capped
+        # endpoint codes, while earlier years can contain literal ages 10-54.
+        # Normalise first so the declared 10-12 and 50+ cells remain true for
+        # every accepted year range.
+        age_select = (
+            "CASE "
+            f"WHEN CAST({cols['mage_c']} AS INTEGER) <= 12 THEN 12 "
+            f"WHEN CAST({cols['mage_c']} AS INTEGER) >= 50 THEN 50 "
+            f"ELSE CAST({cols['mage_c']} AS INTEGER) END AS maternal_age"
+        )
         age_columns = "maternal_age"
     if recorded_definition == "confirmed_or_pending":
         recorded_expr = f"CAST({cols['down_ind']} AS INTEGER)"

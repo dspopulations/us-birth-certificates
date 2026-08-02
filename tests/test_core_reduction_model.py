@@ -103,13 +103,17 @@ def test_prepare_core_age_year_cells_keeps_clinical_missing_rows(
     assert sorted(cells["age_idx"].tolist()) == [0, 3, 6]
 
 
-def test_prepare_core_single_year_cells_preserves_exact_age_codes(
+def test_prepare_core_single_year_cells_pools_endpoint_age_codes(
     tmp_path: Path,
 ) -> None:
     rows = [
+        _make_row(year=2020, mage_c=10, down_ind=0),
+        _make_row(year=2020, mage_c=11, down_ind=1),
         _make_row(year=2020, mage_c=12, down_ind=0),
         _make_row(year=2020, mage_c=13, down_ind=1),
         _make_row(year=2020, mage_c=50, down_ind=0),
+        _make_row(year=2020, mage_c=51, down_ind=1),
+        _make_row(year=2020, mage_c=54, down_ind=0),
     ]
     db = tmp_path / "core.db"
     con = duckdb.connect(str(db))
@@ -131,6 +135,8 @@ def test_prepare_core_single_year_cells_preserves_exact_age_codes(
     assert cells["maternal_age"].tolist() == [12, 13, 50]
     assert cells["age_idx"].tolist() == [0, 1, 2]
     assert cells["maternal_age_label"].tolist() == ["10-12", "13", "50+"]
+    assert cells["N_cell"].tolist() == [3, 1, 3]
+    assert cells["R_cell"].tolist() == [1, 1, 1]
     assert cells.attrs["age_values"] == [12, 13, 50]
     assert cells.attrs["age_labels"] == ["10-12", "13", "50+"]
 
