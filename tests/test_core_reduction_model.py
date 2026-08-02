@@ -11,6 +11,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from dspopulations_us_birth_certificates.selection.core_models import (
+    CORE_MODEL_REGISTRY,
+    core_model_names,
+    get_core_model_definition,
+)
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionPriors,
     build_core_reduction_model,
@@ -18,6 +23,14 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
 )
 from dspopulations_us_birth_certificates.selection.core_reporting import render_core_all
 from dspopulations_us_birth_certificates.selection.priors import logit
+
+
+def test_core_model_registry_indexes_dsp_models() -> None:
+    assert core_model_names() == ("DSP001", "DSP002")
+    assert set(CORE_MODEL_REGISTRY) == {"dsp001", "dsp002"}
+    assert get_core_model_definition("dsp001").recording_model == "constant"
+    assert get_core_model_definition("DSP002").recording_model == "year"
+    assert get_core_model_definition("DSP002").comparison_parent == "DSP001"
 
 
 def _make_row(
@@ -78,6 +91,23 @@ def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:
     assert np.allclose(priors.reduction_sigma, [0.2, 0.5])
 
 
+def test_core_reduction_priors_allow_zero_s_year_sigma_for_constant_model(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "reduction.csv"
+    pd.DataFrame({"year": [2020, 2021], "reduction": [0.35, 0.40]}).to_csv(
+        path, index=False
+    )
+
+    priors = CoreReductionPriors.from_reduction_csv(
+        year_range=(2020, 2021),
+        path=path,
+        recording_s_year_sigma=0.0,
+    )
+
+    assert priors.recording_s_year_sigma == 0.0
+
+
 def test_build_core_reduction_model_and_prior_predictive() -> None:
     pm = pytest.importorskip("pymc")
 
@@ -110,6 +140,77 @@ def test_build_core_reduction_model_and_prior_predictive() -> None:
     assert (r <= cells["N_cell"].to_numpy()[None, None, :]).all()
 
 
+def test_build_core_reduction_model_with_s_year_extension() -> None:
+    pm = pytest.importorskip("pymc")
+
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 0, 1, 1],
+            "age_idx": [2, 4, 2, 4],
+            "N_cell": [1000, 800, 900, 700],
+            "R_cell": [1, 3, 1, 4],
+        }
+    )
+    cells.attrs["n_year"] = 2
+    cells.attrs["year_range"] = (2020, 2021)
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+        recording_s_year_sigma=0.25,
+    )
+
+    model = build_core_reduction_model(
+        cells,
+        priors,
+        n_year=2,
+        recording_model="year",
+    )
+    named = {rv.name for rv in model.free_RVs}
+    assert named == {
+        "rho_logit_year",
+        "recording_s_logit",
+        "recording_s_year_offset_raw",
+    }
+    assert "recording_s_year" in model.named_vars
+    assert "recording_s_year_offset" in model.named_vars
+
+    with model:
+        prior = pm.sample_prior_predictive(draws=5, random_seed=0)
+
+    r = np.asarray(prior.prior_predictive["R_obs"].values)
+    s_year = np.asarray(prior.prior["recording_s_year"].values)
+    assert r.shape[-1] == len(cells)
+    assert s_year.shape[-1] == 2
+    assert ((0.0 < s_year) & (s_year < 1.0)).all()
+
+
+def test_build_core_reduction_model_s_year_requires_positive_year_sigma() -> None:
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 0, 1, 1],
+            "age_idx": [2, 4, 2, 4],
+            "N_cell": [1000, 800, 900, 700],
+            "R_cell": [1, 3, 1, 4],
+        }
+    )
+    cells.attrs["n_year"] = 2
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+        recording_s_year_sigma=0.0,
+    )
+
+    with pytest.raises(ValueError, match="recording_s_year_sigma must be positive"):
+        build_core_reduction_model(
+            cells,
+            priors,
+            n_year=2,
+            recording_model="year",
+        )
+
+
 def test_render_core_report_outputs(tmp_path: Path) -> None:
     cells = pd.DataFrame(
         {
@@ -135,6 +236,10 @@ def test_render_core_report_outputs(tmp_path: Path) -> None:
             "rho_year": (("chain", "draw", "year"), rho),
             "eta_year": (("chain", "draw", "year"), eta),
             "recording_s": (("chain", "draw"), np.full((2, 3), 0.4)),
+            "recording_s_year": (
+                ("chain", "draw", "year"),
+                np.full((2, 3, 2), 0.4),
+            ),
             "true_count_year": (("chain", "draw", "year"), 1000 * eta),
             "recorded_count_year_mu": (("chain", "draw", "year"), 400 * eta),
             "true_count_total": (("chain", "draw"), (1000 * eta).sum(axis=2)),
@@ -175,6 +280,7 @@ def test_render_core_report_outputs(tmp_path: Path) -> None:
         "core_accounting_by_year",
         "core_reduction_prior_posterior",
         "core_recording_s",
+        "core_recording_s_by_year",
         "core_ppc_by_year",
         "core_ppc_by_age",
     }
@@ -186,6 +292,7 @@ def test_render_core_report_outputs(tmp_path: Path) -> None:
         "core_accounting_by_year",
         "core_reduction_prior_posterior",
         "core_recording_s",
+        "core_recording_s_by_year",
         "core_ppc_by_year",
         "core_ppc_by_age",
     ):

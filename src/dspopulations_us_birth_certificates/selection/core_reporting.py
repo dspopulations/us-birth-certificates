@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +69,11 @@ def _write_table(df: pd.DataFrame, out_dir: Path, stem: str) -> None:
     tables_dir = out_dir / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
     df.to_csv(_table_path(out_dir, stem), index=False)
+
+
+def _interval_yerr(mean: np.ndarray, lo: np.ndarray, hi: np.ndarray) -> np.ndarray:
+    """Matplotlib-safe asymmetric error bars from interval bounds."""
+    return np.vstack((np.maximum(mean - lo, 0.0), np.maximum(hi - mean, 0.0)))
 
 
 def _natural_expected_by_year(
@@ -141,6 +147,7 @@ def accounting_by_year_table(
         for var in (
             "rho_year",
             "eta_year",
+            "recording_s_year",
             "true_count_year",
             "recorded_count_year_mu",
         ):
@@ -223,7 +230,8 @@ def headline_table(
                 "metric": "recording_s",
                 **recording_s,
                 "notes": (
-                    "Overall certificate recording sensitivity; prior mean "
+                    "Global certificate recording-sensitivity centre; "
+                    "equals overall sensitivity in constant-s models; prior mean "
                     f"{recording_prior_mean:.3f}; "
                     f"{interval_label(interval_prob)} ETI"
                 ),
@@ -257,7 +265,7 @@ def recording_s_table(
     *,
     interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> pd.DataFrame:
-    """Prior/posterior summary for the single recording sensitivity parameter."""
+    """Prior/posterior summary for the global recording sensitivity parameter."""
     post = _summary(
         idata.posterior["recording_s"].values,
         interval_prob=interval_prob,
@@ -280,6 +288,59 @@ def recording_s_table(
             }
         ]
     )
+
+
+def recording_s_by_year_table(
+    idata: Any,
+    priors_config: dict[str, object],
+    *,
+    years: list[int],
+    recording_model: str = "constant",
+    interval_prob: float = DEFAULT_INTERVAL_PROB,
+) -> pd.DataFrame:
+    """Prior/posterior summary for recording sensitivity by year."""
+    if "recording_s_year" not in idata.posterior:
+        raise ValueError(
+            "InferenceData is missing 'recording_s_year'. Re-fit the core model."
+        )
+
+    mu = float(priors_config.get("recording_s_logit", logit(0.5)))
+    global_sigma = float(priors_config.get("recording_s_sigma", 1.0))
+    year_sigma = (
+        float(priors_config.get("recording_s_year_sigma", 0.0))
+        if recording_model == "year"
+        else 0.0
+    )
+    centered_offset_sigma = (
+        year_sigma * math.sqrt((len(years) - 1.0) / len(years)) if years else 0.0
+    )
+    marginal_sigma = math.sqrt(global_sigma**2 + centered_offset_sigma**2)
+    z = normal_interval_z(interval_prob)
+
+    rows = []
+    for idx, year in enumerate(years):
+        post = _summary(
+            idata.posterior["recording_s_year"].sel(year=idx).values,
+            interval_prob=interval_prob,
+        )
+        rows.append(
+            {
+                "year": year,
+                "parameter": "recording_s_year",
+                "recording_model": recording_model,
+                "prior_mean": float(_inv_logit(mu)),
+                "prior_lo": float(_inv_logit(mu - z * marginal_sigma)),
+                "prior_hi": float(_inv_logit(mu + z * marginal_sigma)),
+                "prior_sigma_logit": marginal_sigma,
+                "prior_global_sigma_logit": global_sigma,
+                "prior_year_offset_sigma_logit": year_sigma,
+                "posterior_mean": post["mean"],
+                "posterior_lo": post["lo"],
+                "posterior_hi": post["hi"],
+                "interval_prob": interval_prob,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def posterior_predictive_table(
@@ -334,8 +395,10 @@ def _errorbar_plot(
     fig, ax = plt.subplots(figsize=(8, 4.5))
     xpos = np.arange(len(df))
     y = df[mean].to_numpy(dtype=float)
-    yerr = np.vstack(
-        (y - df[lo].to_numpy(dtype=float), df[hi].to_numpy(dtype=float) - y)
+    yerr = _interval_yerr(
+        y,
+        df[lo].to_numpy(dtype=float),
+        df[hi].to_numpy(dtype=float),
     )
     ax.errorbar(xpos, y, yerr=yerr, fmt="o-", capsize=4, label="posterior predictive")
     ax.scatter(
@@ -399,11 +462,10 @@ def _reduction_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL
     )
     ax.plot(x, df["rho_prior_mean"], "--", label="prior mean")
     post = df["rho_year_mean"].to_numpy(dtype=float)
-    yerr = np.vstack(
-        (
-            post - df["rho_year_lo"].to_numpy(dtype=float),
-            df["rho_year_hi"].to_numpy(dtype=float) - post,
-        )
+    yerr = _interval_yerr(
+        post,
+        df["rho_year_lo"].to_numpy(dtype=float),
+        df["rho_year_hi"].to_numpy(dtype=float),
     )
     ax.errorbar(x, post, yerr=yerr, fmt="o-", capsize=4, label="posterior")
     ax.set_xticks(x)
@@ -444,6 +506,38 @@ def _recording_s_plot(
     return fig
 
 
+def _recording_s_by_year_plot(
+    table: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL_PROB
+):
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    x = np.arange(len(table))
+    ax.fill_between(
+        x,
+        table["prior_lo"],
+        table["prior_hi"],
+        alpha=0.16,
+        label=f"prior {interval_label(interval_prob)} ETI",
+    )
+    ax.plot(x, table["prior_mean"], "--", label="prior mean")
+    post = table["posterior_mean"].to_numpy(dtype=float)
+    yerr = _interval_yerr(
+        post,
+        table["posterior_lo"].to_numpy(dtype=float),
+        table["posterior_hi"].to_numpy(dtype=float),
+    )
+    ax.errorbar(x, post, yerr=yerr, fmt="o-", capsize=4, label="posterior")
+    ax.set_xticks(x)
+    ax.set_xticklabels(table["year"].astype(str), rotation=35, ha="right")
+    ax.set_ylim(0, min(1.0, max(0.8, float(table["posterior_hi"].max()) + 0.05)))
+    ax.set_ylabel("certificate recording sensitivity")
+    ax.set_title("Recording sensitivity by year")
+    ax.legend()
+    fig.tight_layout()
+    return fig
+
+
 def render_core_all(
     idata: Any,
     cells: pd.DataFrame,
@@ -451,6 +545,7 @@ def render_core_all(
     *,
     priors_config: dict[str, object],
     year_range: tuple[int, int] | None = None,
+    recording_model: str = "constant",
     interval_prob: float = DEFAULT_INTERVAL_PROB,
 ) -> dict[str, pd.DataFrame]:
     """Write all prespecified core-model report figures and tables."""
@@ -474,6 +569,13 @@ def render_core_all(
     )
     reduction = reduction_prior_posterior_table(accounting)
     recording = recording_s_table(idata, priors_config, interval_prob=interval_prob)
+    recording_by_year = recording_s_by_year_table(
+        idata,
+        priors_config,
+        years=list(accounting["year"]),
+        recording_model=recording_model,
+        interval_prob=interval_prob,
+    )
     ppc_year = posterior_predictive_table(
         idata,
         cells,
@@ -494,6 +596,7 @@ def render_core_all(
         "core_accounting_by_year": accounting,
         "core_reduction_prior_posterior": reduction,
         "core_recording_s": recording,
+        "core_recording_s_by_year": recording_by_year,
         "core_ppc_by_year": ppc_year,
         "core_ppc_by_age": ppc_age,
     }
@@ -512,6 +615,11 @@ def render_core_all(
     )
     _save_figure(
         _recording_s_plot(idata, recording, priors_config), out_dir, "core_recording_s"
+    )
+    _save_figure(
+        _recording_s_by_year_plot(recording_by_year, interval_prob=interval_prob),
+        out_dir,
+        "core_recording_s_by_year",
     )
     _save_figure(
         _errorbar_plot(
@@ -548,6 +656,7 @@ __all__ = [
     "accounting_by_year_table",
     "headline_table",
     "posterior_predictive_table",
+    "recording_s_by_year_table",
     "recording_s_table",
     "reduction_prior_posterior_table",
     "render_core_all",

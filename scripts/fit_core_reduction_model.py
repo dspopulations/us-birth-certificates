@@ -24,6 +24,10 @@ from dspopulations_us_birth_certificates.selection import (
     save_summary,
     selection_run_config,
 )
+from dspopulations_us_birth_certificates.selection.core_models import (
+    core_model_names,
+    get_core_model_definition,
+)
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CORE_REDUCTION_MODEL_ID,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
@@ -56,6 +60,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Fit the core age-reduction-recording Bayesian model.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    p.add_argument(
+        "model",
+        nargs="?",
+        default="DSP001",
+        help=f"Core model ID. Valid models: {', '.join(core_model_names())}.",
+    )
     p.add_argument("--profile", default="dev", choices=("dev", "reporting"))
     p.add_argument(
         "--years",
@@ -86,11 +96,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--recording-s-mean", type=float, default=0.5)
     p.add_argument("--recording-s-sigma", type=float, default=1.0)
     p.add_argument(
+        "--recording-s-year-sigma",
+        type=float,
+        default=0.35,
+        help=(
+            "Logit-scale prior SD for centred year offsets in s_year models. "
+            "Ignored by constant-s models."
+        ),
+    )
+    p.add_argument(
         "--output-dir",
         type=Path,
         default=None,
         help=(
-            "Output directory (default: output/selection_core_reduction/<timestamp>)."
+            "Output directory (default: output/selection_core_reduction/"
+            "<DSPnnn>/<timestamp>)."
         ),
     )
     p.add_argument("--prior-only", action="store_true")
@@ -110,10 +130,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Override sampler backend in the selected profile, e.g. nutpie or pymc.",
     )
     ns = p.parse_args(argv)
+    try:
+        ns.model_definition = get_core_model_definition(ns.model)
+    except ValueError as exc:
+        p.error(str(exc))
     ns.year_range = _parse_years(ns.years, (2016, 2024))
     ns.output_dir = ns.output_dir or (
         Path("output")
         / CORE_REDUCTION_MODEL_ID
+        / ns.model_definition.model_id
         / datetime.now().strftime("%Y%m%d-%H%M%S")
     )
     ns.overrides = {
@@ -146,8 +171,12 @@ def main(argv: list[str] | None = None) -> int:
 
     cli_output.banner(
         "fit_core_reduction_model",
-        f"years={ns.year_range[0]}-{ns.year_range[1]}  profile={ns.profile}",
+        (
+            f"model={ns.model_definition.model_id}  "
+            f"years={ns.year_range[0]}-{ns.year_range[1]}  profile={ns.profile}"
+        ),
     )
+    cli_output.info(ns.model_definition.title)
 
     cli_output.section("Environment")
     package_metadata.report_package_versions(list(PACKAGE_LIST))
@@ -191,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         extrapolated_start=ns.extrapolated_start,
         recording_s_mean=ns.recording_s_mean,
         recording_s_sigma=ns.recording_s_sigma,
+        recording_s_year_sigma=ns.recording_s_year_sigma,
     )
     cli_output.info(
         "reduction prior: "
@@ -198,10 +228,18 @@ def main(argv: list[str] | None = None) -> int:
         f"extrapolated sigma={ns.extrapolated_reduction_sigma} "
         f"from {ns.extrapolated_start}"
     )
+    if ns.model_definition.recording_model == "year":
+        cli_output.info(
+            "recording sensitivity: partially pooled s_year offsets "
+            f"(sigma={ns.recording_s_year_sigma})"
+        )
+    else:
+        cli_output.info("recording sensitivity: constant s")
     model = build_core_reduction_model(
         cells,
         priors,
         n_year=cells.attrs["n_year"],
+        recording_model=ns.model_definition.recording_model,
     )
 
     cli_output.section("Sample")
@@ -211,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
     model_config = CoreReductionModelConfig.from_priors(
         year_range=ns.year_range,
         priors_obj=priors,
+        model_definition=ns.model_definition,
         notes=f"profile={ns.profile}",
     )
     context = FitContext(
@@ -223,12 +262,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     save_artefacts(context, ns.output_dir)
     cli_output.success(f"idata.nc, cells.parquet, config.json -> {ns.output_dir}")
-    qmd_path = copy_docs_template(CORE_REDUCTION_MODEL_ID, ns.output_dir)
+    qmd_path = copy_docs_template(ns.model_definition.template_id, ns.output_dir)
     if qmd_path is not None:
         cli_output.success(f"index.qmd -> {qmd_path}")
     else:
         cli_output.warning(
-            f"No Quarto template at docs/models/{CORE_REDUCTION_MODEL_ID}/index.qmd."
+            "No Quarto template at "
+            f"docs/models/{ns.model_definition.template_id}/index.qmd."
         )
 
     if ns.prior_only:
@@ -236,15 +276,19 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     cli_output.section("Posterior summary")
+    summary_vars = [
+        "rho_year",
+        "eta_year",
+        "recording_s",
+        "recording_s_year",
+        "true_count_year",
+        "true_count_total",
+    ]
+    if "recording_s_year_offset" in idata.posterior:
+        summary_vars.insert(4, "recording_s_year_offset")
     summary = diagnostics.summary_table(
         idata,
-        var_names=(
-            "rho_year",
-            "eta_year",
-            "recording_s",
-            "true_count_year",
-            "true_count_total",
-        ),
+        var_names=tuple(summary_vars),
     )
     save_summary(summary, ns.output_dir)
     year_summary = core_year_summary(idata, cells)
@@ -268,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         ns.output_dir,
         priors_config=priors.to_dict(),
         year_range=ns.year_range,
+        recording_model=ns.model_definition.recording_model,
     )
     cli_output.success(f"plots/ and tables/ -> {ns.output_dir}")
     render_report(qmd_path, do_render=ns.render)
