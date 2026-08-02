@@ -72,7 +72,7 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
         {
             "N_cell": rng.integers(1000, 5000, size=n_cell),
             "R_cell": rng.integers(0, 5, size=n_cell),
-            "race_idx": rng.integers(0, 6, size=n_cell),
+            "race_idx": rng.integers(0, 7, size=n_cell),
             "age_idx": rng.integers(0, n_age, size=n_cell),
             "cchd": rng.integers(0, 2, size=n_cell),
         }
@@ -92,13 +92,13 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
         )
     )
 
-    # summary.csv with eta_term_race[0..5] + s_race[0..5].
+    # summary.csv with eta_term_race[0..6] + s_race[0..6].
     # lo/hi are derived from mean ± half-width so forest-plot xerr stays
     # non-negative (matches real az.summary output).
     index = []
     rows = []
     for prefix in ("eta_term_race", "s_race"):
-        for i in range(6):
+        for i in range(7):
             mean = rng.normal(0, 0.3)
             half_width = rng.uniform(0.1, 0.3)
             index.append(f"{prefix}[{i}]")
@@ -116,12 +116,12 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
     summary = pd.DataFrame(rows, index=index)
     summary.to_csv(fit_dir / "summary.csv")
 
-    # tables/identifiability.csv.
+    # tables/identifiability.csv (now a ridge-correlation diagnostic).
     tables = fit_dir / "tables"
     tables.mkdir(exist_ok=True)
     pd.DataFrame(
         {
-            "race_idx": range(6),
+            "race_idx": range(7),
             "race": [
                 "NH White",
                 "NH Black",
@@ -129,10 +129,11 @@ def _build_minimal_fit(fit_dir: Path, variant: str, seed: int) -> None:
                 "NH Asian/Pacific Islander",
                 "Hispanic",
                 "Unknown",
+                "NH Multi-race",
             ],
-            "correlation": rng.uniform(-0.9, 0.3, size=6),
-            "abs_correlation": rng.uniform(0.1, 0.9, size=6),
-            "interpretation": ["data-informed"] * 6,
+            "correlation": rng.uniform(-0.9, 0.3, size=7),
+            "abs_correlation": rng.uniform(0.1, 0.9, size=7),
+            "interpretation": ["low covariance; inspect s_anchor_shrinkage"] * 7,
         }
     ).to_csv(tables / "identifiability.csv", index=False)
 
@@ -164,21 +165,16 @@ def test_compare_autodiscovers_and_aggregates(
     csv = pd.read_csv(out / "comparison.csv")
     # All three variants × at least three metrics.
     assert set(csv["variant"].unique()) == {"A", "B", "C"}
-    assert {"total_true", "eta_term_race", "s_race"}.issubset(
-        csv["metric"].unique()
-    )
+    assert {"total_true", "eta_term_race", "s_race"}.issubset(csv["metric"].unique())
     # Forest-plot image written.
     assert (out / "comparison_forest.png").is_file()
     assert (out / "comparison_forest.svg").is_file()
 
 
-def test_compare_explicit_fit_dirs(
-    three_variant_fits: Path, tmp_path: Path
-) -> None:
+def test_compare_explicit_fit_dirs(three_variant_fits: Path, tmp_path: Path) -> None:
     mod = _load_cli_module()
     fit_dirs = [
-        next((three_variant_fits / v / "full").iterdir())
-        for v in ("A", "B", "C")
+        next((three_variant_fits / v / "full").iterdir()) for v in ("A", "B", "C")
     ]
     out = tmp_path / "compare_explicit"
     exit_code = mod.main(

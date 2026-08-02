@@ -205,9 +205,12 @@ upserts
 writeback
 
 # Modelling terms
-reanchor
 caveated
+compiledir
 counterintuitive
+MPLCONFIGDIR
+nowcasts
+reanchor
 reweighted
 
 # Clinical terms

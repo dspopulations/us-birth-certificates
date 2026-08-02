@@ -350,9 +350,7 @@ def main(argv: list[str] | None = None) -> int:
         idata=idata,
     )
     save_artefacts(context, cli.output_dir)
-    cli_output.success(
-        f"idata.nc, cells.parquet, config.json -> {cli.output_dir}"
-    )
+    cli_output.success(f"idata.nc, cells.parquet, config.json -> {cli.output_dir}")
 
     qmd_path = copy_docs_template(MODEL_ID, cli.output_dir)
     if qmd_path is not None:
@@ -390,7 +388,11 @@ def main(argv: list[str] | None = None) -> int:
         idata,
         cells,
         cli.output_dir,
-        options=RenderOptions(strata=DEFAULT_STRATA),
+        options=RenderOptions(
+            strata=DEFAULT_STRATA,
+            priors_config=model_config.priors,
+            year_range=(cli.start_year, cli.end_year),
+        ),
     )
 
     render_report(qmd_path, do_render=cli.render)

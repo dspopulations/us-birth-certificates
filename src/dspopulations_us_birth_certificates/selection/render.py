@@ -3,7 +3,7 @@
 Both :mod:`scripts.render_selection_diagnostics` (post-hoc rendering
 from a saved fit directory) and :mod:`scripts.fit_selection_model`
 (inline rendering at the end of a fit) call into :func:`render_all` to
-produce the identical six-figure PNG + SVG + CSV companion set.
+produce the identical diagnostic PNG + SVG + CSV companion set.
 
 Layout
 ------
@@ -22,7 +22,8 @@ the rest still render.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+import json
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -47,6 +48,8 @@ class RenderOptions:
     cchd_target: float = 0.225
     hdi_prob: float = 0.94
     strata: tuple[str, ...] = DEFAULT_STRATA
+    priors_config: Mapping[str, object] | None = None
+    year_range: tuple[int, int] | None = None
 
 
 def _save_figure(
@@ -97,6 +100,28 @@ def _guarded(
     cli_output.success(f"{label} -> {plots_dir / stem}.png")
 
 
+def _prior_context_from_config(
+    out_dir: Path,
+) -> tuple[Mapping[str, object] | None, tuple[int, int] | None]:
+    """Read priors/year range from a saved fit config when available."""
+    cfg_path = out_dir / "config.json"
+    if not cfg_path.is_file():
+        return None, None
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        cli_output.warning(f"Could not parse {cfg_path}: {exc}")
+        return None, None
+    year_range = cfg.get("year_range")
+    parsed_year_range = (
+        (int(year_range[0]), int(year_range[1]))
+        if isinstance(year_range, (list, tuple)) and len(year_range) == 2
+        else None
+    )
+    priors = cfg.get("priors")
+    return (priors if isinstance(priors, dict) else None), parsed_year_range
+
+
 def render_all(
     idata: xr.DataTree,
     cells: pd.DataFrame,
@@ -104,12 +129,15 @@ def render_all(
     *,
     options: RenderOptions,
 ) -> None:
-    """Render the six diagnostic figures + their CSV companions."""
+    """Render the diagnostic figures + their CSV companions."""
     plots_dir = out_dir / "plots"
     tables_dir = out_dir / "tables"
+    config_priors, config_year_range = _prior_context_from_config(out_dir)
+    priors_config = options.priors_config or config_priors
+    year_range = options.year_range or config_year_range
 
     _guarded(
-        "Identifiability pair-plot",
+        "Eta/s ridge-correlation pair-plot",
         lambda: (
             diagnostics.identifiability_pairplot(idata),
             diagnostics.identifiability_table(idata),
@@ -120,11 +148,24 @@ def render_all(
     )
 
     _guarded(
+        "s-anchor shrinkage",
+        lambda: (
+            diagnostics.s_anchor_shrinkage_plot(
+                idata, priors_config=priors_config, year_range=year_range
+            ),
+            diagnostics.s_anchor_shrinkage_table(
+                idata, priors_config=priors_config, year_range=year_range
+            ),
+        ),
+        plots_dir,
+        tables_dir,
+        "s_anchor_shrinkage",
+    )
+
+    _guarded(
         "Termination year trajectory",
         lambda: (
-            diagnostics.eta_term_year_trajectory_plot(
-                idata, hdi_prob=options.hdi_prob
-            ),
+            diagnostics.eta_term_year_trajectory_plot(idata, hdi_prob=options.hdi_prob),
             diagnostics.eta_term_year_trajectory_table(
                 idata, hdi_prob=options.hdi_prob
             ),
@@ -192,6 +233,7 @@ def expected_stems(strata: Iterable[str] = DEFAULT_STRATA) -> tuple[str, ...]:
     """Stem names of the figures :func:`render_all` writes (tests rely on this)."""
     base = (
         "identifiability",
+        "s_anchor_shrinkage",
         "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",

@@ -7,12 +7,12 @@ headline posterior quantities:
 
 - Total true DS livebirths 2016–2024 (posterior mean + 95% CI)
 - Per-race ``eta_term_race`` and ``s_race`` posterior means + CIs
-- Per-race identifiability correlation ``|r|`` between ``eta_term_race``
+- Per-race eta/s ridge correlation ``|r|`` between ``eta_term_race``
   and ``s_race`` (from each fit's ``tables/identifiability.csv``)
 
 A material spread across variants on any row indicates prior-driven
-decomposition for that quantity; tight agreement indicates
-data-identified structure (plan §4.4).
+decomposition for that quantity. Tight agreement is useful but is not,
+by itself, proof that the decomposition is data-identified.
 
 Examples
 --------
@@ -110,9 +110,7 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
                 raise SystemExit(f"Missing config.json in {fd}")
             variant = json.loads(cfg_path.read_text()).get("variant")
             if variant not in VARIANTS:
-                raise SystemExit(
-                    f"{fd}/config.json has unexpected variant={variant!r}"
-                )
+                raise SystemExit(f"{fd}/config.json has unexpected variant={variant!r}")
             fit_dirs[variant] = fd
     else:
         for v in VARIANTS:
@@ -122,8 +120,7 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
     if not fit_dirs:
         raise SystemExit("No variant fits found — pass --fit-dirs explicitly.")
     output_dir = ns.output_dir or (
-        ns.root
-        / f"_compare_{pd.Timestamp.now(tz='UTC').strftime('%Y%m%d-%H%M%S')}"
+        ns.root / f"_compare_{pd.Timestamp.now(tz='UTC').strftime('%Y%m%d-%H%M%S')}"
     )
     return CompareCliConfig(
         fit_dirs=fit_dirs,
@@ -137,7 +134,9 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
 # --------------------------------------------------------------------------- #
 
 
-def _load_fit_arrays(fit_dir: Path) -> tuple[dict[str, np.ndarray], pd.DataFrame, float]:
+def _load_fit_arrays(
+    fit_dir: Path,
+) -> tuple[dict[str, np.ndarray], pd.DataFrame, float]:
     """Load one fit's posterior draws + cells needed for aggregation.
 
     Returns ``(arrays, cells, fpr)``. ``arrays`` holds ``p`` (``p_ds_lb``),
@@ -289,7 +288,7 @@ def build_comparison(
 
     ``comparison`` columns: ``variant``, ``metric``, ``level``, ``mean``,
     ``lo``, ``hi``. ``metric`` ∈ {``total_true``, ``agg_eta``, ``reduction``,
-    ``agg_s``, ``eta_term_race``, ``s_race``, ``identifiability_abs_r``};
+    ``agg_s``, ``eta_term_race``, ``s_race``, ``eta_s_corr_abs``};
     ``level`` is the race label (where applicable) or "(all)" for scalars.
 
     ``age_decomposition`` is the per-maternal-age posterior-predictive table
@@ -325,20 +324,22 @@ def build_comparison(
                             "variant": variant,
                             "metric": metric,
                             "level": (
-                                RACE_LEVELS[idx] if idx < len(RACE_LEVELS)
+                                RACE_LEVELS[idx]
+                                if idx < len(RACE_LEVELS)
                                 else f"race_{idx}"
                             ),
                             **row.to_dict(),
                         }
                     )
 
-        # Identifiability |r| per race.
+        # Eta/s ridge-correlation |r| per race. Under anchored s, this is
+        # not a stand-alone identification metric.
         ident = _load_identifiability(fit_dir)
         for _, r in ident.iterrows():
             rows.append(
                 {
                     "variant": variant,
-                    "metric": "identifiability_abs_r",
+                    "metric": "eta_s_corr_abs",
                     "level": r.get("race", f"race_{int(r['race_idx'])}"),
                     "mean": float(r["abs_correlation"]),
                     "lo": float("nan"),
@@ -446,13 +447,9 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Render forest plot")
     try:
         render_forest(comparison, cli.output_dir / "comparison_forest")
-        cli_output.success(
-            f"comparison_forest.png/.svg -> {cli.output_dir}"
-        )
+        cli_output.success(f"comparison_forest.png/.svg -> {cli.output_dir}")
     except Exception as exc:  # noqa: BLE001
-        cli_output.warning(
-            f"Forest plot failed: {type(exc).__name__}: {exc}"
-        )
+        cli_output.warning(f"Forest plot failed: {type(exc).__name__}: {exc}")
 
     cli_output.section("Headline")
     totals = comparison[comparison["metric"] == "total_true"].set_index("variant")

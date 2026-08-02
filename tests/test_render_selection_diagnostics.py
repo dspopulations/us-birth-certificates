@@ -99,6 +99,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     tables = out_dir / "tables"
     expected = {
         "identifiability",
+        "s_anchor_shrinkage",
         "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",
@@ -113,6 +114,7 @@ def test_cli_renders_all_figures(fit_dir: Path, tmp_path: Path) -> None:
     # The non-PPC diagnostics all produce a CSV companion.
     for stem in (
         "identifiability",
+        "s_anchor_shrinkage",
         "eta_term_year_trajectory",
         "cchd_consistency",
         "age_curve",
