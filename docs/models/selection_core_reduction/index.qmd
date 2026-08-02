@@ -46,14 +46,16 @@ The model is deliberately simple:
 
 $$
 P(R = 1 \mid y, a) =
-\theta_\text{age}(a) \cdot (1 - \rho_y) \cdot s
+\theta_\text{age}(a) \cdot (1 - \rho_y) \cdot s_y
  + \{1 - \theta_\text{age}(a)(1-\rho_y)\}\cdot f
 $$
 
 where $\theta_\text{age}$ is the external maternal-age Down syndrome
 livebirth probability absent prenatal selection, $\rho_y$ is the combined
-pre-livebirth reduction in year $y$, $s$ is overall certificate recording
-sensitivity, and $f$ is the fixed false-positive rate.
+pre-livebirth reduction in year $y$, $s_y$ is certificate recording
+sensitivity, and $f$ is the fixed false-positive rate. In `DSP001`,
+all years share one constant `s`; in `DSP002`, `s_year` is partially
+pooled around the same global recording-sensitivity centre.
 
 ::: {.callout-note title="Model at a glance"}
 
@@ -62,7 +64,7 @@ sensitivity, and $f$ is the fixed false-positive rate.
 - **External age anchor:** Morris/de Graaf maternal-age curve.
 - **Reduction prior:** surveillance-derived `rho_year`, widened in the
   extrapolated tail.
-- **Recording model:** one overall certificate sensitivity `s`.
+- **Recording model:** configured by `recording_model` in `config.json`.
 - **Role:** baseline accounting model before adding demographic modifiers.
 
 :::
@@ -71,7 +73,10 @@ sensitivity, and $f$ is the fixed false-positive rate.
 #| echo: false
 year_range = config["year_range"]
 profile = run_config["name"]
+model_id = config.get("model_id", "<unknown>")
+recording_model = config.get("recording_model", "<unknown>")
 Markdown(
+    f"- **model**: `{model_id}` (`recording_model={recording_model}`)\n"
     f"- **year range**: {year_range[0]}-{year_range[1]}\n"
     f"- **sampling profile**: `{profile}` "
     f"({run_config['chains']} chains x {run_config['draws']} draws, "
@@ -139,7 +144,7 @@ display(
 
 The headline total is conditional on the current age curve, reduction prior,
 and recording prior. The model still mainly observes the product
-`theta_age * (1 - rho_year) * s`; this report makes that dependence visible
+`theta_age * (1 - rho_year) * s_year`; this report makes that dependence visible
 rather than claiming the components are identified from birth certificates
 alone.
 
@@ -203,6 +208,21 @@ recording = pd.read_csv("tables/core_recording_s.csv")
 display(recording.round(3))
 ```
 
+## Recording Sensitivity By Year
+
+![Recording sensitivity by year](plots/core_recording_s_by_year.png){#fig-core-recording-year .lightbox fig-align="left"}
+
+```{python}
+#| echo: false
+recording_year = pd.read_csv("tables/core_recording_s_by_year.csv")
+display(recording_year.round(3))
+```
+
+For `DSP001`, this plot is a flat copy of the constant `s` posterior by
+construction. For `DSP002`, it is the direct extension under test: year-specific
+recording sensitivity with centred logit-scale offsets around the global
+recording-sensitivity level.
+
 ## Posterior Predictive Checks
 
 These checks ask whether the fitted model can reproduce the observed recorded
@@ -237,14 +257,17 @@ Recorded DS births
   x certificate recording sensitivity.
 ```
 
-It is ready to compare against the first extension, `s_year`, but not yet to
-carry race/ethnicity, education, payer, or detection/termination claims.
+`DSP001` is the constant-`s` baseline and `DSP002` is the first `s_year`
+extension. This family is not yet designed to carry race/ethnicity, education,
+payer, or detection/termination claims.
 
 ## Caveats
 
 - The model estimates aggregate counts, not missed individual births.
 - Surveillance-derived reduction priors and certificate recording sensitivity
   are not independently identified from certificate counts alone.
+- In `DSP002`, year-specific recording sensitivity competes with `rho_year`
+  unless external surveillance or reporting evidence anchors one of them.
 - The 2020-2024 reduction values are treated as extrapolated and therefore
   receive wider prior uncertainty.
 - A good aggregate fit is necessary but not sufficient for demographic

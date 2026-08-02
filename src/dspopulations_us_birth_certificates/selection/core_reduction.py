@@ -24,6 +24,12 @@ import numpy as np
 import pandas as pd
 
 from dspopulations_us_birth_certificates.intervals import posterior_mean_eti
+from dspopulations_us_birth_certificates.selection.core_models import (
+    CORE_REDUCTION_FAMILY_ID,
+    DSP001,
+    CoreModelDefinition,
+    RecordingModel,
+)
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_COLUMNS,
     DEFAULT_YEAR_RANGE,
@@ -35,7 +41,7 @@ from dspopulations_us_birth_certificates.selection.priors import (
     logit,
 )
 
-CORE_REDUCTION_MODEL_ID = "selection_core_reduction"
+CORE_REDUCTION_MODEL_ID = CORE_REDUCTION_FAMILY_ID
 DEFAULT_REDUCTION_CSV = Path("data/us-births-reduction-rates-1989-2024.csv")
 DEFAULT_EXTRAPOLATED_REDUCTION_START = 2020
 
@@ -52,6 +58,7 @@ class CoreReductionPriors:
     reduction_sigma: np.ndarray = field(default_factory=lambda: np.empty(0))
     recording_s_logit: float = field(default_factory=lambda: float(logit(0.5)))
     recording_s_sigma: float = 1.0
+    recording_s_year_sigma: float = 0.35
     false_positive_rate: float = FALSE_POSITIVE_RATE
     reduction_source: str = str(DEFAULT_REDUCTION_CSV)
     extrapolated_reduction_start: int = DEFAULT_EXTRAPOLATED_REDUCTION_START
@@ -67,6 +74,7 @@ class CoreReductionPriors:
         extrapolated_start: int = DEFAULT_EXTRAPOLATED_REDUCTION_START,
         recording_s_mean: float = 0.5,
         recording_s_sigma: float = 1.0,
+        recording_s_year_sigma: float = 0.35,
         false_positive_rate: float = FALSE_POSITIVE_RATE,
     ) -> CoreReductionPriors:
         """Build priors from the tracked year-level reduction-rate CSV.
@@ -81,6 +89,8 @@ class CoreReductionPriors:
             raise ValueError("reduction logit sigmas must be positive")
         if recording_s_sigma <= 0.0:
             raise ValueError("recording_s_sigma must be positive")
+        if recording_s_year_sigma <= 0.0:
+            raise ValueError("recording_s_year_sigma must be positive")
 
         path = Path(path)
         table = pd.read_csv(path, encoding="utf-8-sig")
@@ -113,6 +123,7 @@ class CoreReductionPriors:
             reduction_sigma=sigma,
             recording_s_logit=float(logit(recording_s_mean)),
             recording_s_sigma=recording_s_sigma,
+            recording_s_year_sigma=recording_s_year_sigma,
             false_positive_rate=false_positive_rate,
             reduction_source=str(path),
             extrapolated_reduction_start=extrapolated_start,
@@ -136,7 +147,12 @@ class CoreReductionModelConfig:
     year_range: tuple[int, int]
     priors: dict[str, Any]
     notes: str = ""
-    model_id: str = CORE_REDUCTION_MODEL_ID
+    model_id: str = DSP001.model_id
+    model_slug: str = DSP001.slug
+    family_id: str = CORE_REDUCTION_FAMILY_ID
+    recording_model: RecordingModel = DSP001.recording_model
+    template_id: str = DSP001.template_id
+    comparison_parent: str | None = DSP001.comparison_parent
 
     @classmethod
     def from_priors(
@@ -144,17 +160,29 @@ class CoreReductionModelConfig:
         *,
         year_range: tuple[int, int],
         priors_obj: CoreReductionPriors,
+        model_definition: CoreModelDefinition = DSP001,
         notes: str = "",
     ) -> CoreReductionModelConfig:
         return cls(
             year_range=year_range,
             priors=priors_obj.to_dict(),
             notes=notes,
+            model_id=model_definition.model_id,
+            model_slug=model_definition.slug,
+            family_id=CORE_REDUCTION_FAMILY_ID,
+            recording_model=model_definition.recording_model,
+            template_id=model_definition.template_id,
+            comparison_parent=model_definition.comparison_parent,
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "model_id": self.model_id,
+            "model_slug": self.model_slug,
+            "family_id": self.family_id,
+            "recording_model": self.recording_model,
+            "template_id": self.template_id,
+            "comparison_parent": self.comparison_parent,
             "year_range": list(self.year_range),
             "priors": dict(self.priors),
             "notes": self.notes,
@@ -247,11 +275,14 @@ def build_core_reduction_model(
     priors: CoreReductionPriors,
     *,
     n_year: int | None = None,
+    recording_model: RecordingModel = "constant",
 ) -> Any:
     """Build the PyMC core reduction-recording model."""
     import pymc as pm
     import pytensor.tensor as pt
 
+    if recording_model not in {"constant", "year"}:
+        raise ValueError("recording_model must be 'constant' or 'year'")
     if n_year is None:
         n_year = int(cells.attrs.get("n_year", cells["year_idx"].max() + 1))
     if len(priors.reduction_logit) != n_year:
@@ -303,13 +334,37 @@ def build_core_reduction_model(
             sigma=priors.recording_s_sigma,
         )
         recording_s = pm.Deterministic("recording_s", pm.math.invlogit(s_logit))
+        if recording_model == "constant":
+            recording_s_year = pm.Deterministic(
+                "recording_s_year",
+                pt.ones((n_year,)) * recording_s,
+                dims="year",
+            )
+        else:
+            s_year_offset_raw = pm.Normal(
+                "recording_s_year_offset_raw",
+                mu=0.0,
+                sigma=priors.recording_s_year_sigma,
+                dims="year",
+            )
+            s_year_offset = pm.Deterministic(
+                "recording_s_year_offset",
+                s_year_offset_raw - s_year_offset_raw.mean(),
+                dims="year",
+            )
+            recording_s_year = pm.Deterministic(
+                "recording_s_year",
+                pm.math.invlogit(s_logit + s_year_offset),
+                dims="year",
+            )
 
         p_ds_lb = pm.Deterministic(
             "p_ds_lb", theta[age_idx] * eta_year[year_idx], dims="cell"
         )
         p_recorded = pm.Deterministic(
             "p_recorded",
-            p_ds_lb * recording_s + (1.0 - p_ds_lb) * priors.false_positive_rate,
+            p_ds_lb * recording_s_year[year_idx]
+            + (1.0 - p_ds_lb) * priors.false_positive_rate,
             dims="cell",
         )
 
@@ -358,6 +413,7 @@ def core_year_summary(idata: Any, cells: pd.DataFrame) -> pd.DataFrame:
         for var in (
             "rho_year",
             "eta_year",
+            "recording_s_year",
             "true_count_year",
             "recorded_count_year_mu",
         ):
