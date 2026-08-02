@@ -872,12 +872,20 @@ def summary_table(
     """Return ``az.summary`` as a DataFrame (optionally filtered)."""
     import arviz as az
 
+    summary_kwargs = {
+        "ci_prob": hdi_prob,
+        "ci_kind": "hdi",
+        # Convergence gates use this frame directly.  ArviZ's display-oriented
+        # default can round an R-hat below 1.01 up to 1.01 and create a false
+        # failure at the strict threshold.
+        "round_to": 6,
+    }
     if var_names is None:
-        return az.summary(idata, ci_prob=hdi_prob, ci_kind="hdi")
+        return az.summary(idata, **summary_kwargs)
     available = [n for n in var_names if n in idata.posterior.data_vars]
     if not available:
-        return az.summary(idata, ci_prob=hdi_prob, ci_kind="hdi")
-    return az.summary(idata, var_names=list(available), ci_prob=hdi_prob, ci_kind="hdi")
+        return az.summary(idata, **summary_kwargs)
+    return az.summary(idata, var_names=list(available), **summary_kwargs)
 
 
 def convergence_health(

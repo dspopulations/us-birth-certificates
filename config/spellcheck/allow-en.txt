@@ -211,8 +211,10 @@ counterintuitive
 HPDI
 MPLCONFIGDIR
 nowcasts
+reaggregated
 reanchor
 reweighted
+unmodelled
 
 # Clinical terms
 Apgars
