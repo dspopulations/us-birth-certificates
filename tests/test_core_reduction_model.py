@@ -91,6 +91,23 @@ def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:
     assert np.allclose(priors.reduction_sigma, [0.2, 0.5])
 
 
+def test_core_reduction_priors_allow_zero_s_year_sigma_for_constant_model(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "reduction.csv"
+    pd.DataFrame({"year": [2020, 2021], "reduction": [0.35, 0.40]}).to_csv(
+        path, index=False
+    )
+
+    priors = CoreReductionPriors.from_reduction_csv(
+        year_range=(2020, 2021),
+        path=path,
+        recording_s_year_sigma=0.0,
+    )
+
+    assert priors.recording_s_year_sigma == 0.0
+
+
 def test_build_core_reduction_model_and_prior_predictive() -> None:
     pm = pytest.importorskip("pymc")
 
@@ -166,6 +183,32 @@ def test_build_core_reduction_model_with_s_year_extension() -> None:
     assert r.shape[-1] == len(cells)
     assert s_year.shape[-1] == 2
     assert ((0.0 < s_year) & (s_year < 1.0)).all()
+
+
+def test_build_core_reduction_model_s_year_requires_positive_year_sigma() -> None:
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 0, 1, 1],
+            "age_idx": [2, 4, 2, 4],
+            "N_cell": [1000, 800, 900, 700],
+            "R_cell": [1, 3, 1, 4],
+        }
+    )
+    cells.attrs["n_year"] = 2
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+        recording_s_year_sigma=0.0,
+    )
+
+    with pytest.raises(ValueError, match="recording_s_year_sigma must be positive"):
+        build_core_reduction_model(
+            cells,
+            priors,
+            n_year=2,
+            recording_model="year",
+        )
 
 
 def test_render_core_report_outputs(tmp_path: Path) -> None:

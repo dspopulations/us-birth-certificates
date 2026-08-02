@@ -89,8 +89,8 @@ class CoreReductionPriors:
             raise ValueError("reduction logit sigmas must be positive")
         if recording_s_sigma <= 0.0:
             raise ValueError("recording_s_sigma must be positive")
-        if recording_s_year_sigma <= 0.0:
-            raise ValueError("recording_s_year_sigma must be positive")
+        if recording_s_year_sigma < 0.0:
+            raise ValueError("recording_s_year_sigma must be non-negative")
 
         path = Path(path)
         table = pd.read_csv(path, encoding="utf-8-sig")
@@ -283,6 +283,10 @@ def build_core_reduction_model(
 
     if recording_model not in {"constant", "year"}:
         raise ValueError("recording_model must be 'constant' or 'year'")
+    if recording_model == "year" and priors.recording_s_year_sigma <= 0.0:
+        raise ValueError(
+            "recording_s_year_sigma must be positive when recording_model='year'"
+        )
     if n_year is None:
         n_year = int(cells.attrs.get("n_year", cells["year_idx"].max() + 1))
     if len(priors.reduction_logit) != n_year:
