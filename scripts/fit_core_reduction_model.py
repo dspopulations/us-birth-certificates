@@ -16,7 +16,9 @@ import numpy as np
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
 from dspopulations_us_birth_certificates.selection import (
     FitContext,
+    copy_docs_template,
     diagnostics,
+    render_report,
     sample,
     save_artefacts,
     save_summary,
@@ -31,6 +33,9 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     build_core_reduction_model,
     core_year_summary,
     prepare_core_age_year_cells,
+)
+from dspopulations_us_birth_certificates.selection.core_reporting import (
+    render_core_all,
 )
 
 
@@ -89,6 +94,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     p.add_argument("--prior-only", action="store_true")
+    p.add_argument(
+        "--render",
+        action="store_true",
+        help="Copy and render the checked-in Quarto report template.",
+    )
     p.add_argument("--draws", type=int, default=None)
     p.add_argument("--tune", type=int, default=None)
     p.add_argument("--chains", type=int, default=None)
@@ -213,9 +223,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     save_artefacts(context, ns.output_dir)
     cli_output.success(f"idata.nc, cells.parquet, config.json -> {ns.output_dir}")
+    qmd_path = copy_docs_template(CORE_REDUCTION_MODEL_ID, ns.output_dir)
+    if qmd_path is not None:
+        cli_output.success(f"index.qmd -> {qmd_path}")
+    else:
+        cli_output.warning(
+            f"No Quarto template at docs/models/{CORE_REDUCTION_MODEL_ID}/index.qmd."
+        )
 
     if ns.prior_only:
-        cli_output.info("Prior-only run - skipping posterior summary.")
+        cli_output.info("Prior-only run - skipping posterior summary / report render.")
         return 0
 
     cli_output.section("Posterior summary")
@@ -243,6 +260,17 @@ def main(argv: list[str] | None = None) -> int:
         cli_output.success("Convergence checks passed.")
     else:
         cli_output.warning("Convergence checks did not all pass - inspect summary.csv.")
+
+    cli_output.section("Report outputs")
+    render_core_all(
+        idata,
+        cells,
+        ns.output_dir,
+        priors_config=priors.to_dict(),
+        year_range=ns.year_range,
+    )
+    cli_output.success(f"plots/ and tables/ -> {ns.output_dir}")
+    render_report(qmd_path, do_render=ns.render)
 
     cli_output.section("Done")
     return 0

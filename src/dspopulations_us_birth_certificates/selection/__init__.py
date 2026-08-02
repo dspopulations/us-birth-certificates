@@ -34,6 +34,9 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     core_year_summary,
     prepare_core_age_year_cells,
 )
+from dspopulations_us_birth_certificates.selection.core_reporting import (
+    render_core_all,
+)
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_DB_PATH,
     DEFAULT_YEAR_RANGE,
@@ -114,6 +117,7 @@ __all__ = [
     "prepare_core_age_year_cells",
     "preset_names",
     "render_quarto",
+    "render_core_all",
     "render_report",
     "sample",
     "save_artefacts",

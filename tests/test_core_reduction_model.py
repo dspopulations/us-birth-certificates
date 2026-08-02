@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import duckdb
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionPriors,
     build_core_reduction_model,
     prepare_core_age_year_cells,
 )
+from dspopulations_us_birth_certificates.selection.core_reporting import render_core_all
 from dspopulations_us_birth_certificates.selection.priors import logit
 
 
@@ -105,3 +108,86 @@ def test_build_core_reduction_model_and_prior_predictive() -> None:
     assert r.shape[-1] == len(cells)
     assert (r >= 0).all()
     assert (r <= cells["N_cell"].to_numpy()[None, None, :]).all()
+
+
+def test_render_core_report_outputs(tmp_path: Path) -> None:
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 0, 1, 1],
+            "age_idx": [2, 4, 2, 4],
+            "N_cell": [1000, 800, 900, 700],
+            "R_cell": [1, 3, 1, 4],
+        }
+    )
+    chain = np.arange(2)
+    draw = np.arange(3)
+    year = np.arange(2)
+    cell = np.arange(len(cells))
+    rho = np.array(
+        [
+            [[0.30, 0.35], [0.31, 0.36], [0.32, 0.37]],
+            [[0.29, 0.34], [0.30, 0.35], [0.31, 0.36]],
+        ]
+    )
+    eta = 1.0 - rho
+    posterior = xr.Dataset(
+        {
+            "rho_year": (("chain", "draw", "year"), rho),
+            "eta_year": (("chain", "draw", "year"), eta),
+            "recording_s": (("chain", "draw"), np.full((2, 3), 0.4)),
+            "true_count_year": (("chain", "draw", "year"), 1000 * eta),
+            "recorded_count_year_mu": (("chain", "draw", "year"), 400 * eta),
+            "true_count_total": (("chain", "draw"), (1000 * eta).sum(axis=2)),
+        },
+        coords={"chain": chain, "draw": draw, "year": year},
+    )
+    ppc = xr.Dataset(
+        {
+            "R_obs": (
+                ("chain", "draw", "cell"),
+                np.array(
+                    [
+                        [[1, 3, 1, 4], [2, 2, 2, 4], [1, 4, 1, 5]],
+                        [[1, 3, 2, 3], [1, 2, 1, 4], [2, 3, 1, 4]],
+                    ]
+                ),
+            )
+        },
+        coords={"chain": chain, "draw": draw, "cell": cell},
+    )
+    idata = SimpleNamespace(posterior=posterior, posterior_predictive=ppc)
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.20, 0.45]),
+    )
+
+    tables = render_core_all(
+        idata,
+        cells,
+        tmp_path,
+        priors_config=priors.to_dict(),
+        year_range=(2020, 2021),
+    )
+
+    expected = {
+        "core_headlines",
+        "core_accounting_by_year",
+        "core_reduction_prior_posterior",
+        "core_recording_s",
+        "core_ppc_by_year",
+        "core_ppc_by_age",
+    }
+    assert expected == set(tables)
+    for stem in expected:
+        assert (tmp_path / "tables" / f"{stem}.csv").is_file()
+        assert len(pd.read_csv(tmp_path / "tables" / f"{stem}.csv")) >= 1
+    for stem in (
+        "core_accounting_by_year",
+        "core_reduction_prior_posterior",
+        "core_recording_s",
+        "core_ppc_by_year",
+        "core_ppc_by_age",
+    ):
+        assert (tmp_path / "plots" / f"{stem}.png").is_file()
+        assert (tmp_path / "plots" / f"{stem}.svg").is_file()
