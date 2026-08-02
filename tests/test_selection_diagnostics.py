@@ -195,3 +195,24 @@ def test_summary_table_and_convergence_health(fitted) -> None:
         "all_ok",
     ):
         assert key in health
+
+
+def test_summary_table_disables_arviz_rounding(monkeypatch) -> None:
+    import arviz as az
+
+    expected = pd.DataFrame(
+        {"r_hat": [1.0099996], "ess_bulk": [500.0], "ess_tail": [450.0]}
+    )
+    captured: dict[str, object] = {}
+
+    def fake_summary(_idata, **kwargs):
+        captured.update(kwargs)
+        return expected
+
+    monkeypatch.setattr(az, "summary", fake_summary)
+
+    summary = diagnostics.summary_table(object())
+
+    assert summary is expected
+    assert captured["round_to"] == "none"
+    assert diagnostics.convergence_health(summary)["all_ok"] is True

@@ -92,10 +92,11 @@ trend, not as fully observed surveillance estimates.
 
 ## Identifiability
 
-The data still mainly see the product:
+After expressing the likelihood as an additive false-positive floor plus an
+excess true-DS component, the data still mainly see the product:
 
 ```text
-theta_age * eta_year * s
+p_recorded = f + theta_age * eta_year * (s - f)
 ```
 
 The simpler model does not make that problem disappear. Instead, it makes the
@@ -126,13 +127,15 @@ accounting model.
 
 ## Publication framing
 
-This baseline supports a clear paper spine:
+This baseline supports a clear paper spine that keeps the false-positive branch
+visible:
 
 ```text
-Recorded DS births
-= maternal-age-expected DS births
-  x survival after prenatal selection
-  x certificate recording sensitivity.
+Recorded DS-coded births
+= (maternal-age-expected DS births
+   x survival after prenatal selection
+   x true-positive certificate recording sensitivity)
+  + (non-DS births x false-positive recording probability).
 ```
 
 Recent-year totals should be reported as nowcasts conditional on reduction-trend
@@ -205,3 +208,35 @@ Immediate next checks:
 3. Stress-test reduction-prior width, especially for 2020-2024.
 4. Only then add race/ethnicity recording or split `rho` into detection and
    termination.
+
+## Follow-up
+
+The follow-up sequence produced `DSP002`, the exact-age `DSP004` and `DSP005`
+ablations, and the age-specific-reduction `DSP003` diagnostic. Resolving the
+Morris curve at NCHS single-age codes materially improves the fair common-grid
+PPC while moving the posterior mean total by only +452 births from `DSP001` to
+`DSP004` and +524 from `DSP002` to `DSP005`. The remaining broad-age misfit is
+not removed: both exact-age simple models still cover only one of seven broad
+age margins at their 89% posterior-predictive intervals.
+
+`DSP004` therefore supersedes `DSP001` as the preferred **simple-resolution
+baseline**. `DSP001` remains the discretisation sensitivity, `DSP005` the
+year-varying-recording sensitivity, and `DSP003` the age-structure diagnostic.
+This is not a mechanism claim. `DSP003` fits the age pattern better in-sample,
+but assigns that pattern to combined reduction by construction and remains
+sensitive to the fixed false-positive and smoothing assumptions.
+
+See [the DSP004/DSP005 exact-age ablation note](20260802-dsp004-dsp005-exact-age-ablations.md)
+for the matched comparisons, endpoint convention, and model decision, and
+[the DSP003 extension note](20260802-dsp003-age-reduction-extension.md) for its
+measurement audit and sensitivity fits.
+
+A subsequent
+[DSP004 false-positive and surveillance-precision grid](20260802-dsp004-false-positive-surveillance-sensitivity.md)
+shows that the working false-positive scenarios primarily change inferred
+recording sensitivity, not the true-total estimate, when the current reduction
+priors are retained. Doubling the independent annual reduction-prior widths
+raises the posterior mean total by approximately 3% and roughly doubles its
+89% interval width. The simple model remains useful as a conditional accounting
+baseline, but the base interval should not be presented as including coherent
+surveillance calibration uncertainty.

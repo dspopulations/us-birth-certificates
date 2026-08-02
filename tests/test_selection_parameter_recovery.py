@@ -173,6 +173,7 @@ def test_sampler_converged(recovery_fit) -> None:
         ],
         ci_prob=DEFAULT_HPDI_PROB,
         ci_kind="hdi",
+        round_to="none",
     )
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     max_rhat = float(summary[rhat_col].max())

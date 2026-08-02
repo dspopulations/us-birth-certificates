@@ -31,6 +31,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CORE_REDUCTION_MODEL_ID,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
+    DEFAULT_REDUCTION_AGE_STEP_SIGMA,
     DEFAULT_REDUCTION_CSV,
     CoreReductionModelConfig,
     CoreReductionPriors,
@@ -41,6 +42,7 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
 from dspopulations_us_birth_certificates.selection.core_reporting import (
     render_core_all,
 )
+from dspopulations_us_birth_certificates.selection.priors import FALSE_POSITIVE_RATE
 
 
 def _parse_years(raw: str | None, fallback: tuple[int, int]) -> tuple[int, int]:
@@ -96,12 +98,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--recording-s-mean", type=float, default=0.5)
     p.add_argument("--recording-s-sigma", type=float, default=1.0)
     p.add_argument(
+        "--false-positive-rate",
+        type=float,
+        default=FALSE_POSITIVE_RATE,
+        help="Fixed probability that a non-DS birth is recorded as DS.",
+    )
+    p.add_argument(
         "--recording-s-year-sigma",
         type=float,
         default=0.35,
         help=(
             "Logit-scale prior SD for centred year offsets in s_year models. "
             "Ignored by constant-s models."
+        ),
+    )
+    p.add_argument(
+        "--reduction-age-step-sigma",
+        type=float,
+        default=DEFAULT_REDUCTION_AGE_STEP_SIGMA,
+        help=(
+            "Logit-scale prior SD for adjacent-age RW1 increments in "
+            "age-specific reduction models."
+        ),
+    )
+    p.add_argument(
+        "--confirmed-only",
+        action="store_true",
+        help=(
+            "Count only confirmed certificate DS flags as recorded cases; pending "
+            "flags remain in the birth denominator but count as non-cases."
         ),
     )
     p.add_argument(
@@ -135,6 +160,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     except ValueError as exc:
         p.error(str(exc))
     ns.year_range = _parse_years(ns.years, (2016, 2024))
+    ns.recorded_definition = (
+        "confirmed_only" if ns.confirmed_only else "confirmed_or_pending"
+    )
     ns.output_dir = ns.output_dir or (
         Path("output")
         / CORE_REDUCTION_MODEL_ID
@@ -195,7 +223,12 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Load age-year cells")
     con = duckdb.connect(str(ns.duckdb_path), read_only=True)
     try:
-        cells = prepare_core_age_year_cells(con, year_range=ns.year_range)
+        cells = prepare_core_age_year_cells(
+            con,
+            year_range=ns.year_range,
+            age_model=ns.model_definition.age_model,
+            recorded_definition=ns.recorded_definition,
+        )
     finally:
         con.close()
     n_total = int(cells["N_cell"].sum())
@@ -207,6 +240,8 @@ def main(argv: list[str] | None = None) -> int:
             ("n_total (livebirths)", f"{n_total:,}"),
             ("r_total (recorded DS)", f"{r_total:,}"),
             ("recorded_rate", f"{r_total / n_total:.2e}"),
+            ("age_model", ns.model_definition.age_model),
+            ("recorded_definition", ns.recorded_definition),
             ("year_range", cells.attrs.get("year_range")),
         ],
     )
@@ -221,6 +256,8 @@ def main(argv: list[str] | None = None) -> int:
         recording_s_mean=ns.recording_s_mean,
         recording_s_sigma=ns.recording_s_sigma,
         recording_s_year_sigma=ns.recording_s_year_sigma,
+        reduction_age_step_sigma=ns.reduction_age_step_sigma,
+        false_positive_rate=ns.false_positive_rate,
     )
     cli_output.info(
         "reduction prior: "
@@ -235,11 +272,23 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         cli_output.info("recording sensitivity: constant s")
+    if ns.model_definition.reduction_model == "year_age":
+        cli_output.info(
+            "combined reduction: exact-age Morris curve with centred RW1 age "
+            f"effect (step sigma={ns.reduction_age_step_sigma})"
+        )
+    elif ns.model_definition.age_model == "single_year":
+        cli_output.info(
+            "combined reduction: common across maternal age within each year; "
+            "Morris curve evaluated at represented age codes"
+        )
+    cli_output.info(f"false-positive rate: fixed at {ns.false_positive_rate:.3g}")
     model = build_core_reduction_model(
         cells,
         priors,
         n_year=cells.attrs["n_year"],
         recording_model=ns.model_definition.recording_model,
+        reduction_model=ns.model_definition.reduction_model,
     )
 
     cli_output.section("Sample")
@@ -250,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         year_range=ns.year_range,
         priors_obj=priors,
         model_definition=ns.model_definition,
+        recorded_definition=ns.recorded_definition,
         notes=f"profile={ns.profile}",
     )
     context = FitContext(
@@ -286,6 +336,8 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if "recording_s_year_offset" in idata.posterior:
         summary_vars.insert(4, "recording_s_year_offset")
+    if "rho_age_offset" in idata.posterior:
+        summary_vars.insert(2, "rho_age_offset")
     summary = diagnostics.summary_table(
         idata,
         var_names=tuple(summary_vars),

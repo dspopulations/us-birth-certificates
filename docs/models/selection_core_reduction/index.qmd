@@ -17,9 +17,9 @@ format:
 
 ::: {.callout-warning title="Preliminary model output"}
 
-This output is preliminary. It is a baseline accounting model intended to
-stabilise the central story before adding race, education, payer, or a
-detection-versus-termination decomposition.
+This output is preliminary. It belongs to a deliberately small accounting-model
+family intended to stabilise the central story before adding race, education,
+payer, or a detection-versus-termination decomposition.
 
 :::
 
@@ -40,30 +40,42 @@ config = json.loads(Path("config.json").read_text())
 run_config = json.loads(Path("run_config.json").read_text())
 cells = pd.read_parquet("cells.parquet")
 interval = interval_label()
+age_reduction_path = Path("tables/core_reduction_by_age_year.csv")
+has_age_reduction = age_reduction_path.is_file()
+age_year_ppc_path = Path("tables/core_ppc_by_age_year.csv")
+age_band_ppc_path = Path("tables/core_ppc_by_age_band.csv")
 ```
 
 The model is deliberately simple:
 
 $$
-P(R = 1 \mid y, a) =
-\theta_\text{age}(a) \cdot (1 - \rho_y) \cdot s_y
- + \{1 - \theta_\text{age}(a)(1-\rho_y)\}\cdot f
+\begin{aligned}
+P(R = 1 \mid y, a)
+&= \theta_\text{age}(a) (1 - \rho_{y,a}) s_y \\
+&\quad + \left[1 - \theta_\text{age}(a)(1-\rho_{y,a})\right] f.
+\end{aligned}
 $$
 
 where $\theta_\text{age}$ is the external maternal-age Down syndrome
-livebirth probability absent prenatal selection, $\rho_y$ is the combined
-pre-livebirth reduction in year $y$, $s_y$ is certificate recording
-sensitivity, and $f$ is the fixed false-positive rate. In `DSP001`,
-all years share one constant `s`; in `DSP002`, `s_year` is partially
-pooled around the same global recording-sensitivity centre.
+livebirth probability absent prenatal selection, $\rho_{y,a}$ is the combined
+pre-livebirth reduction, $s_y$ is certificate recording sensitivity, and $f$
+is the fixed false-positive rate. In `DSP001` and `DSP002`,
+$\rho_{y,a}=\rho_y$ for every age. `DSP001` uses one constant `s`; `DSP002`
+partially pools `s_year` around the same global recording-sensitivity centre.
+`DSP003` instead keeps `s` constant and estimates a smooth age pattern in
+$\rho_{y,a}$. `DSP004` and `DSP005` are exact-age ablations of `DSP001` and
+`DSP002`: they evaluate the Morris curve at each represented maternal-age code
+but retain one common reduction parameter per year.
 
 ::: {.callout-note title="Model at a glance"}
 
 - **Unit:** age-by-year cells.
 - **Observed outcome:** recorded DS births in each cell.
+- **Recorded-case definition:** configured by `recorded_definition`; the
+  confirmed-only sensitivity is distinct from confirmed-or-pending.
 - **External age anchor:** Morris/de Graaf maternal-age curve.
-- **Reduction prior:** surveillance-derived `rho_year`, widened in the
-  extrapolated tail.
+- **Reduction prior:** surveillance-derived yearly marginal reduction, widened
+  in the extrapolated tail.
 - **Recording model:** configured by `recording_model` in `config.json`.
 - **Role:** baseline accounting model before adding demographic modifiers.
 
@@ -75,8 +87,14 @@ year_range = config["year_range"]
 profile = run_config["name"]
 model_id = config.get("model_id", "<unknown>")
 recording_model = config.get("recording_model", "<unknown>")
+reduction_model = config.get("reduction_model", "year")
+age_model = config.get("age_model", "band")
+recorded_definition = config.get("recorded_definition", "confirmed_or_pending")
 Markdown(
-    f"- **model**: `{model_id}` (`recording_model={recording_model}`)\n"
+    f"- **model**: `{model_id}` "
+    f"(`recording_model={recording_model}`, "
+    f"`reduction_model={reduction_model}`, `age_model={age_model}`)\n"
+    f"- **recorded-case definition**: `{recorded_definition}`\n"
     f"- **year range**: {year_range[0]}-{year_range[1]}\n"
     f"- **sampling profile**: `{profile}` "
     f"({run_config['chains']} chains x {run_config['draws']} draws, "
@@ -142,11 +160,13 @@ display(
 )
 ```
 
-The headline total is conditional on the current age curve, reduction prior,
-and recording prior. The model still mainly observes the product
-`theta_age * (1 - rho_year) * s_year`; this report makes that dependence visible
-rather than claiming the components are identified from birth certificates
-alone.
+The headline total is conditional on the current age curve, false-positive
+scenario, reduction prior, and recording prior. After fixing `f`, the model
+mainly observes `theta_age * (1 - rho_year_age) * (s_year - f)` above the
+additive `f` floor; this report makes that dependence visible rather than
+claiming the components are identified from birth certificates alone. For
+models without an age-specific reduction, `rho_year_age` is simply the common
+`rho_year` repeated across ages.
 
 ## Year-By-Year Accounting
 
@@ -196,7 +216,89 @@ display(
 ```
 
 Recent years are nowcasts conditional on the extrapolated reduction trend, not
-direct surveillance observations.
+direct surveillance observations. `rho_year` is a yearly population margin: in
+`DSP003` it is the natural-DS-weighted mean across maternal ages, not the
+reduction at any one age.
+
+## Age-Specific Combined Reduction
+
+```{python}
+#| echo: false
+if has_age_reduction:
+    display(
+        Image(
+            filename="plots/core_reduction_by_age_year.png",
+            alt="Age-specific combined reduction and its weighted yearly marginal",
+        )
+    )
+    age_reduction = pd.read_csv(age_reduction_path)
+    marginal_columns = [
+        "year",
+        "rho_year_marginal_mean",
+        "rho_year_recomputed_mean",
+        "rho_year_recomputed_minus_marginal_mean",
+        "rho_year_marginal_max_abs_draw_difference",
+    ]
+    if "rho_year_anchor_mean" in age_reduction:
+        marginal_columns.insert(2, "rho_year_anchor_mean")
+        marginal_columns.insert(3, "rho_year_anchor_minus_marginal_mean")
+    display(
+        age_reduction.drop_duplicates("year")[marginal_columns].round(6)
+    )
+
+    latest_year = int(age_reduction["year"].max())
+    age_columns = [
+        "age",
+        "natural_expected_ds",
+        "natural_ds_weight_share",
+        "rho_year_age_mean",
+        "rho_year_age_lo",
+        "rho_year_age_hi",
+    ]
+    if "sparse_boundary_age" in age_reduction:
+        age_columns.append("sparse_boundary_age")
+    display(
+        Markdown(
+            f"Age-specific posterior for the latest modelled year, **{latest_year}**:"
+        )
+    )
+    display(
+        age_reduction.loc[age_reduction["year"] == latest_year, age_columns]
+        .round(4)
+        .reset_index(drop=True)
+    )
+else:
+    display(
+        Markdown(
+            "This model constrains combined reduction to be common across "
+            "maternal ages; no age-specific reduction artifact is expected."
+        )
+    )
+```
+
+For `DSP003`, the natural expected DS count supplies the calibration weight
+$w_{y,a}=N_{y,a}\theta_\text{age}(a)$, and the reported yearly margin is
+
+$$
+\rho_y = \frac{\sum_a w_{y,a}\rho_{y,a}}{\sum_a w_{y,a}}.
+$$
+
+The sampled `rho_year_anchor` carries the surveillance prior before numerical
+calibration; `rho_year` is the resulting natural-DS-weighted margin. The age
+offsets redistribute reduction around that margin. The recomputed column is an
+independent check of the calibration identity. This is a conditional
+allocation: after accounting for the external $\theta_\text{age}$ and additive
+false-positive branch, recorded counts identify the age pattern through
+$(1-\rho_{y,a})(s_y-f)$. Interpreting that pattern as age-specific prenatal
+selection requires the `DSP003` assumption that certificate recording
+sensitivity is constant across maternal age.
+
+For every exact-age model (`DSP003`–`DSP005`), the endpoint labels are not exact
+single years: `10-12` pools ages 10–12 and `50+` pools ages 50 and over. Their
+Morris probabilities use numeric representatives 12 and 50. These endpoints
+must not be described as literal ages. In `DSP003`, ages 10–14 and 48–50+ are
+also sparse boundary cells whose age-specific reduction estimates are smoothed
+extrapolations rather than independently data-rich estimates.
 
 ## Recording Sensitivity
 
@@ -218,10 +320,11 @@ recording_year = pd.read_csv("tables/core_recording_s_by_year.csv")
 display(recording_year.round(3))
 ```
 
-For `DSP001`, this plot is a flat copy of the constant `s` posterior by
-construction. For `DSP002`, it is the direct extension under test: year-specific
-recording sensitivity with centred logit-scale offsets around the global
-recording-sensitivity level.
+For `DSP001` and `DSP004`, this plot is a flat copy of the constant `s` posterior
+by construction. For `DSP002` and `DSP005`, it shows year-specific recording
+sensitivity with centred logit-scale offsets around the global
+recording-sensitivity level. `DSP003` uses constant `s` while extending the
+combined-reduction component by maternal age.
 
 ## Posterior Predictive Checks
 
@@ -237,29 +340,117 @@ DS counts after aggregating cell-level posterior predictive draws.
 display(pd.read_csv("tables/core_ppc_by_year.csv").round(3))
 ```
 
-### By Maternal-Age Band
+### By Maternal Age
 
-![Posterior predictive check by maternal age band](plots/core_ppc_by_age.png){#fig-core-ppc-age .lightbox fig-align="left"}
+![Posterior predictive check by maternal age](plots/core_ppc_by_age.png){#fig-core-ppc-age .lightbox fig-align="left"}
 
 ```{python}
 #| echo: false
 display(pd.read_csv("tables/core_ppc_by_age.csv").round(3))
 ```
 
-## Interpretation
+### Exact-Age Predictions Reaggregated To The Seven Bands
 
-This baseline supports the simple publication spine:
-
-```text
-Recorded DS births
-= maternal-age-expected DS births
-  x survival after prenatal selection
-  x certificate recording sensitivity.
+```{python}
+#| echo: false
+if age_band_ppc_path.is_file():
+    display(
+        Image(
+            filename="plots/core_ppc_by_age_band.png",
+            alt="Exact-age posterior predictions reaggregated to seven maternal-age bands",
+        )
+    )
+    display(pd.read_csv(age_band_ppc_path).round(3))
+else:
+    display(
+        Markdown(
+            "This is a seven-band model, so its main maternal-age PPC above is "
+            "already on the reporting-band scale."
+        )
+    )
 ```
 
-`DSP001` is the constant-`s` baseline and `DSP002` is the first `s_year`
-extension. This family is not yet designed to carry race/ethnicity, education,
-payer, or detection/termination claims.
+For exact-age models, this reaggregation distinguishes improved within-band
+resolution from correction of the broader maternal-age pattern.
+
+### By Maternal Age And Year
+
+```{python}
+#| echo: false
+if age_year_ppc_path.is_file():
+    display(
+        Image(
+            filename="plots/core_ppc_by_age_year.png",
+            alt="Posterior-predictive residuals by maternal age and year",
+        )
+    )
+    age_year_ppc = pd.read_csv(age_year_ppc_path)
+    coverage = age_year_ppc["observed_in_interval"].mean()
+    display(
+        Markdown(
+            f"Observed cell count lies inside the {interval} posterior-predictive "
+            f"ETI in **{coverage:.1%}** of age-by-year cells."
+        )
+    )
+    residual_columns = [
+        "year",
+        "age",
+        "births",
+        "observed",
+        "predicted_mean",
+        "predicted_lo",
+        "predicted_hi",
+        "residual_observed_minus_predicted",
+        "standardized_residual",
+        "relative_residual",
+        "observed_in_interval",
+    ]
+    display(
+        age_year_ppc.assign(
+            abs_standardized_residual=lambda d: d["standardized_residual"].abs()
+        )
+        .sort_values("abs_standardized_residual", ascending=False)
+        .head(20)[residual_columns]
+        .round(3)
+        .reset_index(drop=True)
+    )
+else:
+    display(
+        Markdown(
+            "The age-by-year residual diagnostic is generated for exact-age "
+            "models; this run uses the seven-band representation."
+        )
+    )
+```
+
+The heatmap standardises `observed - posterior-predictive mean` by the
+posterior-predictive standard deviation. Positive cells are underpredicted and
+negative cells are overpredicted. A black cross marks an observed count outside
+the posterior-predictive ETI. This joint check is the relevant age-resolution
+diagnostic for `DSP003`–`DSP005`; separate age and year margins can conceal
+structured cell-level misfit.
+
+## Interpretation
+
+This baseline supports the simple publication spine, including the additive
+false-positive branch:
+
+```text
+Recorded DS-coded births
+= (maternal-age-expected DS births
+   x survival after prenatal selection
+   x true-positive certificate recording sensitivity)
+  + (non-DS births x false-positive recording probability).
+```
+
+`DSP001` is the original seven-band constant-`s` baseline and `DSP002` is its
+first `s_year` extension. `DSP003` instead adds a smooth maternal-age pattern in
+combined reduction while preserving the externally anchored yearly margin.
+`DSP004` and `DSP005` repeat the `DSP001`/`DSP002` recording structures using
+the exact-age Morris curve without adding a fitted age effect; `DSP004` is the
+preferred simple-resolution baseline and `DSP005` remains a recording-drift
+sensitivity. This family is not yet designed to carry race/ethnicity,
+education, payer, or detection/termination claims.
 
 ## Caveats
 
@@ -268,7 +459,20 @@ payer, or detection/termination claims.
   are not independently identified from certificate counts alone.
 - In `DSP002`, year-specific recording sensitivity competes with `rho_year`
   unless external surveillance or reporting evidence anchors one of them.
+- In `DSP003`, age-specific combined reduction competes with any unmodelled
+  age pattern in certificate recording. Its age effect is conditional on
+  age-constant recording sensitivity and is not a separately identified
+  termination mechanism.
+- In all exact-age models, `10-12` and `50+` are capped groups represented by
+  ages 12 and 50 in the Morris curve. In `DSP003`, the sparse tail additionally
+  makes the fitted age effect sensitive to smoothing.
 - The 2020-2024 reduction values are treated as extrapolated and therefore
   receive wider prior uncertainty.
+- In a DSP004 sensitivity grid, the working false-positive scenarios primarily
+  change recording sensitivity rather than the true-total estimate under the
+  current reduction priors. Doubling the independent annual reduction-prior
+  widths raises the mean total by approximately 3% and roughly doubles its 89%
+  interval width. That stress still does not represent coherent calibration
+  error shared across surveillance years.
 - A good aggregate fit is necessary but not sufficient for demographic
   decompositions.
