@@ -78,6 +78,7 @@ ADVI
 allclose
 arviz
 asarray
+BFMI
 backtest
 backtested
 beeswarm
@@ -92,6 +93,7 @@ distributionally
 downweight
 dtype
 dtypes
+equicorrelated
 equicorrelation
 estimability
 estimand
@@ -128,6 +130,7 @@ pymc
 pyproject
 pytensor
 reframing
+recomputation
 reparameterise
 reparameterisation
 rhat
@@ -138,6 +141,7 @@ sklearn
 thresholded
 unlabeled
 vars
+WAIC
 wallclock
 
 # Tooling
@@ -225,3 +229,4 @@ unmodelled
 
 # Clinical terms
 Apgars
+preimplantation
