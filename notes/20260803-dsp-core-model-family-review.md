@@ -11,6 +11,14 @@ from that note; every figure marked **[new]** was computed for this review from
 `data/us_births.db` and the saved `DSP004` reporting artefacts, and should be
 reproduced in a release-conformant environment before it is relied on.
 
+**Amended 2026-08-03**, after reconstructing the reduction series against the
+database columns it was built from. The Morris curve largely cancels between
+that series' denominator and the model's multiplication, so the original
+recommendation to propagate Morris *level* uncertainty into the proposed scale
+parameter is **withdrawn**. See "The Morris curve cancels, but only
+conditionally" under Finding 2. The withdrawal narrows recommendation 3 and
+strengthens recommendation 1; no other finding changes.
+
 ## Scope
 
 This reviews the `DSP001`-`DSP005` family as it stands after
@@ -119,23 +127,22 @@ directions:
 simulation gives independently (`17,562 / 6,539 = 2.7`).
 
 **The scenario grid should become a parameter.** A common logit-scale level
-error on the reduction trajectory, the level uncertainty in the Morris curve,
-and any systematic transport error from the surveillance source population to
-the NCHS cohort all act on `T` in exactly the same way. They collapse into a
-single scale nuisance parameter. Giving that one parameter an explicit prior and
-integrating over it would produce an honest interval — plausibly around `±14%`
-rather than `±5%` — and would retire the seven-scenario grid, the two corners,
-the envelope-is-not-an-interval caveat, and the borderline-MCSE adjudication in
-one step.
+error in the surveillance prevalence behind the reduction trajectory, and any
+systematic transport error from the surveillance source population to the NCHS
+cohort, act on `T` in exactly the same way. They collapse into a single scale
+nuisance parameter. Giving that one parameter an explicit prior and integrating
+over it would produce an honest interval — plausibly around `±14%` rather than
+`±5%` — and would retire the seven-scenario grid, the two corners, the
+envelope-is-not-an-interval caveat, and the borderline-MCSE adjudication in one
+step.
 
-It would also finally let Morris uncertainty propagate. At present `theta` is a
-fixed `pm.Data` node (`core_reduction.py:519`) with no uncertainty at all, and
-in the older model `MORRIS_SIGMA = 0.001` is explicitly a pin rather than an
-uncertainty estimate. Pinning `theta` for *identification* was correct; treating
-it as known exactly for *uncertainty* is not, because `T` is directly
-proportional to its level. No standard errors or covariance for the Morris
+Morris *level* uncertainty should **not** be added to that prior, because it
+largely cancels; see Finding 2. What Morris does still control is the *age
+allocation* of the total, which is where Finding 4 bites, and the small
+non-cancelling residual from the difference between the source's age grouping
+and the model's exact-age grid. No standard errors or covariance for the Morris
 double-logistic parameters `(7.33, 4.211, 0.2815, 37.23)` are recorded anywhere
-in the repository.
+in the repository, but for the total that matters less than it appears.
 
 ## Finding 2 — the reduction series has no recorded provenance
 
@@ -159,6 +166,42 @@ expectation is births-weighted. It is *not* derived from
 `DSP00x` models never import `recording_anchor`, so the circularity that
 `notes/20260707-s-anchor-and-identifiability-diagnostic.md` documents for the
 older model does not apply here.
+
+**[new]** The construction is confirmed directly against the database columns it
+was built from. `1 - AVG(p_ds_lb_wt) / AVG(p_ds_lb_nt)` reproduces the CSV to
+`9.1e-04`, `6.1e-04` and `4.6e-04` relative for 2016, 2017 and 2018. At 2019 it
+diverges by `3.1e-02`, giving `0.383930` against the CSV's `0.372370` — an
+independent confirmation, from a different route to the one in Finding 3, that
+2019 was filled from the trend line rather than computed.
+
+### The Morris curve cancels, but only conditionally
+
+Because the reduction series was built by *dividing* by a births-weighted Morris
+expectation, and the model then *multiplies* by the same curve, the curve
+cancels out of the total:
+
+```text
+1 - rho = S / M   =>   T = N * M * (1 - rho) = N * S
+```
+
+So the prior-implied total is the de Graaf surveillance prevalence times NCHS
+births, with Morris dropping out. This explains why refining the age resolution
+from seven bands to single years moved the total by only `+452` births despite
+changing every `theta`, and it is why Morris *level* uncertainty does not belong
+in the scale parameter proposed under Finding 1.
+
+The cancellation is exact algebraically but **conditional in practice, and
+nothing in the code enforces it.** It holds only because the frozen CSV happens
+to have been built from this repository's own `p_ds_lb_nt` Morris column.
+Changing `MORRIS_PARAMS` in `chance.py` without recomputing the CSV would break
+it silently, and `T` would then scale directly with the curve. The provenance gap
+above is therefore more consequential than it first appears: it is what turns an
+exact cancellation into an unverifiable assumption. Any revision to
+`MORRIS_PARAMS` must regenerate the reduction series, and that coupling should be
+stated in `docs/data-preparation.md` and ideally asserted in a test.
+
+What does not cancel — and what the coherent-calibration `delta` axis actually
+measures — is the level uncertainty in the surveillance prevalence itself.
 
 The question that matters cannot be answered from the repository at all:
 **whether the surveillance numerator is raw surveillance-programme prevalence or
@@ -221,7 +264,9 @@ last surveillance-grounded year is 2018. But
 `DEFAULT_EXTRAPOLATED_REDUCTION_START = 2020` (`core_reduction.py:51`) gives
 2019 the observed sigma of `0.20` rather than the extrapolated `0.45`. Six
 extrapolated years are treated as five, with the mislabelled year given less
-than half its intended prior width.
+than half its intended prior width. The database recomputation in Finding 2
+confirms this independently: it agrees with the CSV to under `1e-03` relative for
+2016-2018 and then diverges by `3.1e-02` at 2019.
 
 Separately, the extrapolation carries a pre-2019 behavioural trend straight
 through the COVID-19 disruption to prenatal care and the June 2022 *Dobbs*
@@ -464,6 +509,12 @@ estimate; the independence of the whole family turns on it. Resolve the
 2014/2015 vintage splice at the same time. If the numerator cannot be
 established, that limitation belongs in the abstract, not in a note.
 
+Record at the same time that the series' denominator must stay consistent with
+`MORRIS_PARAMS`, since the Morris cancellation described under Finding 2 depends
+on it and nothing currently enforces it. A test asserting that the tracked CSV
+still reproduces `1 - p_ds_lb_wt / p_ds_lb_nt` for the surveillance-grounded
+years would make the coupling visible and would have caught the 2019 fill.
+
 ### 2. Rebuild the extrapolated tail coherently and relabel 2019
 
 Recompute 2019-2024 against each year's actual births-weighted Morris
@@ -478,9 +529,10 @@ absent, and say so where the 2022-2024 nowcasts are reported.
 ### 3. Replace the scenario grid with one estimated scale parameter
 
 Add a single common logit-scale level parameter on the reduction trajectory with
-an explicit prior combining reduction-level uncertainty, Morris level
-uncertainty and transport error, and integrate over it. Report that interval as
-the headline. This retires `--reduction-calibration-shift-logit`, the seven
+an explicit prior combining surveillance-prevalence level uncertainty and
+transport error, and integrate over it. Report that interval as the headline. Do
+**not** include Morris level uncertainty in that prior — it cancels, per
+Finding 2. This retires `--reduction-calibration-shift-logit`, the seven
 scenarios, the two corners, the envelope caveat and the MCSE adjudication, and
 it is the only way the published interval can honestly represent shared
 surveillance uncertainty. Keep `lambda` as a sensitivity if useful, but stop
