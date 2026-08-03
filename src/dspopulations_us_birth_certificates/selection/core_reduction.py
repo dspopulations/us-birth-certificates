@@ -50,6 +50,8 @@ CORE_REDUCTION_MODEL_ID = CORE_REDUCTION_FAMILY_ID
 DEFAULT_REDUCTION_CSV = Path("data/us-births-reduction-rates-1989-2024.csv")
 DEFAULT_EXTRAPOLATED_REDUCTION_START = 2020
 DEFAULT_REDUCTION_AGE_STEP_SIGMA = 0.10
+DEFAULT_REDUCTION_ERROR_CORRELATION = 0.0
+DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT = 0.0
 RecordedDefinition = Literal["confirmed_or_pending", "confirmed_only"]
 
 
@@ -70,6 +72,8 @@ class CoreReductionPriors:
     false_positive_rate: float = FALSE_POSITIVE_RATE
     reduction_source: str = str(DEFAULT_REDUCTION_CSV)
     extrapolated_reduction_start: int = DEFAULT_EXTRAPOLATED_REDUCTION_START
+    reduction_error_correlation: float = DEFAULT_REDUCTION_ERROR_CORRELATION
+    reduction_calibration_shift_logit: float = DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT
 
     @classmethod
     def from_reduction_csv(
@@ -79,6 +83,10 @@ class CoreReductionPriors:
         path: Path | str = DEFAULT_REDUCTION_CSV,
         observed_logit_sigma: float = 0.20,
         extrapolated_logit_sigma: float = 0.45,
+        reduction_error_correlation: float = DEFAULT_REDUCTION_ERROR_CORRELATION,
+        reduction_calibration_shift_logit: float = (
+            DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT
+        ),
         extrapolated_start: int = DEFAULT_EXTRAPOLATED_REDUCTION_START,
         recording_s_mean: float = 0.5,
         recording_s_sigma: float = 1.0,
@@ -96,6 +104,13 @@ class CoreReductionPriors:
             raise ValueError("recording_s_mean must lie in (0, 1)")
         if observed_logit_sigma <= 0.0 or extrapolated_logit_sigma <= 0.0:
             raise ValueError("reduction logit sigmas must be positive")
+        if (
+            not np.isfinite(reduction_error_correlation)
+            or not 0.0 <= reduction_error_correlation < 1.0
+        ):
+            raise ValueError("reduction_error_correlation must lie in [0, 1)")
+        if not np.isfinite(reduction_calibration_shift_logit):
+            raise ValueError("reduction_calibration_shift_logit must be finite")
         if recording_s_sigma <= 0.0:
             raise ValueError("recording_s_sigma must be positive")
         if recording_s_year_sigma < 0.0:
@@ -134,6 +149,8 @@ class CoreReductionPriors:
             reduction_mean=reduction,
             reduction_logit=logit(reduction),
             reduction_sigma=sigma,
+            reduction_error_correlation=reduction_error_correlation,
+            reduction_calibration_shift_logit=reduction_calibration_shift_logit,
             recording_s_logit=float(logit(recording_s_mean)),
             recording_s_sigma=recording_s_sigma,
             recording_s_year_sigma=recording_s_year_sigma,
@@ -152,6 +169,22 @@ class CoreReductionPriors:
             else:
                 out[key] = value
         return out
+
+
+def _reduction_error_covariance(
+    sigma: np.ndarray,
+    correlation: float,
+) -> np.ndarray:
+    """Return the logit-error covariance with equicorrelated standard errors."""
+    sigma = np.asarray(sigma, dtype=float)
+    if sigma.ndim != 1 or not len(sigma):
+        raise ValueError("reduction sigma must be a non-empty one-dimensional array")
+    if not np.all(np.isfinite(sigma)) or np.any(sigma <= 0.0):
+        raise ValueError("reduction sigma values must be finite and positive")
+    if not np.isfinite(correlation) or not 0.0 <= correlation < 1.0:
+        raise ValueError("reduction error correlation must lie in [0, 1)")
+    standardised = (1.0 - correlation) * np.eye(len(sigma)) + correlation
+    return np.outer(sigma, sigma) * standardised
 
 
 @dataclass(frozen=True)
@@ -401,6 +434,13 @@ def build_core_reduction_model(
         )
     if not 0.0 <= priors.false_positive_rate < 1.0:
         raise ValueError("false_positive_rate must lie in [0, 1)")
+    if (
+        not np.isfinite(priors.reduction_error_correlation)
+        or not 0.0 <= priors.reduction_error_correlation < 1.0
+    ):
+        raise ValueError("reduction_error_correlation must lie in [0, 1)")
+    if not np.isfinite(priors.reduction_calibration_shift_logit):
+        raise ValueError("reduction_calibration_shift_logit must be finite")
     if cells.empty:
         raise ValueError("core model requires at least one age-year cell")
     if n_year is None:
@@ -410,6 +450,15 @@ def build_core_reduction_model(
             f"reduction prior has length {len(priors.reduction_logit)}, "
             f"but n_year={n_year}"
         )
+    if len(priors.reduction_sigma) != n_year:
+        raise ValueError(
+            f"reduction prior sigma has length {len(priors.reduction_sigma)}, "
+            f"but n_year={n_year}"
+        )
+    if not np.all(np.isfinite(priors.reduction_sigma)) or np.any(
+        priors.reduction_sigma <= 0.0
+    ):
+        raise ValueError("reduction_sigma values must be finite and positive")
 
     age_idx = cells["age_idx"].to_numpy()
     year_idx = cells["year_idx"].to_numpy()
@@ -475,12 +524,32 @@ def build_core_reduction_model(
             dims=("year", "age"),
         )
 
-        rho_logit = pm.Normal(
-            "rho_logit_year",
-            mu=priors.reduction_logit,
-            sigma=priors.reduction_sigma,
-            dims="year",
-        )
+        reduction_mu = priors.reduction_logit + priors.reduction_calibration_shift_logit
+        correlation = priors.reduction_error_correlation
+        if correlation == 0.0:
+            rho_logit = pm.Normal(
+                "rho_logit_year",
+                mu=reduction_mu,
+                sigma=priors.reduction_sigma,
+                dims="year",
+            )
+        else:
+            covariance = _reduction_error_covariance(
+                priors.reduction_sigma,
+                correlation,
+            )
+            cholesky = np.linalg.cholesky(covariance)
+            raw_error = pm.Normal(
+                "rho_logit_year_raw",
+                mu=0.0,
+                sigma=1.0,
+                dims="year",
+            )
+            rho_logit = pm.Deterministic(
+                "rho_logit_year",
+                reduction_mu + pt.dot(cholesky, raw_error),
+                dims="year",
+            )
         if reduction_model == "year":
             rho_year = pm.Deterministic(
                 "rho_year", pm.math.invlogit(rho_logit), dims="year"
@@ -647,6 +716,8 @@ __all__ = [
     "DEFAULT_REDUCTION_AGE_STEP_SIGMA",
     "DEFAULT_EXTRAPOLATED_REDUCTION_START",
     "DEFAULT_REDUCTION_CSV",
+    "DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT",
+    "DEFAULT_REDUCTION_ERROR_CORRELATION",
     "CoreReductionModelConfig",
     "CoreReductionPriors",
     "RecordedDefinition",

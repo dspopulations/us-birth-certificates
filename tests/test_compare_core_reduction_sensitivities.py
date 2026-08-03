@@ -13,6 +13,7 @@ import pytest
 import xarray as xr
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
@@ -32,6 +33,14 @@ def _write_run(
     predictive_shift: float = 0.0,
     rhat: float = 1.001,
     divergences: int = 0,
+    reduction_error_correlation: float | None = None,
+    reduction_calibration_shift_logit: float | None = None,
+    recording_s_mean: float | None = None,
+    true_interval_width: float = 2_000.0,
+    include_posterior: bool = False,
+    include_year_specific_posterior: bool = True,
+    recording_model: str = "constant",
+    posterior_recording_s_slope: float = 0.02,
 ) -> None:
     tables = run_dir / "tables"
     tables.mkdir(parents=True)
@@ -39,7 +48,7 @@ def _write_run(
         "model_id": "DSP004",
         "model_slug": "constant_s_exact_age",
         "family_id": "selection_core_reduction",
-        "recording_model": "constant",
+        "recording_model": recording_model,
         "reduction_model": "year",
         "age_model": "single_year",
         "recorded_definition": "confirmed_or_pending",
@@ -64,6 +73,12 @@ def _write_run(
             "extrapolated_reduction_start": 2021,
         },
     }
+    if reduction_error_correlation is not None:
+        config["priors"]["reduction_error_correlation"] = reduction_error_correlation
+    if reduction_calibration_shift_logit is not None:
+        config["priors"]["reduction_calibration_shift_logit"] = (
+            reduction_calibration_shift_logit
+        )
     (run_dir / "config.json").write_text(json.dumps(config), encoding="utf-8")
     (run_dir / "run_config.json").write_text(
         json.dumps(
@@ -92,7 +107,11 @@ def _write_run(
     )
     cells.to_parquet(run_dir / "cells.parquet", index=False)
 
-    recording_s = 0.40 + false_positive_rate * 100.0
+    recording_s = (
+        recording_s_mean
+        if recording_s_mean is not None
+        else 0.40 + false_positive_rate * 100.0
+    )
     pd.DataFrame(
         [
             {
@@ -116,8 +135,8 @@ def _write_run(
             {
                 "metric": "true_ds_livebirths",
                 "mean": true_total,
-                "lo": true_total - 1_000.0,
-                "hi": true_total + 1_000.0,
+                "lo": true_total - true_interval_width / 2.0,
+                "hi": true_total + true_interval_width / 2.0,
             },
             {
                 "metric": "aggregate_reduction",
@@ -246,9 +265,50 @@ def _write_run(
         {"diverging": (("chain", "draw"), diverging)},
         coords={"chain": [0, 1], "draw": np.arange(draws)},
     )
-    xr.DataTree.from_dict({"/sample_stats": sample_stats}).to_netcdf(
-        run_dir / "idata.nc"
-    )
+    groups = {"/sample_stats": sample_stats}
+    if include_posterior:
+        index = np.linspace(-1.0, 1.0, 2 * draws).reshape(2, draws)
+        recording_draws = recording_s + posterior_recording_s_slope * index
+        shift = reduction_calibration_shift_logit or 0.0
+        location = np.asarray(config["priors"]["reduction_logit"]) + shift
+        scale = np.asarray(config["priors"]["reduction_sigma"])
+        rho_logit = location[None, None, :] + index[:, :, None] * scale
+        true_total_draws = true_total + 500.0 * index
+        posterior_variables = {
+            "rho_logit_year": (("chain", "draw", "year"), rho_logit),
+            "recording_s": (("chain", "draw"), recording_draws),
+            "recording_s_logit": (
+                ("chain", "draw"),
+                np.log(recording_draws / (1.0 - recording_draws)),
+            ),
+            "true_count_total": (("chain", "draw"), true_total_draws),
+        }
+        if include_year_specific_posterior:
+            posterior_variables.update(
+                {
+                    "true_count_year": (
+                        ("chain", "draw", "year"),
+                        np.repeat(
+                            (true_total_draws / 2.0)[:, :, None],
+                            2,
+                            axis=2,
+                        ),
+                    ),
+                    "recording_s_year": (
+                        ("chain", "draw", "year"),
+                        np.repeat(recording_draws[:, :, None], 2, axis=2),
+                    ),
+                }
+            )
+        groups["/posterior"] = xr.Dataset(
+            posterior_variables,
+            coords={
+                "chain": [0, 1],
+                "draw": np.arange(draws),
+                "year": [0, 1],
+            },
+        )
+    xr.DataTree.from_dict(groups).to_netcdf(run_dir / "idata.nc")
 
 
 def _update_config(run_dir: Path, update) -> None:
@@ -317,6 +377,8 @@ def test_comparison_writes_incomplete_grid_outputs(tmp_path: Path) -> None:
     assert list(scenarios["draws"]) == [120, 80, 200]
     assert scenarios["fit_healthy"].all()
     assert (scenarios["divergences"] == 0).all()
+    assert (scenarios["reduction_error_correlation"] == 0.0).all()
+    assert (scenarios["reduction_calibration_shift_logit"] == 0.0).all()
 
     summary = pd.read_csv(paths["summary"])
     reference_row = summary.loc[summary["is_reference"]].iloc[0]
@@ -326,10 +388,20 @@ def test_comparison_writes_incomplete_grid_outputs(tmp_path: Path) -> None:
     )
     zero_row = summary.loc[summary["false_positive_rate"] == 0.0].iloc[0]
     assert zero_row["expected_false_positive_flags_mean"] == 0.0
+    legacy_figure = sensitivity._headline_plot(summary)
+    assert "false-positive probability" in legacy_figure.axes[0].get_xlabel()
+    plt.close(legacy_figure)
 
     assert len(pd.read_csv(paths["by_year"])) == 6
-    assert len(pd.read_csv(paths["age_band"])) == 6
+    age_band = pd.read_csv(paths["age_band"])
+    assert len(age_band) == 6
     assert len(pd.read_csv(paths["age_year"])) == 12
+    legacy_heatmap = sensitivity._age_band_residual_plot(age_band)
+    assert [
+        label.get_text() for label in legacy_heatmap.axes[0].get_yticklabels()
+    ] == list(age_band["scenario_id"].drop_duplicates())
+    assert legacy_heatmap.axes[0].get_ylabel() == "assumption scenario"
+    plt.close(legacy_heatmap)
     contrasts = pd.read_csv(paths["contrasts"])
     assert set(contrasts["varied_factor"]) == {
         "false_positive_rate",
@@ -345,8 +417,301 @@ def test_comparison_writes_incomplete_grid_outputs(tmp_path: Path) -> None:
     assert config["factorial_grid_complete"] is False
     assert config["incomplete_factorial_grid_allowed"] is True
     assert len(config["missing_factor_combinations"]) == 1
+    assert config["reduction_error_correlation_levels"] == [0.0]
+    assert config["reduction_calibration_shift_logit_levels"] == [0.0]
     assert config["sampling_budgets_may_differ"] is True
     assert config["raw_loo_or_waic_compared"] is False
+
+
+def test_comparison_reports_coherent_calibration_and_posterior_diagnostics(
+    tmp_path: Path,
+) -> None:
+    reference = tmp_path / "reference"
+    correlated = tmp_path / "correlated"
+    shifted = tmp_path / "shifted"
+    _write_run(
+        reference,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        recording_s_mean=0.40,
+        include_posterior=True,
+    )
+    _write_run(
+        correlated,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=47_000.0,
+        recording_s_mean=0.46,
+        true_interval_width=2_600.0,
+        reduction_error_correlation=0.5,
+        reduction_calibration_shift_logit=0.0,
+        include_posterior=True,
+    )
+    _write_run(
+        shifted,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=50_000.0,
+        recording_s_mean=0.40,
+        reduction_error_correlation=0.0,
+        reduction_calibration_shift_logit=0.2,
+        include_posterior=True,
+    )
+
+    paths = sensitivity.compare_core_reduction_sensitivities(
+        reference,
+        [correlated, shifted],
+        tmp_path / "comparison",
+    )
+
+    scenarios = pd.read_csv(paths["scenarios"])
+    assert scenarios["standardized_trajectory_error_index_available"].all()
+    assert (
+        scenarios["standardized_trajectory_error_index_recording_s_correlation"] > 0.999
+    ).all()
+    assert (
+        scenarios["standardized_trajectory_error_index_recording_s_logit_correlation"]
+        > 0.999
+    ).all()
+    assert scenarios["model_implied_expected_missed_true_cases_available"].all()
+    assert set(scenarios["model_implied_expected_missed_true_cases_method"]) == {
+        "sum_y true_count_year * (1 - recording_s_year)"
+    }
+
+    summary = pd.read_csv(paths["summary"])
+    correlated_row = summary.loc[summary["reduction_error_correlation"] == 0.5].iloc[0]
+    assert correlated_row["true_ds_mean_material_change_from_reference"]
+    assert correlated_row["true_ds_interval_width_material_change_from_reference"]
+    assert correlated_row["recording_s_mean_material_change_from_reference"]
+    assert correlated_row["aggregate_material_change_from_reference"]
+    assert correlated_row["decomposition_material_change_from_reference"]
+    shifted_row = summary.loc[summary["reduction_calibration_shift_logit"] == 0.2].iloc[
+        0
+    ]
+    assert shifted_row[
+        "model_implied_expected_missed_true_cases_mean_material_change_from_reference"
+    ]
+    assert (
+        shifted_row["model_implied_expected_missed_true_cases_hi"]
+        > shifted_row["model_implied_expected_missed_true_cases_lo"]
+    )
+    calibration_figure = sensitivity._headline_plot(summary)
+    assert [
+        label.get_text() for label in calibration_figure.axes[0].get_yticklabels()
+    ] == list(summary["calibration_id"])
+    assert all(
+        "f " not in label.get_text()
+        for label in calibration_figure.axes[0].get_yticklabels()
+    )
+    plt.close(calibration_figure)
+    age_band = pd.read_csv(paths["age_band"])
+    calibration_heatmap = sensitivity._age_band_residual_plot(age_band)
+    assert [
+        label.get_text() for label in calibration_heatmap.axes[0].get_yticklabels()
+    ] == list(age_band.drop_duplicates("scenario_id")["calibration_id"])
+    assert calibration_heatmap.axes[0].get_ylabel() == ("coherent calibration scenario")
+    plt.close(calibration_heatmap)
+
+    mixed = age_band.copy()
+    shifted_scenario = mixed["scenario_id"] == mixed["scenario_id"].iloc[-1]
+    mixed.loc[shifted_scenario, "false_positive_rate"] = 1e-4
+    mixed.loc[shifted_scenario, "false_positive_rate_per_100k"] = 10.0
+    mixed_labels, mixed_axis_label = sensitivity._age_band_scenario_labels(mixed)
+    assert mixed_axis_label == "mixed assumption scenario"
+    assert all("sigma " in label and "corr " in label for label in mixed_labels)
+
+    contrasts = pd.read_csv(paths["contrasts"])
+    assert set(contrasts["varied_factor"]) == {
+        "reduction_error_correlation",
+        "reduction_calibration_shift_logit",
+    }
+    assert len(contrasts) == 2 * len(sensitivity.CONTRAST_METRICS)
+    material_total = contrasts.loc[
+        (contrasts["varied_factor"] == "reduction_error_correlation")
+        & (contrasts["metric"] == "true_ds_mean")
+    ].iloc[0]
+    assert material_total["materiality_evaluated"]
+    assert material_total["material_change"]
+
+    config = json.loads(paths["config"].read_text(encoding="utf-8"))
+    assert config["factorial_grid_complete"] is False
+    assert len(config["missing_factor_combinations"]) == 1
+    assert "horizontal calibration_id" in config["plot_layout_rule"]
+    assert (
+        config["materiality_thresholds"][
+            "model_implied_expected_missed_true_cases_mean_absolute_percent_difference"
+        ]
+        == 10.0
+    )
+    assert config["materiality_proximity_within_two_combined_mcse_evaluated"] is False
+
+
+def test_posterior_missed_true_cases_falls_back_to_constant_s_formula(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    _write_run(
+        run_dir,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        recording_s_mean=0.40,
+        include_posterior=True,
+        include_year_specific_posterior=False,
+    )
+
+    run = sensitivity.load_sensitivity_run(run_dir)
+
+    assert run.model_implied_expected_missed_true_cases_method == (
+        "true_count_total * (1 - recording_s)"
+    )
+    assert run.model_implied_expected_missed_true_cases_mean == pytest.approx(
+        26_396.633,
+        rel=1e-4,
+    )
+    assert run.model_implied_expected_missed_true_cases_hi > (
+        run.model_implied_expected_missed_true_cases_lo
+    )
+
+
+def test_posterior_missed_true_cases_does_not_use_scalar_fallback_for_year_s(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    _write_run(
+        run_dir,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        include_posterior=True,
+        include_year_specific_posterior=False,
+        recording_model="year",
+    )
+
+    run = sensitivity.load_sensitivity_run(run_dir, is_reference=True)
+    scenarios = sensitivity.scenario_table([run])
+    summary = sensitivity.sensitivity_summary_table([run])
+
+    assert run.model_implied_expected_missed_true_cases_mean is None
+    assert run.model_implied_expected_missed_true_cases_method is None
+    assert "requires posterior true_count_year" in (
+        run.model_implied_expected_missed_true_cases_unavailable_reason
+    )
+    assert not scenarios["model_implied_expected_missed_true_cases_available"].iloc[0]
+    assert not summary[
+        "model_implied_expected_missed_true_cases_mean_materiality_evaluated_from_reference"
+    ].iloc[0]
+    assert pd.isna(
+        summary[
+            "model_implied_expected_missed_true_cases_mean_material_change_from_reference"
+        ].iloc[0]
+    )
+    assert (
+        summary[
+            "model_implied_expected_missed_true_cases_mean_materiality_non_evaluation_reason"
+        ].iloc[0]
+        == "reference model-implied expected missed true cases is unavailable"
+    )
+    assert not summary["decomposition_materiality_evaluated_from_reference"].iloc[0]
+    assert pd.isna(summary["decomposition_material_change_from_reference"].iloc[0])
+    assert (
+        "reference model-implied expected missed true cases is unavailable"
+        in (summary["decomposition_materiality_non_evaluation_reason"].iloc[0])
+    )
+
+
+def test_nonfinite_posterior_correlations_are_not_marked_available(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "run"
+    _write_run(
+        run_dir,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        include_posterior=True,
+        posterior_recording_s_slope=0.0,
+    )
+
+    run = sensitivity.load_sensitivity_run(run_dir, is_reference=True)
+    scenarios = sensitivity.scenario_table([run])
+    summary = sensitivity.sensitivity_summary_table([run])
+
+    assert np.isnan(run.standardized_trajectory_error_index_recording_s_correlation)
+    assert np.isnan(
+        run.standardized_trajectory_error_index_recording_s_logit_correlation
+    )
+    assert not scenarios["standardized_trajectory_error_index_available"].iloc[0]
+    assert not scenarios[
+        "standardized_trajectory_error_index_recording_s_correlation_available"
+    ].iloc[0]
+    assert not summary["standardized_trajectory_error_index_available"].iloc[0]
+    assert summary["model_implied_expected_missed_true_cases_available"].iloc[0]
+
+
+def test_reference_unavailable_missed_cases_propagate_through_decomposition(
+    tmp_path: Path,
+) -> None:
+    reference_dir = tmp_path / "reference"
+    candidate_dir = tmp_path / "candidate"
+    _write_run(
+        reference_dir,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        recording_s_mean=0.40,
+        include_posterior=True,
+        include_year_specific_posterior=False,
+        recording_model="year",
+    )
+    _write_run(
+        candidate_dir,
+        false_positive_rate=1e-5,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        recording_s_mean=0.50,
+        include_posterior=True,
+        include_year_specific_posterior=True,
+        recording_model="year",
+    )
+    runs = [
+        sensitivity.load_sensitivity_run(reference_dir, is_reference=True),
+        sensitivity.load_sensitivity_run(candidate_dir),
+    ]
+
+    summary = sensitivity.sensitivity_summary_table(runs)
+    reference = summary.loc[summary["is_reference"]].iloc[0]
+    candidate = summary.loc[~summary["is_reference"]].iloc[0]
+
+    assert pd.isna(reference["decomposition_material_change_from_reference"])
+    assert not reference["decomposition_materiality_evaluated_from_reference"]
+    assert not candidate[
+        "model_implied_expected_missed_true_cases_mean_materiality_evaluated_from_reference"
+    ]
+    assert pd.isna(
+        candidate[
+            "model_implied_expected_missed_true_cases_mean_material_change_from_reference"
+        ]
+    )
+    assert (
+        candidate[
+            "model_implied_expected_missed_true_cases_mean_materiality_non_evaluation_reason"
+        ]
+        == "reference model-implied expected missed true cases is unavailable"
+    )
+    assert candidate["recording_s_mean_material_change_from_reference"]
+    assert candidate["decomposition_material_change_from_reference"]
+    assert candidate["decomposition_materiality_evaluated_from_reference"]
+    assert pd.isna(candidate["decomposition_materiality_non_evaluation_reason"])
 
 
 def test_comparison_records_unhealthy_fit_without_rejecting_it(tmp_path: Path) -> None:
@@ -380,8 +745,69 @@ def test_comparison_records_unhealthy_fit_without_rejecting_it(tmp_path: Path) -
     assert row["divergences"] == 2
     assert not bool(row["convergence_ok"])
     assert not bool(row["fit_healthy"])
+    assert not bool(row["materiality_evaluated_against_reference"])
+    assert row["materiality_non_evaluation_reason"] == "candidate fit is unhealthy"
+    summary = pd.read_csv(paths["summary"])
+    summary_row = summary.loc[~summary["is_reference"]].iloc[0]
+    assert not bool(summary_row["materiality_evaluated_against_reference"])
+    assert not bool(summary_row["aggregate_material_change_from_reference"])
+    assert summary_row["materiality_non_evaluation_reason"] == (
+        "candidate fit is unhealthy"
+    )
+    contrasts = pd.read_csv(paths["contrasts"])
+    total_contrast = contrasts.loc[contrasts["metric"] == "true_ds_mean"].iloc[0]
+    assert not bool(total_contrast["both_fits_healthy"])
+    assert not bool(total_contrast["materiality_evaluated"])
+    assert not bool(total_contrast["material_change"])
+    assert total_contrast["materiality_non_evaluation_reason"] == (
+        "candidate fit is unhealthy"
+    )
     config = json.loads(paths["config"].read_text(encoding="utf-8"))
     assert config["all_fits_healthy"] is False
+
+
+def test_materiality_is_not_evaluated_when_reference_fit_is_unhealthy(
+    tmp_path: Path,
+) -> None:
+    reference = tmp_path / "reference"
+    candidate = tmp_path / "candidate"
+    _write_run(
+        reference,
+        false_positive_rate=7.8e-5,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=44_000.0,
+        rhat=1.02,
+    )
+    _write_run(
+        candidate,
+        false_positive_rate=0.0,
+        observed_sigma=0.20,
+        extrapolated_sigma=0.45,
+        true_total=40_000.0,
+    )
+
+    paths = sensitivity.compare_core_reduction_sensitivities(
+        reference,
+        [candidate],
+        tmp_path / "comparison",
+    )
+
+    scenarios = pd.read_csv(paths["scenarios"])
+    assert not scenarios["reference_fit_healthy"].any()
+    assert not scenarios["materiality_evaluated_against_reference"].any()
+    candidate_row = scenarios.loc[~scenarios["is_reference"]].iloc[0]
+    assert candidate_row["materiality_non_evaluation_reason"] == (
+        "reference fit is unhealthy"
+    )
+    summary = pd.read_csv(paths["summary"])
+    assert not summary["aggregate_material_change_from_reference"].any()
+    contrasts = pd.read_csv(paths["contrasts"])
+    total_contrast = contrasts.loc[contrasts["metric"] == "true_ds_mean"].iloc[0]
+    assert not bool(total_contrast["materiality_evaluated"])
+    assert total_contrast["materiality_non_evaluation_reason"] == (
+        "reference fit is unhealthy"
+    )
 
 
 def test_comparison_rejects_changed_invariant_prior(tmp_path: Path) -> None:

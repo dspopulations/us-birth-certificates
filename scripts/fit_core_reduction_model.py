@@ -32,7 +32,9 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     CORE_REDUCTION_MODEL_ID,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
     DEFAULT_REDUCTION_AGE_STEP_SIGMA,
+    DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT,
     DEFAULT_REDUCTION_CSV,
+    DEFAULT_REDUCTION_ERROR_CORRELATION,
     CoreReductionModelConfig,
     CoreReductionPriors,
     build_core_reduction_model,
@@ -95,6 +97,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--observed-reduction-sigma", type=float, default=0.20)
     p.add_argument("--extrapolated-reduction-sigma", type=float, default=0.45)
+    p.add_argument(
+        "--reduction-error-correlation",
+        type=float,
+        default=DEFAULT_REDUCTION_ERROR_CORRELATION,
+        help=(
+            "Correlation between yearly logit-scale reduction-prior errors. "
+            "Marginal yearly variances are preserved."
+        ),
+    )
+    p.add_argument(
+        "--reduction-calibration-shift-logit",
+        type=float,
+        default=DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT,
+        help="Fixed logit-scale shift applied to the complete reduction trajectory.",
+    )
     p.add_argument("--recording-s-mean", type=float, default=0.5)
     p.add_argument("--recording-s-sigma", type=float, default=1.0)
     p.add_argument(
@@ -252,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         path=ns.reduction_csv,
         observed_logit_sigma=ns.observed_reduction_sigma,
         extrapolated_logit_sigma=ns.extrapolated_reduction_sigma,
+        reduction_error_correlation=ns.reduction_error_correlation,
+        reduction_calibration_shift_logit=ns.reduction_calibration_shift_logit,
         extrapolated_start=ns.extrapolated_start,
         recording_s_mean=ns.recording_s_mean,
         recording_s_sigma=ns.recording_s_sigma,
@@ -264,6 +283,11 @@ def main(argv: list[str] | None = None) -> int:
         f"observed sigma={ns.observed_reduction_sigma}, "
         f"extrapolated sigma={ns.extrapolated_reduction_sigma} "
         f"from {ns.extrapolated_start}"
+    )
+    cli_output.info(
+        "reduction calibration: "
+        f"year-error correlation={ns.reduction_error_correlation}, "
+        f"fixed logit shift={ns.reduction_calibration_shift_logit:+.3g}"
     )
     if ns.model_definition.recording_model == "year":
         cli_output.info(
@@ -338,6 +362,8 @@ def main(argv: list[str] | None = None) -> int:
         summary_vars.insert(4, "recording_s_year_offset")
     if "rho_age_offset" in idata.posterior:
         summary_vars.insert(2, "rho_age_offset")
+    if "rho_logit_year_raw" in idata.posterior:
+        summary_vars.insert(2, "rho_logit_year_raw")
     summary = diagnostics.summary_table(
         idata,
         var_names=tuple(summary_vars),
