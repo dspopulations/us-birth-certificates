@@ -33,13 +33,21 @@ from dspopulations_us_birth_certificates.selection.priors import logit
 
 
 def test_core_model_registry_indexes_dsp_models() -> None:
-    assert core_model_names() == ("DSP001", "DSP002", "DSP003", "DSP004", "DSP005")
+    assert core_model_names() == (
+        "DSP001",
+        "DSP002",
+        "DSP003",
+        "DSP004",
+        "DSP005",
+        "DSP006",
+    )
     assert set(CORE_MODEL_REGISTRY) == {
         "dsp001",
         "dsp002",
         "dsp003",
         "dsp004",
         "dsp005",
+        "dsp006",
     }
     assert get_core_model_definition("dsp001").recording_model == "constant"
     assert get_core_model_definition("DSP002").recording_model == "year"
@@ -64,12 +72,22 @@ def _make_row(
     mage_c: int | None,
     down_ind: int | None = 0,
     ca_down_c: str | None = None,
+    ca_down: str | None = None,
+    ca_downs: str | None = None,
 ) -> dict[str, int | str | None]:
+    """One synthetic birth record.
+
+    ``ca_down``/``ca_downs`` are the 2003-revision anomaly checkbox fields; a
+    record with either populated is a revised certificate. Leaving both None
+    represents an unrevised record.
+    """
     return {
         "year": year,
         "mage_c": mage_c,
         "down_ind": down_ind,
         "ca_down_c": ca_down_c,
+        "ca_down": ca_down,
+        "ca_downs": ca_downs,
     }
 
 
@@ -170,6 +188,156 @@ def test_prepare_core_confirmed_only_keeps_denominator(tmp_path: Path) -> None:
     assert combined["R_cell"].sum() == 2
     assert confirmed["R_cell"].sum() == 1
     assert confirmed.attrs["recorded_definition"] == "confirmed_only"
+
+
+def test_prepare_core_cells_split_revision_preserves_totals(tmp_path: Path) -> None:
+    rows = [
+        _make_row(year=2010, mage_c=30, down_ind=1, ca_down="Y"),
+        _make_row(year=2010, mage_c=30, down_ind=0, ca_downs="N"),
+        _make_row(year=2010, mage_c=30, down_ind=1),
+        _make_row(year=2010, mage_c=30, down_ind=0),
+    ]
+    db = tmp_path / "core.db"
+    con = duckdb.connect(str(db))
+    con.register("_rows", pd.DataFrame(rows))
+    con.execute("CREATE TABLE us_births AS SELECT * FROM _rows")
+    con.unregister("_rows")
+    con.close()
+
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        pooled = prepare_core_age_year_cells(con, year_range=(2010, 2010))
+        split = prepare_core_age_year_cells(
+            con,
+            year_range=(2010, 2010),
+            split_revision=True,
+        )
+    finally:
+        con.close()
+
+    # Splitting must reallocate rows, never create or drop them.
+    assert pooled["N_cell"].sum() == split["N_cell"].sum() == 4
+    assert pooled["R_cell"].sum() == split["R_cell"].sum() == 2
+    assert "revised" not in pooled
+    assert pooled.attrs["split_revision"] is False
+    assert split.attrs["split_revision"] is True
+    assert sorted(split["revised"].tolist()) == [0, 1]
+    by_revision = split.set_index("revised")
+    assert by_revision.loc[1, "N_cell"] == 2
+    assert by_revision.loc[1, "R_cell"] == 1
+    assert by_revision.loc[0, "N_cell"] == 2
+    assert by_revision.loc[0, "R_cell"] == 1
+
+
+def _revision_cells() -> pd.DataFrame:
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 0, 0, 0, 1, 1, 1, 1],
+            "age_idx": [2, 2, 4, 4, 2, 2, 4, 4],
+            "revised": [0, 1, 0, 1, 0, 1, 0, 1],
+            "N_cell": [500, 500, 400, 400, 300, 600, 200, 500],
+            "R_cell": [1, 2, 1, 3, 1, 2, 1, 3],
+        }
+    )
+    cells.attrs["n_year"] = 2
+    cells.attrs["year_range"] = (2020, 2021)
+    return cells
+
+
+def test_build_core_reduction_model_with_revision_split() -> None:
+    pm = pytest.importorskip("pymc")
+
+    cells = _revision_cells()
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+    )
+
+    model = build_core_reduction_model(
+        cells,
+        priors,
+        n_year=2,
+        recording_model="revision",
+    )
+    named = {rv.name for rv in model.free_RVs}
+    assert named == {
+        "rho_logit_year",
+        "recording_s_logit",
+        "recording_s_unrevised_offset",
+    }
+    assert "recording_s_unrevised" in model.named_vars
+
+    with model:
+        prior = pm.sample_prior_predictive(draws=8, random_seed=0)
+
+    recorded = np.asarray(prior.prior_predictive["R_obs"].values)
+    assert recorded.shape[-1] == len(cells)
+    for name in ("recording_s", "recording_s_unrevised"):
+        drawn = np.asarray(prior.prior[name].values)
+        assert ((0.0 < drawn) & (drawn < 1.0)).all()
+
+    # Cells 0-3 are (age 2, unrevised), (age 2, revised), (age 4, unrevised),
+    # (age 4, revised) within year 0. The revision must shift p_recorded within
+    # an age, in the same direction at both ages, since one offset drives both.
+    p_recorded = np.asarray(prior.prior["p_recorded"].values)[0, 0]
+    assert p_recorded[0] != p_recorded[1]
+    assert np.sign(p_recorded[1] - p_recorded[0]) == np.sign(
+        p_recorded[3] - p_recorded[2]
+    )
+
+
+def test_revision_recording_model_requires_split_cells() -> None:
+    pytest.importorskip("pymc")
+
+    cells = _revision_cells().drop(columns=["revised"])
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+    )
+
+    with pytest.raises(ValueError, match="split_revision=True"):
+        build_core_reduction_model(
+            cells,
+            priors,
+            n_year=2,
+            recording_model="revision",
+        )
+
+
+def test_revision_split_leaves_true_counts_unchanged() -> None:
+    """The split changes only recording, so true counts must be invariant."""
+    pytest.importorskip("pymc")
+
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=logit(np.array([0.35, 0.40])),
+        reduction_sigma=np.array([0.25, 0.35]),
+    )
+    split = _revision_cells()
+    pooled = (
+        split.groupby(["year_idx", "age_idx"], as_index=False)[["N_cell", "R_cell"]]
+        .sum()
+        .astype({"N_cell": "int64", "R_cell": "int64"})
+    )
+    pooled.attrs.update(split.attrs)
+
+    theta = np.array([0.0007, 0.0008, 0.0009, 0.0015, 0.0047, 0.0152, 0.0307])
+    totals = []
+    for frame, recording_model in ((pooled, "constant"), (split, "revision")):
+        model = build_core_reduction_model(
+            frame,
+            priors,
+            n_year=2,
+            recording_model=recording_model,
+        )
+        n_cell = frame["N_cell"].to_numpy(dtype=float)
+        eta = 1.0 - priors.reduction_mean
+        p = theta[frame["age_idx"].to_numpy()] * eta[frame["year_idx"].to_numpy()]
+        totals.append(float(np.dot(n_cell, p)))
+        assert "true_count_total" in model.named_vars
+    assert np.isclose(totals[0], totals[1])
 
 
 def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-RecordingModel = Literal["constant", "year"]
+RecordingModel = Literal["constant", "year", "revision"]
 ReductionModel = Literal["year", "year_age"]
 AgeModel = Literal["band", "single_year"]
 
@@ -99,12 +99,30 @@ DSP005 = CoreModelDefinition(
     comparison_parent="DSP004",
 )
 
+DSP006 = CoreModelDefinition(
+    model_id="DSP006",
+    slug="s_revision_exact_age",
+    title="Core reduction-recording model with revision-split s and exact age",
+    description=(
+        "Exact-age extension of DSP004 giving separate certificate recording "
+        "sensitivity to revised and unrevised birth certificates. Requires a "
+        "year range spanning the 2004-2015 revision phase-in to be identified; "
+        "from 2016 every record is revised and the offset reverts to its prior."
+    ),
+    recording_model="revision",
+    reduction_model="year",
+    age_model="single_year",
+    introduced="2026-08-03",
+    comparison_parent="DSP004",
+)
+
 CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp001": DSP001,
     "dsp002": DSP002,
     "dsp003": DSP003,
     "dsp004": DSP004,
     "dsp005": DSP005,
+    "dsp006": DSP006,
 }
 
 
@@ -116,9 +134,10 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
         )
     if not re.fullmatch(r"[A-Za-z0-9]+(?:[A-Za-z0-9_-]*[A-Za-z0-9])?", definition.slug):
         raise ValueError(f"{definition.model_id}.slug must be path safe.")
-    if definition.recording_model not in {"constant", "year"}:
+    if definition.recording_model not in {"constant", "year", "revision"}:
         raise ValueError(
-            f"{definition.model_id}.recording_model must be 'constant' or 'year'."
+            f"{definition.model_id}.recording_model must be 'constant', 'year' "
+            "or 'revision'."
         )
     if definition.reduction_model not in {"year", "year_age"}:
         raise ValueError(
@@ -202,6 +221,7 @@ __all__ = [
     "DSP003",
     "DSP004",
     "DSP005",
+    "DSP006",
     "AgeModel",
     "CoreModelDefinition",
     "RecordingModel",
