@@ -32,7 +32,7 @@ dependencies = [
   "preliz>=0.27.1",
   "pymc>=6.2.0",
   "scipy>=1.18.0",
-  "dse-research-utils>=0.9.0",
+  "dse-research-utils>=0.9.1",
 ]
 
 [project.optional-dependencies]
@@ -45,10 +45,11 @@ dev = [
   "ipywidgets>=8.1.8",
   "joblib>=1.4.0",
   "lightgbm>=4.7.0",
-  # numba is a transitive shap dep; pin it explicitly or the resolver backtracks
-  # to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14 wheel. Held at
-  # 0.65.1 rather than the current 0.66.0 because pytensor 3.2.x caps it there.
-  "numba>=0.65.1,<=0.65.1",
+  # numba is a transitive shap dep; keep the explicit floor or the resolver
+  # backtracks to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14
+  # wheel. The cap tracks the shared conda core: pytensor 3.2.4 raised its own
+  # cap to numba <=0.66.0, so 0.66.0 is now admitted.
+  "numba>=0.65.1,<=0.66.0",
   "notebook>=7.5.5",
   "optuna>=4.9.0",
   "polars>=1.43.1",
@@ -64,7 +65,7 @@ dev = [
 # dse-research-utils isn't published to PyPI — resolve it from the public git
 # tag. (The conda env in environment.yml installs it from the same tag in its
 # pip layer; this entry is only consumed by uv.)
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.9.0" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.9.1" }
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"
