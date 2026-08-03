@@ -111,6 +111,44 @@ calibration does not resolve the residual maternal-age allocation. The next
 model-adequacy gate is the mirrored age-on-recording diagnostic; neither age
 allocation should be treated as identified from certificates alone.
 
+## DSP004 race-surveillance audit
+
+A no-refit audit reconstructs the independent, unshifted reporting `DSP004`
+fit by exact maternal age, year, and the current seven race/Hispanic-origin
+groups. The project lead confirmed on 2026-08-03 that the de Graaf source points
+are centred five-year estimates based on maternal race and that prevalence is
+the ratio of numerator and denominator counts pooled across each window. The
+label 2016 therefore represents 2014-2018, of which the frozen fit supports only
+2016-2018; it is excluded from the aligned comparison. The label 2018
+represents 2016-2020 and is fully supported.
+
+The earlier annual-label 2016/2018 comparison and cross-year transport result
+are superseded and provide no evidence of repeatability. For the sole complete
+window, the pooled count ratio is the sole source-aligned estimand. Its existing
+comparison gives a material 2018 composition discrepancy (`TV` about 0.0803;
+`WRMS` about 0.2184), including Asian/Pacific Islander and Hispanic
+relative-rate contrasts. The earlier equal-year-rate calculation was
+numerically close but is now a superseded sensitivity, not decision evidence.
+Summing the native source birth denominators implies 25,128 named-group true
+births, compared with a model posterior mean of 24,865; the source denominator
+contains about 1.50% more named-group births than the model cohort. Applying
+the same source rates to model births gives 24,781. The pooled data therefore
+contain some absolute-scale information, but it remains inseparable from the
+unresolved denominator mapping and cannot yet serve as a second national-scale
+anchor.
+
+The incomplete 2016 window means there is no temporal replication.
+Hispanic-origin precedence, multi-race bridging, material source/model
+denominator differences, source covariance, and overlap with the national
+reduction evidence remain unresolved. The mirrored age-on-recording gate also
+remains outstanding. The audit therefore records `calibration_eligible=false`
+and authorises no race layer. Its local output must also be regenerated in a
+release-conformant environment before it can be sealed. Resolve those source
+and denominator definitions, obtain a second complete window, establish source
+covariance and evidence dependence, and complete the mirrored age-on-recording
+gate before reconsidering a time-invariant, composition-preserving race
+extension.
+
 The comparisons are descriptive and in-sample. `DSP004` is preferred over
 `DSP001` because it removes an avoidable age-discretisation approximation, not
 because it resolves the remaining age misfit. `DSP005` checks sensitivity to
@@ -134,4 +172,7 @@ records the false-positive and reduction-prior-width grid and its conditional
 interpretation. The
 [coherent surveillance-calibration analysis](../../notes/20260803-dsp004-coherent-surveillance-calibration.md)
 records the pre-specified correlated-error and common-shift protocol, fitted
-results and conditional reporting decision.
+results and conditional reporting decision. The
+[race-surveillance audit](../../notes/20260803-dsp004-race-surveillance-audit.md)
+records the no-refit protocol, reconstruction checks, descriptive findings and
+fail-closed model decision.

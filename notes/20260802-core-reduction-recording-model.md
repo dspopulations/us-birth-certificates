@@ -240,3 +240,35 @@ raises the posterior mean total by approximately 3% and roughly doubles its
 89% interval width. The simple model remains useful as a conditional accounting
 baseline, but the base interval should not be presented as including coherent
 surveillance calibration uncertainty.
+
+The subsequent
+[no-refit race-surveillance audit](20260803-dsp004-race-surveillance-audit.md)
+was revised after the project lead confirmed on 2026-08-03 that the de Graaf
+estimates are centred five-year values based on maternal race and that
+prevalence is a ratio of numerator and denominator counts pooled across each
+window. The earlier annual-label 2016/2018 comparison and transport result are
+superseded. A label of 2016 requires 2014-2018, but the frozen `DSP004`
+reference supports only 2016-2018; only the 2018-centred 2016-2020 window is
+complete. The pooled count ratio is therefore the sole source-aligned estimand,
+and the audit makes no repeatability or transport claim. The earlier
+equal-year-rate calculation was numerically close but is now a superseded
+sensitivity rather than decision evidence.
+
+The pooled comparison shows a material 2018 relative-composition discrepancy,
+including Asian/Pacific Islander and Hispanic contrasts, while the
+native source birth denominators imply 25,128 named-group true births versus a
+model posterior mean of 24,865. Because the source contains about 1.50% more
+named-group births than the model cohort, that absolute difference remains
+inseparable from denominator mapping. Applying the source rates to model births
+gives 24,781. This is a single-complete-window pooled descriptive signal, not
+yet an independent national-scale anchor.
+
+The Hispanic-origin and multi-race category crosswalk remains unresolved,
+source/model denominators differ materially, no source covariance is available,
+and overlap with the national reduction evidence has not been established.
+The incomplete 2016 window provides no replication, and the mirrored
+age-on-recording gate remains outstanding. Calibration remains blocked, and the
+local audit must be rerun in a release-conformant environment before it can
+become a sealed artefact. The immediate use of these figures is to motivate
+source reconciliation and a second complete window, not to calibrate
+race-specific reduction or recording effects.
