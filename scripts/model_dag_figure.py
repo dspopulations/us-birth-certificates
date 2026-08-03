@@ -3,7 +3,7 @@
 Produces ``notes/figures/dsp004_dag_extensions`` (PNG + SVG). The upper panel is
 the generative structure of the preferred accounting model in mathematical
 notation; the lower panel lists the five extension points marked on it, in the
-dependency order recommended by the model-family review.
+build order recommended by the companion identification note.
 
 No data or fit artefacts are read -- this is a structural diagram only.
 
@@ -21,14 +21,15 @@ import matplotlib.pyplot as plt  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
+from matplotlib.path import Path  # noqa: E402
 
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
 FILE_NAME = "dsp004_dag_extensions"
 
-# Node roles. Fixed external inputs and observed data are not estimated; free
-# parameters are the only two quantities DSP004 samples.
+# Node roles. Fixed external inputs and observed data are not estimated. DSP004
+# samples two parameter blocks: nine yearly reduction logits and one recording logit.
 ROLE_STYLE = {
     "data": {"fc": "#e8e8e8", "ec": "#5a5a5a"},
     "fixed": {"fc": "#fdece0", "ec": styles.COLOUR_DARK_ORANGE},
@@ -109,18 +110,17 @@ EDGES = [
     ("s", "prec", "bottom", "top"),
     ("f", "prec", "left", "right"),
     ("prec", "R", "bottom", "top"),
-    ("N", "pds", "right", "left"),
     ("N", "R", "bottom", "left"),
 ]
 
 # (label, x, y) in axes data units. Placed in gaps rather than offset from a
 # node corner, so a badge never lands on a box edge or an arrow.
 BADGES = [
-    ("1", 22.5, 97.0),
-    ("2", 55.0, 78.0),
-    ("3", 77.5, 97.0),
-    ("4", 26.5, 20.5),
-    ("5", 75.5, 67.0),
+    ("1", 22.5, 97.0),  # theta  -- ART correction
+    ("2", 26.5, 20.5),  # R      -- confirmed/pending channels
+    ("3", 77.5, 97.0),  # s      -- group offsets on recording
+    ("4", 55.0, 78.0),  # eta    -- group and age structure on reduction
+    ("5", 75.5, 67.0),  # s -> p_rec edge -- severity
 ]
 
 EXTENSIONS = [
@@ -129,16 +129,15 @@ EXTENSIONS = [
         "Assisted reproduction on the natural rate",
         r"$\theta_a \;\rightarrow\; \theta_a\,\kappa^{\mathrm{ART}}$"
         r"$\quad$ for $\mathtt{rf\_artec}=Y$",
-        "Donor oocytes and embryo screening make the Morris curve wrong for "
-        "ART births.\nExplains 93% of the 45+ age misfit. Do this first.",
+        "Donor oocytes and embryo screening make the Morris curve wrong for\n"
+        "ART births. Appears to account for 93% of the 45+ misfit. Do first.",
     ),
     (
         "2",
-        "Group and age structure on reduction",
-        r"$\rho_y \;\rightarrow\; \rho_{g,y}"
-        r" + \beta_g\,x_a \quad$ with $\sum_g w_g\,\rho_{g,y} = \rho_y$",
-        "The payer-by-age gradient identifies $\\beta_g$; recording cannot "
-        "produce it.\nMargin constraint preserves the national annual anchor.",
+        "Confirmed and pending as separate channels",
+        r"$R \;\rightarrow\; (R^{C}, R^{P})$ with $(s_C, f_C)$ and $(s_P, f_P)$",
+        "Doubles the constraints to 702 for three extra parameters and lets\n"
+        "the data estimate $f$, which is enriched in the pending channel.",
     ),
     (
         "3",
@@ -150,11 +149,11 @@ EXTENSIONS = [
     ),
     (
         "4",
-        "Confirmed and pending as separate channels",
-        r"$R \;\rightarrow\; (R^{C}, R^{P})$ with $(s_C, f_C)$ and $(s_P, f_P)$",
-        "Doubles the constraints to 702 for two extra parameters and lets the "
-        "data estimate $f$,\nwhich is enriched in the pending channel by about "
-        "3.4 times.",
+        "Group and age structure on reduction",
+        r"$\rho_y \;\rightarrow\; \rho_{g,y}"
+        r" + \beta_g\,x_a \quad$ with $\sum_g w_g\,\rho_{g,y} = \rho_y$",
+        "Payer-by-age bounds $\\beta_g$ from below; the recording gradient's\n"
+        "sign is adverse. Margin constraint preserves the national anchor.",
     ),
     (
         "5",
@@ -279,6 +278,22 @@ def draw_dag(ax: plt.Axes) -> None:
             )
         )
 
+    # N feeds the totals, not the per-cell probability. Routed below the p_DS box
+    # so it does not cross it; the single crossing with p_DS -> p_rec is intended.
+    ax.add_patch(
+        FancyArrowPatch(
+            path=Path(
+                [(19.5, 46.0), (19.5, 40.5), (82.5, 40.5), (82.5, 43.5)],
+                [Path.MOVETO, Path.LINETO, Path.LINETO, Path.LINETO],
+            ),
+            arrowstyle="-|>",
+            mutation_scale=11,
+            linewidth=1.1,
+            color="#6a6a6a",
+            zorder=1,
+        )
+    )
+
     for label, x, y in BADGES:
         _badge(ax, x, y, label)
 
@@ -299,7 +314,7 @@ def draw_dag(ax: plt.Axes) -> None:
         (
             "observed / given",
             "fixed external input",
-            "free parameter (2 in total)",
+            "free parameter (2 blocks, 10 in total)",
             "deterministic",
             "estimand",
         ),
@@ -323,7 +338,7 @@ def draw_extensions(ax: plt.Axes) -> None:
     ax.text(
         0,
         97,
-        "Extension points, in dependency order",
+        "Extension points, in build order",
         fontsize=9.5,
         fontweight="bold",
         va="top",

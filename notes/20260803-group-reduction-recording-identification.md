@@ -72,7 +72,7 @@ opposite direction, and concentrated in the same group.
 
 ## The time-based screening design is underpowered
 
-The natural exclusion restriction is screening technology: cfDNA adoption has a
+The natural identifying variation is screening technology: cfDNA adoption has a
 datable time profile and certificate recording has no reason to track it, which is
 the logic `selection/priors.py` already applies to the national year dimension.
 
@@ -91,11 +91,11 @@ errors:
 The prediction that screening expansion to average-risk pregnancies should steepen
 the decline at younger ages is not supported, but neither is it refuted: the
 youngest-versus-35-39 difference is `9.2` percentage points against a combined
-standard error of `10.8`. Nine years and roughly two thousand flags per band is
-simply not enough resolution. Treat the time dimension as a corroborating check,
+standard error of `10.8`. Nine years and between about two and five thousand flags
+per band is simply not enough resolution. Treat the time dimension as a corroborating check,
 not as the identifying variation.
 
-## The payer-by-age interaction is a usable exclusion restriction
+## The payer-by-age interaction bounds the reduction contrast
 
 The cross-sectional contrast has far more power and a much sharper structure.
 **[new]** Pooled 2016-2024, ART excluded, false-positive-adjusted:
@@ -115,8 +115,15 @@ log-ratio standard error of `0.016`, `z = 25.2`. Payer mix is stable across the
 window — Medicaid `42.6%` to `40.4%` of births, private `48.6%` to `50.6%`,
 unknown under `1%` — so this is not composition drift.
 
-**Below age 30 the two payers are indistinguishable; above 30 the gap opens to
-between `45%` and `89%`.** Separately, the private-insured profile falls from
+**[new]** Per-band log-ratio standard errors, which the table above omits: `0.136` at
+under-20, `0.057` at 20-24, `0.041` at 25-29, `0.036` at 30-34, `0.030` at 35-39 and
+`0.034` at 40+, giving `z` of `-0.04`, `+1.43`, `+1.24`, `+10.2`, `+16.5` and `+15.0`.
+
+**Above age 30 the interaction is overwhelming; below it the apparent equality is
+underpowered rather than established.** With only `65` private flags under age 20 a
+recording difference of `25%` would go undetected, so "indistinguishable" below 30
+means "not resolvable". The claim that recording does not vary with socioeconomic
+status therefore rests on the education tables below, which do carry standard errors. Separately, the private-insured profile falls from
 `0.318` to `0.155` across the age range while the Medicaid profile barely moves,
 `0.317` to `0.293`.
 
@@ -259,12 +266,14 @@ than as curve error.
 Without resolving the level confounding at all: **the maternal-age gradient in
 prenatal selection is concentrated among privately insured and higher-educated
 mothers, and is close to flat among Medicaid and lowest-education mothers.** That is
-an Aim 5 result, it is bounded from below by the data, and it requires no external
-calibration.
+an Aim 5 finding once estimated inside the model; as computed here it is a bounded
+diagnostic. It requires no external recording calibration, though the ratios are
+false-positive-adjusted at `f = 7.8e-5` and conditional on `DSP004` posterior means.
 
 State it as a bound rather than a point estimate. The `1.89` ratio at 45 and over is
 not an estimate of the reduction contrast; the defensible claim is that the contrast
-grows by at least `1.91`-fold across the age range under the sign restriction above.
+grows by at least `1.91`-fold across the age range under the sign restriction above,
+evaluated at `f = 7.8e-5`; the factor moves with `f` as tabulated earlier.
 
 ## Proposed design
 
@@ -330,9 +339,9 @@ most flexible: the ART correction from the review's Finding 4, and the
 confirmed/pending channel split from the companion note.
 
 - **Interpretation.** Payer bundles race, education, age, parity and geography, and
-  Medicaid eligibility is partly determined by pregnancy itself. The exclusion
-  restriction survives that — it needs only that recording is free of a
-  payer-by-age interaction — but the effect must be reported as a socioeconomic
+  Medicaid eligibility is partly determined by pregnancy itself. The sign
+  restriction survives that — it needs only that the socioeconomic-recording
+  gradient does not reverse — but the effect must be reported as a socioeconomic
   bundle, not as insurance per se. Use education as a corroborating stratifier.
 - **Geography is absent.** The only geographic field in the extract is
   `mbstate_rec`, mother's nativity; public-use natality files suppress state of

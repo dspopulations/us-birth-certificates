@@ -27,8 +27,18 @@ total unchanged to the birth. Two prior-implied totals under Finding 3 were comp
 on the wrong cohort filter and are corrected from `45,698` and `44,432` to `45,607`
 and `44,347`, with three coherent-tail values corrected in the fourth decimal.
 Recommendation 2 is sharpened: the substantive fix is to extrapolate the prevalence
-numerator rather than the ratio. All other figures in this note were re-verified
-against source and reconcile exactly.
+numerator rather than the ratio.
+
+**Amended a third time 2026-08-03**, after an independent adversarial audit of all
+three notes. The audit found further errors, including two introduced by the second
+amendment, and they are corrected here. The material ones: the `+452` ablation shift
+is evidence *against* cancellation in `DSP001`, not for it; the theta-invariance of
+the total holds only if the extrapolated tail is regenerated in prevalence space, and
+the grounded years are about a third of the total; the claim that ART correction
+raises `s` is incompatible with the total not moving; the `s_year` decline quoted for
+`DSP005` was `DSP002`'s; and several code-fact claims under Finding 7 were wrong.
+Individual corrections are marked in place. This note no longer claims that every
+figure reconciles — only those explicitly stated to have been verified.
 
 ## Scope
 
@@ -77,7 +87,9 @@ These are genuine strengths and should be preserved through any revision.
   is `0.929`-`0.979`.
 - The `DSP001` to `DSP004` exact-age ablation is a real improvement with a real
   diagnostic payoff: common-grid mean absolute standardised residual falls from
-  `1.690` to `1.019` while the posterior mean total moves only `+452` births.
+  `1.690` to `1.019`. The `+452`-birth move in the posterior mean is small in
+  absolute terms but, per Finding 2, should not be read as stability — it tracks the
+  change in the Morris expectation almost exactly.
 - The equicorrelation implementation in `core_reduction.py:174-187` is correct.
   `(1 - lambda) I + lambda J` scaled by the outer product of the sigmas is the
   equicorrelated covariance, and it does preserve every marginal variance as
@@ -89,8 +101,9 @@ These are genuine strengths and should be preserved through any revision.
   is exactly the discipline this study needs.
 - Numerical hygiene is good: `round_to="none"` in `summary_table` so display
   rounding cannot move a value across a convergence threshold; reconstruction
-  identities checked to `1e-11`; the race audit verifying that it performs no
-  DuckDB writes.
+  identities asserted at `1e-15` to `1e-12` in `audit_core_race_surveillance.py`,
+  with observed reconstruction discrepancies up to `4.37e-11`; the race audit
+  verifying that it performs no DuckDB writes.
 
 ## Finding 1 — the total's level is a prior, and its interval is too narrow
 
@@ -109,10 +122,12 @@ speaks, and the total's level is proportional to it.
 `f` applies to a denominator that is almost the whole cohort,
 
 ```text
-(17,809 - 33,527,704 * 7.8e-5) / 0.340182 = 44,665
+(17,809 - 33,527,704 * 7.8e-5) / 0.340182 = 44,664
 ```
 
-against a posterior mean total of `44,255` — agreement to under 1%. The
+against a posterior mean total of `44,255` — agreement to under 1%. This applies `f`
+to the whole cohort rather than to non-DS births only, which is why it differs
+slightly from the `2,612` false-flag count the model implies. The
 recorded counts fix `T * s`; the reduction prior fixes `s`; the total follows.
 
 Two consequences.
@@ -126,17 +141,25 @@ manufactures precision in precisely the direction that is otherwise
 unidentified. The family's own numbers show the size of the effect from two
 directions:
 
-| Evidence | Width on the total |
-| --- | ---: |
-| Prior simulation, `lambda=0` | `6,539` |
-| Prior simulation, `lambda=0.9` | `17,562` |
-| Baseline posterior 89% ETI | `4,631` |
-| Span of primary scenario means (`37,610`-`50,190`) | `12,580` |
-| Span including both joint corners (`34,806`-`50,190`) | `15,384` |
+| Evidence | Scale | Width on the total |
+| --- | --- | ---: |
+| Prior simulation, `lambda=0` | prior | `6,539` |
+| Prior simulation, `lambda=0.9` | prior | `17,562` |
+| Baseline 89% ETI | posterior | `4,631` |
+| Span of primary scenario means (`37,610`-`50,190`) | scenario | `12,580` |
+| Span including both joint corners (`34,806`-`50,190`) | scenario | `15,384` |
 
-**[new]** The scenario-mean span is `2.7` times the baseline interval width, and
-`3.3` times it once the corners are included — the same factor the prior
-simulation gives independently (`17,562 / 6,539 = 2.7`).
+The three scales are not interchangeable and should not be divided across rows.
+Within the prior scale, `lambda=0.9` is `2.7` times as wide as `lambda=0`. Separately,
+the scenario-mean span is `2.7` times the baseline posterior interval width and `3.3`
+times it with the corners.
+
+**An important counter-observation.** The `lambda=0.9` *posterior* interval is
+`4,062`, **narrower** than the baseline's `4,631`, and its mean shifts `-7.62%`. The
+coherent-calibration note explains this as conditional model geometry and warns
+against reading it as precision. So correlated surveillance error does not widen the
+posterior — it relocates it. The case for a wider reported interval rests on the
+scenario-mean span and on the `delta` axis, not on the `lambda` posteriors.
 
 **The scenario grid should become a parameter.** A common logit-scale level
 error in the surveillance prevalence behind the reduction trajectory, and any
@@ -175,7 +198,9 @@ vintage, method)".
 expectation is births-weighted. It is *not* derived from
 `data/us-births-degraaf-prevalence-recording-2000-2024.csv` and not from
 `scripts/derive_recording_rates.py`. That is a genuinely separate path, and the
-`DSP00x` models never import `recording_anchor`, so the circularity that
+`DSP00x` models never consume any `recording_anchor` value — `priors.py:34` does
+import from it, but no anchor quantity reaches the core models — so the circularity
+that
 `notes/20260707-s-anchor-and-identifiability-diagnostic.md` documents for the
 older model does not apply here.
 
@@ -220,8 +245,8 @@ The question that matters cannot be answered from the repository at all:
 an ascertainment-adjusted modelled estimate.** If it is the adjusted estimate,
 the anchor already contains a recording-rate correction and the independence the
 family relies on is weaker than assumed. There is no citation, no vintage and no
-method note. A precision discontinuity at 2014/2015 — six significant figures
-before, nine after — is consistent with two spliced source vintages, and
+method note. A precision discontinuity at 2014/2015 — four significant figures
+through 2014 (`0.001302`), seven from 2015 (`0.001265051`), with 2017 at five — is consistent with two spliced source vintages, and
 `docs/data-preparation.md` already flags it.
 
 Everything downstream is conditional on this file, including the whole
@@ -260,8 +285,8 @@ The Morris expectation per birth rose from `2.110542e-03` in 2018 to
 change of `-2.8%`, landing almost exactly on the published posterior mean of
 `44,255`.
 
-This changes the interpretation of the tail. Roughly half of the prior-data
-conflict in 2021-2024 — which a constant-`s` reading would attribute to
+This changes the interpretation of the tail. **[new]** Roughly `60%` of the
+prior-data conflict in 2021-2024 — `58%`, `50%`, `61%` and `69%` year by year — — which a constant-`s` reading would attribute to
 recording holding steady while reduction rose — is instead the extrapolation
 failing to track a denominator that is known and moving. Any statement that
 combined reduction rose sharply after 2020 is currently confounded with the
@@ -286,13 +311,14 @@ decision, with no structural break, in exactly the years of greatest policy
 interest. Because termination decisions precede birth by several months, a
 mid-2022 break maps mostly onto 2023 births.
 
-## Finding 4 — assisted reproductive technology explains most of the age misfit
+## Finding 4 — assisted reproductive technology appears to explain the age misfit
 
 The broad-age posterior-predictive coverage of `1/7` is treated across three
 notes as an unresolved allocation between age-varying reduction and age-varying
 recording, with the mirrored age-on-recording diagnostic named as the next gate.
 A third explanation is available, it is testable in data already extracted, and
-it accounts for most of the failure.
+it appears to account for most of the failure. The evidence below is a
+posterior-mean residual decomposition, not a fitted result.
 
 `rf_artec` (assisted reproductive technology) is already in the pipeline via
 `data_utils.py`. **[new]** Comparing observed recorded counts against the
@@ -303,7 +329,7 @@ it accounts for most of the failure.
 | under 35 | `194,597` | `0.97` | `1.05` |
 | 35-39 | `176,425` | `0.43` | `0.98` |
 | 40-44 | `82,329` | `0.25` | `1.09` |
-| 45+ | `25,643` | `0.06` | `0.98` |
+| 45+ | `25,643` | `0.06` | `0.97` |
 
 The coding is unambiguous. At 45 and over, `rf_artec='X'` with `rf_inftr='N'`
 covers `59,545` births with `391` recorded cases (`6.57` per 1,000), while
@@ -331,23 +357,38 @@ headline total, once the Morris cancellation of Finding 2 is respected. Scaling
 `theta` for ART births by the multipliers their observed-to-predicted ratios imply
 (`0.974` under 35, `0.432` at 35-39, `0.245` at 40-44, `0.064` at 45+) lowers the
 Morris expectation from `73,397` to `71,051`, `-3.2%`. If the reduction series is
-left as it is, the prior-implied total falls by the same `-3.2%`, from `45,607` to
-`44,156`. But if the series is regenerated against the corrected curve, as
-recommendation 1 requires, the total returns to `45,607` **exactly** — because
-`T = N * S` and `S` is an external measurement that no change to `theta` can move.
+left as it is, the prior-implied total falls to `44,156`, also `-3.2%` in aggregate
+though not year by year, since ART's share of the Morris expectation rises from
+`3.40%` to `5.91%` across the window.
+
+The invariance is conditional in a way the second amendment did not state. `T = N * S`
+requires `(1 - rho) = S / M` in every year, which Finding 3 establishes holds only for
+2016-2018 — about a third of the total. So regenerating the series restores exact
+invariance **only if the extrapolated tail is regenerated in prevalence space**, which
+is what sharpened recommendation 2 asks for; on that convention the total returns to
+`45,607` to the birth. If instead the tail keeps its extrapolated ratio and only the
+grounded years are recomputed, the total falls by roughly two thirds of `3.2%`.
+
+These multipliers are also an upper bound on the `theta` effect. Of the three
+mechanisms above, donor oocytes and embryo screening act on `theta`, but intensive
+screening of ART pregnancies acts on `eta`. Attributing the whole observed deficit to
+`theta`, as the multipliers do, therefore overstates the curve correction.
 
 An earlier draft of this note claimed the correction would lower the total by
 `3`-`4%`. That figure is an artefact of leaving the series inconsistent with the
 curve, which is the very inconsistency recommendation 1 exists to remove, and it
 is withdrawn. What the correction does change is real and substantial: the age
 allocation and hence the broad-age posterior-predictive failure, the implied
-reduction rate, the implied recording sensitivity, the roughly `12%` of the
-apparent time trend that is ART composition rather than behaviour, and the
-contamination of every group comparison. None of those depend on the total moving.
+reduction rate, the roughly `12%` of the apparent time trend that is ART composition
+rather than behaviour, and the contamination of every group comparison. Note that `s`
+does **not** materially change either: Finding 1's identity `s ~ (R - fN) / T` fixes
+it once `T` is fixed.
 
 This also explains a puzzle in the `DSP003` note, which records that ages 48, 49
 and 50+ are over-predicted at `sigma=0.10`, that the sparse tail is influential,
-and that the total swings `39,601`-`44,511` across smoothing choices. Those are
+and that the total swings `40,845`-`44,511` across smoothing choices at fixed `f` —
+the wider `39,601`-`44,511` range in that note crosses the `f` axis as well. Those
+are
 the ART-dominated ages. `DSP003`'s smooth age effect is being asked to absorb an
 ART composition artefact at the top of the range and a genuine screening-uptake
 gradient at the bottom, which is why it is so sensitive to `sigma`.
@@ -380,7 +421,8 @@ monotonically:
 | 2024 | `0.1870` | `0.0051` |
 
 That is a `-19.9%` decline over nine years. No single year-to-year step exceeds
-`1.8` standard errors, but the cumulative trend is unambiguous. Every
+`1.8` standard errors in the full nine-year series, of which the table above shows
+alternate years only, but the cumulative trend is unambiguous. Every
 substantive conclusion about change over time is a choice about how to divide
 that decline between rising reduction and falling recording, and the certificate
 data cannot make the division.
@@ -390,7 +432,10 @@ recording anchor assigns much of it to recording:
 `notes/figures/recording_rates_anchor.csv` shows `s` for NH White falling from
 `0.4615` in 2016 to `0.3831` in 2024, `-17%`. These two artefacts in the same
 repository resolve the same discrepancy in opposite directions, and the `DSP00x`
-notes never mention the second. The two rest on different tail assumptions — the
+notes never mention the second. The anchor is used here only to *bracket* the range
+of allocations the same evidence admits, not as independent evidence — the companion
+group note is right that it cannot arbitrate, being built from the same recorded
+counts and the same Morris curve. The two rest on different tail assumptions — the
 anchor holds the survival ratio flat from 2018, the reduction CSV extrapolates
 it — but between them they bracket the answer, and only one bracket is currently
 reported.
@@ -399,9 +444,10 @@ reported.
 determined by the ratio of prior widths — `0.20`/`0.45` on reduction against
 `0.35` on the centred recording offsets — and that ratio has no evidential
 basis. `DSP005` reads as a test of year-varying recording but functions as an
-arbitrary apportionment. Its reported `s_year` decline of `0.363` to `0.331`,
-`-8.8%`, is roughly half the anchor's and should not be read as evidence about
-the true split.
+arbitrary apportionment. `DSP005`'s posterior `s_year` declines `0.3603` to `0.3248`,
+`-9.9%`, roughly half the anchor's `-17.0%`, and should not be read as evidence about
+the true split. (An earlier draft quoted `0.363` to `0.331`, which is `DSP002`'s
+band-resolution series, not `DSP005`'s.)
 
 **[new]** Rising ART use also contributes a pure composition artefact that the
 model currently books as rising termination. ART's share of Morris-expected
@@ -424,14 +470,20 @@ the notes' credit `T` is nearly invariant to `f`; `s` is not, moving `0.401` to
 
 **The numerator definition interacts with the only external check on `s`.** Of
 the `17,809` flags, `9,825` are pending and `7,984` confirmed — `55%` pending.
-Confirmed-only gives `s = 0.186`; confirmed-or-pending at `f=0` gives `0.401`.
+Confirmed-only gives `s = 0.186`, though that is a `DSP003` run and the `DSP003` note
+states it must not be compared directly with confirmed-or-pending sensitivities; the
+`DSP004` confirmed-or-pending fit at `f=0` gives `0.401`.
 Boulet's record-linkage sensitivity of approximately `40%` is genuinely
 independent evidence about `s`, and it is the only external check available on
 the one non-identified direction. It is not currently reported as such. Whether
 Boulet's denominator corresponds to confirmed-or-pending or to confirmed alone
-determines whether that evidence corroborates the model or implies a total
-roughly `80%` higher. That question is more consequential than anything
-currently on the roadmap.
+determines which of the model's own `s` estimates it should be set against. The
+model's own confirmed-only fit gives a total of `42,971`, `3%` *below* the
+confirmed-or-pending reference rather than above it. An earlier draft asserted the
+mismatch implied a total roughly `80%` higher; that figure paired a
+confirmed-or-pending numerator with a confirmed-only sensitivity and is withdrawn.
+The definitional question remains worth resolving, but it is not the largest item on
+the roadmap.
 
 ## Finding 7 — verification gaps
 
@@ -445,14 +497,16 @@ specific failure modes are the ones missing.
    `tests/test_core_reduction_model.py` uses prior-predictive draws or graph
    inspection; none calls `pm.sample`. There is no core-cell simulator.
 2. **The fit script never fails.** `scripts/fit_core_reduction_model.py:374-384`
-   prints a warning and returns `0` regardless, and divergences are not read at
-   fit time at all. `output/selection_core_reduction/DSP001/20260802-152232`
+   prints a warning, and the function returns `0` regardless at line 399;
+   divergences are not read at fit time at all. `output/selection_core_reduction/DSP001/20260802-152232`
    records max Rhat `1.1400` and minimum ESS `12` and carries a complete set of
    tables, plots and `year_summary.csv`, indistinguishable from a healthy run.
 3. **The convergence gate misses free random variables.** `summary_vars` omits
-   `rho_logit_year`, which is free in the default uncorrelated configuration,
-   and `rho_age_step`, which is `DSP003`'s 38 actual free parameters. Only the
-   cumulated, centred transform `rho_age_offset` is checked.
+   `rho_age_step`, which is `DSP003`'s 38 actual free parameters; only the cumulated,
+   centred transform `rho_age_offset` is checked, and that is not a per-coordinate
+   monotone map. `rho_logit_year` is also omitted but has no practical consequence:
+   the monitored `rho_year` is its per-year monotone image, and ArviZ's
+   rank-normalised `r_hat` and ESS are invariant under monotone transformation.
 4. **Coverage is reported without a reference level.** The `DSP004` `f=0` run
    shows `55.3%` cell coverage against a nominal `89%` and no code path flags
    it. The only coverage-versus-threshold comparison in the repository is in the
@@ -462,19 +516,24 @@ specific failure modes are the ones missing.
    It converges to machine epsilon on the current grid, but a wider
    `reduction_age_step_sigma`, a large calibration shift or an extended age
    range could break the fixed 12-iteration solve silently.
-6. **No MCSE, energy/BFMI or tree-depth diagnostics** anywhere in the core
-   pipeline, despite the coherent-calibration note's decision rule depending on
-   combined MCSEs.
+6. **No MCSE *gate*, and no energy/BFMI or tree-depth diagnostics at all.**
+   `mcse_mean` and `mcse_sd` are present in every core `summary.csv` because
+   `az.summary` emits them, and the coherent-calibration note uses them by hand; what
+   is missing is any automated check against them. Energy/BFMI and tree-depth
+   saturation are genuinely absent.
 7. **Prior-predictive draws are sampled and saved but never consumed.** There is
    no prior-predictive check on `R_obs` for any core model. What the report
    calls prior-versus-posterior is an analytic logit-normal quantile
    calculation.
 8. **No manifest for core fits.** `manifest.py` records the git SHA and package
-   versions but is used only by `scripts/fit_model.py`. Core-model artefacts
+   versions but is written only by `scripts/fit_model.py` and read by
+   `scripts/compare_variants.py`. Core-model artefacts
    carry no provenance and no recorded health status.
-9. **The five safety rejections in `_exact_grid_for_comparison` are untested** —
-   mismatched recorded definition, year range, false-positive rate, cell grid
-   and cohort totals. These are the checks that stop a scientifically invalid
+9. **The rejection branches of `_exact_grid_for_comparison` are untested** — its
+   seven `raise` sites in `compare_core_reduction_models.py` cover mismatched
+   recorded definition, year range, false-positive rate, cell grid, cohort totals
+   and missing columns. Only the happy path is exercised, by
+   `tests/test_compare_core_reduction_models.py:382`. These are the checks that stop a scientifically invalid
    comparison.
 10. **Artefact-contract drift.** All nine `DSP003` runs predate
     `core_ppc_by_age_band.csv`, which `compare_core_reduction_sensitivities.py`
@@ -506,7 +565,12 @@ parameters, and there is no held-out or temporal cross-validation anywhere.
   yet it links every other note except that one and still reports only the
   approximately `3%` effect of widening independent priors. A reader of the
   primary note comes away believing headline uncertainty is around `±5%` when
-  the corpus establishes `±13`-`15%`.
+  scenario-mean shifts of `±13`-`15%`. That is a sensitivity envelope rather than an
+  interval — the distinction this note praises the corpus for making elsewhere — but
+  it is the right order of magnitude for what a reader should take away, and the
+  spine note's own "roughly doubles the 89% interval width" is closer to it than to
+  `±5%`. The spine note also omits the `DSP002` note, so two of the six other design
+  notes are unlinked, not one.
 - **The `DSP002` note is stale.** It still names `DSP001` as the primary simple
   model and carries no supersession marker, unlike the `DSP003` note.
 - **A retracted claim was never revised.** The false-positive note's
@@ -531,9 +595,10 @@ change the recommended sequencing below.
 - [Estimating the false-positive rate from the age gradient and the
   confirmed/pending split](20260803-false-positive-channel-identification.md)
   shows that `f` is estimable rather than merely importable: the `58`-fold `theta`
-  range identifies it as a regression intercept, every specification puts it above
-  the `7.8e-5` default, and the pending channel carries about `3.4` times the
-  confirmed channel's rate. It also shows `f` distorts group comparisons far more
+  range identifies it as a regression intercept, the combined-channel estimates come
+  out above the `7.8e-5` default, and the pending channel carries about `3.4` times
+  the confirmed channel's rate. Those estimates are upper bounds, so they do not by
+  themselves establish that the true `f` is higher. It also shows `f` distorts group comparisons far more
   than it does the national total.
 - [Identifying group effects on reduction separately from
   recording](20260803-group-reduction-recording-identification.md) establishes that
@@ -598,7 +663,7 @@ extrapolated ratio silently encodes a rising one.
 Set `DEFAULT_EXTRAPOLATED_REDUCTION_START = 2019` in `core_reduction.py:51` so the
 first extrapolated year receives the extrapolated prior width. Under the
 flat-prevalence reading, expect the prior-implied total to fall by roughly `2.8%`
-and the tail prior-data conflict to roughly halve. Record whether a *Dobbs*
+and the tail prior-data conflict to fall by roughly `60%`. Record whether a *Dobbs*
 structural break is being assumed absent, and say so where the 2022-2024 nowcasts
 are reported.
 
@@ -626,9 +691,10 @@ Do **not** expect the total to move. Under the Morris cancellation, correcting
 `theta` and regenerating the reduction series together leave `T` unchanged to the
 birth; only a correction applied without regenerating the series would shift it,
 and that shift is an artefact rather than a result. Expect instead a materially
-better broad-age fit, a lower implied reduction rate, a higher `s`, and the removal
-of roughly `12%` of the apparent time trend along with the ART contamination of
-group comparisons. Re-run the `DSP003` smoothing sensitivity afterwards; its
+better broad-age fit, a lower implied reduction rate, and the removal of roughly
+`12%` of the apparent time trend along with the ART contamination of group
+comparisons. `s` does not materially move either, for the reason given under
+Finding 4. Re-run the `DSP003` smoothing sensitivity afterwards; its
 `sigma` sensitivity should shrink, since the influential sparse tail at ages 48-50
 is roughly half ART births.
 
@@ -638,8 +704,9 @@ Determine whether Boulet's approximately `40%` sensitivity corresponds to
 confirmed-or-pending or to confirmed-only flags, and report the comparison
 against the posterior `s` either way. This is the only quasi-independent check
 on the non-identified direction and it currently goes unreported. Re-derive `f`
-on the correct scale, or retire the `7.8e-5` default in favour of the
-cohort-calibrated `4.15e-5` with the units error stated.
+on the correct scale, or retire both the `7.8e-5` default and the `4.15e-5`
+cohort-calibrated alternative in favour of an estimated `f`, per the companion note,
+with the units error stated either way.
 
 ### 6. Make the trend allocation explicit rather than implicit
 
@@ -673,14 +740,17 @@ Reconcile the two `DSP004` baselines and state which is the reference. Refit the
 1,500-draw runs at 3,000 draws, or drop the "matched" claim. Add the
 coherent-calibration result and link to the spine note. Add a supersession
 marker to the `DSP002` note. Revise the false-positive note's disowned MCSE
-claim. Fix the `DSP002` label in `docs/models/README.md` and the plan citation
-in `tests/test_selection_priors.py`.
+claim. Fix the `DSP002` label in `docs/models/README.md` and the four dangling plan
+citations — `tests/test_selection_priors.py` cites "plan §10 #1", "#3" and "#4", and
+`tests/test_selection_parameter_recovery.py:19` cites "plan §3.2".
 
 ## Reproducing the new figures
 
 Every **[new]** figure comes from read-only aggregate queries against
 `data/us_births.db` for 2016-2024 with `down_ind IS NOT NULL` and
-`mage_c IS NOT NULL`, combined with the posterior means in
+`mage_c IS NOT NULL`. Findings 2 and 3 and recommendation 2 use only those queries,
+the tracked CSVs and `chance.get_ds_lb_nt_probability_array`. Findings 4 and 5
+additionally use the posterior means in
 `output/selection_core_reduction/DSP004/20260803-calibration-base-reporting/year_summary.csv`
 and `chance.get_ds_lb_nt_probability_array`. Predicted counts use
 `N * (theta * eta_year * s + (1 - theta * eta_year) * f)` at posterior means,

@@ -66,10 +66,25 @@ weights:
 | Excluding ART | pending | `0.1657` (`0.0033`) | `7.039e-05` (`3.60e-06`) |
 | Excluding ART | confirmed or pending | `0.3249` (`0.0054`) | `1.007e-04` (`5.61e-06`) |
 
-Two observations. The ART-excluded combined slope of `0.3249` nearly reproduces
-the `DSP004` posterior mean `s` of `0.340`, which is a useful cross-check on both.
-And every specification puts `f` **above** the `7.8e-5` default — `1.007e-04`
-excluding ART, `+29%`, and `1.457e-04` including it.
+Two observations, both needing care.
+
+The like-for-like comparison with `DSP004`, whose fit **includes** ART births, is the
+all-births combined row: `s = 0.2537`, which is `25%` below the posterior mean of
+`0.340`. The ART-excluded row of `0.3249` is much closer, but it is not the matching
+estimand and should not be presented as a cross-check. Neither is independent of the
+fit, since both regressions hold `eta` at `DSP004` posterior means.
+
+The two **combined-channel** estimates exceed the `7.8e-5` default — `1.007e-04`
+excluding ART, `1.457e-04` including it. The individual channel rows do not, and four
+of the six rows are below it. Because the intercept absorbs age misspecification these
+are upper bounds, so they do not establish that the true `f` is higher; what they do
+establish is that the data are not consistent with `f` being negligible.
+
+The channel rows are also not additive, although the recorded counts are: `s` sums to
+`0.2795` against a combined `0.2537`, and `f` to `1.206e-04` against `1.457e-04`. The
+cause is the weighting — each fit uses `1/max(count, 1)` from its own channel, so the
+three fits weight cells differently. A single joint fit would remove the discrepancy
+and is the right implementation.
 
 **The essential caveat.** The intercept absorbs any age misspecification. If
 reduction rises with maternal age, a single-slope fit compensates with a
@@ -121,9 +136,11 @@ recording. What the note does not record is that `f` materially distorts *group*
 comparisons, because its share of a group's flags is `f / (R/N)` and therefore
 depends on that group's recorded rate.
 
-**[new]** Across the seven race/Hispanic-origin groups the implied false-positive
-share of flags ranges from `10.4%` (NH AIAN) to `25.3%` (NH Asian/Pacific
-Islander), a factor of `2.4`. Subtracting the false-positive term widens the
+**[new]** Across the six **named** race/Hispanic-origin groups the implied false-positive share
+of flags ranges from `10.4%` (NH AIAN) to `25.3%` (NH Asian/Pacific Islander), a
+factor of `2.4`. `RACE_LEVELS` has seven entries; the seventh, Unknown, is excluded
+here along with `306,717` births and `187` flags, so the named-group columns sum to
+`33,220,987` and `17,622` rather than the full cohort. Subtracting the false-positive term widens the
 between-group spread in the identified ratio from `4.39` to `5.26`-fold. So `f` is
 close to irrelevant for Aim 3 and central to Aim 4.
 
@@ -144,8 +161,9 @@ confirmed[y,a] ~ Binomial(N, p_ds_lb * s_C + (1 - p_ds_lb) * f_C)
 pending[y,a]   ~ Binomial(N, p_ds_lb * s_P + (1 - p_ds_lb) * f_P)
 ```
 
-This gives 702 cell constraints instead of 351 for the cost of two extra
-parameters, and it gives `f` an internal identifying signature — enrichment in the
+This gives 702 cell constraints instead of 351 for the cost of three extra free
+parameters — `f` is currently a fixed constant, so `(s)` becomes
+`(s_C, s_P, f_C, f_P)` — and it gives `f` an internal identifying signature — enrichment in the
 pending channel — rather than an imported constant. Give `f_C` and `f_P` priors
 wide enough to reflect the genuine state of the evidence rather than fixed values.
 
