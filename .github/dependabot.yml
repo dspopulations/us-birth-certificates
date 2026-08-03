@@ -12,6 +12,23 @@ updates:
       interval: daily
       time: "06:00"
       timezone: "Europe/London"
+    ignore:
+      # Both ceilings below mirror the shared conda core and are deliberate
+      # constraints, not stale pins. Dependabot cannot see environment.yml or the
+      # canonical core, so without these it proposes individually-plausible but
+      # unsolvable widenings — as it did in
+      # dseinternational/language-reading-predictors#467.
+      #
+      # numpy: pytensor 3.2.x pins numba <=0.66.0 and numba 0.66.0 still pins
+      # numpy <2.5, so 2.5 is unreachable for anything depending on pymc. Remove
+      # once numba supports numpy 2.5.
+      - dependency-name: "numpy"
+        versions: [">=2.5.0"]
+      # numba: the cap tracks whatever pytensor admits — 3.2.4 raised it to
+      # <=0.66.0. Patch releases within 0.66.x are fine; 0.67 needs a pytensor
+      # release that accepts it first. Remove/raise in step with the core.
+      - dependency-name: "numba"
+        versions: [">=0.67.0"]
     assignees:
       - "frankbuckley"
 
