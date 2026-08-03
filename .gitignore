@@ -16,6 +16,3 @@ __pycache__/
 /.claude
 .DS_Store
 /notes/__*
-
-# Personal working document, deliberately untracked
-notes/20260803-project-reset-briefing.md
