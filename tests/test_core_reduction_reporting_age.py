@@ -14,10 +14,46 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionPriors,
 )
 from dspopulations_us_birth_certificates.selection.core_reporting import (
+    _prior_rho_table,
     age_reduction_by_year_table,
+    reduction_prior_posterior_table,
     render_core_all,
 )
 from dspopulations_us_birth_certificates.selection.priors import AGE_LEVELS, logit
+
+
+def test_prior_rho_table_reports_shifted_marginals_and_source_anchor() -> None:
+    source = np.array([0.35, 0.40])
+    shift = 0.2
+    table = _prior_rho_table(
+        {
+            "reduction_mean": source,
+            "reduction_logit": logit(source),
+            "reduction_sigma": np.array([0.20, 0.45]),
+            "reduction_calibration_shift_logit": shift,
+            "reduction_error_correlation": 0.9,
+        },
+        interval_prob=0.89,
+    )
+
+    expected = 1.0 / (1.0 + np.exp(-(logit(source) + shift)))
+    assert table["rho_prior_mean"].to_numpy() == pytest.approx(expected)
+    assert table["rho_prior_centre"].to_numpy() == pytest.approx(expected)
+    assert table["rho_surveillance_anchor_mean"].to_numpy() == pytest.approx(source)
+    assert (table["reduction_calibration_shift_logit"] == shift).all()
+    assert (table["reduction_error_correlation"] == 0.9).all()
+
+    accounting = table.assign(
+        year=[2020, 2021],
+        rho_year_mean=[0.36, 0.41],
+        rho_year_lo=[0.32, 0.36],
+        rho_year_hi=[0.40, 0.46],
+        eta_year_mean=[0.64, 0.59],
+    )
+    propagated = reduction_prior_posterior_table(accounting)
+    assert "rho_surveillance_anchor_mean" in propagated
+    assert "rho_prior_centre" in propagated
+    assert "reduction_calibration_shift_odds_multiplier" in propagated
 
 
 def _age_reduction_idata(variable: str) -> SimpleNamespace:

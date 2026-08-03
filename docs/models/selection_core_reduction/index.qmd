@@ -38,6 +38,13 @@ from dspopulations_us_birth_certificates.intervals import interval_label
 
 config = json.loads(Path("config.json").read_text())
 run_config = json.loads(Path("run_config.json").read_text())
+priors_config = config.get("priors", {})
+reduction_error_correlation = float(
+    priors_config.get("reduction_error_correlation", 0.0)
+)
+reduction_calibration_shift_logit = float(
+    priors_config.get("reduction_calibration_shift_logit", 0.0)
+)
 cells = pd.read_parquet("cells.parquet")
 interval = interval_label()
 age_reduction_path = Path("tables/core_reduction_by_age_year.csv")
@@ -96,6 +103,9 @@ Markdown(
     f"`reduction_model={reduction_model}`, `age_model={age_model}`)\n"
     f"- **recorded-case definition**: `{recorded_definition}`\n"
     f"- **year range**: {year_range[0]}-{year_range[1]}\n"
+    f"- **reduction-prior calibration sensitivity**: "
+    f"`lambda={reduction_error_correlation:g}`, "
+    f"`delta={reduction_calibration_shift_logit:+g}` logit\n"
     f"- **sampling profile**: `{profile}` "
     f"({run_config['chains']} chains x {run_config['draws']} draws, "
     f"tune={run_config['tune']}, "
@@ -199,19 +209,28 @@ display(
 ```{python}
 #| echo: false
 reduction = pd.read_csv("tables/core_reduction_prior_posterior.csv")
+prior_centre_column = (
+    "rho_prior_centre" if "rho_prior_centre" in reduction else "rho_prior_mean"
+)
+reduction_columns = [
+    "year",
+    prior_centre_column,
+    "rho_prior_lo",
+    "rho_prior_hi",
+    "rho_year_mean",
+    "rho_year_lo",
+    "rho_year_hi",
+    "extrapolated",
+]
+for optional_column in [
+    "rho_surveillance_anchor_mean",
+    "reduction_calibration_shift_logit",
+    "reduction_error_correlation",
+]:
+    if optional_column in reduction:
+        reduction_columns.insert(-4, optional_column)
 display(
-    reduction[
-        [
-            "year",
-            "rho_prior_mean",
-            "rho_prior_lo",
-            "rho_prior_hi",
-            "rho_year_mean",
-            "rho_year_lo",
-            "rho_year_hi",
-            "extrapolated",
-        ]
-    ].round(3)
+    reduction[reduction_columns].round(3)
 )
 ```
 
@@ -219,6 +238,29 @@ Recent years are nowcasts conditional on the extrapolated reduction trend, not
 direct surveillance observations. `rho_year` is a yearly population margin: in
 `DSP003` it is the natural-DS-weighted mean across maternal ages, not the
 reduction at any one age.
+
+For coherent surveillance-calibration sensitivities, the annual logit prior is
+
+$$
+\operatorname{logit}(\rho_y)=\mu_y+\delta+\varepsilon_y,
+\qquad
+(\Sigma_\lambda)_{ij}
+=\sigma_i\sigma_j[(1-\lambda)\mathbb{1}(i=j)+\lambda].
+$$
+
+The `reduction_error_correlation` control sets $\lambda$ and the
+`reduction_calibration_shift_logit` control sets $\delta$. The implementation
+uses a Cholesky factor of $\Sigma_\lambda$ with independent standard-normal
+innovations. Consequently, $\lambda$ changes cross-year correlation while
+preserving every marginal variance $\sigma_y^2$; $\delta$ applies a fixed
+common shift to all logit prior centres. The unshifted independent baseline is
+$\lambda=0,\delta=0$.
+
+These controls test common error correlation and a coherent level displacement.
+They do not introduce or test an alternative extrapolated-tail slope and cannot
+establish trend robustness. Any envelope across separately fitted scenarios is
+descriptive, not a posterior interval, and scenario draws are not pooled or
+model-averaged.
 
 ## Age-Specific Combined Reduction
 
@@ -455,6 +497,9 @@ education, payer, or detection/termination claims.
 ## Caveats
 
 - The model estimates aggregate counts, not missed individual births.
+- For constant-$s$ `DSP004`, model-implied missed true cases are calculated
+  draw by draw as $T(1-s)$. This is an aggregate decomposition and does not
+  identify which individual records were missed.
 - Surveillance-derived reduction priors and certificate recording sensitivity
   are not independently identified from certificate counts alone.
 - In `DSP002`, year-specific recording sensitivity competes with `rho_year`

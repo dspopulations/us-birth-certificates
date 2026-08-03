@@ -13,7 +13,7 @@ not imply that the highest-numbered model is preferred.
 | `DSP001` | Discretisation sensitivity | Seven bands | Constant `s` | One value per year | Original core accounting model; retained to measure the effect of evaluating the Morris curve in broad bands. |
 | `DSP002` | Band-resolution sensitivity | Seven bands | Partially pooled `s_year` | One value per year | Tests year-varying recording under the original broad-band age approximation. |
 | `DSP003` | Age-structure diagnostic | NCHS single-age codes | Constant `s` | Smooth age pattern within year | Tests how much residual age structure can be absorbed by combined reduction while preserving each year's natural-DS-weighted surveillance margin. |
-| `DSP004` | Preferred simple-resolution baseline | NCHS single-age codes | Constant `s` | One value per year | Removes the broad-band Morris approximation while retaining the simplest transparent reduction-recording structure. |
+| `DSP004` | Preferred structure; conditional reference | NCHS single-age codes | Constant `s` | One value per year | Removes the broad-band Morris approximation while retaining the simplest transparent reduction-recording structure; totals remain conditional on calibration scenarios. |
 | `DSP005` | Year-recording sensitivity | NCHS single-age codes | Partially pooled `s_year` | One value per year | Tests whether year-specific recording materially changes the preferred exact-age baseline. |
 
 All five models use the same Quarto template at
@@ -44,6 +44,73 @@ python scripts/compare_core_reduction_sensitivities.py \
   --output-dir output/selection_core_reduction/comparisons/<comparison-name>
 ```
 
+## DSP004 coherent surveillance-calibration controls
+
+`DSP004` also exposes two sensitivity controls without assigning a new model
+identifier:
+
+- `--reduction-error-correlation`, stored in `config.json` as
+  `reduction_error_correlation`, sets the common correlation $\lambda$ among
+  yearly logit-scale reduction-prior errors while preserving every year's
+  marginal prior variance; and
+- `--reduction-calibration-shift-logit`, stored as
+  `reduction_calibration_shift_logit`, applies a fixed common logit shift
+  $\delta$ to the complete reduction trajectory.
+
+The default `lambda=0`, `delta=0` configuration reproduces the independent,
+unshifted prior. The pre-specified primary grid has seven unique scenarios:
+
+| Role | $\lambda$ | $\delta$ |
+| --- | ---: | ---: |
+| Baseline | `0` | `0` |
+| Correlation sensitivity | `0.5` | `0` |
+| Correlation sensitivity | `0.9` | `0` |
+| Common-level stress | `0` | `-0.4` |
+| Common-level stress | `0` | `-0.2` |
+| Common-level stress | `0` | `+0.2` |
+| Common-level stress | `0` | `+0.4` |
+
+All seven scenarios hold `f=7.8e-5` and the observed/extrapolated reduction-
+prior logit SDs at `0.20 / 0.45`. The shift values are stress values, not
+validated bounds. Aggregate materiality is pre-specified as either an absolute
+change of at least 5% in the total posterior mean or an increase of at least
+25% in the 89% ETI width. The decomposition checks are an absolute change of at
+least `0.05` in mean $s$ and at least 10% in the posterior mean of draw-by-draw
+model-implied missed true cases, $T(1-s)$ for constant-$s$ `DSP004`.
+
+If an aggregate rule triggers, the protocol adds joint corners
+`(lambda, delta)=(0.9, -0.4)` and `(0.9, +0.4)` and checks them against the
+separate-axis scenario envelope. That envelope is descriptive, not a posterior
+interval; the scenario draws are not pooled or model-averaged. These controls
+test common error correlation and a common level shift. They do not test the
+extrapolated-tail slope or establish trend robustness, and all missed-case
+quantities remain population aggregates rather than individual classifications.
+
+The completed primary grid triggers the aggregate rule. Its posterior means
+span 37,610-50,190, with outer 89% ETI endpoints of 35,023-52,177. The required
+`(lambda, delta)=(0.9, +0.4)` corner gives 34,806 (32,727-36,924), outside that
+separate-axis total envelope. Primary decomposition means span `0.300-0.401`
+for $s$ and `22,572-35,151` missed true cases. The original negative-corner fit
+shared seed 47 with the baseline, so its borderline MCSE classification was not
+retained. An independent-seed refined run gives 46,336.589
+(44,331.066-48,337.931), a `+4.704%` mean change. Its distance from the 5%
+threshold is 131.025 births, exceeding its two-combined-MCSE band of 89.274
+births, so the aggregate mean change is classified as immaterial. Its refined
+`s=0.325` and missed-count mean of 31,298 (29,276-33,312), `+7.123%` from
+baseline, are inside both primary decomposition envelopes and trigger neither
+decomposition rule. The positive-shift corner remains outside both primary
+decomposition envelopes at `s=0.433` and 19,769 missed cases, so its interaction
+conclusion is unaffected. `DSP004` is therefore retained as the preferred
+accounting structure and its independent, unshifted fit as a conditional
+reference, not as a posterior that incorporates shared surveillance-source
+uncertainty. Results must be reported by scenario; their envelope is not a
+credible interval.
+
+Broad-age posterior-predictive coverage remains `1/7`: coherent surveillance
+calibration does not resolve the residual maternal-age allocation. The next
+model-adequacy gate is the mirrored age-on-recording diagnostic; neither age
+allocation should be treated as identified from certificates alone.
+
 The comparisons are descriptive and in-sample. `DSP004` is preferred over
 `DSP001` because it removes an avoidable age-discretisation approximation, not
 because it resolves the remaining age misfit. `DSP005` checks sensitivity to
@@ -64,4 +131,7 @@ records the matched results and decision. The
 age-structure and measurement sensitivities. The
 [DSP004 measurement sensitivity note](../../notes/20260802-dsp004-false-positive-surveillance-sensitivity.md)
 records the false-positive and reduction-prior-width grid and its conditional
-interpretation.
+interpretation. The
+[coherent surveillance-calibration analysis](../../notes/20260803-dsp004-coherent-surveillance-calibration.md)
+records the pre-specified correlated-error and common-shift protocol, fitted
+results and conditional reporting decision.

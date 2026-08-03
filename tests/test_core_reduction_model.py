@@ -24,6 +24,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionModelConfig,
     CoreReductionPriors,
+    _reduction_error_covariance,
     build_core_reduction_model,
     prepare_core_age_year_cells,
 )
@@ -182,11 +183,41 @@ def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:
         path=path,
         observed_logit_sigma=0.2,
         extrapolated_logit_sigma=0.5,
+        reduction_error_correlation=0.6,
+        reduction_calibration_shift_logit=0.2,
         extrapolated_start=2021,
     )
 
     assert np.allclose(priors.reduction_mean, [0.35, 0.40])
     assert np.allclose(priors.reduction_sigma, [0.2, 0.5])
+    assert priors.reduction_error_correlation == 0.6
+    assert priors.reduction_calibration_shift_logit == 0.2
+
+
+@pytest.mark.parametrize(
+    ("correlation", "shift", "message"),
+    [
+        (-0.1, 0.0, "reduction_error_correlation"),
+        (1.0, 0.0, "reduction_error_correlation"),
+        (0.0, np.inf, "reduction_calibration_shift_logit"),
+    ],
+)
+def test_core_reduction_priors_reject_invalid_calibration_parameters(
+    tmp_path: Path,
+    correlation: float,
+    shift: float,
+    message: str,
+) -> None:
+    path = tmp_path / "reduction.csv"
+    pd.DataFrame({"year": [2020], "reduction": [0.35]}).to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match=message):
+        CoreReductionPriors.from_reduction_csv(
+            year_range=(2020, 2020),
+            path=path,
+            reduction_error_correlation=correlation,
+            reduction_calibration_shift_logit=shift,
+        )
 
 
 def test_core_reduction_priors_allow_zero_s_year_sigma_for_constant_model(
@@ -213,6 +244,8 @@ def test_core_reduction_config_serialises_dsp003_sensitivities(tmp_path: Path) -
         year_range=(2020, 2020),
         path=path,
         reduction_age_step_sigma=0.08,
+        reduction_error_correlation=0.5,
+        reduction_calibration_shift_logit=-0.2,
         false_positive_rate=0.0,
     )
 
@@ -235,6 +268,8 @@ def test_core_reduction_config_serialises_dsp003_sensitivities(tmp_path: Path) -
     }
     assert config["priors"]["theta_lb_age_used"] is False
     assert config["priors"]["reduction_age_step_sigma"] == 0.08
+    assert config["priors"]["reduction_error_correlation"] == 0.5
+    assert config["priors"]["reduction_calibration_shift_logit"] == -0.2
     assert config["priors"]["false_positive_rate"] == 0.0
 
 
@@ -304,6 +339,61 @@ def test_build_core_reduction_model_and_prior_predictive() -> None:
     assert r.shape[-1] == len(cells)
     assert (r >= 0).all()
     assert (r <= cells["N_cell"].to_numpy()[None, None, :]).all()
+
+
+def test_reduction_error_covariance_preserves_marginals_and_correlation() -> None:
+    sigma = np.array([0.20, 0.45, 0.30])
+    correlation = 0.6
+
+    covariance = _reduction_error_covariance(sigma, correlation)
+    cholesky = np.linalg.cholesky(covariance)
+    reconstructed = cholesky @ cholesky.T
+    standardised = covariance / np.outer(sigma, sigma)
+
+    assert reconstructed == pytest.approx(covariance)
+    assert np.diag(covariance) == pytest.approx(sigma**2)
+    assert standardised[np.triu_indices(len(sigma), k=1)] == pytest.approx(correlation)
+
+
+def test_correlated_reduction_prior_applies_whitened_shifted_transform() -> None:
+    pm = pytest.importorskip("pymc")
+
+    cells = pd.DataFrame(
+        {
+            "year_idx": [0, 1],
+            "age_idx": [2, 2],
+            "N_cell": [1000, 900],
+            "R_cell": [1, 1],
+        }
+    )
+    cells.attrs["n_year"] = 2
+    anchor_logit = logit(np.array([0.35, 0.40]))
+    sigma = np.array([0.20, 0.45])
+    priors = CoreReductionPriors(
+        reduction_mean=np.array([0.35, 0.40]),
+        reduction_logit=anchor_logit,
+        reduction_sigma=sigma,
+        reduction_error_correlation=0.6,
+        reduction_calibration_shift_logit=0.2,
+    )
+
+    model = build_core_reduction_model(cells, priors, n_year=2)
+    assert {rv.name for rv in model.free_RVs} == {
+        "rho_logit_year_raw",
+        "recording_s_logit",
+    }
+    with model:
+        prior = pm.sample_prior_predictive(
+            draws=20,
+            var_names=["rho_logit_year", "rho_logit_year_raw"],
+            random_seed=11,
+        )
+
+    rho_logit = np.asarray(prior.prior["rho_logit_year"]).reshape(-1, 2)
+    raw = np.asarray(prior.prior["rho_logit_year_raw"]).reshape(-1, 2)
+    covariance = _reduction_error_covariance(sigma, 0.6)
+    expected = anchor_logit + 0.2 + raw @ np.linalg.cholesky(covariance).T
+    assert rho_logit == pytest.approx(expected)
 
 
 def test_build_core_reduction_model_with_s_year_extension() -> None:

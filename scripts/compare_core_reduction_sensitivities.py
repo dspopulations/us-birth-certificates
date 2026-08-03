@@ -3,11 +3,14 @@
 The comparison is deliberately table-driven.  Runs of the same core model use
 the same native age-by-year cells, so their checked-in reporting contracts are
 more direct than reconstructing another posterior-predictive sample from each
-NetCDF file.  The NetCDF is opened only to count sampler divergences.
+NetCDF file.  The NetCDF is also used for sampler divergences and a small set
+of explicitly draw-wise dependence and missed-case diagnostics.
 
-The two intended sensitivity axes are the fixed false-positive probability
-``f`` and the surveillance-derived reduction-prior widths.  Incomplete
-factorial grids are allowed and are recorded explicitly in the output config.
+The intended sensitivity axes are the fixed false-positive probability ``f``,
+the surveillance-derived reduction-prior widths, the correlation between
+yearly reduction-prior errors, and a fixed logit-scale calibration shift.
+Incomplete factorial grids are allowed and are recorded explicitly in the
+output config.
 """
 
 from __future__ import annotations
@@ -33,7 +36,18 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     CORE_REDUCTION_MODEL_ID,
 )
 
-ALLOWED_VARYING_PRIORS = frozenset({"false_positive_rate", "reduction_sigma"})
+ALLOWED_VARYING_PRIORS = frozenset(
+    {
+        "false_positive_rate",
+        "reduction_sigma",
+        "reduction_error_correlation",
+        "reduction_calibration_shift_logit",
+    }
+)
+TOTAL_MEAN_MATERIAL_PERCENT = 5.0
+TOTAL_INTERVAL_WIDTH_MATERIAL_PERCENT = 25.0
+RECORDING_S_MATERIAL_ABSOLUTE = 0.05
+MISSED_TRUE_CASES_MEAN_MATERIAL_PERCENT = 10.0
 REQUIRED_TABLES = {
     "headlines": "core_headlines.csv",
     "accounting_by_year": "core_accounting_by_year.csv",
@@ -44,8 +58,12 @@ REQUIRED_TABLES = {
 }
 CONTRAST_METRICS = (
     "true_ds_mean",
+    "true_ds_interval_width",
     "recording_s_mean",
+    "recording_s_interval_width",
     "aggregate_reduction_mean",
+    "model_implied_expected_missed_true_cases_mean",
+    "model_implied_expected_missed_true_cases_interval_width",
     "age_year_coverage_fraction",
     "age_year_mean_absolute_standardized_residual",
     "age_band_coverage_fraction",
@@ -58,6 +76,11 @@ ENVELOPE_METRICS = {
         "expected_false_positive_flags_mean",
         "expected_false_positive_flags_lo",
         "expected_false_positive_flags_hi",
+    ),
+    "model_implied_expected_missed_true_cases": (
+        "model_implied_expected_missed_true_cases_mean",
+        "model_implied_expected_missed_true_cases_lo",
+        "model_implied_expected_missed_true_cases_hi",
     ),
     "age_year_coverage_fraction": ("age_year_coverage_fraction", None, None),
     "age_year_mean_absolute_standardized_residual": (
@@ -83,11 +106,20 @@ class CoreSensitivityRun:
     false_positive_rate: float
     observed_reduction_sigma: float
     extrapolated_reduction_sigma: float
+    reduction_error_correlation: float
+    reduction_calibration_shift_logit: float
     interval_prob: float
     max_rhat: float
     min_ess: float
     convergence_ok: bool
     divergences: int | None
+    standardized_trajectory_error_index_recording_s_correlation: float | None
+    standardized_trajectory_error_index_recording_s_logit_correlation: float | None
+    model_implied_expected_missed_true_cases_mean: float | None
+    model_implied_expected_missed_true_cases_lo: float | None
+    model_implied_expected_missed_true_cases_hi: float | None
+    model_implied_expected_missed_true_cases_method: str | None
+    model_implied_expected_missed_true_cases_unavailable_reason: str | None
 
     @property
     def reduction_width_id(self) -> str:
@@ -98,13 +130,36 @@ class CoreSensitivityRun:
         )
 
     @property
-    def factor_key(self) -> tuple[float, float, float]:
+    def calibration_id(self) -> str:
+        """Human-readable identifier for one coherent-calibration regime."""
+        return (
+            f"corr={self.reduction_error_correlation:.8g}; "
+            f"shift={self.reduction_calibration_shift_logit:+.8g}"
+        )
+
+    @property
+    def factor_key(self) -> tuple[float, float, float, float, float]:
         """Stable numeric key for duplicate-scenario checks."""
         return (
             self.false_positive_rate,
             self.observed_reduction_sigma,
             self.extrapolated_reduction_sigma,
+            self.reduction_error_correlation,
+            self.reduction_calibration_shift_logit,
         )
+
+
+@dataclass(frozen=True)
+class PosteriorSensitivityDiagnostics:
+    """Draw-wise quantities derived from an available posterior group."""
+
+    trajectory_index_recording_s_correlation: float | None = None
+    trajectory_index_recording_s_logit_correlation: float | None = None
+    missed_true_cases_mean: float | None = None
+    missed_true_cases_lo: float | None = None
+    missed_true_cases_hi: float | None = None
+    missed_true_cases_method: str | None = None
+    missed_true_cases_unavailable_reason: str | None = None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -167,6 +222,49 @@ def _reduction_prior_widths(config: dict[str, Any]) -> tuple[float, float]:
     return float(observed[0]), float(extrapolated[0])
 
 
+def _coherent_calibration_factors(config: dict[str, Any]) -> tuple[float, float]:
+    """Extract coherent-calibration factors, defaulting legacy runs to zero."""
+    priors = config.get("priors")
+    if not isinstance(priors, dict):
+        raise ValueError("config.priors must be a JSON object.")
+    try:
+        correlation = float(priors.get("reduction_error_correlation", 0.0))
+        shift = float(priors.get("reduction_calibration_shift_logit", 0.0))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "Coherent reduction-calibration factors must be numeric."
+        ) from exc
+    if not np.isfinite(correlation) or not 0.0 <= correlation < 1.0:
+        raise ValueError("priors.reduction_error_correlation must lie in [0, 1).")
+    if not np.isfinite(shift):
+        raise ValueError("priors.reduction_calibration_shift_logit must be finite.")
+    return correlation, shift
+
+
+def _reduction_prior_location_and_scale(
+    config: dict[str, Any],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return shifted yearly logit locations and marginal standard deviations."""
+    try:
+        priors = config["priors"]
+        location = np.asarray(priors["reduction_logit"], dtype=float)
+        scale = np.asarray(priors["reduction_sigma"], dtype=float)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "config must contain valid yearly reduction_logit and reduction_sigma."
+        ) from exc
+    _, shift = _coherent_calibration_factors(config)
+    if location.ndim != 1 or scale.ndim != 1 or len(location) != len(scale):
+        raise ValueError(
+            "priors.reduction_logit and reduction_sigma must be same-length vectors."
+        )
+    if not len(location) or not np.all(np.isfinite(location)):
+        raise ValueError("priors.reduction_logit values must be finite.")
+    if not np.all(np.isfinite(scale)) or np.any(scale <= 0.0):
+        raise ValueError("priors.reduction_sigma values must be finite and positive.")
+    return location + shift, scale
+
+
 def _report_interval_probability(tables: dict[str, pd.DataFrame]) -> float:
     values: list[float] = []
     for name in (
@@ -201,10 +299,192 @@ def _count_divergences(path: Path) -> int | None:
         raise ValueError(f"Could not read sample_stats from {path}.") from exc
 
 
+def _posterior_scalar_samples(array: xr.DataArray, *, name: str) -> np.ndarray:
+    """Return one scalar posterior quantity per chain-draw sample."""
+    sample_dims = {"chain", "draw"}
+    if not sample_dims.issubset(array.dims):
+        raise ValueError(f"Posterior variable {name!r} has no chain/draw dimensions.")
+    other_dims = [dim for dim in array.dims if dim not in sample_dims]
+    if other_dims:
+        raise ValueError(f"Posterior variable {name!r} is not scalar per draw.")
+    return np.asarray(array.transpose("chain", "draw").values, dtype=float).reshape(-1)
+
+
+def _posterior_year_samples(array: xr.DataArray, *, name: str) -> np.ndarray:
+    """Return a sample-by-year matrix for one posterior trajectory."""
+    sample_dims = {"chain", "draw"}
+    if not sample_dims.issubset(array.dims):
+        raise ValueError(f"Posterior variable {name!r} has no chain/draw dimensions.")
+    other_dims = [dim for dim in array.dims if dim not in sample_dims]
+    if len(other_dims) != 1:
+        raise ValueError(
+            f"Posterior variable {name!r} must have exactly one trajectory dimension."
+        )
+    values = np.asarray(
+        array.transpose("chain", "draw", other_dims[0]).values,
+        dtype=float,
+    )
+    return values.reshape(-1, values.shape[-1])
+
+
+def _finite_draw_correlation(left: np.ndarray, right: np.ndarray) -> float:
+    """Return a finite-draw Pearson correlation, or NaN when degenerate."""
+    if left.shape != right.shape:
+        raise ValueError("Posterior quantities have incompatible draw counts.")
+    finite = np.isfinite(left) & np.isfinite(right)
+    left_finite = left[finite]
+    right_finite = right[finite]
+    if (
+        left_finite.size < 2
+        or np.ptp(left_finite) == 0.0
+        or np.ptp(right_finite) == 0.0
+    ):
+        return float("nan")
+    return float(np.corrcoef(left_finite, right_finite)[0, 1])
+
+
+def _mean_eti(draws: np.ndarray, *, interval_prob: float) -> tuple[float, float, float]:
+    """Summarise finite posterior draws with a mean and equal-tailed interval."""
+    finite = np.asarray(draws, dtype=float).reshape(-1)
+    finite = finite[np.isfinite(finite)]
+    if not finite.size:
+        return float("nan"), float("nan"), float("nan")
+    tail = (1.0 - interval_prob) / 2.0
+    lo, hi = np.quantile(finite, [tail, 1.0 - tail])
+    return float(np.mean(finite)), float(lo), float(hi)
+
+
+def _posterior_sensitivity_diagnostics(
+    path: Path,
+    *,
+    config: dict[str, Any],
+    interval_prob: float,
+) -> PosteriorSensitivityDiagnostics:
+    """Derive trajectory-dependence and missed-case summaries when available."""
+    try:
+        posterior_context = xr.open_dataset(path, group="posterior")
+    except OSError, ValueError:
+        return PosteriorSensitivityDiagnostics(
+            missed_true_cases_unavailable_reason="posterior group is unavailable"
+        )
+
+    with posterior_context as posterior:
+        trajectory_index: np.ndarray | None = None
+        if "rho_logit_year" in posterior:
+            rho_logit = _posterior_year_samples(
+                posterior["rho_logit_year"], name="rho_logit_year"
+            )
+            location, scale = _reduction_prior_location_and_scale(config)
+            if rho_logit.shape[1] != len(location):
+                raise ValueError(
+                    "Posterior rho_logit_year and reduction prior have different "
+                    "year counts."
+                )
+            trajectory_index = np.mean(
+                (rho_logit - location[None, :]) / scale[None, :],
+                axis=1,
+            )
+
+        recording_correlation: float | None = None
+        if trajectory_index is not None and "recording_s" in posterior:
+            recording_s = _posterior_scalar_samples(
+                posterior["recording_s"], name="recording_s"
+            )
+            recording_correlation = _finite_draw_correlation(
+                trajectory_index, recording_s
+            )
+
+        recording_logit_correlation: float | None = None
+        if trajectory_index is not None and "recording_s_logit" in posterior:
+            recording_s_logit = _posterior_scalar_samples(
+                posterior["recording_s_logit"], name="recording_s_logit"
+            )
+            recording_logit_correlation = _finite_draw_correlation(
+                trajectory_index, recording_s_logit
+            )
+
+        missed_draws: np.ndarray | None = None
+        missed_method: str | None = None
+        missed_unavailable_reason: str | None = None
+        if "true_count_year" in posterior and "recording_s_year" in posterior:
+            true_year = _posterior_year_samples(
+                posterior["true_count_year"], name="true_count_year"
+            )
+            recording_year = _posterior_year_samples(
+                posterior["recording_s_year"], name="recording_s_year"
+            )
+            if true_year.shape != recording_year.shape:
+                raise ValueError(
+                    "Posterior true_count_year and recording_s_year have "
+                    "incompatible shapes."
+                )
+            missed_draws = np.sum(true_year * (1.0 - recording_year), axis=1)
+            missed_method = "sum_y true_count_year * (1 - recording_s_year)"
+        elif (
+            config.get("recording_model") == "constant"
+            and "true_count_total" in posterior
+            and "recording_s" in posterior
+        ):
+            true_total = _posterior_scalar_samples(
+                posterior["true_count_total"], name="true_count_total"
+            )
+            recording_s = _posterior_scalar_samples(
+                posterior["recording_s"], name="recording_s"
+            )
+            if true_total.shape != recording_s.shape:
+                raise ValueError(
+                    "Posterior true_count_total and recording_s have incompatible "
+                    "draw counts."
+                )
+            missed_draws = true_total * (1.0 - recording_s)
+            missed_method = "true_count_total * (1 - recording_s)"
+        elif config.get("recording_model") != "constant":
+            missed_unavailable_reason = (
+                f"recording_model={config.get('recording_model')!r} requires "
+                "posterior true_count_year and recording_s_year arrays"
+            )
+        else:
+            missed_unavailable_reason = (
+                "posterior true_count_total and recording_s are unavailable"
+            )
+
+        missed_mean: float | None = None
+        missed_lo: float | None = None
+        missed_hi: float | None = None
+        if missed_draws is not None:
+            missed_mean, missed_lo, missed_hi = _mean_eti(
+                missed_draws,
+                interval_prob=interval_prob,
+            )
+            if not all(np.isfinite((missed_mean, missed_lo, missed_hi))):
+                missed_unavailable_reason = (
+                    "model-implied expected missed true cases summary is non-finite"
+                )
+
+    return PosteriorSensitivityDiagnostics(
+        trajectory_index_recording_s_correlation=recording_correlation,
+        trajectory_index_recording_s_logit_correlation=(recording_logit_correlation),
+        missed_true_cases_mean=missed_mean,
+        missed_true_cases_lo=missed_lo,
+        missed_true_cases_hi=missed_hi,
+        missed_true_cases_method=missed_method,
+        missed_true_cases_unavailable_reason=missed_unavailable_reason,
+    )
+
+
 def _scenario_id(
-    false_positive_rate: float, observed: float, extrapolated: float
+    false_positive_rate: float,
+    observed: float,
+    extrapolated: float,
+    reduction_error_correlation: float,
+    reduction_calibration_shift_logit: float,
 ) -> str:
-    return f"f={false_positive_rate:.8g}; rho_sigma={observed:.8g}/{extrapolated:.8g}"
+    return (
+        f"f={false_positive_rate:.8g}; "
+        f"rho_sigma={observed:.8g}/{extrapolated:.8g}; "
+        f"rho_corr={reduction_error_correlation:.8g}; "
+        f"rho_shift_logit={reduction_calibration_shift_logit:+.8g}"
+    )
 
 
 def load_sensitivity_run(
@@ -302,9 +582,18 @@ def load_sensitivity_run(
     if not np.isfinite(false_positive_rate) or not 0.0 <= false_positive_rate < 1.0:
         raise ValueError("priors.false_positive_rate must be finite and lie in [0, 1).")
     observed_sigma, extrapolated_sigma = _reduction_prior_widths(config)
+    reduction_error_correlation, reduction_calibration_shift_logit = (
+        _coherent_calibration_factors(config)
+    )
     interval_prob = _report_interval_probability(tables)
     health = diagnostics.convergence_health(summary)
-    divergences = _count_divergences(run_dir / "idata.nc")
+    idata_path = run_dir / "idata.nc"
+    divergences = _count_divergences(idata_path)
+    posterior_diagnostics = _posterior_sensitivity_diagnostics(
+        idata_path,
+        config=config,
+        interval_prob=interval_prob,
+    )
 
     return CoreSensitivityRun(
         run_dir=run_dir,
@@ -312,6 +601,8 @@ def load_sensitivity_run(
             false_positive_rate,
             observed_sigma,
             extrapolated_sigma,
+            reduction_error_correlation,
+            reduction_calibration_shift_logit,
         ),
         is_reference=is_reference,
         config=config,
@@ -322,11 +613,34 @@ def load_sensitivity_run(
         false_positive_rate=false_positive_rate,
         observed_reduction_sigma=observed_sigma,
         extrapolated_reduction_sigma=extrapolated_sigma,
+        reduction_error_correlation=reduction_error_correlation,
+        reduction_calibration_shift_logit=reduction_calibration_shift_logit,
         interval_prob=interval_prob,
         max_rhat=float(health["max_rhat"]),
         min_ess=float(health["min_ess"]),
         convergence_ok=bool(health["all_ok"]),
         divergences=divergences,
+        standardized_trajectory_error_index_recording_s_correlation=(
+            posterior_diagnostics.trajectory_index_recording_s_correlation
+        ),
+        standardized_trajectory_error_index_recording_s_logit_correlation=(
+            posterior_diagnostics.trajectory_index_recording_s_logit_correlation
+        ),
+        model_implied_expected_missed_true_cases_mean=(
+            posterior_diagnostics.missed_true_cases_mean
+        ),
+        model_implied_expected_missed_true_cases_lo=(
+            posterior_diagnostics.missed_true_cases_lo
+        ),
+        model_implied_expected_missed_true_cases_hi=(
+            posterior_diagnostics.missed_true_cases_hi
+        ),
+        model_implied_expected_missed_true_cases_method=(
+            posterior_diagnostics.missed_true_cases_method
+        ),
+        model_implied_expected_missed_true_cases_unavailable_reason=(
+            posterior_diagnostics.missed_true_cases_unavailable_reason
+        ),
     )
 
 
@@ -390,7 +704,7 @@ def _assert_same_native_observations(
 
 
 def validate_sensitivity_runs(runs: list[CoreSensitivityRun]) -> None:
-    """Require matched models and allow only the two intended prior axes."""
+    """Require matched models and allow only the intended sensitivity axes."""
     if len(runs) < 2:
         raise ValueError("At least two fitted runs are required for comparison.")
     if sum(run.is_reference for run in runs) != 1:
@@ -402,7 +716,7 @@ def validate_sensitivity_runs(runs: list[CoreSensitivityRun]) -> None:
     factor_keys = [run.factor_key for run in runs]
     if len(set(factor_keys)) != len(factor_keys):
         raise ValueError(
-            "Each false-positive/rho-prior factor combination must appear at most once."
+            "Each sensitivity-factor combination must appear at most once."
         )
 
     reference = next(run for run in runs if run.is_reference)
@@ -432,8 +746,8 @@ def validate_sensitivity_runs(runs: list[CoreSensitivityRun]) -> None:
             )
         if _canonical(_invariant_priors(run.config)) != reference_priors:
             raise ValueError(
-                f"{run.run_dir} changes a prior other than false_positive_rate "
-                "or reduction_sigma."
+                f"{run.run_dir} changes a prior other than an allowed sensitivity "
+                "factor."
             )
         if not _sorted_cells(run).equals(reference_cells):
             raise ValueError(f"{run.run_dir} does not use the same model cells.")
@@ -452,12 +766,132 @@ def _headline(run: CoreSensitivityRun, metric: str) -> pd.Series:
     return row
 
 
+def _fit_healthy(run: CoreSensitivityRun) -> bool:
+    """Return the pre-specified sampler-health gate for one run."""
+    return bool(run.convergence_ok and run.divergences == 0)
+
+
+def _is_finite_optional(value: float | None) -> bool:
+    """Return whether an optional scalar is present and finite."""
+    return value is not None and bool(np.isfinite(value))
+
+
+def _materiality_health_status(
+    *,
+    reference_healthy: bool,
+    candidate_healthy: bool,
+    candidate_is_reference: bool = False,
+) -> tuple[bool, str | None]:
+    """Fail materiality evaluation closed when either fitted run is unhealthy."""
+    if reference_healthy and candidate_healthy:
+        return True, None
+    if candidate_is_reference:
+        return False, "reference fit is unhealthy"
+    if not reference_healthy and not candidate_healthy:
+        return False, "reference and candidate fits are unhealthy"
+    if not reference_healthy:
+        return False, "reference fit is unhealthy"
+    return False, "candidate fit is unhealthy"
+
+
+def _metric_materiality_status(
+    frame: pd.DataFrame,
+    *,
+    availability_column: str,
+    metric_label: str,
+) -> tuple[pd.Series, pd.Series]:
+    """Return scenario-vs-reference evaluation status and reason for one metric."""
+    reference = frame.loc[frame["is_reference"]].iloc[0]
+    reference_available = bool(reference[availability_column])
+    evaluated: list[bool] = []
+    reasons: list[str | None] = []
+    for row in frame.itertuples(index=False):
+        health_evaluated = bool(row.materiality_evaluated_against_reference)
+        candidate_available = bool(getattr(row, availability_column))
+        if not health_evaluated:
+            evaluated.append(False)
+            reasons.append(row.materiality_non_evaluation_reason)
+        elif reference_available and candidate_available:
+            evaluated.append(True)
+            reasons.append(None)
+        elif bool(row.is_reference) or (
+            not reference_available and candidate_available
+        ):
+            evaluated.append(False)
+            reasons.append(f"reference {metric_label} is unavailable")
+        elif reference_available and not candidate_available:
+            evaluated.append(False)
+            reasons.append(f"candidate {metric_label} is unavailable")
+        else:
+            evaluated.append(False)
+            reasons.append(
+                f"reference and candidate {metric_label} summaries are unavailable"
+            )
+    return (
+        pd.Series(evaluated, index=frame.index, dtype=bool),
+        pd.Series(reasons, index=frame.index, dtype=object),
+    )
+
+
+def _nullable_materiality_result(
+    evaluated: pd.Series,
+    condition: pd.Series,
+) -> pd.Series:
+    """Return a nullable Boolean materiality decision."""
+    result = pd.Series(pd.NA, index=evaluated.index, dtype="boolean")
+    result.loc[evaluated] = condition.loc[evaluated].astype(bool)
+    return result
+
+
+def _combine_decomposition_materiality(
+    recording_result: pd.Series,
+    missed_result: pd.Series,
+) -> tuple[pd.Series, pd.Series]:
+    """Combine decomposition components without treating unknown as false."""
+    components = pd.concat([recording_result, missed_result], axis=1)
+    any_material = components.fillna(False).astype(bool).any(axis=1)
+    all_evaluated = components.notna().all(axis=1)
+    evaluated = any_material | all_evaluated
+    result = pd.Series(pd.NA, index=components.index, dtype="boolean")
+    result.loc[any_material] = True
+    result.loc[~any_material & all_evaluated] = False
+    return result, evaluated
+
+
 def scenario_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
     """Return run provenance, factor levels, and sampler-health diagnostics."""
     rows = []
+    reference = next(run for run in runs if run.is_reference)
+    reference_fit_healthy = _fit_healthy(reference)
     for order, run in enumerate(runs):
         cfg = run.run_config
         no_divergences = run.divergences == 0 if run.divergences is not None else False
+        fit_healthy = _fit_healthy(run)
+        materiality_evaluated, materiality_reason = _materiality_health_status(
+            reference_healthy=reference_fit_healthy,
+            candidate_healthy=fit_healthy,
+            candidate_is_reference=run.is_reference,
+        )
+        recording_correlation_available = _is_finite_optional(
+            run.standardized_trajectory_error_index_recording_s_correlation
+        )
+        recording_logit_correlation_available = _is_finite_optional(
+            run.standardized_trajectory_error_index_recording_s_logit_correlation
+        )
+        missed_cases_available = all(
+            _is_finite_optional(value)
+            for value in (
+                run.model_implied_expected_missed_true_cases_mean,
+                run.model_implied_expected_missed_true_cases_lo,
+                run.model_implied_expected_missed_true_cases_hi,
+            )
+        )
+        missed_cases_reason = (
+            None
+            if missed_cases_available
+            else run.model_implied_expected_missed_true_cases_unavailable_reason
+            or "model-implied expected missed true cases summary is non-finite"
+        )
         rows.append(
             {
                 "scenario_order": order,
@@ -472,6 +906,14 @@ def scenario_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
                     run.extrapolated_reduction_sigma
                 ),
                 "reduction_width_id": run.reduction_width_id,
+                "reduction_error_correlation": run.reduction_error_correlation,
+                "reduction_calibration_shift_logit": (
+                    run.reduction_calibration_shift_logit
+                ),
+                "reduction_calibration_shift_odds_multiplier": float(
+                    np.exp(run.reduction_calibration_shift_logit)
+                ),
+                "calibration_id": run.calibration_id,
                 "interval_prob": run.interval_prob,
                 "profile": cfg.get("name"),
                 "draws": cfg.get("draws"),
@@ -486,7 +928,35 @@ def scenario_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
                 "convergence_ok": run.convergence_ok,
                 "divergences": run.divergences,
                 "no_divergences": no_divergences,
-                "fit_healthy": run.convergence_ok and no_divergences,
+                "fit_healthy": fit_healthy,
+                "reference_fit_healthy": reference_fit_healthy,
+                "materiality_evaluated_against_reference": materiality_evaluated,
+                "materiality_non_evaluation_reason": materiality_reason,
+                "standardized_trajectory_error_index_available": (
+                    recording_correlation_available
+                    or recording_logit_correlation_available
+                ),
+                "standardized_trajectory_error_index_recording_s_correlation_available": (
+                    recording_correlation_available
+                ),
+                "standardized_trajectory_error_index_recording_s_logit_correlation_available": (
+                    recording_logit_correlation_available
+                ),
+                "standardized_trajectory_error_index_recording_s_correlation": (
+                    run.standardized_trajectory_error_index_recording_s_correlation
+                ),
+                "standardized_trajectory_error_index_recording_s_logit_correlation": (
+                    run.standardized_trajectory_error_index_recording_s_logit_correlation
+                ),
+                "model_implied_expected_missed_true_cases_available": (
+                    missed_cases_available
+                ),
+                "model_implied_expected_missed_true_cases_method": (
+                    run.model_implied_expected_missed_true_cases_method
+                ),
+                "model_implied_expected_missed_true_cases_unavailable_reason": (
+                    missed_cases_reason
+                ),
             }
         )
     return pd.DataFrame(rows)
@@ -512,6 +982,21 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
     """Return one headline and PPC-calibration row per scenario."""
     rows = []
     for run in runs:
+        fit_healthy = _fit_healthy(run)
+        recording_correlation_available = _is_finite_optional(
+            run.standardized_trajectory_error_index_recording_s_correlation
+        )
+        recording_logit_correlation_available = _is_finite_optional(
+            run.standardized_trajectory_error_index_recording_s_logit_correlation
+        )
+        missed_cases_available = all(
+            _is_finite_optional(value)
+            for value in (
+                run.model_implied_expected_missed_true_cases_mean,
+                run.model_implied_expected_missed_true_cases_lo,
+                run.model_implied_expected_missed_true_cases_hi,
+            )
+        )
         livebirths = _headline(run, "livebirths")
         recorded = _headline(run, "recorded_ds")
         natural = _headline(run, "natural_expected_ds")
@@ -527,6 +1012,21 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
         expected_fp_mean = f * (n_births - true_mean)
         expected_fp_lo = f * (n_births - true_hi)
         expected_fp_hi = f * (n_births - true_lo)
+        missed_mean = (
+            float(run.model_implied_expected_missed_true_cases_mean)
+            if run.model_implied_expected_missed_true_cases_mean is not None
+            else np.nan
+        )
+        missed_lo = (
+            float(run.model_implied_expected_missed_true_cases_lo)
+            if run.model_implied_expected_missed_true_cases_lo is not None
+            else np.nan
+        )
+        missed_hi = (
+            float(run.model_implied_expected_missed_true_cases_hi)
+            if run.model_implied_expected_missed_true_cases_hi is not None
+            else np.nan
+        )
 
         age_year = _residual_columns(run.tables["ppc_age_year"])
         residual = age_year["residual_observed_minus_predicted"].to_numpy(dtype=float)
@@ -540,6 +1040,7 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
             {
                 "scenario_id": run.scenario_id,
                 "is_reference": run.is_reference,
+                "fit_healthy": fit_healthy,
                 "false_positive_rate": f,
                 "false_positive_rate_per_100k": f * 100_000.0,
                 "observed_reduction_sigma_logit": run.observed_reduction_sigma,
@@ -547,6 +1048,14 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
                     run.extrapolated_reduction_sigma
                 ),
                 "reduction_width_id": run.reduction_width_id,
+                "reduction_error_correlation": run.reduction_error_correlation,
+                "reduction_calibration_shift_logit": (
+                    run.reduction_calibration_shift_logit
+                ),
+                "reduction_calibration_shift_odds_multiplier": float(
+                    np.exp(run.reduction_calibration_shift_logit)
+                ),
+                "calibration_id": run.calibration_id,
                 "livebirths": n_births,
                 "recorded_ds": recorded_count,
                 "natural_expected_ds": float(natural["mean"]),
@@ -568,6 +1077,40 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
                     expected_fp_mean / recorded_count
                     if recorded_count > 0.0
                     else np.nan
+                ),
+                "standardized_trajectory_error_index_recording_s_correlation": (
+                    run.standardized_trajectory_error_index_recording_s_correlation
+                ),
+                "standardized_trajectory_error_index_recording_s_correlation_available": (
+                    recording_correlation_available
+                ),
+                "standardized_trajectory_error_index_recording_s_logit_correlation": (
+                    run.standardized_trajectory_error_index_recording_s_logit_correlation
+                ),
+                "standardized_trajectory_error_index_recording_s_logit_correlation_available": (
+                    recording_logit_correlation_available
+                ),
+                "standardized_trajectory_error_index_available": (
+                    recording_correlation_available
+                    or recording_logit_correlation_available
+                ),
+                "model_implied_expected_missed_true_cases_mean": missed_mean,
+                "model_implied_expected_missed_true_cases_lo": missed_lo,
+                "model_implied_expected_missed_true_cases_hi": missed_hi,
+                "model_implied_expected_missed_true_cases_interval_width": (
+                    missed_hi - missed_lo
+                ),
+                "model_implied_expected_missed_true_cases_method": (
+                    run.model_implied_expected_missed_true_cases_method
+                ),
+                "model_implied_expected_missed_true_cases_available": (
+                    missed_cases_available
+                ),
+                "model_implied_expected_missed_true_cases_unavailable_reason": (
+                    None
+                    if missed_cases_available
+                    else run.model_implied_expected_missed_true_cases_unavailable_reason
+                    or "model-implied expected missed true cases summary is non-finite"
                 ),
                 "age_year_cells": len(age_year),
                 "age_year_coverage_count": int(
@@ -603,10 +1146,51 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
         )
     out = pd.DataFrame(rows)
     reference = out.loc[out["is_reference"]].iloc[0]
+    reference_fit_healthy = bool(reference["fit_healthy"])
+    materiality_status = [
+        _materiality_health_status(
+            reference_healthy=reference_fit_healthy,
+            candidate_healthy=bool(row.fit_healthy),
+            candidate_is_reference=bool(row.is_reference),
+        )
+        for row in out.itertuples(index=False)
+    ]
+    out["reference_fit_healthy"] = reference_fit_healthy
+    out["materiality_evaluated_against_reference"] = [
+        evaluated for evaluated, _ in materiality_status
+    ]
+    out["materiality_non_evaluation_reason"] = [
+        reason for _, reason in materiality_status
+    ]
+    out["recording_s_mean_available"] = np.isfinite(out["recording_s_mean"])
+    (
+        out["recording_s_mean_materiality_evaluated_from_reference"],
+        out["recording_s_mean_materiality_non_evaluation_reason"],
+    ) = _metric_materiality_status(
+        out,
+        availability_column="recording_s_mean_available",
+        metric_label="recording-sensitivity mean",
+    )
+    (
+        out[
+            "model_implied_expected_missed_true_cases_mean_materiality_evaluated_from_reference"
+        ],
+        out[
+            "model_implied_expected_missed_true_cases_mean_materiality_non_evaluation_reason"
+        ],
+    ) = _metric_materiality_status(
+        out,
+        availability_column="model_implied_expected_missed_true_cases_available",
+        metric_label="model-implied expected missed true cases",
+    )
     delta_columns = (
         "true_ds_mean",
+        "true_ds_interval_width",
         "aggregate_reduction_mean",
         "recording_s_mean",
+        "recording_s_interval_width",
+        "model_implied_expected_missed_true_cases_mean",
+        "model_implied_expected_missed_true_cases_interval_width",
         "age_year_coverage_fraction",
         "age_year_mean_absolute_standardized_residual",
         "age_band_coverage_fraction",
@@ -618,6 +1202,78 @@ def sensitivity_summary_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
         * out["true_ds_mean_difference_from_reference"]
         / reference["true_ds_mean"]
     )
+    out["true_ds_interval_width_percent_difference_from_reference"] = (
+        100.0
+        * out["true_ds_interval_width_difference_from_reference"]
+        / reference["true_ds_interval_width"]
+    )
+    missed_reference = reference["model_implied_expected_missed_true_cases_mean"]
+    out[
+        "model_implied_expected_missed_true_cases_mean_percent_difference_from_reference"
+    ] = (
+        100.0
+        * out["model_implied_expected_missed_true_cases_mean_difference_from_reference"]
+        / missed_reference
+    )
+    out["true_ds_mean_material_change_from_reference"] = out[
+        "materiality_evaluated_against_reference"
+    ] & (
+        out["true_ds_mean_percent_difference_from_reference"].abs()
+        >= TOTAL_MEAN_MATERIAL_PERCENT
+    )
+    out["true_ds_interval_width_material_change_from_reference"] = out[
+        "materiality_evaluated_against_reference"
+    ] & (
+        out["true_ds_interval_width_percent_difference_from_reference"]
+        >= TOTAL_INTERVAL_WIDTH_MATERIAL_PERCENT
+    )
+    out["recording_s_mean_material_change_from_reference"] = (
+        _nullable_materiality_result(
+            out["recording_s_mean_materiality_evaluated_from_reference"],
+            out["recording_s_mean_difference_from_reference"].abs()
+            >= RECORDING_S_MATERIAL_ABSOLUTE,
+        )
+    )
+    out[
+        "model_implied_expected_missed_true_cases_mean_material_change_from_reference"
+    ] = _nullable_materiality_result(
+        out[
+            "model_implied_expected_missed_true_cases_mean_materiality_evaluated_from_reference"
+        ],
+        out[
+            "model_implied_expected_missed_true_cases_mean_percent_difference_from_reference"
+        ].abs()
+        >= MISSED_TRUE_CASES_MEAN_MATERIAL_PERCENT,
+    )
+    out["aggregate_material_change_from_reference"] = out[
+        [
+            "true_ds_mean_material_change_from_reference",
+            "true_ds_interval_width_material_change_from_reference",
+        ]
+    ].any(axis=1)
+    (
+        out["decomposition_material_change_from_reference"],
+        out["decomposition_materiality_evaluated_from_reference"],
+    ) = _combine_decomposition_materiality(
+        out["recording_s_mean_material_change_from_reference"],
+        out[
+            "model_implied_expected_missed_true_cases_mean_material_change_from_reference"
+        ],
+    )
+    decomposition_reasons: list[str | None] = []
+    for row in out.itertuples(index=False):
+        if bool(row.decomposition_materiality_evaluated_from_reference):
+            decomposition_reasons.append(None)
+            continue
+        component_reasons = [
+            row.recording_s_mean_materiality_non_evaluation_reason,
+            row.model_implied_expected_missed_true_cases_mean_materiality_non_evaluation_reason,
+        ]
+        unique_reasons = list(
+            dict.fromkeys(reason for reason in component_reasons if reason)
+        )
+        decomposition_reasons.append("; ".join(unique_reasons))
+    out["decomposition_materiality_non_evaluation_reason"] = decomposition_reasons
     return out
 
 
@@ -630,6 +1286,12 @@ def _scenario_columns(run: CoreSensitivityRun) -> dict[str, Any]:
         "observed_reduction_sigma_logit": run.observed_reduction_sigma,
         "extrapolated_reduction_sigma_logit": run.extrapolated_reduction_sigma,
         "reduction_width_id": run.reduction_width_id,
+        "reduction_error_correlation": run.reduction_error_correlation,
+        "reduction_calibration_shift_logit": (run.reduction_calibration_shift_logit),
+        "reduction_calibration_shift_odds_multiplier": float(
+            np.exp(run.reduction_calibration_shift_logit)
+        ),
+        "calibration_id": run.calibration_id,
     }
 
 
@@ -667,9 +1329,12 @@ def sensitivity_by_year_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
             for column in (
                 "year",
                 "rho_prior_mean",
+                "rho_prior_centre",
+                "rho_prior_location_logit",
                 "rho_prior_lo",
                 "rho_prior_hi",
                 "rho_prior_sigma_logit",
+                "rho_surveillance_anchor_mean",
                 "rho_year_mean",
                 "rho_year_lo",
                 "rho_year_hi",
@@ -729,6 +1394,30 @@ def sensitivity_age_year_table(runs: list[CoreSensitivityRun]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def _contrast_materiality_non_evaluation_reason(
+    *,
+    materiality_rule: str | None,
+    values_finite: bool,
+    reference_contrast: bool,
+    from_fit_healthy: bool,
+    to_fit_healthy: bool,
+) -> str | None:
+    """Explain why a contrast's materiality rule was not evaluated."""
+    if materiality_rule is None:
+        return "metric has no pre-specified materiality rule"
+    if not reference_contrast:
+        return "not a scenario-versus-reference contrast"
+    if not from_fit_healthy and not to_fit_healthy:
+        return "reference and candidate fits are unhealthy"
+    if not from_fit_healthy:
+        return "reference fit is unhealthy"
+    if not to_fit_healthy:
+        return "candidate fit is unhealthy"
+    if not values_finite:
+        return "metric values are non-finite"
+    return None
+
+
 def _contrast_rows(
     group: pd.DataFrame,
     *,
@@ -741,12 +1430,68 @@ def _contrast_rows(
             "false_positive_rate",
             "observed_reduction_sigma_logit",
             "extrapolated_reduction_sigma_logit",
+            "reduction_error_correlation",
+            "reduction_calibration_shift_logit",
         ]
     )
     for (_, from_row), (_, to_row) in itertools.combinations(ordered.iterrows(), 2):
+        if bool(to_row["is_reference"]) and not bool(from_row["is_reference"]):
+            from_row, to_row = to_row, from_row
+        reference_contrast = bool(from_row["is_reference"])
+        from_fit_healthy = bool(from_row["fit_healthy"])
+        to_fit_healthy = bool(to_row["fit_healthy"])
+        both_fits_healthy = from_fit_healthy and to_fit_healthy
+        pair_materiality_evaluated = reference_contrast and both_fits_healthy
         for metric in CONTRAST_METRICS:
             from_value = float(from_row[metric])
             to_value = float(to_row[metric])
+            difference = to_value - from_value
+            percent_difference = (
+                100.0 * difference / from_value
+                if np.isfinite(from_value) and from_value != 0.0
+                else np.nan
+            )
+            materiality_rule: str | None = None
+            materiality_threshold: float = np.nan
+            material_change = False
+            if metric == "true_ds_mean":
+                materiality_rule = "absolute percent difference"
+                materiality_threshold = TOTAL_MEAN_MATERIAL_PERCENT
+                material_change = bool(
+                    pair_materiality_evaluated
+                    and np.isfinite(percent_difference)
+                    and abs(percent_difference) >= materiality_threshold
+                )
+            elif metric == "true_ds_interval_width":
+                materiality_rule = "percent increase"
+                materiality_threshold = TOTAL_INTERVAL_WIDTH_MATERIAL_PERCENT
+                material_change = bool(
+                    pair_materiality_evaluated
+                    and np.isfinite(percent_difference)
+                    and percent_difference >= materiality_threshold
+                )
+            elif metric == "recording_s_mean":
+                materiality_rule = "absolute difference"
+                materiality_threshold = RECORDING_S_MATERIAL_ABSOLUTE
+                material_change = bool(
+                    pair_materiality_evaluated
+                    and np.isfinite(difference)
+                    and abs(difference) >= materiality_threshold
+                )
+            elif metric == "model_implied_expected_missed_true_cases_mean":
+                materiality_rule = "absolute percent difference"
+                materiality_threshold = MISSED_TRUE_CASES_MEAN_MATERIAL_PERCENT
+                material_change = bool(
+                    pair_materiality_evaluated
+                    and np.isfinite(percent_difference)
+                    and abs(percent_difference) >= materiality_threshold
+                )
+            values_finite = bool(np.isfinite(from_value) and np.isfinite(to_value))
+            materiality_evaluated = bool(
+                pair_materiality_evaluated
+                and materiality_rule is not None
+                and values_finite
+            )
             rows.append(
                 {
                     "varied_factor": varied_factor,
@@ -757,15 +1502,40 @@ def _contrast_rows(
                     "to_false_positive_rate": to_row["false_positive_rate"],
                     "from_reduction_width_id": from_row["reduction_width_id"],
                     "to_reduction_width_id": to_row["reduction_width_id"],
+                    "from_reduction_error_correlation": from_row[
+                        "reduction_error_correlation"
+                    ],
+                    "to_reduction_error_correlation": to_row[
+                        "reduction_error_correlation"
+                    ],
+                    "from_reduction_calibration_shift_logit": from_row[
+                        "reduction_calibration_shift_logit"
+                    ],
+                    "to_reduction_calibration_shift_logit": to_row[
+                        "reduction_calibration_shift_logit"
+                    ],
+                    "reference_contrast": reference_contrast,
+                    "from_fit_healthy": from_fit_healthy,
+                    "to_fit_healthy": to_fit_healthy,
+                    "both_fits_healthy": both_fits_healthy,
                     "metric": metric,
                     "from_value": from_value,
                     "to_value": to_value,
-                    "difference": to_value - from_value,
-                    "percent_difference": (
-                        100.0 * (to_value - from_value) / from_value
-                        if from_value != 0.0
-                        else np.nan
+                    "difference": difference,
+                    "percent_difference": percent_difference,
+                    "materiality_rule": materiality_rule,
+                    "materiality_threshold": materiality_threshold,
+                    "materiality_evaluated": materiality_evaluated,
+                    "materiality_non_evaluation_reason": (
+                        _contrast_materiality_non_evaluation_reason(
+                            materiality_rule=materiality_rule,
+                            values_finite=values_finite,
+                            reference_contrast=reference_contrast,
+                            from_fit_healthy=from_fit_healthy,
+                            to_fit_healthy=to_fit_healthy,
+                        )
                     ),
+                    "material_change": material_change,
                     "contrast_scope": (
                         "controlled contrast of posterior summaries; no paired "
                         "posterior interval"
@@ -778,22 +1548,36 @@ def _contrast_rows(
 def sensitivity_contrast_table(summary: pd.DataFrame) -> pd.DataFrame:
     """Return all observed one-factor contrasts in a possibly incomplete grid."""
     rows: list[dict[str, Any]] = []
-    for width, group in summary.groupby("reduction_width_id", sort=False):
-        if group["false_positive_rate"].nunique() > 1:
-            rows.extend(
-                _contrast_rows(
-                    group,
-                    varied_factor="false_positive_rate",
-                    held_factor=f"reduction_width_id={width}",
-                )
+    factors = (
+        ("false_positive_rate", "false_positive_rate"),
+        ("reduction_prior_width", "reduction_width_id"),
+        ("reduction_error_correlation", "reduction_error_correlation"),
+        (
+            "reduction_calibration_shift_logit",
+            "reduction_calibration_shift_logit",
+        ),
+    )
+    for varied_name, varied_column in factors:
+        held = [(name, column) for name, column in factors if name != varied_name]
+        held_columns = [column for _, column in held]
+        for held_values, group in summary.groupby(
+            held_columns,
+            sort=False,
+            dropna=False,
+        ):
+            if group[varied_column].nunique() <= 1:
+                continue
+            if not isinstance(held_values, tuple):
+                held_values = (held_values,)
+            held_factor = "; ".join(
+                f"{name}={value}"
+                for (name, _), value in zip(held, held_values, strict=True)
             )
-    for f_value, group in summary.groupby("false_positive_rate", sort=False):
-        if group["reduction_width_id"].nunique() > 1:
             rows.extend(
                 _contrast_rows(
                     group,
-                    varied_factor="reduction_prior_width",
-                    held_factor=f"false_positive_rate={f_value:.8g}",
+                    varied_factor=varied_name,
+                    held_factor=held_factor,
                 )
             )
     columns = [
@@ -805,11 +1589,24 @@ def sensitivity_contrast_table(summary: pd.DataFrame) -> pd.DataFrame:
         "to_false_positive_rate",
         "from_reduction_width_id",
         "to_reduction_width_id",
+        "from_reduction_error_correlation",
+        "to_reduction_error_correlation",
+        "from_reduction_calibration_shift_logit",
+        "to_reduction_calibration_shift_logit",
+        "reference_contrast",
+        "from_fit_healthy",
+        "to_fit_healthy",
+        "both_fits_healthy",
         "metric",
         "from_value",
         "to_value",
         "difference",
         "percent_difference",
+        "materiality_rule",
+        "materiality_threshold",
+        "materiality_evaluated",
+        "materiality_non_evaluation_reason",
+        "material_change",
         "contrast_scope",
     ]
     return pd.DataFrame(rows, columns=columns)
@@ -819,24 +1616,53 @@ def sensitivity_envelope_table(summary: pd.DataFrame) -> pd.DataFrame:
     """Return the range across assumptions without calling it a posterior interval."""
     rows = []
     for metric, (mean_column, lo_column, hi_column) in ENVELOPE_METRICS.items():
-        minimum_idx = summary[mean_column].idxmin()
-        maximum_idx = summary[mean_column].idxmax()
+        finite_mean = summary.loc[np.isfinite(summary[mean_column]), mean_column]
+        if finite_mean.empty:
+            minimum_idx = None
+            maximum_idx = None
+        else:
+            minimum_idx = finite_mean.idxmin()
+            maximum_idx = finite_mean.idxmax()
         rows.append(
             {
                 "metric": metric,
-                "minimum_mean": float(summary.loc[minimum_idx, mean_column]),
-                "minimum_mean_scenario_id": summary.loc[minimum_idx, "scenario_id"],
-                "maximum_mean": float(summary.loc[maximum_idx, mean_column]),
-                "maximum_mean_scenario_id": summary.loc[maximum_idx, "scenario_id"],
-                "scenario_mean_span": float(
-                    summary.loc[maximum_idx, mean_column]
-                    - summary.loc[minimum_idx, mean_column]
+                "minimum_mean": (
+                    float(summary.loc[minimum_idx, mean_column])
+                    if minimum_idx is not None
+                    else np.nan
+                ),
+                "minimum_mean_scenario_id": (
+                    summary.loc[minimum_idx, "scenario_id"]
+                    if minimum_idx is not None
+                    else None
+                ),
+                "maximum_mean": (
+                    float(summary.loc[maximum_idx, mean_column])
+                    if maximum_idx is not None
+                    else np.nan
+                ),
+                "maximum_mean_scenario_id": (
+                    summary.loc[maximum_idx, "scenario_id"]
+                    if maximum_idx is not None
+                    else None
+                ),
+                "scenario_mean_span": (
+                    float(
+                        summary.loc[maximum_idx, mean_column]
+                        - summary.loc[minimum_idx, mean_column]
+                    )
+                    if minimum_idx is not None and maximum_idx is not None
+                    else np.nan
                 ),
                 "envelope_lo": (
-                    float(summary[lo_column].min()) if lo_column is not None else np.nan
+                    float(summary[lo_column].min())
+                    if lo_column is not None and np.isfinite(summary[lo_column]).any()
+                    else np.nan
                 ),
                 "envelope_hi": (
-                    float(summary[hi_column].max()) if hi_column is not None else np.nan
+                    float(summary[hi_column].max())
+                    if hi_column is not None and np.isfinite(summary[hi_column]).any()
+                    else np.nan
                 ),
                 "envelope_definition": (
                     "range across fitted assumption scenarios; not a posterior "
@@ -855,20 +1681,39 @@ def _factorial_grid_metadata(runs: list[CoreSensitivityRun]) -> dict[str, Any]:
             for run in runs
         }
     )
+    correlation_levels = sorted({run.reduction_error_correlation for run in runs})
+    shift_levels = sorted({run.reduction_calibration_shift_logit for run in runs})
     observed = {run.factor_key for run in runs}
     expected = {
-        (f_value, observed_sigma, extrapolated_sigma)
-        for f_value, (observed_sigma, extrapolated_sigma) in itertools.product(
+        (
+            f_value,
+            observed_sigma,
+            extrapolated_sigma,
+            correlation,
+            shift,
+        )
+        for (
+            f_value,
+            (observed_sigma, extrapolated_sigma),
+            correlation,
+            shift,
+        ) in itertools.product(
             false_positive_levels,
             width_levels,
+            correlation_levels,
+            shift_levels,
         )
     }
 
-    def serialise(key: tuple[float, float, float]) -> dict[str, float]:
+    def serialise(
+        key: tuple[float, float, float, float, float],
+    ) -> dict[str, float]:
         return {
             "false_positive_rate": key[0],
             "observed_reduction_sigma_logit": key[1],
             "extrapolated_reduction_sigma_logit": key[2],
+            "reduction_error_correlation": key[3],
+            "reduction_calibration_shift_logit": key[4],
         }
 
     missing = sorted(expected.difference(observed))
@@ -880,6 +1725,14 @@ def _factorial_grid_metadata(runs: list[CoreSensitivityRun]) -> dict[str, Any]:
                 "extrapolated_reduction_sigma_logit": extrapolated_sigma,
             }
             for observed_sigma, extrapolated_sigma in width_levels
+        ],
+        "reduction_error_correlation_levels": correlation_levels,
+        "reduction_calibration_shift_logit_levels": shift_levels,
+        "factor_names": [
+            "false_positive_rate",
+            "reduction_prior_width",
+            "reduction_error_correlation",
+            "reduction_calibration_shift_logit",
         ],
         "observed_factor_combinations": [serialise(key) for key in sorted(observed)],
         "missing_factor_combinations": [serialise(key) for key in missing],
@@ -899,7 +1752,7 @@ def _save_figure(fig: Any, output_dir: Path, stem: str) -> tuple[Path, Path]:
     return png, svg
 
 
-def _scenario_colours(widths: list[str]) -> dict[str, str]:
+def _scenario_colours(scenario_ids: list[str]) -> dict[str, str]:
     palette = (
         plot_styles.COLOUR_BLUE,
         plot_styles.COLOUR_ORANGE,
@@ -907,10 +1760,87 @@ def _scenario_colours(widths: list[str]) -> dict[str, str]:
         plot_styles.COLOUR_PURPLE,
         plot_styles.COLOUR_RED,
     )
-    return {width: palette[idx % len(palette)] for idx, width in enumerate(widths)}
+    return {
+        scenario_id: palette[idx % len(palette)]
+        for idx, scenario_id in enumerate(scenario_ids)
+    }
 
 
-def _headline_plot(summary: pd.DataFrame):
+def _categorical_scenario_labels(summary: pd.DataFrame) -> list[str]:
+    """Return compact labels that expose every sensitivity factor."""
+    return [
+        (
+            f"f {row.false_positive_rate_per_100k:.3g}/100k\n"
+            f"sigma {row.reduction_width_id}\n"
+            f"corr {row.reduction_error_correlation:.3g}; "
+            f"shift {row.reduction_calibration_shift_logit:+.3g}"
+        )
+        for row in summary.itertuples(index=False)
+    ]
+
+
+def _calibration_axes_vary(summary: pd.DataFrame) -> bool:
+    return (
+        summary["reduction_error_correlation"].nunique() > 1
+        or summary["reduction_calibration_shift_logit"].nunique() > 1
+    )
+
+
+def _only_calibration_axes_vary(summary: pd.DataFrame) -> bool:
+    return (
+        _calibration_axes_vary(summary)
+        and summary["false_positive_rate"].nunique() == 1
+        and summary["reduction_width_id"].nunique() == 1
+    )
+
+
+def _calibration_headline_plot(summary: pd.DataFrame):
+    """Horizontal forest plot for a coherent-calibration-only sensitivity grid."""
+    import matplotlib.pyplot as plt
+
+    height = max(plot_styles.FIGSIZE_XL[1], 0.48 * len(summary) + 1.8)
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(plot_styles.FIGSIZE_XL[0], height),
+        sharey=True,
+        layout="constrained",
+    )
+    scenario_ids = list(summary["scenario_id"])
+    colours = _scenario_colours(scenario_ids)
+    y = np.arange(len(summary))
+    for idx, (_, row) in enumerate(summary.iterrows()):
+        for ax, mean_column, lo_column, hi_column in (
+            (axes[0], "true_ds_mean", "true_ds_lo", "true_ds_hi"),
+            (axes[1], "recording_s_mean", "recording_s_lo", "recording_s_hi"),
+        ):
+            mean = float(row[mean_column])
+            lo = float(row[lo_column])
+            hi = float(row[hi_column])
+            colour = colours[str(row["scenario_id"])]
+            ax.errorbar(
+                [mean],
+                [idx],
+                xerr=np.array([[mean - lo], [hi - mean]]),
+                fmt="*" if bool(row["is_reference"]) else "o",
+                markersize=10 if bool(row["is_reference"]) else 6,
+                capsize=3,
+                color=colour,
+                ecolor=colour,
+            )
+    labels = list(summary["calibration_id"])
+    axes[0].set_yticks(y, labels)
+    axes[0].invert_yaxis()
+    axes[0].set_ylabel("coherent calibration scenario (star = reference)")
+    axes[0].set_xlabel("estimated true DS livebirths")
+    axes[0].set_title("True DS total across assumptions")
+    axes[1].set_xlabel("certificate recording sensitivity")
+    axes[1].set_title("Recording sensitivity across assumptions")
+    return fig
+
+
+def _false_positive_width_headline_plot(summary: pd.DataFrame):
+    """Preserve the original false-positive/prior-width line plot."""
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 2, figsize=plot_styles.FIGSIZE_XL)
@@ -939,24 +1869,19 @@ def _headline_plot(summary: pd.DataFrame):
                 label=f"rho sigma {width}",
             )
     reference = summary.loc[summary["is_reference"]].iloc[0]
-    axes[0].scatter(
-        [reference["false_positive_rate_per_100k"]],
-        [reference["true_ds_mean"]],
-        marker="*",
-        s=100,
-        color=plot_styles.TEXT_COLOUR,
-        zorder=4,
-        label="reference",
-    )
-    axes[1].scatter(
-        [reference["false_positive_rate_per_100k"]],
-        [reference["recording_s_mean"]],
-        marker="*",
-        s=100,
-        color=plot_styles.TEXT_COLOUR,
-        zorder=4,
-        label="reference",
-    )
+    for ax, metric in (
+        (axes[0], "true_ds_mean"),
+        (axes[1], "recording_s_mean"),
+    ):
+        ax.scatter(
+            [reference["false_positive_rate_per_100k"]],
+            [reference[metric]],
+            marker="*",
+            s=100,
+            color=plot_styles.TEXT_COLOUR,
+            zorder=4,
+            label="reference",
+        )
     axes[0].set_ylabel("estimated true DS livebirths")
     axes[0].set_title("True DS total across assumptions")
     axes[1].set_ylabel("certificate recording sensitivity")
@@ -968,7 +1893,99 @@ def _headline_plot(summary: pd.DataFrame):
     return fig
 
 
-def _ppc_plot(summary: pd.DataFrame):
+def _categorical_headline_plot(summary: pd.DataFrame):
+    """Fallback for grids in which calibration and legacy axes both vary."""
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=plot_styles.FIGSIZE_XL)
+    scenario_ids = list(summary["scenario_id"])
+    colours = _scenario_colours(scenario_ids)
+    x = np.arange(len(summary))
+    for idx, (_, row) in enumerate(summary.iterrows()):
+        for ax, mean_column, lo_column, hi_column in (
+            (axes[0], "true_ds_mean", "true_ds_lo", "true_ds_hi"),
+            (axes[1], "recording_s_mean", "recording_s_lo", "recording_s_hi"),
+        ):
+            mean = float(row[mean_column])
+            lo = float(row[lo_column])
+            hi = float(row[hi_column])
+            colour = colours[str(row["scenario_id"])]
+            ax.errorbar(
+                [idx],
+                [mean],
+                yerr=np.array([[mean - lo], [hi - mean]]),
+                fmt="*" if bool(row["is_reference"]) else "o",
+                markersize=10 if bool(row["is_reference"]) else 6,
+                capsize=3,
+                color=colour,
+                ecolor=colour,
+            )
+    axes[0].set_ylabel("estimated true DS livebirths")
+    axes[0].set_title("True DS total across assumptions")
+    axes[1].set_ylabel("certificate recording sensitivity")
+    axes[1].set_title("Recording sensitivity across assumptions")
+    labels = _categorical_scenario_labels(summary)
+    for ax in axes:
+        ax.set_xticks(x, labels, rotation=35, ha="right")
+        ax.set_xlabel("categorical assumption scenario (star = reference)")
+    fig.tight_layout()
+    return fig
+
+
+def _headline_plot(summary: pd.DataFrame):
+    if _only_calibration_axes_vary(summary):
+        return _calibration_headline_plot(summary)
+    if not _calibration_axes_vary(summary):
+        return _false_positive_width_headline_plot(summary)
+    return _categorical_headline_plot(summary)
+
+
+def _calibration_ppc_plot(summary: pd.DataFrame):
+    """Compact horizontal PPC plot for coherent-calibration-only grids."""
+    import matplotlib.pyplot as plt
+
+    height = max(plot_styles.FIGSIZE_XL[1], 0.48 * len(summary) + 1.8)
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(plot_styles.FIGSIZE_XL[0], height),
+        sharey=True,
+        layout="constrained",
+    )
+    scenario_ids = list(summary["scenario_id"])
+    colours = _scenario_colours(scenario_ids)
+    y = np.arange(len(summary))
+    for idx, (_, row) in enumerate(summary.iterrows()):
+        marker = "*" if bool(row["is_reference"]) else "o"
+        size = 100 if bool(row["is_reference"]) else 45
+        colour = colours[str(row["scenario_id"])]
+        axes[0].scatter(
+            [100.0 * float(row["age_year_coverage_fraction"])],
+            [idx],
+            marker=marker,
+            s=size,
+            color=colour,
+        )
+        axes[1].scatter(
+            [float(row["age_year_mean_absolute_standardized_residual"])],
+            [idx],
+            marker=marker,
+            s=size,
+            color=colour,
+        )
+    labels = list(summary["calibration_id"])
+    axes[0].set_yticks(y, labels)
+    axes[0].invert_yaxis()
+    axes[0].set_ylabel("coherent calibration scenario (star = reference)")
+    axes[0].set_xlabel("age-year cells covered (%)")
+    axes[0].set_title("Native age-year PPC coverage")
+    axes[1].set_xlabel("mean absolute standardised residual")
+    axes[1].set_title("Native age-year PPC residuals")
+    return fig
+
+
+def _false_positive_width_ppc_plot(summary: pd.DataFrame):
+    """Preserve the original false-positive/prior-width PPC line plot."""
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 2, figsize=plot_styles.FIGSIZE_XL)
@@ -1002,6 +2019,62 @@ def _ppc_plot(summary: pd.DataFrame):
         ax.legend(fontsize="small")
     fig.tight_layout()
     return fig
+
+
+def _categorical_ppc_plot(summary: pd.DataFrame):
+    """Fallback PPC plot when calibration and legacy axes both vary."""
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=plot_styles.FIGSIZE_XL)
+    scenario_ids = list(summary["scenario_id"])
+    colours = _scenario_colours(scenario_ids)
+    x = np.arange(len(summary))
+    for idx, (_, row) in enumerate(summary.iterrows()):
+        marker = "*" if bool(row["is_reference"]) else "o"
+        size = 100 if bool(row["is_reference"]) else 45
+        colour = colours[str(row["scenario_id"])]
+        axes[0].scatter(
+            [idx],
+            [100.0 * float(row["age_year_coverage_fraction"])],
+            marker=marker,
+            s=size,
+            color=colour,
+        )
+        axes[1].scatter(
+            [idx],
+            [float(row["age_year_mean_absolute_standardized_residual"])],
+            marker=marker,
+            s=size,
+            color=colour,
+        )
+    axes[0].set_ylabel("age-year cells covered (%)")
+    axes[0].set_title("Native age-year PPC coverage")
+    axes[1].set_ylabel("mean absolute standardised residual")
+    axes[1].set_title("Native age-year PPC residuals")
+    labels = _categorical_scenario_labels(summary)
+    for ax in axes:
+        ax.set_xticks(x, labels, rotation=35, ha="right")
+        ax.set_xlabel("categorical assumption scenario (star = reference)")
+    fig.tight_layout()
+    return fig
+
+
+def _ppc_plot(summary: pd.DataFrame):
+    if _only_calibration_axes_vary(summary):
+        return _calibration_ppc_plot(summary)
+    if not _calibration_axes_vary(summary):
+        return _false_positive_width_ppc_plot(summary)
+    return _categorical_ppc_plot(summary)
+
+
+def _age_band_scenario_labels(age_band: pd.DataFrame) -> tuple[list[str], str]:
+    """Choose compact heatmap labels without hiding any factor that varies."""
+    metadata = age_band.drop_duplicates("scenario_id", keep="first")
+    if _only_calibration_axes_vary(metadata):
+        return list(metadata["calibration_id"]), "coherent calibration scenario"
+    if not _calibration_axes_vary(metadata):
+        return list(metadata["scenario_id"]), "assumption scenario"
+    return _categorical_scenario_labels(metadata), "mixed assumption scenario"
 
 
 def _age_band_residual_plot(age_band: pd.DataFrame):
@@ -1057,10 +2130,11 @@ def _age_band_residual_plot(age_band: pd.DataFrame):
         ax.legend(loc="upper left", fontsize="small")
     ax.set_xticks(np.arange(len(bands)))
     ax.set_xticklabels(bands, rotation=35, ha="right")
+    scenario_labels, scenario_axis_label = _age_band_scenario_labels(age_band)
     ax.set_yticks(np.arange(len(scenarios)))
-    ax.set_yticklabels(scenarios)
+    ax.set_yticklabels(scenario_labels)
     ax.set_xlabel("maternal-age band")
-    ax.set_ylabel("assumption scenario")
+    ax.set_ylabel(scenario_axis_label)
     ax.set_title("Native broad-age posterior-predictive residuals")
     return fig
 
@@ -1130,7 +2204,59 @@ def compare_core_reduction_sensitivities(
             "logit-scale uncertainty around surveillance-derived yearly "
             "combined-reduction means"
         ),
+        "reduction_error_correlation_definition": (
+            "equicorrelation between yearly logit-scale reduction-prior errors; "
+            "marginal yearly prior variances are preserved"
+        ),
+        "reduction_calibration_shift_logit_definition": (
+            "fixed logit-scale shift applied to the complete surveillance-derived "
+            "reduction trajectory"
+        ),
+        "standardized_trajectory_error_index_definition": (
+            "within each posterior draw, mean across years of rho_logit_year minus "
+            "its shifted surveillance-prior location, divided by that year's "
+            "marginal prior standard deviation; a derived index, not a separately "
+            "estimated calibration parameter"
+        ),
+        "standardized_trajectory_error_index_dependence_definition": (
+            "Pearson correlation across posterior draws with recording_s and, "
+            "when saved, recording_s_logit"
+        ),
+        "model_implied_expected_missed_true_cases_definition": (
+            "draw-wise expected true DS livebirths not recorded by the certificate "
+            "recording component; uses sum_y true_count_year * "
+            "(1 - recording_s_year) when available; the scalar "
+            "true_count_total * (1 - recording_s) fallback is valid only for "
+            "constant-recording models and is unavailable otherwise"
+        ),
+        "model_implied_expected_missed_true_cases_interval": (
+            "equal-tailed posterior interval at reporting_interval_prob"
+        ),
+        "materiality_thresholds": {
+            "true_ds_mean_absolute_percent_difference": (TOTAL_MEAN_MATERIAL_PERCENT),
+            "true_ds_interval_width_percent_increase": (
+                TOTAL_INTERVAL_WIDTH_MATERIAL_PERCENT
+            ),
+            "recording_s_mean_absolute_difference": RECORDING_S_MATERIAL_ABSOLUTE,
+            "model_implied_expected_missed_true_cases_mean_absolute_percent_difference": (
+                MISSED_TRUE_CASES_MEAN_MATERIAL_PERCENT
+            ),
+        },
+        "aggregate_materiality_drives_joint_corner_decisions": True,
+        "decomposition_materiality_is_reported_separately": True,
+        "materiality_requires_healthy_reference_and_candidate_fits": True,
+        "materiality_proximity_within_two_combined_mcse_evaluated": False,
+        "materiality_proximity_note": (
+            "saved reporting contracts do not expose compatible Monte Carlo "
+            "standard errors for every decision metric"
+        ),
         "axes_are_separate_assumptions": True,
+        "plot_layout_rule": (
+            "horizontal calibration_id forest/point plots when only coherent-"
+            "calibration factors vary; original false-positive/prior-width line "
+            "plots when calibration factors are invariant; categorical fallback "
+            "for mixed grids"
+        ),
         "raw_loo_or_waic_compared": False,
         "ppc_evidence_scope": (
             "native in-sample posterior-predictive checks; not held-out evidence"
@@ -1147,7 +2273,7 @@ def compare_core_reduction_sensitivities(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare saved core-model false-positive/prior-width fits.",
+        description="Compare saved core-model assumption-sensitivity fits.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("reference_dir", type=Path)

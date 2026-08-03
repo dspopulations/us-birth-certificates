@@ -200,14 +200,24 @@ def _prior_rho_table(
 ) -> pd.DataFrame:
     mu = np.asarray(priors_config["reduction_logit"], dtype=float)
     sigma = np.asarray(priors_config["reduction_sigma"], dtype=float)
-    mean = np.asarray(priors_config["reduction_mean"], dtype=float)
+    source_mean = np.asarray(priors_config["reduction_mean"], dtype=float)
+    logit_shift = float(priors_config.get("reduction_calibration_shift_logit", 0.0))
+    correlation = float(priors_config.get("reduction_error_correlation", 0.0))
+    shifted_mu = mu + logit_shift
+    mean = _inv_logit(shifted_mu)
     z = normal_interval_z(interval_prob)
     return pd.DataFrame(
         {
             "rho_prior_mean": mean,
-            "rho_prior_lo": _inv_logit(mu - z * sigma),
-            "rho_prior_hi": _inv_logit(mu + z * sigma),
+            "rho_prior_centre": mean,
+            "rho_prior_location_logit": shifted_mu,
+            "rho_prior_lo": _inv_logit(shifted_mu - z * sigma),
+            "rho_prior_hi": _inv_logit(shifted_mu + z * sigma),
             "rho_prior_sigma_logit": sigma,
+            "rho_surveillance_anchor_mean": source_mean,
+            "reduction_calibration_shift_logit": logit_shift,
+            "reduction_calibration_shift_odds_multiplier": np.exp(logit_shift),
+            "reduction_error_correlation": correlation,
             "rho_prior_source": priors_config.get("reduction_source", ""),
             "extrapolated": np.arange(len(mean))
             >= int(priors_config.get("extrapolated_reduction_start", 10**9))
@@ -353,13 +363,23 @@ def headline_table(
 def reduction_prior_posterior_table(
     accounting: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Table comparing the marginal rho prior and posterior by year."""
+    """Table comparing the marginal rho prior and posterior by year.
+
+    ``rho_prior_mean`` is retained as a backwards-compatible alias for the
+    logit-normal centre/median recorded in ``rho_prior_centre``.
+    """
     cols = [
         "year",
         "rho_prior_mean",
+        "rho_prior_centre",
+        "rho_prior_location_logit",
         "rho_prior_lo",
         "rho_prior_hi",
         "rho_prior_sigma_logit",
+        "rho_surveillance_anchor_mean",
+        "reduction_calibration_shift_logit",
+        "reduction_calibration_shift_odds_multiplier",
+        "reduction_error_correlation",
         "rho_year_mean",
         "rho_year_lo",
         "rho_year_hi",
@@ -874,6 +894,9 @@ def _reduction_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     x = np.arange(len(df))
+    prior_centre_column = (
+        "rho_prior_centre" if "rho_prior_centre" in df else "rho_prior_mean"
+    )
     ax.fill_between(
         x,
         df["rho_prior_lo"],
@@ -881,7 +904,7 @@ def _reduction_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL
         alpha=0.16,
         label=f"prior {interval_label(interval_prob)} ETI",
     )
-    ax.plot(x, df["rho_prior_mean"], "--", label="prior mean")
+    ax.plot(x, df[prior_centre_column], "--", label="prior centre (median)")
     post = df["rho_year_mean"].to_numpy(dtype=float)
     yerr = _interval_yerr(
         post,
