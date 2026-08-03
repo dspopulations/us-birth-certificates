@@ -19,6 +19,17 @@ parameter is **withdrawn**. See "The Morris curve cancels, but only
 conditionally" under Finding 2. The withdrawal narrows recommendation 3 and
 strengthens recommendation 1; no other finding changes.
 
+**Amended again 2026-08-03**, following a pre-merge verification pass. Three
+corrections. The claim that the ART correction lowers the headline total by `3`-`4%`
+is **withdrawn**: it holds only if the reduction series is left inconsistent with the
+corrected curve, and regenerating the series as recommendation 1 requires leaves the
+total unchanged to the birth. Two prior-implied totals under Finding 3 were computed
+on the wrong cohort filter and are corrected from `45,698` and `44,432` to `45,607`
+and `44,347`, with three coherent-tail values corrected in the fourth decimal.
+Recommendation 2 is sharpened: the substantive fix is to extrapolate the prevalence
+numerator rather than the ratio. All other figures in this note were re-verified
+against source and reconcile exactly.
+
 ## Scope
 
 This reviews the `DSP001`-`DSP005` family as it stands after
@@ -46,7 +57,8 @@ Two things should change before any number is published. First, the headline
 supports, because the reported baseline treats annual surveillance errors as
 independent. Second, the one clear model-adequacy failure — the maternal-age fit
 — has a specific, testable cause that none of the notes considers, and
-correcting it moves the total.
+correcting it changes the age allocation, the implied reduction rate and the
+implied recording sensitivity, though not the total.
 
 A third item is now the largest open risk: the reduction series that determines
 the headline total has no derivation recorded anywhere in this repository.
@@ -235,16 +247,16 @@ last grounded value, gives a materially different trajectory:
 
 | Year | CSV prior | Coherent recomputation | `DSP004` posterior mean |
 | ---: | ---: | ---: | ---: |
-| 2019 | `0.3724` | `0.3838` | `0.3702` |
+| 2019 | `0.3724` | `0.3837` | `0.3702` |
 | 2020 | `0.3783` | `0.3936` | `0.3839` |
 | 2021 | `0.3843` | `0.4058` | `0.4213` |
-| 2022 | `0.3903` | `0.4221` | `0.4537` |
-| 2023 | `0.3962` | `0.4309` | `0.4532` |
+| 2022 | `0.3903` | `0.4220` | `0.4537` |
+| 2023 | `0.3962` | `0.4307` | `0.4532` |
 | 2024 | `0.4022` | `0.4392` | `0.4556` |
 
 The Morris expectation per birth rose from `2.110542e-03` in 2018 to
 `2.362013e-03` in 2024, `+11.9%`. The prior-implied 2016-2024 total falls from
-`45,698` under the CSV series to `44,432` under the coherent recomputation, a
+`45,607` under the CSV series to `44,347` under the coherent recomputation, a
 change of `-2.8%`, landing almost exactly on the published posterior mean of
 `44,255`.
 
@@ -312,9 +324,26 @@ intensively. Applying the Morris curve at face value to ART births therefore
 overstates the natural expectation where `theta` is largest.
 
 **[new]** ART births are `1.4%` of the cohort but contribute `3,403` of the
-`73,397` Morris-expected cases, `4.6%`. Correcting for it would lower the
-headline total by roughly `3`-`4%` and raise `s` correspondingly — close to the
-family's own `5%` materiality gate.
+`73,397` Morris-expected cases, `4.6%`.
+
+**What the correction does and does not change.** It does *not* change the
+headline total, once the Morris cancellation of Finding 2 is respected. Scaling
+`theta` for ART births by the multipliers their observed-to-predicted ratios imply
+(`0.974` under 35, `0.432` at 35-39, `0.245` at 40-44, `0.064` at 45+) lowers the
+Morris expectation from `73,397` to `71,051`, `-3.2%`. If the reduction series is
+left as it is, the prior-implied total falls by the same `-3.2%`, from `45,607` to
+`44,156`. But if the series is regenerated against the corrected curve, as
+recommendation 1 requires, the total returns to `45,607` **exactly** — because
+`T = N * S` and `S` is an external measurement that no change to `theta` can move.
+
+An earlier draft of this note claimed the correction would lower the total by
+`3`-`4%`. That figure is an artefact of leaving the series inconsistent with the
+curve, which is the very inconsistency recommendation 1 exists to remove, and it
+is withdrawn. What the correction does change is real and substantial: the age
+allocation and hence the broad-age posterior-predictive failure, the implied
+reduction rate, the implied recording sensitivity, the roughly `12%` of the
+apparent time trend that is ART composition rather than behaviour, and the
+contamination of every group comparison. None of those depend on the total moving.
 
 This also explains a puzzle in the `DSP003` note, which records that ages 48, 49
 and 50+ are over-predicted at `sigma=0.10`, that the sparse tail is influential,
@@ -509,10 +538,14 @@ change the recommended sequencing below.
 - [Identifying group effects on reduction separately from
   recording](20260803-group-reduction-recording-identification.md) establishes that
   stratification alone can never separate the two, records the fully identified
-  group-level ratio, and proposes a payer-by-age exclusion restriction. The
+  group-level ratio, and proposes a payer-by-age sign restriction. The
   Medicaid-to-private ratio is indistinguishable from `1` below age 30 and reaches
-  `1.63`-`1.89` above 35 — a pattern recording cannot produce, and one that is
-  invariant to the Morris curve.
+  `1.63`-`1.89` above 35, invariant to the Morris curve. Recording mechanisms could
+  in principle produce such an interaction, but their sign is adverse, so the
+  observed pattern bounds the reduction contrast from below at `1.91`-fold. A
+  maternal-education test fixes that sign empirically: the ratio *falls* with
+  education at ages 40 and over, from `0.305` to `0.123`, which is the opposite of
+  what a recording explanation predicts.
 
 Both reinforce recommendation 4: the ART correction should come before any
 race or socioeconomic layer.
@@ -547,14 +580,27 @@ years would make the coupling visible and would have caught the 2019 fill.
 
 ### 2. Rebuild the extrapolated tail coherently and relabel 2019
 
-Recompute 2019-2024 against each year's actual births-weighted Morris
-expectation rather than extrapolating the ratio, so the series stops conflating
-behavioural change with maternal-age composition change. Set
-`DEFAULT_EXTRAPOLATED_REDUCTION_START = 2019` in `core_reduction.py:51` so the
-first extrapolated year receives the extrapolated prior width. Expect the
-prior-implied total to fall by roughly `2.8%` and the tail prior-data conflict
-to roughly halve. Record whether a *Dobbs* structural break is being assumed
-absent, and say so where the 2022-2024 nowcasts are reported.
+Extrapolate the **prevalence numerator** and derive the ratio from it, rather than
+extrapolating the ratio and letting the implied prevalence trajectory fall out
+unnoticed. That is the substantive content of this recommendation: recomputing
+against actual Morris expectations is not sufficient on its own, because a
+prevalence trajectory still has to be chosen.
+
+**[new]** The clearest statement of the current problem, and the form in which it
+should be put to the surveillance source: given each year's actual births-weighted
+Morris expectation, the tracked reduction values for 2019-2024 imply that Down
+syndrome livebirth prevalence **rose `6.6%`** between 2018 and 2024, from `1.3245`
+to `1.4119` per 1,000. Holding prevalence flat at its 2018 value instead gives the
+coherent reduction trajectory tabulated under Finding 3. So the question is not
+whether the arithmetic is right but which prevalence trajectory was intended; the
+extrapolated ratio silently encodes a rising one.
+
+Set `DEFAULT_EXTRAPOLATED_REDUCTION_START = 2019` in `core_reduction.py:51` so the
+first extrapolated year receives the extrapolated prior width. Under the
+flat-prevalence reading, expect the prior-implied total to fall by roughly `2.8%`
+and the tail prior-data conflict to roughly halve. Record whether a *Dobbs*
+structural break is being assumed absent, and say so where the 2022-2024 nowcasts
+are reported.
 
 ### 3. Replace the scenario grid with one estimated scale parameter
 
@@ -574,9 +620,17 @@ Stratify cells by `rf_artec`, or at minimum run the ART-stratified
 posterior-predictive check, and re-examine broad-age coverage. The 45+ failure
 appears fully explained by it. Do this before spending further effort on the
 mirrored age-on-recording diagnostic, which is currently being asked to explain
-a misfit that is largely a `theta` misspecification. Expect the total to fall by
-roughly `3`-`4%`. Re-run the `DSP003` smoothing sensitivity afterwards; its
-`sigma` sensitivity should shrink.
+a misfit that is largely a `theta` misspecification.
+
+Do **not** expect the total to move. Under the Morris cancellation, correcting
+`theta` and regenerating the reduction series together leave `T` unchanged to the
+birth; only a correction applied without regenerating the series would shift it,
+and that shift is an artefact rather than a result. Expect instead a materially
+better broad-age fit, a lower implied reduction rate, a higher `s`, and the removal
+of roughly `12%` of the apparent time trend along with the ART contamination of
+group comparisons. Re-run the `DSP003` smoothing sensitivity afterwards; its
+`sigma` sensitivity should shrink, since the influential sparse tail at ages 48-50
+is roughly half ART births.
 
 ### 5. Resolve the numerator definition against the external evidence on `s`
 

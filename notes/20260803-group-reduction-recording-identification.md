@@ -120,17 +120,49 @@ between `45%` and `89%`.** Separately, the private-insured profile falls from
 `0.318` to `0.155` across the age range while the Medicaid profile barely moves,
 `0.317` to `0.293`.
 
-### Why the interaction identifies reduction
+### Why the interaction bounds the reduction contrast
 
-Certificate recording has no mechanism that produces an interaction between
-insurance type and maternal age. There is no reason the completeness of a Down
-syndrome notation for a baby born to a 40-year-old would depend on her insurer in
-a way it does not for a 25-year-old. Prenatal screening access and termination
-produce exactly that interaction, because screening is age-triggered: an access
-disparity can only bite at ages where screening happens and must vanish where it
-does not.
+Prenatal screening access and termination produce this interaction naturally,
+because screening is age-triggered: an access disparity can only bite at ages where
+screening happens and must vanish where it does not.
 
-Two properties make this robust.
+The restriction is **not** that recording is free of such an interaction. It is not.
+The obvious mechanism is that income rises with maternal age among the privately
+insured while Medicaid eligibility caps it, so if higher-income pregnancies are
+better recorded then `s_P` improves with age relative to `s_M`. What matters is that
+this mechanism has a **determinable sign**, and that the sign works against the
+observed pattern rather than producing it.
+
+Write the observed ratio as `r(g,a) = eta(g,a) * s(g,a)` and let
+`psi(a) = s_M(a) / s_P(a)`. Then
+
+```text
+log r_M(a) - log r_P(a) = [log eta_M(a) - log eta_P(a)] + log psi(a)
+```
+
+The observed left-hand side rises by `0.647` in logs across the age range, from
+`log 0.99` to `log 1.89`. The socioeconomic-recording mechanism makes `psi`
+non-increasing, so `log psi` contributes nothing positive and the reduction contrast
+must account for at least the whole rise:
+
+```text
+eta_M / eta_P grows by at least exp(0.647) = 1.91x from under-20 to 45+
+```
+
+The observed interaction is therefore a **lower bound** on the reduction contrast,
+not an estimate of it. Deflating the finding would require `psi` to be *increasing*
+— Medicaid recording improving relative to private as mothers get older — for which
+there is no plausible mechanism and, as the next subsection shows, no empirical
+support.
+
+A second mechanism points the same way. Among privately insured older mothers the
+DS births that occur despite high detection are disproportionately cases diagnosed
+prenatally whose parents continued, which are the best-documented cases available:
+a known diagnosis at delivery. Among Medicaid older mothers more DS births are
+surprises at delivery, plausibly recorded worse. Both effects raise `s_P` relative
+to `s_M` with age.
+
+Three further properties make the bound robust.
 
 **The Morris curve cancels.** Within an age band the Medicaid-to-private ratio is
 the ratio of two false-positive-adjusted recorded rates; `theta(a)` appears in both
@@ -152,22 +184,87 @@ every value including `f = 0`, and a larger `f` widens rather than narrows it. S
 the interaction does not depend on resolving the false-positive question first,
 even though the *levels* do.
 
-**Recording level is separately readable at the young end.** If prenatal selection
-is negligible below age 20, the `0.315` there *is* the recording sensitivity — and
-it is identical for Medicaid and private, which contradicts the assumption that
-socioeconomic status drives recording. Because any residual selection at those ages
-implies a higher `s`, `0.315` is a lower bound. It sits just below `DSP004`'s
-fitted `0.340` and below Boulet's approximately `0.40`. Taking `T = (R - N f) / s`
-with the current `f`, a lower bound of `0.315` implies `T <= 48,235`; if reduction
-below age 20 is at most `15%`, then `s >= 0.371` and `T <= 41,000` — below the
-`DSP004` posterior mean of `44,255`. That points the same way as the ART correction
-and as the Boulet comparison.
+**Recording level is separately readable at the young end, but only conditional on
+`f`.** If prenatal selection is negligible below age 20, the under-20 ratio *is* the
+recording sensitivity — and it is indistinguishable between Medicaid and private,
+which contradicts the assumption that socioeconomic status drives recording. Because
+any residual selection at those ages implies a higher `s`, that ratio is a lower
+bound on `s`, and `T = (R - N f) / s` therefore gives an upper bound on the total.
+
+**[new]** Both the ratio and the bound depend strongly on the assumed
+false-positive rate, and they move in opposite directions, so the bound must be
+reported across the range rather than at one value:
+
+| `f` | Under-20 ratio | Implies `s >=` | `T <=` | `T <=` if `eta <= 0.85` |
+| ---: | ---: | ---: | ---: | ---: |
+| `0` | `0.432` | `0.432` | `41,215` | `35,033` |
+| `7.8e-05` | `0.315` | `0.315` | `48,177` | `40,950` |
+| `1.007e-04` | `0.281` | `0.281` | `51,288` | `43,595` |
+
+At the value the [companion note](20260803-false-positive-channel-identification.md)
+argues for, `1.007e-04`, the unconditional bound of `51,288` is no longer
+informative, and the bound conditional on at most `15%` reduction below age 20 moves
+from `40,950` to `43,595` — still under the `DSP004` posterior mean of `44,255`, but
+only just. So this line of argument points the same way as the Boulet comparison,
+that the fitted `s` is at the low end and the total at the high end, but it is not
+strong enough to carry a claim on its own until `f` is settled. An earlier draft
+quoted `T <= 48,235` and `T <= 41,000` at a single `f` without that dependence.
+
+### The education test fixes the sign empirically
+
+Maternal education is a second socioeconomic axis, and the two explanations make
+**opposite** predictions for it. If socioeconomic status acts through recording, then
+better-off mothers are better recorded and their ratio should be *higher*. If it
+acts through selection, they screen more and their ratio should be *lower*, and only
+at ages where screening happens.
+
+**[new]** At ages 40 and over, ART excluded, false-positive-adjusted:
+
+| Education | Births | Flags | Ratio | SE |
+| --- | ---: | ---: | ---: | ---: |
+| At most high school | `321,744` | `1,638` | `0.305` | `0.008` |
+| Some college | `245,814` | `1,002` | `0.249` | `0.008` |
+| Bachelor | `271,691` | `813` | `0.181` | `0.006` |
+| Graduate or professional | `238,608` | `492` | `0.123` | `0.006` |
+
+Monotone decreasing, a factor of `2.5` end to end, with every gap many standard
+errors wide. Higher education gives a **lower** ratio — the opposite sign to the
+recording explanation. The same ordering holds within private insurance alone
+(`0.253` at high school or less against `0.114` at graduate level), so it is not a
+payer artefact.
+
+**[new]** Under age 25, where screening is minimal, the same groups converge:
+
+| Education | Births | Flags | Ratio | SE |
+| --- | ---: | ---: | ---: | ---: |
+| At most high school | `5,181,396` | `1,405` | `0.280` | `0.007` |
+| Some college | `2,032,468` | `547` | `0.273` | `0.012` |
+| Bachelor | `340,109` | `99` | `0.299` | `0.030` |
+
+All within noise of one another. The graduate cell is omitted because it rests on
+four flags. That convergence is itself evidence against the premise of the recording
+explanation: where selection is not operating there is no detectable socioeconomic
+gradient in the ratio, which is difficult to reconcile with recording varying
+strongly with income.
+
+One incidental check falls out of the same table. The lowest-education profile is
+flat to slightly rising with age, `0.280` to `0.305`. A systematically too-steep
+Morris curve would drag *every* group's profile downward with age, so at least one
+flat group is mild evidence that the curve is about right for non-ART births — which
+supports reading the steep high-socioeconomic-status decline as real selection rather
+than as curve error.
 
 ### The finding this already yields
 
 Without resolving the level confounding at all: **the maternal-age gradient in
-prenatal selection is almost entirely a private-insurance phenomenon.** That is an
-Aim 5 result, it is identified, and it requires no external calibration.
+prenatal selection is concentrated among privately insured and higher-educated
+mothers, and is close to flat among Medicaid and lowest-education mothers.** That is
+an Aim 5 result, it is bounded from below by the data, and it requires no external
+calibration.
+
+State it as a bound rather than a point estimate. The `1.89` ratio at 45 and over is
+not an estimate of the reduction contrast; the defensible claim is that the contrast
+grows by at least `1.91`-fold across the age range under the sign restriction above.
 
 ## Proposed design
 
@@ -249,6 +346,12 @@ confirmed/pending channel split from the companion note.
 - **These are diagnostics, not results.** Every figure here is an aggregate ratio
   at posterior means with conditional standard errors. The interaction needs
   estimating inside the model, with uncertainty, before it is a finding.
+- **The identification is a sign restriction, not an exclusion restriction.** An
+  earlier draft of this note claimed recording could not produce a payer-by-age
+  interaction. That was too strong. Recording mechanisms exist; the argument is that
+  their sign is determinable and adverse, so the observed interaction bounds the
+  reduction contrast from below. Route B should be specified and reported on that
+  basis, and the bound should be stated wherever the interaction is.
 - **Do not use the de Graaf-derived recording anchor to arbitrate.** It is computed
   from the same recorded counts and the same Morris curve, as
   [the anchor diagnostic](20260707-s-anchor-and-identifiability-diagnostic.md)
@@ -260,4 +363,8 @@ Read-only aggregate queries over `data/us_births.db` for 2016-2024 with
 `down_ind IS NOT NULL` and `mage_c IS NOT NULL`, grouping on `mracehisp_c` and
 `pay_rec` (`1` Medicaid, `2` private, `3` self-pay, `4` other, `9` unknown), with
 `rf_artec` as the ART stratifier and `chance.get_ds_lb_nt_probability_array` for
-`theta`. Ratios use `f = 7.8e-5` where adjusted.
+`theta`. Ratios use `f = 7.8e-5` where adjusted. The education tables group `meduc`
+as `1-3` at most high school, `4-5` some college, `6` bachelor and `7-8` graduate or
+professional, excluding `9` (not stated). Standard errors are Poisson on the flag
+count and are conditional on `eta` at `DSP004` posterior means, so they understate
+total uncertainty.
