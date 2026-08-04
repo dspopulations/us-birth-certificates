@@ -313,6 +313,13 @@ data-availability wish into the binding constraint on this whole line of work.
   single most valuable open input to this design, and gastroschisis shows the
   assumption is not free: one condition that looked admissible on the reduction
   criterion had a `26%` prevalence-driven decline.
+  **Partly addressed** — see
+  [the trend-pin note](20260804-dsp010-control-prevalence-trend-pins.md). Three of
+  the four controls now carry a measured trend from active surveillance and the
+  implied shared trend is `-0.00262` log per year, which supports the `0 ± 0.004`
+  prior rather than displacing it. Hypospadias was refused a pin: its series is a
+  `-16%` level shift at 2019 (z = `-6.0`), not a trend. Every fit reported below
+  still uses the unpinned table.
 - **The common prevalence trend is unfalsifiable from inside the panel.** It is
   carried as a prior at `0.004` log per year and the posterior returns the prior
   essentially unchanged, which is the correct behaviour and also a statement that
@@ -390,12 +397,19 @@ python scripts/audit_anchored_chain_health.py --strict
 
 ## Recommended next steps
 
-1. **Pin the controls' prevalence trends against published surveillance.** This
-   is the highest-value open input and the one that would most change what the
-   panel can claim. NBDPN annual reports and the state-based birth-defects
-   surveillance literature give birth prevalence for all four controls; entering
-   them in `true_trend_log_per_year` converts an assumption into an offset. Do
-   gastroschisis too, as a check that the machinery recovers a known decline.
+1. ~~**Pin the controls' prevalence trends against published surveillance.**~~
+   **Done, with one refusal** —
+   [the trend-pin note](20260804-dsp010-control-prevalence-trend-pins.md). The
+   source is the Texas Birth Defects Registry rather than the NBDPN pooled reports:
+   the national estimates are five-year cohorts that cannot give an annual slope,
+   and hypospadias is absent from them entirely. Cleft palate alone, cleft lip ±
+   palate and limb reduction are pinned; gastroschisis is pinned at `-0.038` log
+   per year, confirming the exclusion and making it available as the fifth-control
+   check. Hypospadias is refused — its 2019 level shift is a discontinuity, not a
+   trend. Two follow-ons now sit ahead of everything else here: **refit `DSP010`
+   against `data/us-births-anomaly-panel-conditions-pinned.csv`**, and **build the
+   channel that carries the pins' standard errors**, since a fixed offset asserts a
+   point estimate and the errors are not small relative to the slopes.
 2. **Widen the overlap rather than the panel.** The loading is weakly identified
    because only five years carry both channels. A surveillance anchor extended by
    even two mid-years would add four overlap years and roughly double the
