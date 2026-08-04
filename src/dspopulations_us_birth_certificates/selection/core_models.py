@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 RecordingModel = Literal["constant", "year", "revision"]
+RecordingDrift = Literal["none", "post_anchor"]
 ReductionModel = Literal["year", "year_age", "anchor"]
 AgeModel = Literal["band", "single_year"]
 
@@ -25,6 +26,7 @@ class CoreModelDefinition:
     introduced: str
     reduction_model: ReductionModel = "year"
     age_model: AgeModel = "band"
+    recording_drift: RecordingDrift = "none"
     template_id: str = CORE_REDUCTION_FAMILY_ID
     comparison_parent: str | None = None
 
@@ -152,6 +154,29 @@ DSP008 = CoreModelDefinition(
     comparison_parent="DSP007",
 )
 
+DSP009 = CoreModelDefinition(
+    model_id="DSP009",
+    slug="anchor_s_revision_drift_exact_age",
+    title="Surveillance-anchored core model with post-anchor recording drift",
+    description=(
+        "Extends DSP008 by letting the revised-certificate recording sensitivity "
+        "drift as a random walk over the years no surveillance window covers. "
+        "DSP008 holds s constant there, so a falling flag rate can only be read "
+        "as falling prevalence; DSP009 makes that allocation an explicit prior "
+        "instead of an implicit consequence. It buys candour, not identification: "
+        "the split of the post-window decline between prevalence and recording is "
+        "set by recording_s_drift_sigma against the anchor's own state variances, "
+        "so both corners must be reported alongside it. A zero drift sigma "
+        "reproduces DSP008 exactly."
+    ),
+    recording_model="revision",
+    reduction_model="anchor",
+    age_model="single_year",
+    recording_drift="post_anchor",
+    introduced="2026-08-04",
+    comparison_parent="DSP008",
+)
+
 CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp001": DSP001,
     "dsp002": DSP002,
@@ -161,6 +186,7 @@ CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp006": DSP006,
     "dsp007": DSP007,
     "dsp008": DSP008,
+    "dsp009": DSP009,
 }
 
 
@@ -186,6 +212,10 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
         raise ValueError(
             f"{definition.model_id}.age_model must be 'band' or 'single_year'."
         )
+    if definition.recording_drift not in {"none", "post_anchor"}:
+        raise ValueError(
+            f"{definition.model_id}.recording_drift must be 'none' or 'post_anchor'."
+        )
     if (
         definition.reduction_model == "year_age"
         and definition.age_model != "single_year"
@@ -193,6 +223,26 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
         raise ValueError(
             f"{definition.model_id} must use age_model='single_year' when "
             "reduction_model='year_age'."
+        )
+    if (
+        definition.recording_drift == "post_anchor"
+        and definition.reduction_model != "anchor"
+    ):
+        # Without an anchor there is no "last covered year" to drift from, and
+        # nothing pins the pre-drift level either.
+        raise ValueError(
+            f"{definition.model_id} must use reduction_model='anchor' when "
+            "recording_drift='post_anchor'."
+        )
+    if (
+        definition.recording_drift == "post_anchor"
+        and definition.recording_model == "year"
+    ):
+        # Centred year offsets and a post-anchor random walk are two competing
+        # parameterisations of the same year-varying sensitivity.
+        raise ValueError(
+            f"{definition.model_id} cannot combine recording_model='year' with "
+            "recording_drift='post_anchor'."
         )
     if definition.comparison_parent is not None and not re.fullmatch(
         r"DSP\d{3}", definition.comparison_parent
@@ -263,8 +313,10 @@ __all__ = [
     "DSP006",
     "DSP007",
     "DSP008",
+    "DSP009",
     "AgeModel",
     "CoreModelDefinition",
+    "RecordingDrift",
     "RecordingModel",
     "ReductionModel",
     "core_model_names",

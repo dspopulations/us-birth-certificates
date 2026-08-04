@@ -32,6 +32,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     DSP001,
     AgeModel,
     CoreModelDefinition,
+    RecordingDrift,
     RecordingModel,
     ReductionModel,
 )
@@ -62,9 +63,64 @@ DEFAULT_ANCHOR_WINDOW_HALF_WIDTH = 2
 DEFAULT_ANCHOR_LEVEL_SIGMA = 0.02
 DEFAULT_ANCHOR_TREND_SIGMA = 0.01
 # The workbook attaches no uncertainty to the surveillance prevalences at all.
-# This is the prior scale for a *free* observation SD, so the fit reports how
-# well the windows are actually reconciled instead of asserting it.
+# This is the prior scale used only when the observation SD is estimated, which is
+# no longer the default; see DEFAULT_ANCHOR_OBS_SIGMA_FIXED.
 DEFAULT_ANCHOR_OBS_SIGMA = 0.05
+
+# The surveillance observation SD is FIXED by default, for two independent
+# reasons that point the same way.
+#
+# Reporting: an estimated SD measures only whether the overlapping windows are
+# mutually *consistent* with a smooth latent path -- it cannot measure whether the
+# surveillance prevalences are *accurate*, because the workbook supplies no
+# uncertainty at all. Estimating it produced 0.012 and an interval on the
+# 2016-2024 total of 2.87%, which asserts that surveillance prevalence is measured
+# to about one percent. Nothing supports that.
+#
+# Numerical: a free SD admits a degenerate mode. Its HalfNormal prior does not
+# stop it reaching 0.84, and at that value the observation equation contributes
+# almost nothing to the log-probability, so the anchor effectively switches off.
+# Latent prevalence then runs up until theta * eta exceeds one for every age,
+# where p_ds_lb is clipped -- a flat region with no gradient, and so an absorbing
+# state. One chain in four escaped there in a DSP009 fit at 4,000 draws. See
+# notes/20260804-dsp009-post-anchor-recording-drift.md and
+# scripts/audit_anchored_chain_health.py.
+#
+# 0.05 is about four times the internal-consistency value, so it is the
+# conservative end of that comparison rather than a tight assertion. It remains an
+# assumption: report across the sensitivity axis (0.05 / 0.10 / 0.20) and say
+# which value was chosen. Pass anchor_obs_sigma_fixed=None to estimate it instead,
+# which re-opens the mode.
+DEFAULT_ANCHOR_OBS_SIGMA_FIXED = 0.05
+
+# Barrier on theta * eta exceeding one, which the Binomial cannot accept. The clip
+# that keeps it valid is flat, so cells where it binds stop contributing gradient
+# in eta; these restore one. softplus(k*x)/k is inert for x well below zero and
+# ~linear above, so the sharpness sets how abruptly the barrier engages and the
+# penalty sets how hard.
+#
+# Both are calibrated to be inert at any plausible parameter value. theta peaks at
+# about 0.038 (age 50), so theta * eta reaches one only near eta = 26 -- against a
+# posterior eta around 0.6, and against eta = 1 (rho = 0, the anchored prevalence
+# equalling the Morris expectation) which the model deliberately permits as a
+# diagnostic. At eta = 1 the largest theta * eta is 0.038 and the barrier
+# evaluates to exp(-194), which is zero in float64. It therefore cannot perturb
+# any legitimate fit, including the rho < 0 diagnostic.
+ANCHOR_OVERSHOOT_SHARPNESS = 200.0
+ANCHOR_OVERSHOOT_PENALTY = 1.0e3
+
+# Per-year logit-scale SD of the random walk on recording sensitivity over the
+# years no surveillance window covers. Calibrated so the cumulative prior width
+# across a four-year unanchored tail spans this repository's own bracketing
+# allocation of the post-2018 flag-rate decline: the de Graaf-derived recording
+# anchor in notes/figures/recording_rates_anchor.csv has s for NH White falling
+# 17% over 2016-2024, which is about 0.12 logit units over four years, or one
+# cumulative SD at this value. It is an assumption, not evidence. The split of
+# the post-window decline between prevalence and recording is prior-determined,
+# so a drifted fit must be reported alongside both corners: 0.0 here (all
+# prevalence, identical to DSP008) and ``anchor_forecast_flat=True`` (all
+# recording).
+DEFAULT_RECORDING_S_DRIFT_SIGMA = 0.06
 
 
 @dataclass(frozen=True)
@@ -173,6 +229,7 @@ class CoreReductionPriors:
     recording_s_logit: float = field(default_factory=lambda: float(logit(0.5)))
     recording_s_sigma: float = 1.0
     recording_s_year_sigma: float = 0.35
+    recording_s_drift_sigma: float = DEFAULT_RECORDING_S_DRIFT_SIGMA
     reduction_age_step_sigma: float = DEFAULT_REDUCTION_AGE_STEP_SIGMA
     false_positive_rate: float = FALSE_POSITIVE_RATE
     reduction_source: str = str(DEFAULT_REDUCTION_CSV)
@@ -196,6 +253,7 @@ class CoreReductionPriors:
         recording_s_mean: float = 0.5,
         recording_s_sigma: float = 1.0,
         recording_s_year_sigma: float = 0.35,
+        recording_s_drift_sigma: float = DEFAULT_RECORDING_S_DRIFT_SIGMA,
         reduction_age_step_sigma: float = DEFAULT_REDUCTION_AGE_STEP_SIGMA,
         false_positive_rate: float = FALSE_POSITIVE_RATE,
     ) -> CoreReductionPriors:
@@ -220,6 +278,8 @@ class CoreReductionPriors:
             raise ValueError("recording_s_sigma must be positive")
         if recording_s_year_sigma < 0.0:
             raise ValueError("recording_s_year_sigma must be non-negative")
+        if not np.isfinite(recording_s_drift_sigma) or recording_s_drift_sigma < 0.0:
+            raise ValueError("recording_s_drift_sigma must be finite and non-negative")
         if reduction_age_step_sigma <= 0.0:
             raise ValueError("reduction_age_step_sigma must be positive")
         if not 0.0 <= false_positive_rate < 1.0:
@@ -259,6 +319,7 @@ class CoreReductionPriors:
             recording_s_logit=float(logit(recording_s_mean)),
             recording_s_sigma=recording_s_sigma,
             recording_s_year_sigma=recording_s_year_sigma,
+            recording_s_drift_sigma=recording_s_drift_sigma,
             reduction_age_step_sigma=reduction_age_step_sigma,
             false_positive_rate=false_positive_rate,
             reduction_source=str(path),
@@ -305,6 +366,7 @@ class CoreReductionModelConfig:
     recording_model: RecordingModel = DSP001.recording_model
     reduction_model: ReductionModel = DSP001.reduction_model
     age_model: AgeModel = DSP001.age_model
+    recording_drift: RecordingDrift = DSP001.recording_drift
     recorded_definition: RecordedDefinition = "confirmed_or_pending"
     theta_model: str = "seven_band_fixed"
     age_endpoint_convention: dict[str, str] | None = None
@@ -322,7 +384,7 @@ class CoreReductionModelConfig:
         recorded_definition: RecordedDefinition = "confirmed_or_pending",
         notes: str = "",
         anchor: SurveillanceAnchor | None = None,
-        anchor_hyperpriors: dict[str, float] | None = None,
+        anchor_hyperpriors: dict[str, Any] | None = None,
     ) -> CoreReductionModelConfig:
         if recorded_definition not in {"confirmed_or_pending", "confirmed_only"}:
             raise ValueError(
@@ -341,6 +403,13 @@ class CoreReductionModelConfig:
         # serialised config, so a reader of the report cannot mistake the
         # retained comparison series for the prior the model actually used.
         priors["reduction_prior_enters_likelihood"] = not anchored
+        # A drifted fit divides the post-window flag decline between prevalence
+        # and recording by prior width alone, so record whether the drift is live
+        # rather than leaving a reader to infer it from the sigma.
+        drifted = model_definition.recording_drift == "post_anchor"
+        priors["recording_drift_enters_likelihood"] = (
+            drifted and priors_obj.recording_s_drift_sigma > 0.0
+        )
         anchor_record: dict[str, Any] | None = None
         if anchor is not None:
             anchor_record = anchor.to_dict()
@@ -355,6 +424,7 @@ class CoreReductionModelConfig:
             recording_model=model_definition.recording_model,
             reduction_model=model_definition.reduction_model,
             age_model=model_definition.age_model,
+            recording_drift=model_definition.recording_drift,
             recorded_definition=recorded_definition,
             theta_model=(
                 "morris_double_logistic_by_age_code"
@@ -382,6 +452,7 @@ class CoreReductionModelConfig:
             "recording_model": self.recording_model,
             "reduction_model": self.reduction_model,
             "age_model": self.age_model,
+            "recording_drift": self.recording_drift,
             "recorded_definition": self.recorded_definition,
             "theta_model": self.theta_model,
             "age_endpoint_convention": (
@@ -575,11 +646,13 @@ def build_core_reduction_model(
     n_year: int | None = None,
     recording_model: RecordingModel = "constant",
     reduction_model: ReductionModel = "year",
+    recording_drift: RecordingDrift = "none",
     anchor: SurveillanceAnchor | None = None,
     anchor_level_sigma: float = DEFAULT_ANCHOR_LEVEL_SIGMA,
     anchor_trend_sigma: float = DEFAULT_ANCHOR_TREND_SIGMA,
     anchor_obs_sigma: float = DEFAULT_ANCHOR_OBS_SIGMA,
-    anchor_obs_sigma_fixed: float | None = None,
+    anchor_obs_sigma_fixed: float | None = DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
+    anchor_forecast_flat: bool = False,
 ) -> Any:
     """Build the PyMC core reduction-recording model.
 
@@ -594,6 +667,25 @@ def build_core_reduction_model(
     so the reduction becomes a *consequence* of an anchored prevalence rather
     than an imported prior.  Years beyond the last observed window are forecast
     by the same state equation, with intervals that widen as they should.
+
+    The surveillance observation SD is **fixed** by default, at
+    ``DEFAULT_ANCHOR_OBS_SIGMA_FIXED``.  Passing ``anchor_obs_sigma_fixed=None``
+    estimates it instead, which both overstates precision and re-opens a
+    degenerate mode; see that constant's rationale before doing so.
+
+    ``recording_drift='post_anchor'`` adds a random walk on ``logit s`` over
+    exactly those unanchored years.  Holding ``s`` constant there — what every
+    other anchored model does — means a falling recorded rate can only be read as
+    falling prevalence, so the allocation is decided by a modelling default
+    rather than by evidence.  The drift makes it an explicit prior instead.  It
+    does **not** identify the split: with no window to constrain the level, the
+    division between prevalence and recording is set by
+    ``priors.recording_s_drift_sigma`` against the anchor's own level and trend
+    variances.  Report the two corners with it —
+    ``recording_s_drift_sigma=0.0`` puts the whole decline on prevalence and
+    reproduces the undrifted fit exactly, and ``anchor_forecast_flat=True``
+    holds latent prevalence at its last anchored value and puts the whole
+    decline on recording.
     """
     import pymc as pm
     import pytensor.tensor as pt
@@ -626,6 +718,27 @@ def build_core_reduction_model(
             "a SurveillanceAnchor was supplied but reduction_model is "
             f"{reduction_model!r}; pass reduction_model='anchor' to use it"
         )
+    if recording_drift not in {"none", "post_anchor"}:
+        raise ValueError("recording_drift must be 'none' or 'post_anchor'")
+    if recording_drift == "post_anchor":
+        if reduction_model != "anchor":
+            raise ValueError(
+                "recording_drift='post_anchor' requires reduction_model='anchor'; "
+                "without an anchor there is no last covered year to drift from"
+            )
+        if recording_model == "year":
+            raise ValueError(
+                "recording_drift='post_anchor' cannot be combined with "
+                "recording_model='year'; centred year offsets and a post-anchor "
+                "random walk parameterise the same year-varying sensitivity"
+            )
+        if (
+            not np.isfinite(priors.recording_s_drift_sigma)
+            or priors.recording_s_drift_sigma < 0.0
+        ):
+            raise ValueError("recording_s_drift_sigma must be finite and non-negative")
+    if anchor_forecast_flat and reduction_model != "anchor":
+        raise ValueError("anchor_forecast_flat requires reduction_model='anchor'")
     if recording_model == "year" and priors.recording_s_year_sigma <= 0.0:
         raise ValueError(
             "recording_s_year_sigma must be positive when recording_model='year'"
@@ -667,6 +780,25 @@ def build_core_reduction_model(
         if anchor.mid_year_idx.min() < 0 or anchor.mid_year_idx.max() >= n_year:
             raise ValueError(
                 "anchor window mid-years must fall inside the modelled year range"
+            )
+
+    # The last modelled year any window reaches. A window centred on model-year
+    # index m constrains the mean over m - half_width ... m + half_width, so the
+    # anchored span ends half a window past the final mid-year. Years after that
+    # carry no surveillance observation at all.
+    last_anchored_year_idx = (
+        int(anchor.mid_year_idx.max()) + anchor.half_width
+        if anchor is not None
+        else n_year - 1
+    )
+    n_drift_year = 0
+    if recording_drift == "post_anchor":
+        n_drift_year = n_year - 1 - min(last_anchored_year_idx, n_year - 1)
+        if n_drift_year <= 0:
+            raise ValueError(
+                "recording_drift='post_anchor' needs at least one modelled year "
+                "beyond the last surveillance window, but the windows reach the "
+                f"end of the {n_year}-year range; use an undrifted model instead"
             )
 
     age_idx = cells["age_idx"].to_numpy()
@@ -786,15 +918,23 @@ def build_core_reduction_model(
             slope = slope_start + pt.concatenate(
                 [pt.zeros((1,)), pt.cumsum(trend_innovation * sigma_trend)]
             )
+            latent_increment = slope[:-1] + level_innovation * sigma_level
+            if anchor_forecast_flat:
+                # The corner opposite a drifting s: hold latent prevalence at its
+                # last anchored value so the whole post-window decline in the
+                # recorded rate has to be absorbed by recording. Increment j
+                # feeds latent year j + 1, so zeroing every increment from the
+                # last anchored latent index onward leaves the path flat from
+                # that year. Latent index i is model year i - half_width, hence
+                # the 2 * half offset.
+                last_anchored_latent_idx = int(anchor.mid_year_idx.max()) + 2 * half
+                latent_increment = latent_increment * pt.as_tensor_variable(
+                    (np.arange(n_latent - 1) < last_anchored_latent_idx).astype(float)
+                )
             log_prevalence_latent = pm.Deterministic(
                 "anchor_log_prevalence_latent",
                 level_start
-                + pt.concatenate(
-                    [
-                        pt.zeros((1,)),
-                        pt.cumsum(slope[:-1] + level_innovation * sigma_level),
-                    ]
-                ),
+                + pt.concatenate([pt.zeros((1,)), pt.cumsum(latent_increment)]),
                 dims="latent_year",
             )
             prevalence_latent = pt.exp(log_prevalence_latent)
@@ -954,6 +1094,38 @@ def build_core_reduction_model(
             sigma=priors.recording_s_sigma,
         )
         recording_s = pm.Deterministic("recording_s", pm.math.invlogit(s_logit))
+
+        # ``recording_s`` stays the anchored-era level in every model, drifted or
+        # not, so it remains directly comparable across the family. The drift is
+        # carried as a separate per-year logit offset that is exactly zero while
+        # the anchor still speaks.
+        s_drift_logit: Any = None
+        if recording_drift == "post_anchor" and priors.recording_s_drift_sigma > 0.0:
+            drift_innovation = pm.Normal(
+                "recording_s_drift_innovation_raw",
+                mu=0.0,
+                sigma=1.0,
+                shape=n_drift_year,
+            )
+            s_drift_logit = pm.Deterministic(
+                "recording_s_drift_logit",
+                pt.concatenate(
+                    [
+                        pt.zeros((n_year - n_drift_year,)),
+                        pt.cumsum(drift_innovation * priors.recording_s_drift_sigma),
+                    ]
+                ),
+                dims="year",
+            )
+        s_logit_year = s_logit if s_drift_logit is None else s_logit + s_drift_logit
+        # Keep the undrifted graph byte-identical to what it was before the drift
+        # existed, so a zero drift sigma reproduces the parent model exactly.
+        recording_s_year_value = (
+            pt.ones((n_year,)) * recording_s
+            if s_drift_logit is None
+            else pm.math.invlogit(s_logit_year)
+        )
+
         if recording_model == "revision":
             # ``recording_s`` is the revised-certificate sensitivity, so it stays
             # directly comparable with fits confined to 2016 onward where every
@@ -972,13 +1144,13 @@ def build_core_reduction_model(
             )
             recording_s_year = pm.Deterministic(
                 "recording_s_year",
-                pt.ones((n_year,)) * recording_s,
+                recording_s_year_value,
                 dims="year",
             )
         elif recording_model == "constant":
             recording_s_year = pm.Deterministic(
                 "recording_s_year",
-                pt.ones((n_year,)) * recording_s,
+                recording_s_year_value,
                 dims="year",
             )
         else:
@@ -999,23 +1171,49 @@ def build_core_reduction_model(
                 dims="year",
             )
 
+        if s_drift_logit is not None:
+            # The headline the drift exists to report: how far the final modelled
+            # year's revised sensitivity has moved from its anchored-era level.
+            # A value below 1 means recording has taken part of the recorded-rate
+            # decline that an undrifted fit books entirely as falling prevalence.
+            pm.Deterministic(
+                "recording_s_drift_ratio", recording_s_year[-1] / recording_s
+            )
+
+        p_ds_lb_overshoot = None
         if rho_year_age is None:
             p_ds_lb_value = theta[age_idx] * eta_year[year_idx]
             if reduction_model == "anchor":
                 # eta is a ratio of prevalences, not a bounded probability, so an
                 # extreme draw could in principle push theta * eta above 1 and
-                # make the Binomial invalid. The guard never binds at posterior
-                # scale (eta is around 0.6) but keeps prior-predictive and early
-                # tuning draws well defined. Note rho < 0 is deliberately NOT
-                # excluded: it would mean the anchored prevalence exceeds the
-                # Morris no-reduction expectation, which is a real diagnostic.
+                # make the Binomial invalid. Clipping keeps it valid. Note rho < 0
+                # is deliberately NOT excluded: it would mean the anchored
+                # prevalence exceeds the Morris no-reduction expectation, which is
+                # a real diagnostic.
+                #
+                # But a clip is flat, so wherever it binds those cells contribute
+                # no gradient in eta. In the DSP009 fit that exposed the anchor-off
+                # mode, it bound in 16% of cells, which removed exactly the
+                # restoring force that would have pushed eta back down. The clip
+                # did not create that mode -- it is a genuine, much worse local
+                # basin, about 291 log units down, reachable once a free
+                # observation SD lets the anchor be discarded -- but the flat
+                # region helped hold a chain there. The barrier below restores a
+                # gradient that actively expels one.
+                p_ds_lb_overshoot = p_ds_lb_value - 1.0
                 p_ds_lb_value = pt.clip(p_ds_lb_value, 1e-12, 1.0 - 1e-9)
         else:
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
         p_ds_lb = pm.Deterministic("p_ds_lb", p_ds_lb_value, dims="cell")
         if recording_model == "revision":
+            # The drift shifts both certificate versions together: it models the
+            # certificate's recording behaviour over time, not a change in the gap
+            # between the two versions. Unrevised records only exist before 2016,
+            # which is always inside the anchored span, so in practice the drift
+            # term is zero wherever ``revised_cell`` is 0.
             s_cell = pm.math.invlogit(
-                s_logit + s_unrevised_offset * (1.0 - revised_cell)
+                (s_logit if s_drift_logit is None else s_logit_year[year_idx])
+                + s_unrevised_offset * (1.0 - revised_cell)
             )
         else:
             s_cell = recording_s_year[year_idx]
@@ -1036,6 +1234,20 @@ def build_core_reduction_model(
             dims="year",
         )
         pm.Deterministic("true_count_total", pt.dot(n_cell, p_ds_lb))
+
+        if p_ds_lb_overshoot is not None:
+            # Smooth barrier replacing the clip's lost gradient. softplus(k*x)/k is
+            # ~0 for x well below zero and ~x well above, so this is inert while
+            # theta * eta is a valid probability and grows once it is not, with a
+            # gradient throughout.
+            overshoot = pt.sum(
+                pt.softplus(p_ds_lb_overshoot * ANCHOR_OVERSHOOT_SHARPNESS)
+                / ANCHOR_OVERSHOOT_SHARPNESS
+            )
+            pm.Deterministic("p_ds_lb_overshoot", overshoot)
+            pm.Potential(
+                "p_ds_lb_overshoot_barrier", -ANCHOR_OVERSHOOT_PENALTY * overshoot
+            )
 
         pm.Binomial(
             "R_obs",
@@ -1084,6 +1296,8 @@ def core_year_summary(idata: Any, cells: pd.DataFrame) -> pd.DataFrame:
 
 __all__ = [
     "CORE_REDUCTION_MODEL_ID",
+    "DEFAULT_ANCHOR_OBS_SIGMA_FIXED",
+    "DEFAULT_RECORDING_S_DRIFT_SIGMA",
     "DEFAULT_REDUCTION_AGE_STEP_SIGMA",
     "DEFAULT_EXTRAPOLATED_REDUCTION_START",
     "DEFAULT_REDUCTION_CSV",

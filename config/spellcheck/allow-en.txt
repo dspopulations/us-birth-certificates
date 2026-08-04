@@ -125,6 +125,8 @@ nutpie
 overfit
 overfitting
 parameterisation
+parameterises
+softplus
 docstrings
 pred
 pymc
