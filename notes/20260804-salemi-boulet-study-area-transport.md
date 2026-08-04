@@ -246,18 +246,24 @@ caution about replacing `f`, not a licence to.
   needed; the 2016–2024 WONDER data only establishes that Florida records
   persistently low. It has in fact got relatively worse — `0.77x` national in
   2007–2011, `0.48x` in 2016–2024.
-- **A residual gap survives on the confirmed-only definition.** Salemi's `7.0%`
-  transported (and adjusted for the confirmed-share difference, `27.6%` in Florida
-  against `33.1%` nationally for the same years) reaches about `0.109`, against the
-  model's confirmed-only fit of `0.186`. Still a factor of `1.7`, where
-  confirmed-or-pending lands inside the posterior interval. Carried as an open
-  roadmap item at
-  [family review recommendation 5b](20260803-dsp-core-model-family-review.md),
-  with the leading lead being that the `0.186` run set `f = 0` — worth about a
-  factor of `0.8` on the C/P rows of the same sensitivity table — and that Salemi
-  supplies the right rate for confirmed flags directly at roughly `1.1e-5`
-  (`12` false positives among `115` confirmed). Until that refit is done the
-  confirmed-only sensitivity should be treated as externally unvalidated.
+- **The confirmed-only definition reconciles too, but only after two corrections
+  (added 2026-08-04).** An earlier version of this note reported a surviving
+  factor-`1.7` gap: Salemi's `7.0%` transported to about `0.109` against the
+  model's confirmed-only fit of `0.186`. Both halves were wrong. Refitting
+  `DSP003` confirmed-only at the false-positive rate Salemi measures for confirmed
+  flags (`12` among `115`, or `1.1e-5` per non-case) moves `s` from `0.1861` to
+  `0.1757` — a factor of `0.944`, small because that rate implies only `369` false
+  positives among `7,984` confirmed flags. The larger error was the comparator:
+  since `s_C = s_CP x q`, transporting Salemi's figure needs the confirmed share
+  moved as well as the recording level, and the share is strongly era-dependent
+  (`27.6%` Florida 2007-2011, `33.1%` national in those years, `44.8%` national in
+  2016-2024). The earlier figure used the 2007-2011 share against a 2016-2024 fit.
+  With the model's own window the comparator is `0.1475`, or `0.1621` carrying
+  `s_CP` forward as well — gaps of `1.19x` and `1.08x`, the same tolerance as
+  confirmed-or-pending. Worked through at
+  [family review recommendation 5b](20260803-dsp-core-model-family-review.md).
+  What survives is narrower: the confirmed share's `33.1%`-to-`44.8%` drift has no
+  clinical explanation and is now load-bearing for this comparison.
 - **Counting details.** `births_revised` uses a slightly wider non-null condition
   than `births`, so the revised share reads `100.2%`–`100.3%` from 2016 —
   immaterial at `0.3%` but visible in the by-year output. The `17,809` here versus

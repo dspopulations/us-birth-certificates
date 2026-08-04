@@ -725,42 +725,74 @@ recording level they give `0.374` and `0.319` against a posterior of `0.344`. Th
 note recommends **against** folding this into the prior on `s`, since it and the
 de Graaf anchor both trace back to surveillance prevalence.
 
-**5b — OPEN: the confirmed-only definition does not reconcile.** Salemi's
-karyotype-confirmed sensitivity is `7.0%` (103/1478, CI `5.7`-`8.3%`); transported
-by the same factor and adjusted for the confirmed-share difference — `27.6%` of
-Florida's flags against `33.1%` nationally in the same years — it reaches about
-`0.109`. The model's confirmed-only fit gives `0.186`. A factor of `1.7`, where
-the confirmed-or-pending comparison lands inside the posterior interval.
+**5b — the confirmed-only definition reconciles too (resolved 2026-08-04).** This
+item was opened as a factor-`1.7` discrepancy: Salemi's karyotype-confirmed
+sensitivity of `7.0%` (103/1478, CI `5.7`-`8.3%`), transported, reached about
+`0.109` against the model's confirmed-only fit of `0.186`. Both halves of that
+comparison were wrong, and **the larger error was in the comparator, not the
+model.**
 
-The comparison is legitimate, and that is what makes the gap worth chasing.
-Salemi's confirmed-only figure and the model's confirmed-only `s` are the same
-estimand — `P(flagged AND karyotype confirmed | true DS)`, a confirmation
-sensitivity — so the caveat recorded in the
+The comparison itself is legitimate, which is what made it worth chasing. Salemi's
+confirmed-only figure and the model's confirmed-only `s` are the same estimand —
+`P(flagged AND karyotype confirmed | true DS)`, a confirmation sensitivity — so
+the caveat in the
 [`DSP003` note](20260802-dsp003-age-reduction-extension.md) (that confirmed-only
 `s` must not be compared with the C/P estimates) does not block comparing it with
-Salemi's own confirmed-only row. Two leads, in order of expected size:
+Salemi's own confirmed-only row.
 
-1. **The `0.186` run used `f = 0`.** That row of the `DSP003` sensitivity table
-   sets false positives to zero, and the table's own C/P rows show what that
-   costs: `f = 0` gives `s = 0.450` where `f = 7.8e-5` gives `0.349`-`0.372`, a
-   factor of about `0.8`. Salemi supplies the right rate for confirmed flags
-   directly — `12` false positives among `115` confirmed — or roughly `1.1e-5`
-   per non-case, an order of magnitude below the C/P rate, as it should be for a
-   subset. **Refit confirmed-only at that `f` before treating any residual as
-   real.** Expect the gap to narrow, not close.
-2. **Confirmation practice is a state-level reporting behaviour, not a clinical
-   one.** The national confirmed share moved `33.1%` (2007-2011) to `44.8%`
-   (2016-2024) with no plausible clinical driver, and the `27.6%`-versus-`33.1%`
-   ratio adjustment assumes confirmation practice and recording completeness are
-   independent, which is untested. `data/us-births-wonder-state-pooled-2016-2024.csv`
-   carries `ds_confirmed` by state and can measure that association directly.
+**The refit.** The `0.186` came from a sensitivity row with `f = 0`. Salemi
+supplies the right rate for confirmed flags directly — `12` false positives among
+`115` confirmed, or about `1.1e-5` per non-case. Refitting `DSP003` confirmed-only
+at that `f`, reporting profile, PyMC sampler, everything else held:
 
-Salemi's row cannot absorb the difference by itself: `103` true positives gives a
-CI of `5.7`-`8.3%`, nowhere near wide enough for a factor of `1.7`. So something
-in the chain is wrong, and until it is found the confirmed-only sensitivity should
-be reported as **unvalidated externally** rather than as a second reading of the
-same evidence. This does not affect the preferred confirmed-or-pending
-specification.
+| run | `f` | `s` (89% ETI) | true DS livebirths |
+| --- | ---: | ---: | ---: |
+| control, reproduces the table row | `0` | `0.1861` (`0.1760`-`0.1971`) | 42,971 (40,659-45,204) |
+| refit | `1.1e-5` | `0.1757` (`0.1658`-`0.1861`) | 43,403 (41,056-45,784) |
+
+Both runs converged (max Rhat `1.0021`, min ESS `1678`). Reproduce with:
+
+```bash
+python scripts/fit_core_reduction_model.py DSP003 --profile reporting \
+  --confirmed-only --false-positive-rate 0 --nuts-sampler pymc
+python scripts/fit_core_reduction_model.py DSP003 --profile reporting \
+  --confirmed-only --false-positive-rate 1.1e-5 --nuts-sampler pymc
+```
+
+The control reproduces the published row to four decimal places on `s` and to
+single births on the total, so the setup is the documented one. **The `f` effect is
+a factor of `0.944`, not the `~0.8` this item predicted.** That prediction
+extrapolated from the C/P rows and should not have: `f = 1.1e-5` over 33.5M births
+is `369` false positives against `7,984` confirmed flags, `4.6%` of them, where
+`f = 7.8e-5` against `17,809` C/P flags is `14.7%`. A three-times-smaller rate
+against a numerator two times smaller is a much smaller correction. The total moved
+`+1.0%`, consistent with the family's known insensitivity of `T` to `f`.
+
+**The comparator error, which dominated.** `s_C = s_CP x q`, where `q` is the
+confirmed share among flags, so transporting `s_C` from Florida 2007-2011 to the
+model's setting requires moving **both** factors. The share is strongly
+era-dependent — `27.6%` for Salemi's Florida, `33.1%` nationally in his years,
+`44.8%` nationally in 2016-2024 — and this item used the **2007-2011** national
+share against a **2016-2024** fit. With the model's own window:
+
+    0.070 x 1.297 x (0.448 / 0.276) = 0.1475
+
+or `0.1621` if `s_CP` is also carried forward on recorded C/P prevalence
+(`4.83` to `5.31` per 10,000). Against the refit's `0.1757` those are gaps of
+`1.19x` and `1.08x` — the same tolerance as the confirmed-or-pending comparison,
+which sits at `1.08x` against transported Salemi and `0.92x` against transported
+Boulet. **The confirmed-only definition is externally validated after all**, and
+the earlier `unvalidated` label is withdrawn.
+
+**What survives, smaller and sharper.** The national confirmed share moved `33.1%`
+to `44.8%` between the two eras with no plausible clinical driver, and that drift
+is now load-bearing for this comparison rather than incidental to it. Two
+untested assumptions rest on it: that confirmation practice and recording
+completeness are independent (the ratio adjustment above assumes so), and that the
+drift is reporting behaviour rather than a change in what the field means.
+`data/us-births-wonder-state-pooled-2016-2024.csv` carries `ds_confirmed` by state
+and can measure the first directly. Neither affects the preferred
+confirmed-or-pending specification.
 
 **5c — the `f` half stands.** Re-derive `f`
 on the correct scale, or retire both the `7.8e-5` default and the `4.15e-5`
