@@ -253,14 +253,25 @@ Pending). Status is `observed`, `suppressed` or `zero`.
 | `data/us-births-wonder-state-year-2016-2024.csv` | 459 |
 | `data/us-births-wonder-state-race-pooled-2016-2024.csv` | 1,377 |
 | `data/us-births-wonder-state-year-race6-2016-2024.csv` | 2,753 |
+| `data/us-births-wonder-state-year-race6-hisp-2016-2024.csv` | 7,659 |
 
-Rows whose denominator and numerator are both zero are dropped from the two
-largest tables as structurally empty. The `State x year x race6 x Hispanic`
-four-way table was pulled and verified but **not committed** — at 766 KiB it is
-twice the size of everything else in `data/` combined, and it is the least
-informative table (74.5% captured, 1,697 censored cells, 5,446 zeros). Regenerate
-it from the query specification below if a full state x year x `mracehisp_c`
-model is ever wanted.
+Rows whose denominator and numerator are both zero are dropped from the three
+largest tables as structurally empty.
+
+The last of these is the `State x year x race6 x Hispanic` four-way table — the
+only one of the set that supports `mracehisp_c` at annual resolution, since
+reconstructing that coding needs both `D149.V42` and `D149.V43`. It is also the
+weakest table in the set and should be treated accordingly: **74.5% of recorded
+mass captured exactly, 1,697 interval-censored cells, 5,446 structural zeros**,
+and 1,367 of its denominator cells are censored too, so both sides of a rate need
+censored handling. At 758 KiB it is roughly twice the size of everything else in
+`data/` combined. It is committed because regenerating it needs an interactive
+WONDER session that cannot be scripted from the API (see the automation question
+below), not because the table earns its size on information content.
+
+Prefer `state x race6 x Hispanic` pooled (95.0% captured) or `state x year x
+race6` (83.5%) wherever the annual `mracehisp_c` interaction is not specifically
+required.
 
 ### Query specification
 
@@ -310,10 +321,13 @@ denominator. No new model structure needed.
 exact, 86 censored cells anchored by the option-A margins. Recovers temporal
 variation in state recording. Requires a censored observation term only.
 
-**C. State x race.** Already in hand in two forms — pooled with the Hispanic
-split (95.0% captured), and by year without it (83.5%). Connects to the open
+**C. State x race.** Already in hand in three forms — pooled with the Hispanic
+split (95.0% captured), by year without it (83.5%), and the full annual
+`mracehisp_c` cross-tab (74.5%, both sides censored). Connects to the open
 questions in the [race-surveillance audit](20260803-dsp004-race-surveillance-audit.md);
-that audit's fail-closed conclusion is unaffected by this note.
+that audit's fail-closed conclusion is unaffected by this note, and the extra
+table does not change it — the audit fails closed on category crosswalks,
+denominators and replication, none of which state resolution addresses.
 
 **D. Restricted-use file request.** Bypasses WONDER from 2005 onward, gives
 exact-age state cells, closes 2005-2015. Long lead time and an institutional
