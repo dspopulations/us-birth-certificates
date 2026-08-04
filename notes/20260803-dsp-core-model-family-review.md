@@ -715,20 +715,60 @@ is roughly half ART births.
 
 ### 5. Resolve the numerator definition against the external evidence on `s`
 
-**The sensitivity half of this is resolved (2026-08-04)** by
+**5a — the confirmed-or-pending half is resolved (2026-08-04)** by
 [the study-area transport note](20260804-salemi-boulet-study-area-transport.md).
 Boulet's figure is `18.1%`, not the `40%` cited above; it is the
-confirmed-or-pending analogue, and the confirmed-only comparator is Salemi's
-`7.0%`. Transported to national recording level the two studies give `0.374` and
-`0.319` against a posterior of `0.344`. The note recommends **against** folding
-this into the prior on `s`, since it and the de Graaf anchor both trace back to
-surveillance prevalence. One gap survives: on the confirmed-only definition the
-transported figure reaches only about `0.109` against the model's `0.186`.
+confirmed-or-pending analogue, because the 1989-revision certificate carried no
+karyotype sub-field. Both studies were run in low-recording areas — Florida is the
+third-lowest-recording state in the country — and transported to national
+recording level they give `0.374` and `0.319` against a posterior of `0.344`. The
+note recommends **against** folding this into the prior on `s`, since it and the
+de Graaf anchor both trace back to surveillance prevalence.
 
-The `f` half stands. Re-derive `f`
+**5b — OPEN: the confirmed-only definition does not reconcile.** Salemi's
+karyotype-confirmed sensitivity is `7.0%` (103/1478, CI `5.7`-`8.3%`); transported
+by the same factor and adjusted for the confirmed-share difference — `27.6%` of
+Florida's flags against `33.1%` nationally in the same years — it reaches about
+`0.109`. The model's confirmed-only fit gives `0.186`. A factor of `1.7`, where
+the confirmed-or-pending comparison lands inside the posterior interval.
+
+The comparison is legitimate, and that is what makes the gap worth chasing.
+Salemi's confirmed-only figure and the model's confirmed-only `s` are the same
+estimand — `P(flagged AND karyotype confirmed | true DS)`, a confirmation
+sensitivity — so the caveat recorded in the
+[`DSP003` note](20260802-dsp003-age-reduction-extension.md) (that confirmed-only
+`s` must not be compared with the C/P estimates) does not block comparing it with
+Salemi's own confirmed-only row. Two leads, in order of expected size:
+
+1. **The `0.186` run used `f = 0`.** That row of the `DSP003` sensitivity table
+   sets false positives to zero, and the table's own C/P rows show what that
+   costs: `f = 0` gives `s = 0.450` where `f = 7.8e-5` gives `0.349`-`0.372`, a
+   factor of about `0.8`. Salemi supplies the right rate for confirmed flags
+   directly — `12` false positives among `115` confirmed — or roughly `1.1e-5`
+   per non-case, an order of magnitude below the C/P rate, as it should be for a
+   subset. **Refit confirmed-only at that `f` before treating any residual as
+   real.** Expect the gap to narrow, not close.
+2. **Confirmation practice is a state-level reporting behaviour, not a clinical
+   one.** The national confirmed share moved `33.1%` (2007-2011) to `44.8%`
+   (2016-2024) with no plausible clinical driver, and the `27.6%`-versus-`33.1%`
+   ratio adjustment assumes confirmation practice and recording completeness are
+   independent, which is untested. `data/us-births-wonder-state-pooled-2016-2024.csv`
+   carries `ds_confirmed` by state and can measure that association directly.
+
+Salemi's row cannot absorb the difference by itself: `103` true positives gives a
+CI of `5.7`-`8.3%`, nowhere near wide enough for a factor of `1.7`. So something
+in the chain is wrong, and until it is found the confirmed-only sensitivity should
+be reported as **unvalidated externally** rather than as a second reading of the
+same evidence. This does not affect the preferred confirmed-or-pending
+specification.
+
+**5c — the `f` half stands.** Re-derive `f`
 on the correct scale, or retire both the `7.8e-5` default and the `4.15e-5`
 cohort-calibrated alternative in favour of an estimated `f`, per the companion note,
-with the units error stated either way.
+with the units error stated either way. The transport note weakens the urgency
+without removing it: Salemi's measured DS PPV of `87.3%` sits close to the `85.3%`
+the funnel implies, so `7.8e-5` produces about the right false-positive volume at
+national DS prevalence despite the units error in its derivation.
 
 ### 6. Make the trend allocation explicit rather than implicit
 

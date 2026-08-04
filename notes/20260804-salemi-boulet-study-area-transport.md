@@ -249,9 +249,15 @@ caution about replacing `f`, not a licence to.
 - **A residual gap survives on the confirmed-only definition.** Salemi's `7.0%`
   transported (and adjusted for the confirmed-share difference, `27.6%` in Florida
   against `33.1%` nationally for the same years) reaches about `0.109`, against the
-  model's confirmed-only fit of `0.186`. Still a factor of `1.7`. The
-  confirmed-or-pending definition reconciles; the confirmed-only one does not, and
-  it is not clear why.
+  model's confirmed-only fit of `0.186`. Still a factor of `1.7`, where
+  confirmed-or-pending lands inside the posterior interval. Carried as an open
+  roadmap item at
+  [family review recommendation 5b](20260803-dsp-core-model-family-review.md),
+  with the leading lead being that the `0.186` run set `f = 0` — worth about a
+  factor of `0.8` on the C/P rows of the same sensitivity table — and that Salemi
+  supplies the right rate for confirmed flags directly at roughly `1.1e-5`
+  (`12` false positives among `115` confirmed). Until that refit is done the
+  confirmed-only sensitivity should be treated as externally unvalidated.
 - **Counting details.** `births_revised` uses a slightly wider non-null condition
   than `births`, so the revised share reads `100.2%`–`100.3%` from 2016 —
   immaterial at `0.3%` but visible in the by-year output. The `17,809` here versus
