@@ -7,6 +7,7 @@
 # Organisations and datasets
 CDC
 EUROCAT
+FBDR
 MACDP
 NAPHSIS
 NBDPN
@@ -14,6 +15,7 @@ NBER
 NCHS
 NDSCR
 NVSS
+TBDR
 
 # NVSS / birth-certificate variables and codings
 AIAN
@@ -114,6 +116,7 @@ livebirth
 livebirths
 invlogit
 logit
+logits
 MCMC
 MCSE
 MCSEs
@@ -142,6 +145,8 @@ sigmas
 sigmoidal
 sklearn
 stratifier
+tercile
+terciles
 thresholded
 trendline
 trendlines

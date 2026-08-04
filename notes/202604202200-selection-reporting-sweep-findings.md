@@ -12,10 +12,21 @@
 > pre/post-2022 asymmetric sigma on `eta_term_year` and a fourth
 > variant (D) built around that mechanism. That year asymmetry has
 > since been removed; the fourth variant no longer exists. The intercept-level
-> findings below — θ_LB above Morris, s below Boulet, and the
-> resulting incompatibility with surveillance — are not specific to
-> that removed mechanism and still apply to the current A/B/C
-> variants.
+> findings below — θ_LB above Morris, s below the external sensitivity
+> evidence, and the resulting incompatibility with surveillance — are
+> not specific to that removed mechanism and still apply to the current
+> A/B/C variants.
+
+> [!NOTE]
+> **Correction (2026-08-04).** This note graded `s_int` against "Boulet ≈ 40%
+> sensitivity". That figure appears nowhere in Boulet, who reports **18%** for
+> Down syndrome in metropolitan Atlanta, and is withdrawn. The comparison itself
+> survives: both validation studies were run in low-recording areas, and
+> transported to national recording level they give `0.374` and `0.319`. A
+> posterior sensitivity of 4–7% remains incompatible with the external evidence
+> by a wide margin, so every conclusion here stands — only the attribution
+> changes. See
+> [the study-area transport note](20260804-salemi-boulet-study-area-transport.md).
 
 ## TL;DR
 
@@ -31,7 +42,8 @@ diagnostic reports all race-level panels as **data-informed** (|r| ≤
 
 **But the posterior intercepts are wildly inconsistent with the
 priors.** θ_LB sits 10–15σ above Morris, `s_int` sits 6–10σ below
-Boulet, and `eta_detect_int` sits ~6σ below its prior. The model is
+the external sensitivity evidence, and `eta_detect_int` sits ~6σ below
+its prior. The model is
 making the data fit by pulling the slowest-σ prior (Morris, σ=0.10)
 around; with 33.5 M rows, even σ=0.10 is not tight in any useful
 sense. The implied "4% birth-certificate sensitivity" is not credible.
@@ -150,8 +162,9 @@ Combined, these imply posterior:
 - Implied **93–96% of true DS livebirths missed** per race.
 - Implied birth-certificate sensitivity: **4–7%**.
 
-Neither number is compatible with the literature (Boulet ≈ 40%
-sensitivity; published under-ascertainment ≈ 60%, i.e. ~40% recorded).
+Neither number is compatible with the literature (~37% national
+sensitivity, transported from Boulet's 18% metro-Atlanta measurement;
+published under-ascertainment ≈ 60%, i.e. ~40% recorded).
 
 ## CCHD consistency check is conceptually broken
 
