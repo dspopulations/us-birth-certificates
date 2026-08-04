@@ -181,6 +181,7 @@ rprime
 # Literature / authors
 Alberman
 Boulet
+DerSimonian
 Eiben
 Elkan
 Gert

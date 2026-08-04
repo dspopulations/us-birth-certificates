@@ -314,13 +314,29 @@ as parameters rather than as silence:
 
 | Control | Meaning | Corner |
 | --- | --- | --- |
+| `--panel-conditions-csv` | Which curation table supplies each control's own true-prevalence trend, as a fixed offset. | The pinned table measures three of four from active surveillance; the default table assumes all four are flat. |
 | `--panel-prevalence-trend-sigma` | Prior SD on a true-prevalence trend shared by *every* control, log per year. Perfectly confounded with a recording trend; no comparison inside the panel can see it. | `0` asserts the exclusion restriction exactly; raising it moves back towards `DSP009`. |
 | `--panel-loading-fixed` | Pins how far Down syndrome recording departs from the item factor. | `1.0` is the strict shared-factor restriction, which the panel's own disagreement argues against. |
 
-The default prevalence-trend SD of `0.004` log per year puts one prior SD at about
-`3.3%` over the eight-year panel span, against a common recorded decline near
-`10%` — so it admits that up to roughly a third of that decline might be real
-prevalence. It is a stated judgement, not a measurement.
+**The headline fit takes the first two out of prior territory and leaves the third
+where it is.** `data/us-births-anomaly-panel-conditions-pinned.csv` carries measured
+trends for cleft palate alone, cleft lip ± palate and limb reduction; their mean
+implies a shared trend of `-0.00262` log per year, comfortably inside the `0 ± 0.004`
+prior the earlier specification asserted. With that external support the headline
+sets `--panel-prevalence-trend-sigma 0`, which costs `+13` births (`0.8` Monte Carlo
+standard errors — nothing) and removes `2.5` percentage points of factor width that
+was pure prior. Hypospadias is refused a pin, so γ = 0 still asserts slightly more
+than the measurement delivers, and the γ-free fit stays in the envelope for that
+reason. See
+[the trend-pin note](../../notes/20260804-dsp010-control-prevalence-trend-pins.md).
+
+Had the trends stayed unpinned, the default prevalence-trend SD of `0.004` log per
+year would put one prior SD at about `3.3%` over the eight-year panel span against a
+common recorded decline near `10%` — admitting that up to roughly a third of the
+decline might be real prevalence, as a stated judgement rather than a measurement.
+
+The loading is untouched by any of this. It is identified only by the anchor/panel
+overlap, and its posterior SD is `0.456` against a prior of `0.500`.
 
 ### Geometry and scope
 
@@ -343,7 +359,7 @@ level, and those references are different years: `DSP009`'s drift is zero until 
 last window closes, so its ratio spans 2020-2024, while `DSP010`'s factor starts at
 the 2016 panel reference and spans 2016-2024. Comparing the two ratios directly
 inverts the annual rates — `0.9623` over four years is `-0.94%` a year against
-`0.9521` over eight years at `-0.60%`. Compare the totals, or divide by the span
+`0.9593` over eight years at `-0.52%`. Compare the totals, or divide by the span
 first; do not read the two ratios side by side.
 
 The panel's denominators are checked against the certificate cells' per-year
@@ -353,10 +369,17 @@ of US births is stable to within `0.08%` across 2016-2024 against double-digit
 changes in the rates, so the mis-scaling is absorbed by the condition's own level
 and contributes no trend.
 
+The headline specification, and the two corners either side of it. The first needs
+`--tune 6000 --target-accept 0.995`: with γ removed the geometry tightens around
+`panel_condition_trend_scale`, and at the default settings this configuration can
+lose a chain to that funnel with **zero divergences** to warn you. Read the fit's
+R-hat verdict, and run `scripts/audit_anchored_chain_health.py --strict`.
+
 ```bash
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv --panel-prevalence-trend-sigma 0 --tune 6000 --target-accept 0.995
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv
 python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-loading-fixed 1.0
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-prevalence-trend-sigma 0
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv --panel-prevalence-trend-sigma 0 --panel-loading-fixed 1.0 --tune 6000 --target-accept 0.995
 ```
 
 ## DSP004 race-surveillance audit
