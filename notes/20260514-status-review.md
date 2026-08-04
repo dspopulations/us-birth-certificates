@@ -25,10 +25,18 @@ From `plans/readme.md`:
    and how those factors evolve.
 
 The reason this is non-trivial: NCHS birth-certificate sensitivity for DS
-is well below 100%; published surveillance puts recording at ~40%
-(Boulet 2011). Naïve counts under-state births by roughly 60%. The
+is well below 100%; national recording sits at roughly 35–40%, so naïve
+counts under-state births by about 60–65%. The
 project is trying to close that gap with ML *and* a structural Bayesian
 model.
+
+> **Correction (2026-08-04).** This passage originally attributed the ~40%
+> recording rate to Boulet (2011). Boulet reports **18%** sensitivity for Down
+> syndrome, measured in metropolitan Atlanta; 40% appears nowhere in the paper.
+> The national figure survives — transporting Boulet's estimate to national
+> recording level gives 0.374, and Salemi's gives 0.319 — but the attribution
+> was wrong. See
+> [the study-area transport note](20260804-salemi-boulet-study-area-transport.md).
 
 ## 2. Approach
 
@@ -108,11 +116,13 @@ at production scale.** From
 three variants (A/B/C),
 
 - θ_LB sits 10–15σ above Morris.
-- *s_int* sits 6–10σ below Boulet.
+- *s_int* sits 6–10σ below the external sensitivity evidence.
 - η_detect_int sits ~6σ below prior.
 - Implied total true DS livebirths 2016–2024 ≈ 231k vs surveillance
   ≈ 378k (~42k/year).
-- Implied BC sensitivity 4–7% vs Boulet's ≈ 40%.
+- Implied BC sensitivity 4–7% vs ~37% nationally (transported from
+  Boulet's 18% metro-Atlanta measurement; the ≈ 40% originally cited
+  here as Boulet's own figure is withdrawn — see the correction above).
 
 Cause: with 33.5M rows the likelihood overwhelms even σ = 0.10 priors.
 The Morris prior is *not* tight enough at this data scale. The

@@ -473,7 +473,7 @@ the `17,809` flags, `9,825` are pending and `7,984` confirmed — `55%` pending.
 Confirmed-only gives `s = 0.186`, though that is a `DSP003` run and the `DSP003` note
 states it must not be compared directly with confirmed-or-pending sensitivities; the
 `DSP004` confirmed-or-pending fit at `f=0` gives `0.401`.
-Boulet's record-linkage sensitivity of approximately `40%` is genuinely
+Boulet's record-linkage sensitivity is genuinely
 independent evidence about `s`, and it is the only external check available on
 the one non-identified direction. It is not currently reported as such. Whether
 Boulet's denominator corresponds to confirmed-or-pending or to confirmed alone
@@ -484,6 +484,21 @@ mismatch implied a total roughly `80%` higher; that figure paired a
 confirmed-or-pending numerator with a confirmed-only sensitivity and is withdrawn.
 The definitional question remains worth resolving, but it is not the largest item on
 the roadmap.
+
+> **Correction and resolution (2026-08-04).** This finding originally cited
+> Boulet's sensitivity as "approximately `40%`". **That figure appears nowhere in
+> the paper** and is withdrawn: Boulet reports `18.1%` for Down syndrome
+> specifically (113/625) and `23%` across six defects. Both questions the finding
+> raises are now answered in
+> [the study-area transport note](20260804-salemi-boulet-study-area-transport.md).
+> Boulet's denominator is the **confirmed-or-pending** analogue, because the
+> 1989-revision certificate carried a flat list of anomaly checkboxes with no
+> karyotype sub-field; the confirmed-only comparator is Salemi's `7.0%`. Both
+> studies were run in low-recording areas — Florida is the third-lowest-recording
+> state in the country — and transported to national recording level they give
+> `0.374` and `0.319`, which bracket the posterior `s = 0.344`. **The external
+> check corroborates the family rather than challenging it.** The `~40%` the
+> project had been using was approximately right for the wrong reason.
 
 ## Finding 7 — verification gaps
 
@@ -700,10 +715,17 @@ is roughly half ART births.
 
 ### 5. Resolve the numerator definition against the external evidence on `s`
 
-Determine whether Boulet's approximately `40%` sensitivity corresponds to
-confirmed-or-pending or to confirmed-only flags, and report the comparison
-against the posterior `s` either way. This is the only quasi-independent check
-on the non-identified direction and it currently goes unreported. Re-derive `f`
+**The sensitivity half of this is resolved (2026-08-04)** by
+[the study-area transport note](20260804-salemi-boulet-study-area-transport.md).
+Boulet's figure is `18.1%`, not the `40%` cited above; it is the
+confirmed-or-pending analogue, and the confirmed-only comparator is Salemi's
+`7.0%`. Transported to national recording level the two studies give `0.374` and
+`0.319` against a posterior of `0.344`. The note recommends **against** folding
+this into the prior on `s`, since it and the de Graaf anchor both trace back to
+surveillance prevalence. One gap survives: on the confirmed-only definition the
+transported figure reaches only about `0.109` against the model's `0.186`.
+
+The `f` half stands. Re-derive `f`
 on the correct scale, or retire both the `7.8e-5` default and the `4.15e-5`
 cohort-calibrated alternative in favour of an estimated `f`, per the companion note,
 with the units error stated either way.

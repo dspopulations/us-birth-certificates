@@ -187,12 +187,16 @@ caution about replacing `f`, not a licence to.
 
 ## What to change
 
-1. **Fix the Boulet provenance.** Replace "approximately `40%`" with `18%` in
-   Down syndrome, and state the transported figure separately with its derivation.
-   Affects [the family review](20260803-dsp-core-model-family-review.md),
-   [the status review](20260514-status-review.md), and
-   [the reporting sweep](202604202200-selection-reporting-sweep-findings.md),
-   where fits were graded against the wrong comparator.
+1. **Fix the Boulet provenance — applied.** Dated correction callouts are now in
+   [the family review](20260803-dsp-core-model-family-review.md) (Finding 6 and
+   recommendation 5), [the status review](20260514-status-review.md), and
+   [the reporting sweep](202604202200-selection-reporting-sweep-findings.md).
+   The withdrawn figure is quoted in each so the record stays legible rather than
+   being silently rewritten. Both notes that graded fits against `40%` reach the
+   same conclusion against the transported `~37%`, so only the attribution
+   changed. `UNKNOWN_S = 0.40` in `scripts/derive_recording_rates.py` is
+   documented as a weak neutral fallback rather than as Boulet's figure, and
+   needs no change — it happens to sit close to the transported value.
 2. **Report the transported sensitivities as the independent check on `s`.** This
    is what recommendation 5 asked for. `0.319` and `0.374` against a posterior of
    `0.344` (89% ETI `0.326`–`0.363`) is corroboration, and it is currently unreported.
