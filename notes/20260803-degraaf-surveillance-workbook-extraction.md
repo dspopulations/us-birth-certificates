@@ -5,8 +5,9 @@
 
 **Date:** 2026-08-03
 
-**Status:** Data-extraction audit, era audit, and a fitted model extension
-(`DSP006`). All figures come from
+**Status:** Data-extraction audit, era audit, and three fitted model extensions
+(`DSP006` revision-split recording; `DSP007`/`DSP008` surveillance-anchored
+level). All figures come from
 `data/cor verwissel jaren overzicht prevalencties races usa birth cert vanaf 2000 ALT3.xlsx`
 and `data/us_births.db`, reproduced by
 [`scripts/extract_degraaf_surveillance.py`](../scripts/extract_degraaf_surveillance.py)
@@ -16,9 +17,13 @@ in a local environment that is **not release-conformant**; regenerate before
 citation. The refit figures are reporting-profile runs but were produced in the
 same non-conformant environment, so they are indicative rather than citable.
 
-**Amended** the same day to add the era audit and the 2004-start refit, in
-response to the question of whether the model window should start earlier. The
-surveillance-anchor observation equation proposed below remains **unimplemented**.
+**Amended twice.** First to add the era audit and the 2004-start refit, in
+response to the question of whether the model window should start earlier; then
+on 2026-08-04 to implement the surveillance observation equation as `DSP007` and
+`DSP008`. The design section below is retained as written, and the "anchored
+model" section records what the implementation actually produced — which differs
+from what the design section anticipated in one important respect: the interval
+turned out to be governed by an unknown rather than narrowed by the anchor.
 
 **This note builds on
 [the 28 June extraction note](20260628-degraaf-corrected-prevalence-extraction.md),
@@ -61,10 +66,13 @@ What this pass adds beyond the June decoding:
    certificate version (`DSP006`) **nearly halves the interval on the 2016–2024
    total** while leaving the headline within `0.6%`. Extending *without* the
    split biases it up `3.6%`.
-
-The mechanism the reset needs **already exists** in the selection model
-(`selection/recording_anchor.py`, `--anchor-margin`). The core DSP family simply
-does not use it.
+7. **The surveillance anchor is implemented** (`DSP007`/`DSP008`) and does fix
+   the identification problem: the level no longer comes from the reduction CSV.
+   But it **does not deliver a precision gain so much as relocate an
+   assumption** — the interval runs from `2.87%` to `16.19%` depending on an
+   assumed surveillance accuracy the workbook does not supply, while the mean
+   moves only `1.1%`. That single unknown is now the binding constraint on the
+   whole model.
 
 ## What the workbook contains
 
@@ -489,13 +497,13 @@ s unrevised  0.2954  [0.2852, 0.3063]
 ratio        1.1441  [1.1098, 1.1792]     P(revised > unrevised) = 1.000
 ```
 
-### What this refit does *not* do
+### What the revision refit does *not* do
 
 The level still comes from the reduction CSV via `from_reduction_csv`. The
-surveillance observation equation proposed above is **not** implemented, so the
-Morris cancellation and the prior-only level identified in the review both still
-stand. This refit is the window extension plus the revision covariate, nothing
-more.
+surveillance observation equation is implemented separately, in `DSP007`/`DSP008`
+below; `DSP006` on its own is the window extension plus the revision covariate,
+nothing more, and under it the Morris cancellation and the prior-only level both
+still stand.
 
 Two caveats. The revised/unrevised contrast is confounded by unobserved state
 composition, and for 2005–2015 no available source can resolve it, so `1.144`
@@ -507,13 +515,129 @@ after 2018 that the revision does not explain, and no amount of pre-2016 data
 resolves whether it was prevalence or recording. Extending the window sharpens
 that question; only post-2018 surveillance can settle it.
 
+## The anchored model
+
+`DSP007` replaces the reduction-rate prior with the observation equation
+proposed above; `DSP008` adds the revision split. Latent annual log prevalence
+follows a local linear trend, is observed through the surveillance programmes'
+centred five-year window means, and sets the reduction by the accounting
+identity
+
+```text
+eta_year = prevalence_year / Morris_expected_prevalence_year
+```
+
+so the reduction is a *consequence* of an anchored prevalence rather than an
+imported prior. The latent series is padded two years either side of the model
+window, so a window centred on the first or last modelled year remains usable;
+2004–2024 admits 13 windows, mid-2004 to mid-2018.
+
+Three properties are worth stating because they were the point of the exercise.
+
+**The level is now identified by data.** `rho_logit_year` does not exist in an
+anchored fit. The reduction CSV is still loaded so the report can contrast the
+superseded prior with the anchored posterior, and the config records
+`reduction_prior_enters_likelihood: false` so no reader can mistake the retained
+comparison series for the prior the model used.
+
+**The overlap is handled rather than ignored.** Each window constrains the mean
+of its own five latent years, so overlapping windows share latent years instead
+of double-counting evidence. The config also records
+`effective_independent_windows` — `3.8` for 2004–2024 — so the 13 windows are
+never presented as 13 observations.
+
+**The forecast widens.** 2019–2024 have no window, and the ETI on latent
+prevalence grows from `0.63` per 10,000 in 2018 to `0.96` in 2024, a 52%
+widening across six unanchored years.
+
+### Results, 2004–2024
+
+| Fit | Level from | `s` | 2016–2024 total | ETI width |
+| --- | --- | --- | ---: | ---: |
+| `DSP004`, 2016–2024 (frozen) | reduction CSV | `0.3402` | `44,255` [`41,934`–`46,565`] | `10.46%` |
+| `DSP004` | reduction CSV | `0.3271` | `45,866` [`44,566`–`47,155`] | `5.64%` |
+| `DSP006` | reduction CSV | `0.3379` / `0.2954` | `44,505` [`43,219`–`45,814`] | `5.83%` |
+| `DSP007` | **surveillance** | `0.3254` | `45,487` [`44,804`–`46,240`] | `3.16%` |
+| **`DSP008`** | **surveillance** | `0.3347` / `0.2970` | **`44,589`** [`43,952`–`45,231`] | **`2.87%`** |
+
+All five rows are reporting profile. `DSP008` reaches max R-hat `1.0100`, exactly
+at the `<1.01` gate, with min ESS `589`; `DSP007` is cleaner at `1.0042` and
+`762`. The `DSP008` value needs a longer run before it is cited, though the dev
+and reporting fits agree to `0.02%` on the total, which argues the borderline
+statistic is sampler noise rather than a specification problem.
+
+The era-pooling bias recurs in the anchored model exactly as it does in the
+prior-based one: `DSP007` with one constant `s` gives `45,487`, about `2%` above
+`DSP008`'s `44,589`. So the revision split matters independently of how the level
+is set, and `DSP008` is the specification that carries both fixes.
+
+`DSP008`'s `44,589` sits within `0.7%` of both `DSP006` and the frozen
+2016–2024 run. Four routes to the modern total — a short window with a prior
+level, a long window with a prior level and the revision split, and the anchored
+versions of each — agree to about a percent.
+
+### The interval is not a precision gain. It is a relocated assumption
+
+This is the finding that matters most, and it cuts against the headline.
+
+The estimated observation SD is `0.0122` — the 13 windows reconcile with a
+smooth latent path to about `1.2%`. But that quantity measures
+only whether the windows are *mutually consistent*. It cannot measure whether the
+surveillance programmes' prevalences are *accurate*, because the workbook
+supplies no uncertainty at all. Fixing the observation SD at larger values is
+therefore the honest sensitivity axis, and `--anchor-obs-sigma-fixed` exists for
+exactly that:
+
+Dev profile, so the levels are indicative; the relationship is the point.
+
+| Surveillance observation SD | 2016–2024 total | ETI width |
+| --- | ---: | ---: |
+| estimated (`0.012`) | `44,580` | `2.87%` |
+| fixed `0.05` | `44,522` | `5.86%` |
+| fixed `0.10` | `44,441` | `9.69%` |
+| fixed `0.20` | `44,088` | `16.19%` |
+
+The **mean is robust** — it moves by `1.1%` across the whole range, which is the
+real gain, because the level is now determined by data under any of these
+assumptions. The **width is almost entirely a function of an unknown.** At a
+plausible 10% surveillance error the interval is `9.69%`, essentially the
+`10.46%` the original 2016–2024 fit reported.
+
+So anchoring does not narrow the interval so much as **move where the narrowness
+comes from**: previously from tight reduction priors that the review found
+roughly 2.7× too confident, now from an assumption that surveillance prevalence
+is measured almost exactly. The improvement is real but it is one of *candour*,
+not precision — the new assumption is single, explicit, and answerable by one
+question to Gert, where the old one was diffuse and buried in a CSV.
+
+**Do not report `2.87%`** as the interval on the 2016–2024 total. Until Gert
+supplies uncertainty, report the sensitivity row that matches a defensible view
+of surveillance accuracy, and say which was chosen.
+
+### It also resolves the trajectory question — by assumption, not by evidence
+
+Under `DSP008` the latent prevalence rises to `13.8` per 10,000 around 2018 and
+then falls to about `12.9` by 2024. That is Gert's direction, and it is worth
+being clear about why the model says it.
+
+2019–2024 have no surveillance window, so latent prevalence there is constrained
+by the state equation *and by the recorded flag counts*. With `s` held constant
+across those years, a falling flag rate can only be explained by falling
+prevalence. The model is not discovering that prevalence fell; it is inheriting
+the constant-`s` assumption and reporting the consequence. A specification
+allowing `s` to drift after 2018 would attribute the same decline to recording
+and would fit equally well. Nothing in the data after 2018 distinguishes them —
+which is the same conclusion the era audit reached from the other direction.
+
 ## Asks of Gert
 
 1. **Uncertainty on the surveillance prevalences.** Confidence intervals, or the
    number of contributing programmes and the birth denominator each window
    covers, so an observation variance can be derived rather than assumed. This is
-   the single most valuable addition, and the one thing that would let the reset
-   improve the interval rather than only the justification.
+   now demonstrably **the binding constraint on the entire model**: with the
+   anchor implemented, the interval on the 2016–2024 total runs from `2.87%` to
+   `16.19%` purely as a function of this one unknown, while the mean barely
+   moves. Nothing else we can do ourselves narrows it.
 2. **2015 and 2017.** Why are these two windows absent when 2014, 2016 and 2018
    are present? Are the underlying data recoverable?
 3. **Windows after 2016–2020.** Are 2019 or 2020 mid-years available or expected?
@@ -538,11 +662,12 @@ that question; only post-2018 surveillance can settle it.
    2016–2024 from it. This is done and reproducible; it is the cheapest
    available improvement to the interval, and it does not depend on anything
    further from Gert.
-2. **Port the pooled anchor into the core DSP family**, replacing
-   `from_reduction_csv` as the source of the level. Reuse
-   `selection/recording_anchor.py` and `derive_recording_rates.py` rather than
-   re-deriving the imputation. With a 2004 start there are 13 anchored windows to
-   fit the observation equation against rather than 2.
+2. ~~Port the pooled anchor into the core DSP family.~~ **Done** as
+   `DSP007`/`DSP008`. What remains is to decide, with Gert's input on
+   surveillance accuracy, which sensitivity row to report — and to reconcile the
+   core family's anchor with the selection model's `PREV_RACE_YEAR`, which
+   applies the same idea by race as a soft potential and whose backtested tail
+   imputation is still the better-tested treatment of 2019-2024.
 3. **Keep `θ(age)`.** The anchor pins the level; the age gradient identifies `f`
    and the recording shape. The reset should add the anchor, not remove the age
    model.
@@ -593,7 +718,18 @@ The era audit consumes that anchor and must run second:
 python scripts/audit_certificate_revision_era.py
 ```
 
-The three refits, reporting profile:
+The anchored fits, and the surveillance-accuracy sensitivity:
+
+```bash
+python scripts/fit_core_reduction_model.py DSP008 --profile reporting --years 2004-2024 --output-dir output/refit2004/DSP008-reporting
+```
+
+```bash
+python scripts/fit_core_reduction_model.py DSP008 --profile dev --years 2004-2024 --anchor-obs-sigma-fixed 0.10 --output-dir output/refit2004/DSP008-obs0.10
+```
+
+`DSP007`/`DSP008` read the anchor from `output/degraaf_surveillance/`, so the
+extraction script must run first. The prior-based refits, reporting profile:
 
 ```bash
 python scripts/fit_core_reduction_model.py DSP004 --profile reporting --years 2004-2024 --output-dir output/refit2004/DSP004-baseline-reporting

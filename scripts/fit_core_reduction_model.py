@@ -30,6 +30,11 @@ from dspopulations_us_birth_certificates.selection.core_models import (
 )
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CORE_REDUCTION_MODEL_ID,
+    DEFAULT_ANCHOR_CSV,
+    DEFAULT_ANCHOR_LEVEL_SIGMA,
+    DEFAULT_ANCHOR_OBS_SIGMA,
+    DEFAULT_ANCHOR_TREND_SIGMA,
+    DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
     DEFAULT_REDUCTION_AGE_STEP_SIGMA,
     DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT,
@@ -37,6 +42,7 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     DEFAULT_REDUCTION_ERROR_CORRELATION,
     CoreReductionModelConfig,
     CoreReductionPriors,
+    SurveillanceAnchor,
     build_core_reduction_model,
     core_year_summary,
     prepare_core_age_year_cells,
@@ -136,6 +142,56 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Logit-scale prior SD for adjacent-age RW1 increments in "
             "age-specific reduction models."
+        ),
+    )
+    p.add_argument(
+        "--anchor-csv",
+        type=Path,
+        default=DEFAULT_ANCHOR_CSV,
+        help=(
+            "Pooled surveillance anchor CSV, from "
+            "scripts/extract_degraaf_surveillance.py. Used only by anchored models."
+        ),
+    )
+    p.add_argument(
+        "--anchor-half-width",
+        type=int,
+        default=DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
+        help="Half-width of the surveillance averaging window, in years.",
+    )
+    p.add_argument(
+        "--anchor-level-sigma",
+        type=float,
+        default=DEFAULT_ANCHOR_LEVEL_SIGMA,
+        help=(
+            "Half-normal prior scale for the year-to-year SD of latent log "
+            "prevalence. Measured at 1.5-1.8%% in the model-family review."
+        ),
+    )
+    p.add_argument(
+        "--anchor-trend-sigma",
+        type=float,
+        default=DEFAULT_ANCHOR_TREND_SIGMA,
+        help="Half-normal prior scale for drift in the latent trend slope.",
+    )
+    p.add_argument(
+        "--anchor-obs-sigma",
+        type=float,
+        default=DEFAULT_ANCHOR_OBS_SIGMA,
+        help=(
+            "Half-normal prior scale for the surveillance observation SD. The "
+            "workbook supplies no uncertainty, so this SD is estimated, not fixed."
+        ),
+    )
+    p.add_argument(
+        "--anchor-obs-sigma-fixed",
+        type=float,
+        default=None,
+        help=(
+            "Fix the surveillance observation SD instead of estimating it. The "
+            "estimated SD only measures whether the windows agree with a smooth "
+            "path, so fixing it larger is the sensitivity axis for surveillance "
+            "accuracy."
         ),
     )
     p.add_argument(
@@ -308,12 +364,46 @@ def main(argv: list[str] | None = None) -> int:
             "Morris curve evaluated at represented age codes"
         )
     cli_output.info(f"false-positive rate: fixed at {ns.false_positive_rate:.3g}")
+    anchor = None
+    if ns.model_definition.reduction_model == "anchor":
+        anchor = SurveillanceAnchor.from_csv(
+            year_range=ns.year_range,
+            path=ns.anchor_csv,
+            half_width=ns.anchor_half_width,
+        )
+        details = anchor.to_dict()
+        cli_output.print_kv(
+            "Surveillance anchor",
+            [
+                ("source", anchor.source),
+                ("windows", details["n_windows"]),
+                ("mid_years", f"{anchor.mid_years[0]}-{anchor.mid_years[-1]}"),
+                (
+                    "effective independent",
+                    f"{details['effective_independent_windows']:.1f}",
+                ),
+                ("window width", 2 * anchor.half_width + 1),
+                ("level sigma prior", ns.anchor_level_sigma),
+                ("trend sigma prior", ns.anchor_trend_sigma),
+                ("obs sigma prior", ns.anchor_obs_sigma),
+            ],
+        )
+        cli_output.info(
+            "level: latent log prevalence with a local linear trend, observed "
+            "through centred window means; the reduction-rate CSV prior is "
+            "loaded for comparison only and does NOT enter the likelihood"
+        )
     model = build_core_reduction_model(
         cells,
         priors,
         n_year=cells.attrs["n_year"],
         recording_model=ns.model_definition.recording_model,
         reduction_model=ns.model_definition.reduction_model,
+        anchor=anchor,
+        anchor_level_sigma=ns.anchor_level_sigma,
+        anchor_trend_sigma=ns.anchor_trend_sigma,
+        anchor_obs_sigma=ns.anchor_obs_sigma,
+        anchor_obs_sigma_fixed=ns.anchor_obs_sigma_fixed,
     )
 
     cli_output.section("Sample")
@@ -326,6 +416,13 @@ def main(argv: list[str] | None = None) -> int:
         model_definition=ns.model_definition,
         recorded_definition=ns.recorded_definition,
         notes=f"profile={ns.profile}",
+        anchor=anchor,
+        anchor_hyperpriors={
+            "level_sigma": ns.anchor_level_sigma,
+            "trend_sigma": ns.anchor_trend_sigma,
+            "obs_sigma": ns.anchor_obs_sigma,
+            "obs_sigma_fixed": ns.anchor_obs_sigma_fixed,
+        },
     )
     context = FitContext(
         config=model_config,
@@ -363,6 +460,14 @@ def main(argv: list[str] | None = None) -> int:
         summary_vars.insert(4, "recording_s_year_offset")
     if "recording_s_unrevised" in idata.posterior:
         summary_vars[3:3] = ["recording_s_unrevised", "recording_s_unrevised_offset"]
+    if "prevalence_year" in idata.posterior:
+        summary_vars[0:0] = [
+            "prevalence_year",
+            "anchor_window_prevalence",
+            "anchor_obs_sigma",
+            "anchor_level_sigma",
+            "anchor_trend_sigma",
+        ]
     if "rho_age_offset" in idata.posterior:
         summary_vars.insert(2, "rho_age_offset")
     if "rho_logit_year_raw" in idata.posterior:

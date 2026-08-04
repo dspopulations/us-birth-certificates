@@ -24,6 +24,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionModelConfig,
     CoreReductionPriors,
+    SurveillanceAnchor,
     _reduction_error_covariance,
     build_core_reduction_model,
     prepare_core_age_year_cells,
@@ -40,6 +41,8 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "DSP004",
         "DSP005",
         "DSP006",
+        "DSP007",
+        "DSP008",
     )
     assert set(CORE_MODEL_REGISTRY) == {
         "dsp001",
@@ -48,6 +51,8 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "dsp004",
         "dsp005",
         "dsp006",
+        "dsp007",
+        "dsp008",
     }
     assert get_core_model_definition("dsp001").recording_model == "constant"
     assert get_core_model_definition("DSP002").recording_model == "year"
@@ -338,6 +343,195 @@ def test_revision_split_leaves_true_counts_unchanged() -> None:
         totals.append(float(np.dot(n_cell, p)))
         assert "true_count_total" in model.named_vars
     assert np.isclose(totals[0], totals[1])
+
+
+def _anchor_csv(tmp_path: Path, mid_years: list[int], prevalences: list[float]) -> Path:
+    path = tmp_path / "anchor.csv"
+    pd.DataFrame({"mid_year": mid_years, "prevalence_per10k": prevalences}).to_csv(
+        path, index=False
+    )
+    return path
+
+
+def test_surveillance_anchor_from_csv_selects_windows_inside_range(
+    tmp_path: Path,
+) -> None:
+    path = _anchor_csv(
+        tmp_path,
+        [2002, 2004, 2006, 2020],
+        [12.0, 12.5, 13.0, 14.0],
+    )
+    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2010), path=path)
+
+    # 2002 and 2020 are centred outside the range and must be dropped rather
+    # than partially applied.
+    assert anchor.mid_years == (2004, 2006)
+    assert anchor.mid_year_idx.tolist() == [0, 2]
+    # Prevalence is converted from per-10,000 to per live birth.
+    assert np.allclose(np.exp(anchor.log_prevalence), [12.5e-4, 13.0e-4])
+    assert anchor.to_dict()["n_windows"] == 2
+
+
+def test_surveillance_anchor_rejects_empty_selection(tmp_path: Path) -> None:
+    path = _anchor_csv(tmp_path, [1990, 1991], [10.0, 10.5])
+    with pytest.raises(ValueError, match="no surveillance window centred"):
+        SurveillanceAnchor.from_csv(year_range=(2016, 2024), path=path)
+
+
+def test_surveillance_anchor_discounts_overlapping_windows(tmp_path: Path) -> None:
+    """Seventeen overlapping five-year windows are not seventeen observations."""
+    mid_years = list(range(2000, 2017))
+    path = _anchor_csv(tmp_path, mid_years, [12.5] * len(mid_years))
+    anchor = SurveillanceAnchor.from_csv(year_range=(2000, 2016), path=path)
+    # 17 mid-years span 2000-2016, plus two padding years either side = 21
+    # birth-years, over a five-year window width.
+    assert anchor.to_dict()["effective_independent_windows"] == pytest.approx(21 / 5)
+
+
+def _anchor_cells(n_year: int) -> pd.DataFrame:
+    rows = []
+    for year in range(n_year):
+        for age_idx, maternal_age in enumerate((30, 40)):
+            rows.append(
+                {
+                    "year_idx": year,
+                    "age_idx": age_idx,
+                    "maternal_age": maternal_age,
+                    "N_cell": 200_000 if maternal_age == 30 else 50_000,
+                    "R_cell": 30 if maternal_age == 30 else 60,
+                }
+            )
+    cells = pd.DataFrame(rows)
+    cells.attrs["n_year"] = n_year
+    cells.attrs["year_range"] = (2004, 2004 + n_year - 1)
+    return cells
+
+
+def test_anchored_model_derives_eta_from_prevalence(tmp_path: Path) -> None:
+    """eta must equal anchored prevalence over the Morris expectation."""
+    pm = pytest.importorskip("pymc")
+
+    n_year = 9
+    cells = _anchor_cells(n_year)
+    path = _anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0])
+    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path)
+    priors = CoreReductionPriors()
+
+    model = build_core_reduction_model(
+        cells,
+        priors,
+        n_year=n_year,
+        recording_model="constant",
+        reduction_model="anchor",
+        anchor=anchor,
+    )
+    named = {rv.name for rv in model.free_RVs}
+    # No rho_logit_year: the reduction prior does not enter an anchored fit.
+    assert "rho_logit_year" not in named
+    assert {
+        "anchor_log_level_start",
+        "anchor_log_slope_start",
+        "anchor_level_sigma",
+        "anchor_trend_sigma",
+        "anchor_obs_sigma",
+        "anchor_level_innovation_raw",
+        "anchor_trend_innovation_raw",
+        "recording_s_logit",
+    } <= named
+
+    with model:
+        prior = pm.sample_prior_predictive(draws=6, random_seed=0)
+
+    prevalence = np.asarray(prior.prior["prevalence_year"].values)
+    eta = np.asarray(prior.prior["eta_year"].values)
+    natural = np.asarray(
+        model.named_vars["natural_prevalence_year"].get_value()  # type: ignore[union-attr]
+    )
+    assert prevalence.shape[-1] == n_year
+    assert np.allclose(eta, prevalence / natural, rtol=1e-10)
+    assert np.allclose(
+        np.asarray(prior.prior["rho_year"].values), 1.0 - eta, rtol=1e-10
+    )
+    # The latent series is padded so an edge-centred window is still usable.
+    latent = np.asarray(prior.prior["anchor_log_prevalence_latent"].values)
+    assert latent.shape[-1] == n_year + 2 * anchor.half_width
+
+
+def test_anchored_window_prevalence_is_the_centred_mean(tmp_path: Path) -> None:
+    """Each window must constrain the mean of its own five latent years."""
+    pm = pytest.importorskip("pymc")
+
+    n_year = 9
+    path = _anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0])
+    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path)
+    model = build_core_reduction_model(
+        _anchor_cells(n_year),
+        CoreReductionPriors(),
+        n_year=n_year,
+        recording_model="constant",
+        reduction_model="anchor",
+        anchor=anchor,
+    )
+    with model:
+        prior = pm.sample_prior_predictive(draws=4, random_seed=1)
+
+    latent = np.exp(np.asarray(prior.prior["anchor_log_prevalence_latent"].values))
+    windows = np.asarray(prior.prior["anchor_window_prevalence"].values)
+    width = 2 * anchor.half_width + 1
+    for position, start in enumerate(anchor.mid_year_idx):
+        expected = latent[..., start : start + width].mean(axis=-1)
+        assert np.allclose(windows[..., position], expected, rtol=1e-10)
+
+
+def test_anchored_model_requires_an_anchor() -> None:
+    pytest.importorskip("pymc")
+    with pytest.raises(ValueError, match="requires a SurveillanceAnchor"):
+        build_core_reduction_model(
+            _anchor_cells(5),
+            CoreReductionPriors(
+                reduction_mean=np.full(5, 0.35),
+                reduction_logit=logit(np.full(5, 0.35)),
+                reduction_sigma=np.full(5, 0.2),
+            ),
+            n_year=5,
+            reduction_model="anchor",
+        )
+
+
+def test_unanchored_model_rejects_a_stray_anchor(tmp_path: Path) -> None:
+    pytest.importorskip("pymc")
+    path = _anchor_csv(tmp_path, [2006], [12.5])
+    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path)
+    with pytest.raises(ValueError, match="pass reduction_model='anchor'"):
+        build_core_reduction_model(
+            _anchor_cells(9),
+            CoreReductionPriors(
+                reduction_mean=np.full(9, 0.35),
+                reduction_logit=logit(np.full(9, 0.35)),
+                reduction_sigma=np.full(9, 0.2),
+            ),
+            n_year=9,
+            reduction_model="year",
+            anchor=anchor,
+        )
+
+
+def test_anchor_obs_sigma_can_be_fixed(tmp_path: Path) -> None:
+    """Fixing the observation SD is the sensitivity axis for accuracy."""
+    pytest.importorskip("pymc")
+    path = _anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0])
+    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path)
+    model = build_core_reduction_model(
+        _anchor_cells(9),
+        CoreReductionPriors(),
+        n_year=9,
+        reduction_model="anchor",
+        anchor=anchor,
+        anchor_obs_sigma_fixed=0.1,
+    )
+    named = {rv.name for rv in model.free_RVs}
+    assert "anchor_obs_sigma" not in named
+    assert "anchor_obs_sigma" in model.named_vars
 
 
 def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:
