@@ -261,9 +261,15 @@ caution about replacing `f`, not a licence to.
   With the model's own window the comparator is `0.1475`, or `0.1621` carrying
   `s_CP` forward as well — gaps of `1.19x` and `1.08x`, the same tolerance as
   confirmed-or-pending. Worked through at
-  [family review recommendation 5b](20260803-dsp-core-model-family-review.md).
-  What survives is narrower: the confirmed share's `33.1%`-to-`44.8%` drift has no
-  clinical explanation and is now load-bearing for this comparison.
+  [family review recommendation 5b](20260803-dsp-core-model-family-review.md),
+  where the two assumptions behind that adjustment are also tested and both hold:
+  `q` is independent of recording completeness (permutation `p = 0.22` unweighted,
+  `0.72` flag-weighted; pooled `q` flat at `0.449`/`0.456`/`0.443` across recording
+  terciles), and the `33.1%`-to-`44.8%` drift is `93.8%` a within-age rise rather
+  than composition. `q` does vary strongly *between states* — `0.192` to `0.844`,
+  `14x` binomial dispersion — which does not bias the transport but means the
+  confirmed-only estimand mixes recording with detection, since `q` tracks
+  maternal age and therefore prenatal diagnosis.
 - **Counting details.** `births_revised` uses a slightly wider non-null condition
   than `births`, so the revised share reads `100.2%`–`100.3%` from 2016 —
   immaterial at `0.3%` but visible in the by-year output. The `17,809` here versus

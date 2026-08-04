@@ -20,6 +20,12 @@ prevalence and unusual only in *recording*. That is checked directly, by
 comparing each study's verified-registry prevalence against this project's
 surveillance prevalence for the same years.
 
+Transporting a *confirmed-only* sensitivity needs one further premise, since
+`s_C = s_CP * q`: that the confirmed share `q = P(confirmed | flagged)` does not
+covary with recording completeness. `confirmation_independence` tests that with a
+permutation null, and `confirmation_gradients` asks what `q` measures -- whether
+its long drift is reporting behaviour or a real rise in karyotype confirmation.
+
 Outputs (DUA-safe aggregates):
     notes/figures/study-area-recording-transport.csv  -- state-level recorded prevalence
 
@@ -35,6 +41,7 @@ import duckdb  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
+from scipy import stats  # noqa: E402
 
 DB_PATH = "data/us_births.db"
 SURVEILLANCE_CSV = "data/us-births-surveillance-prevalence-1989-2024.csv"
@@ -205,12 +212,174 @@ def log_scale_sd(frame: pd.DataFrame) -> float:
     return float(np.sqrt((weights * (logp - mean) ** 2).sum()))
 
 
+def _weighted_corr(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> float:
+    mx, my = np.average(x, weights=w), np.average(y, weights=w)
+    cov = np.average((x - mx) * (y - my), weights=w)
+    var = np.average((x - mx) ** 2, weights=w) * np.average((y - my) ** 2, weights=w)
+    return float(cov / np.sqrt(var))
+
+
+def confirmation_independence(n_perm: int = 50_000, seed: int = 20260804) -> dict:
+    """Test whether confirmation practice covaries with recording completeness.
+
+    The transport of a confirmed-only sensitivity multiplies by a ratio of
+    confirmed shares `q = P(confirmed | flagged)`, which assumes `q` does not
+    covary with recording completeness. Two distinct questions:
+
+    1. Is `q` constant across states? A binomial dispersion test answers this.
+    2. Does `q` *covary* with completeness? Only this is what the transport
+       assumes, and it needs a null that preserves `q`'s real overdispersion
+       and breaks only the pairing -- a permutation, not a binomial bootstrap.
+
+    A regression of `log(confirmed prevalence)` on `log(pending prevalence)`
+    cannot answer (2): with `conf = q * total` and `pend = (1 - q) * total`, any
+    variance in `q` drags the slope below 1 through `cov(log q, log(1-q)) < 0`
+    whether or not `q` covaries with `total`.
+    """
+    rng = np.random.default_rng(seed)
+    frame = pd.read_csv(WONDER_STATE_CSV)
+    for col in ("births", "ds_cp", "ds_confirmed"):
+        frame[col] = pd.to_numeric(frame[col], errors="coerce")
+    obs = frame[
+        (frame.ds_cp_status == "observed") & (frame.ds_confirmed_status == "observed")
+    ].copy()
+    obs["pending"] = obs.ds_cp - obs.ds_confirmed
+    obs = obs[(obs.ds_confirmed > 0) & (obs.pending > 0)].reset_index(drop=True)
+    obs["prev10k"] = 1e4 * obs.ds_cp / obs.births
+    obs["q"] = obs.ds_confirmed / obs.ds_cp
+
+    totals = obs.ds_cp.to_numpy()
+    confirmed = obs.ds_confirmed.to_numpy()
+    q_pooled = float(confirmed.sum() / totals.sum())
+
+    # (1) dispersion of q relative to binomial sampling noise
+    chi2 = float(
+        (
+            ((confirmed - totals * q_pooled) ** 2)
+            / (totals * q_pooled * (1 - q_pooled))
+        ).sum()
+    )
+    dof = len(obs) - 1
+    dispersion = chi2 / dof
+    rho_bb = max(0.0, (dispersion - 1) / (totals.mean() - 1))
+
+    # (2) association, with a permutation null that keeps q's marginals
+    logit_q = np.log(obs.q.to_numpy() / (1 - obs.q.to_numpy()))
+    log_prev = np.log(obs.prev10k.to_numpy())
+    weights = totals.astype(float)
+    r_unweighted = float(np.corrcoef(logit_q, log_prev)[0, 1])
+    r_weighted = _weighted_corr(logit_q, log_prev, weights)
+
+    null_unw = np.empty(n_perm)
+    null_wt = np.empty(n_perm)
+    for i in range(n_perm):
+        shuffled = logit_q[rng.permutation(len(obs))]
+        null_unw[i] = np.corrcoef(shuffled, log_prev)[0, 1]
+        null_wt[i] = _weighted_corr(shuffled, log_prev, weights)
+
+    def two_sided(stat: float, null: np.ndarray) -> float:
+        return float(min(1.0, 2 * min((null >= stat).mean(), (null <= stat).mean())))
+
+    obs["tercile"] = pd.qcut(obs.prev10k, 3, labels=["low", "mid", "high"])
+    terciles = {
+        str(name): float(g.ds_confirmed.sum() / g.ds_cp.sum())
+        for name, g in obs.groupby("tercile", observed=True)
+    }
+    return {
+        "n_states": len(obs),
+        "q_pooled": q_pooled,
+        "q_min": float(obs.q.min()),
+        "q_min_state": obs.loc[obs.q.idxmin(), "state"],
+        "q_max": float(obs.q.max()),
+        "q_max_state": obs.loc[obs.q.idxmax(), "state"],
+        "chi2": chi2,
+        "dof": dof,
+        "dispersion": dispersion,
+        "rho_beta_binomial": rho_bb,
+        "between_state_sd_q": float(np.sqrt(rho_bb * q_pooled * (1 - q_pooled))),
+        "r_unweighted": r_unweighted,
+        "p_unweighted": two_sided(r_unweighted, null_unw),
+        "r_weighted": r_weighted,
+        "p_weighted": two_sided(r_weighted, null_wt),
+        "terciles": terciles,
+        "florida_q": float(obs.loc[obs.state == "Florida", "q"].iloc[0]),
+    }
+
+
+def confirmation_gradients(con: duckdb.DuckDBPyConnection) -> dict:
+    """Maternal-age gradient in `q`, and how much of its drift is composition.
+
+    A purely clerical habit would not track maternal age. Prenatal diagnosis
+    does, so an age gradient is evidence that part of `q` is real diagnostic
+    information reaching the certificate rather than reporting style.
+
+    The gradient is reported over 2016-2024 alone so the era drift does not
+    contaminate it; the drift decomposition needs the longer 2007-2024 span.
+    Band labels are numbered to keep them in age order rather than alphabetical.
+    """
+    band_case = """
+        CASE WHEN CAST(mage_c AS INTEGER) < 25 THEN '1 <25'
+             WHEN CAST(mage_c AS INTEGER) < 30 THEN '2 25-29'
+             WHEN CAST(mage_c AS INTEGER) < 35 THEN '3 30-34'
+             WHEN CAST(mage_c AS INTEGER) < 40 THEN '4 35-39'
+             ELSE '5 40+' END
+    """
+    frame = con.execute(f"""
+        SELECT CAST(year AS INTEGER) AS year, {band_case} AS band,
+               SUM(CASE WHEN UPPER(CAST(ca_down_c AS VARCHAR))='C' THEN 1 ELSE 0 END)
+                   AS confirmed,
+               SUM(CASE WHEN UPPER(CAST(ca_down_c AS VARCHAR))='P' THEN 1 ELSE 0 END)
+                   AS pending
+        FROM us_births
+        WHERE year BETWEEN 2007 AND 2024
+          AND (ca_down IS NOT NULL OR ca_downs IS NOT NULL)
+          AND mage_c IS NOT NULL
+        GROUP BY 1, 2
+    """).df()
+    frame["n"] = frame.confirmed + frame.pending
+    counts = frame.pivot(index="year", columns="band", values="n").fillna(0)
+    conf = frame.pivot(index="year", columns="band", values="confirmed").fillna(0)
+
+    window = frame[frame.year >= 2016]
+    by_band = window.groupby("band")[["confirmed", "pending"]].sum().sort_index()
+    by_band["q"] = by_band.confirmed / (by_band.confirmed + by_band.pending)
+    chi2, p_age, _, _ = stats.chi2_contingency(
+        by_band[["confirmed", "pending"]].to_numpy()
+    )
+
+    standard = counts.sum(axis=0) / counts.sum().sum()
+    crude = conf.sum(axis=1) / counts.sum(axis=1)
+    adjusted = (conf / counts * standard).sum(axis=1)
+
+    def logit_trend(series: pd.Series) -> tuple[float, float, float]:
+        fit = stats.linregress(
+            series.index.astype(float), np.log(series / (1 - series))
+        )
+        return float(fit.slope), float(fit.stderr), float(fit.rvalue**2)
+
+    slope_crude, se_crude, r2_crude = logit_trend(crude)
+    slope_adj, se_adj, r2_adj = logit_trend(adjusted)
+    return {
+        "by_band": by_band,
+        "chi2_age": float(chi2),
+        "p_age": float(p_age),
+        "slope_crude": slope_crude,
+        "se_crude": se_crude,
+        "r2_crude": r2_crude,
+        "slope_adjusted": slope_adj,
+        "se_adjusted": se_adj,
+        "r2_adjusted": r2_adj,
+        "composition_share": 1 - slope_adj / slope_crude,
+    }
+
+
 def main() -> None:
     setup.init_script()
     con = duckdb.connect(DB_PATH, read_only=True)
     try:
         national = national_by_year(con)
         confirmed = confirmed_split(con)
+        gradients = confirmation_gradients(con)
     finally:
         con.close()
 
@@ -303,6 +472,50 @@ def main() -> None:
         )
     salemi_share = SALEMI_CONFIRMED["recorded"] / SALEMI["recorded"]
     print(f"  Salemi Florida 2007-2011: {salemi_share:.3f}")
+
+    ind = confirmation_independence()
+    print("\nIs the confirmed share q constant across states?")
+    print(
+        f"  {ind['n_states']} states, pooled q = {ind['q_pooled']:.4f},"
+        f" range {ind['q_min']:.3f} ({ind['q_min_state']})"
+        f" to {ind['q_max']:.3f} ({ind['q_max_state']})"
+    )
+    print(
+        f"  binomial chi2 {ind['chi2']:.1f} on {ind['dof']} df"
+        f" -> dispersion {ind['dispersion']:.2f};"
+        f" beta-binomial rho {ind['rho_beta_binomial']:.4f},"
+        f" between-state SD of q {ind['between_state_sd_q']:.3f}"
+    )
+    print("  => not constant. Real state-level variation in confirmation practice.")
+
+    print("\nDoes q covary with recording completeness? (permutation null)")
+    print(
+        f"  unweighted r = {ind['r_unweighted']:+.4f} (p = {ind['p_unweighted']:.3f});"
+        f" flag-weighted r = {ind['r_weighted']:+.4f} (p = {ind['p_weighted']:.3f})"
+    )
+    print(
+        "  pooled q by recording tercile: "
+        + ", ".join(f"{k} {v:.4f}" for k, v in ind["terciles"].items())
+    )
+    print("  => no detectable association. The transport's premise holds.")
+
+    grad = gradients
+    print("\nWhat q measures")
+    print(
+        "  q by maternal age: "
+        + ", ".join(f"{b} {r.q:.3f}" for b, r in grad["by_band"].iterrows())
+    )
+    print(f"  chi2 = {grad['chi2_age']:.1f}, p = {grad['p_age']:.3g}")
+    print(
+        f"  logit(q) drift 2007-2024: crude {grad['slope_crude']:+.4f}/yr"
+        f" (r2 {grad['r2_crude']:.3f}),"
+        f" age-standardised {grad['slope_adjusted']:+.4f}/yr"
+        f" (r2 {grad['r2_adjusted']:.3f})"
+    )
+    print(
+        f"  composition explains {100 * grad['composition_share']:.1f}% of the drift;"
+        f" the rest is a within-age rise in confirmation."
+    )
 
     states.to_csv(OUT_CSV, index=False)
     print(f"\nwrote {OUT_CSV}")

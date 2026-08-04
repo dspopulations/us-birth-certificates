@@ -15,6 +15,7 @@ NBER
 NCHS
 NDSCR
 NVSS
+TBDR
 
 # NVSS / birth-certificate variables and codings
 AIAN
@@ -144,6 +145,8 @@ sigmas
 sigmoidal
 sklearn
 stratifier
+tercile
+terciles
 thresholded
 trendline
 trendlines

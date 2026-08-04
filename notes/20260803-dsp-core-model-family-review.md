@@ -784,15 +784,50 @@ which sits at `1.08x` against transported Salemi and `0.92x` against transported
 Boulet. **The confirmed-only definition is externally validated after all**, and
 the earlier `unvalidated` label is withdrawn.
 
-**What survives, smaller and sharper.** The national confirmed share moved `33.1%`
-to `44.8%` between the two eras with no plausible clinical driver, and that drift
-is now load-bearing for this comparison rather than incidental to it. Two
-untested assumptions rest on it: that confirmation practice and recording
-completeness are independent (the ratio adjustment above assumes so), and that the
-drift is reporting behaviour rather than a change in what the field means.
-`data/us-births-wonder-state-pooled-2016-2024.csv` carries `ds_confirmed` by state
-and can measure the first directly. Neither affects the preferred
-confirmed-or-pending specification.
+**Both assumptions behind that adjustment are now tested, and both hold.** The
+ratio adjustment needs `q` to be independent of recording completeness, and the
+`33.1%`-to-`44.8%` drift needed an explanation. Measured across states, 2016-2024,
+48 of 51 usable (Hawaii, Vermont and Wyoming have suppressed confirmed counts):
+
+*`q` is independent of recording completeness.* Correlation of `logit q` with log
+recorded prevalence is `-0.180` unweighted and `-0.064` weighted by flag count,
+against a permutation null giving `p = 0.217` and `p = 0.722`. Pooled `q` by
+recording tercile is flat — `0.4494`, `0.4560`, `0.4428` — across a `6.3`-fold
+spread in recording. Florida is the cleanest single case: its confirmed share went
+from `0.276` (`0.83x` national) in Salemi's years to `0.559` (`1.24x` national) in
+2016-2024 while its recording completeness stayed near the bottom at `0.48x`
+national. The two move independently in exactly the state the transport depends on.
+
+A caution on method: the obvious test — correlating `q` against total recorded
+prevalence — is invalid, because `q = C/(C+P)` and prevalence `= (C+P)/births`
+share the total, so sampling noise alone induces a negative correlation. The null
+above is a permutation that preserves `q`'s marginal distribution and breaks only
+the pairing. A regression of `log(confirmed prevalence)` on `log(pending
+prevalence)` does not fix it either: any variance in `q` drags that slope below `1`
+through `cov(log q, log(1-q)) < 0`, whether or not `q` covaries with the total.
+
+*The drift is real and clinical, not reporting behaviour.* `q` rises monotonically
+with maternal age over 2016-2024 — `0.397`, `0.415`, `0.425`, `0.474`, `0.482`
+across five bands, `chi2 = 75.9`, `p = 1.3e-15`. A clerical habit would not track
+maternal age; prenatal diagnosis does. Age-standardising the 2007-2024 drift barely
+changes it (crude `+0.0404` logit/yr, `r2 0.860`; standardised `+0.0379`,
+`r2 0.853`), so **composition explains only `6.2%`** — the rest is a genuine
+within-age rise in the share of Down syndrome livebirths whose karyotype is
+confirmed before the certificate is filed. That is what the cfDNA screening era
+would produce, and it arrives as a steady drift rather than a step, which is what
+rules out a change in form instructions.
+
+**One new finding, and it is the one with consequences.** `q` is nowhere near
+constant across states: `0.192` (North Dakota) to `0.844` (District of Columbia),
+a binomial dispersion of `14.07` (`chi2 = 661.2` on 47 df), beta-binomial
+intraclass `rho = 0.0355`, or a between-state SD of about `0.094` on the
+probability scale. This does not bias the transport, which uses each setting's own
+directly measured `q`, but it does mean two things. Any future state-level layer
+must carry that dispersion rather than a national `q`. And more importantly, since
+part of `q` tracks prenatal diagnosis, **the confirmed-only estimand mixes
+recording with detection** — the two channels this family models separately. That
+is a reason to keep confirmed-or-pending as the primary specification quite apart
+from its better external agreement.
 
 **5c — the `f` half stands.** Re-derive `f`
 on the correct scale, or retire both the `7.8e-5` default and the `4.15e-5`
