@@ -136,12 +136,14 @@ says plainly not to report it.
 **Numerical.** A free SD admits a degenerate mode. Its half-normal prior does not
 prevent it reaching `0.84`, and at that value the observation equation contributes
 almost nothing to the log-probability, so the anchor effectively switches off.
-Latent prevalence then runs up until $\theta\eta$ exceeds one for every maternal
-age, where `p_ds_lb` is clipped — a flat region with no gradient, and therefore an
-absorbing state. Recording sensitivity collapses towards zero to keep the product
-near the observed recorded rate. One chain in four escaped there in a `DSP009` fit
-at 4,000 draws per chain, and pooled convergence statistics did not make it
-obvious: three healthy chains still gave a max R-hat of `1.0111`.
+Latent prevalence then runs up and recording sensitivity collapses towards zero to
+keep the product near the observed recorded rate. This is a genuine local basin
+about `291` log units down rather than a numerical artefact: it fits the recorded
+cell counts *better*, by `84` log units, and pays for that by discarding the
+anchor. It is the $\eta s$ ridge, and the anchor is what holds `s` at `0.335`. One
+chain in four reached it in a `DSP009` fit at 4,000 draws per chain, and pooled
+convergence statistics did not make it obvious: three healthy chains still gave a
+max R-hat of `1.0111`.
 
 The fixed value is an **assumption about surveillance accuracy, not an estimate**.
 Report across the sensitivity axis and say which value was chosen:

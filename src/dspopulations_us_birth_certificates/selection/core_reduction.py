@@ -80,17 +80,22 @@ DEFAULT_ANCHOR_OBS_SIGMA = 0.05
 # Numerical: a free SD admits a degenerate mode. Its HalfNormal prior does not
 # stop it reaching 0.84, and at that value the observation equation contributes
 # almost nothing to the log-probability, so the anchor effectively switches off.
-# Latent prevalence then runs up until theta * eta exceeds one for every age,
-# where p_ds_lb is clipped -- a flat region with no gradient, and so an absorbing
-# state. One chain in four escaped there in a DSP009 fit at 4,000 draws. See
+# The mode is a genuine local basin about 291 log units down, not a numerical
+# artefact: decomposing the log-probability there shows it fits the recorded cell
+# counts *better*, by 84 log units, and pays for it by discarding the anchor. That
+# is the eta * s ridge the project already documents -- the cell likelihood alone
+# prefers a lower s and a higher total, and the anchor is what holds s at 0.335.
+# One chain in four reached it in a DSP009 fit at 4,000 draws. See
 # notes/20260804-dsp009-post-anchor-recording-drift.md and
 # scripts/audit_anchored_chain_health.py.
 #
 # 0.05 is about four times the internal-consistency value, so it is the
 # conservative end of that comparison rather than a tight assertion. It remains an
 # assumption: report across the sensitivity axis (0.05 / 0.10 / 0.20) and say
-# which value was chosen. Pass anchor_obs_sigma_fixed=None to estimate it instead,
-# which re-opens the mode.
+# which value was chosen. Pass anchor_obs_sigma_fixed=None to estimate it instead.
+# That re-opens the basin, though it is no longer a trap: the barrier below
+# restores the escape gradient and expels chains from it. The reporting argument
+# above stands on its own regardless.
 DEFAULT_ANCHOR_OBS_SIGMA_FIXED = 0.05
 
 # Barrier on theta * eta exceeding one, which the Binomial cannot accept. The clip

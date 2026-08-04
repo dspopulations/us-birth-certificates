@@ -281,9 +281,9 @@ never exceeds `0.88` — against `50.9` in the escaped chain. **No number record
 anywhere in this repository from an anchored fit is affected.**
 
 The escaped chain sat in the mode for **100% of its draws**, so it entered during
-tuning and never left. That is what an absorbing flat region predicts, and it also
-means the failure is not a transient excursion that longer sampling would average
-away.
+tuning and never left. That is what a deep basin behind a real barrier predicts,
+and it also means the failure is not a transient excursion that longer sampling
+would average away.
 
 ### What the mode actually requires
 
@@ -458,12 +458,12 @@ written up.
   value understates the problem by a wide margin — extending the run took it to
   `1.5299`. A marginal R-hat in this family should be treated as a reason to
   extend the run, never as a near-pass.
-- **`anchor_obs_sigma` should not be estimated.** Beyond the reporting argument,
-  a free observation SD admits the degenerate mode above. Consider making
-  `--anchor-obs-sigma-fixed` the default for anchored models, or replacing the
-  `theta * eta` clip with a formulation that has a gradient — a soft penalty, or a
-  reparameterisation of `eta` that cannot exceed `1 / max(theta)` — so the flat
-  region stops being an absorbing state.
+- **`anchor_obs_sigma` should not be estimated**, on the reporting argument
+  alone. A free observation SD also admits the degenerate mode above, which is why
+  `--anchor-obs-sigma-fixed` is now the default and why the `theta * eta` clip now
+  carries a smooth barrier. Both are in place, and either is independently
+  sufficient against the mode; the reporting argument is what keeps the SD fixed
+  even so.
 - **All standard-profile fits carried divergences**, and
   `scripts/fit_core_reduction_model.py` never reads `sample_stats.diverging` — the
   review's Finding 7 item 2. The counts here were extracted by hand. Notably the
