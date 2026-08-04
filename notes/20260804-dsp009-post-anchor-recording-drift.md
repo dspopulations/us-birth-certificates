@@ -19,10 +19,11 @@ is the general form of the problem.
 post-window prevalence/recording allocation explicit, and shows that forbidding it
 biases the 2016-2024 total down by about `1.8%` while narrowing its interval by a
 factor of `1.4`. Separately, and more consequentially, fitting it properly exposed
-a **degenerate mode in the anchored likelihood that `DSP007` and `DSP008` also
-admit** — one chain in four escaped to a region where the surveillance anchor
-effectively switches off. That section should be read before any anchored result is
-cited, including results already recorded elsewhere.
+a **degenerate mode in the anchored likelihood** — one chain in four escaped to a
+region where the surveillance anchor effectively switches off. A per-chain audit of
+all 19 anchored fits in the repository confirms **no existing `DSP007` or `DSP008`
+result is contaminated**, and identifies the three conditions the mode jointly
+requires.
 
 ## Question
 
@@ -173,18 +174,63 @@ windows are *mutually consistent*, never whether the surveillance prevalences ar
 preference and the numerical requirement coincide, so every fit reported below
 fixes it.
 
-**`DSP009` did not create this mode; it made it reachable.** The escape needs
-`anchor_obs_sigma` to inflate, which is available in `DSP007` and `DSP008` too.
-What the drift adds is four extra free directions in the tail, which shorten the
-path to it. `DSP008`'s clean extended fit — max R-hat `1.0012`, zero divergences —
-is therefore evidence that its four chains did not find the mode, not evidence
-that the mode is absent. The all-recording corner also converged with the SD free,
-because pinning prevalence flat removes the runaway direction, which is consistent
-with the same mechanism.
-
 An earlier draft of this note reported `DSP009` results from the standard
 reporting profile. Those are withdrawn: that run had not yet found the second
 mode, so its interval was an artefact of incomplete exploration.
+
+### No existing anchored run is contaminated
+
+`scripts/audit_anchored_chain_health.py` audits every anchored fit under
+`output/` per chain rather than through pooled statistics, which is the only way
+this failure is visible — three healthy chains out of four produced a max R-hat of
+`1.0111`, indistinguishable from a run that merely needs lengthening. It flags a
+chain by the share of its draws with `eta > 1.5` and by between-chain dispersion in
+`recording_s`, and exits non-zero under `--strict`.
+
+**All 18 anchored runs other than the one above are CLEAN.** That includes both
+frozen `DSP007` runs, all five frozen `DSP008` runs, and the extended fits reported
+here. In every clean run the four chains agree on `recording_s` to better than
+`0.3%`, `anchor_obs_sigma` sits at `0.012`-`0.014` where it is free, and `eta`
+never exceeds `0.88` — against `50.9` in the escaped chain. **No number recorded
+anywhere in this repository from an anchored fit is affected.**
+
+The escaped chain sat in the mode for **100% of its draws**, so it entered during
+tuning and never left. That is what an absorbing flat region predicts, and it also
+means the failure is not a transient excursion that longer sampling would average
+away.
+
+### What the mode actually requires
+
+Auditing across specifications turns the mechanism into a factorial result. All
+rows are 4 chains × 4,000 draws at `target_accept` `0.99`, the settings at which the
+mode appears:
+
+| Model | Drift | Observation SD | Prevalence tail | Verdict |
+| --- | --- | --- | --- | --- |
+| `DSP007` | none | free | forecast | CLEAN |
+| `DSP008` | none | free | forecast | CLEAN |
+| `DSP009` | `post_anchor` | free | forecast | **DEGENERATE** |
+| `DSP009` | `post_anchor` | free | flat | CLEAN |
+| `DSP009` | `post_anchor` | fixed `0.05` | forecast | CLEAN |
+| `DSP009` | `post_anchor` | fixed `0.10` | forecast | CLEAN |
+
+Three ingredients are jointly necessary at these run lengths: a free observation
+SD, a drifting `s`, and a forecasting rather than pinned prevalence tail. Remove any
+one and the mode does not appear. So the earlier framing — that the drift merely
+shortens a path `DSP007` and `DSP008` were already on — is **too pessimistic about
+those two**. At matched settings neither finds it, and the drift is doing real work
+in opening the route.
+
+What cannot be concluded is that the mode is *absent* from the `DSP007`/`DSP008`
+posteriors. A clean verdict is evidence about what four chains explored, not a proof
+of unimodality, and ten of the clean runs have fewer than 4,000 draws per chain —
+precisely the regime in which this mode was invisible in `DSP009`. The audit prints
+that caveat rather than letting a clean row read as a guarantee.
+
+One incidental finding: the frozen `output/refit2004/DSP008-obs0.05` run carries
+max R-hat `1.0147`, above the `<1.01` gate, and nothing in the repository records
+it. It is clean on the per-chain audit, so this is a convergence shortfall rather
+than the mode.
 
 ## Results
 
@@ -395,8 +441,15 @@ python scripts/fit_core_reduction_model.py DSP009 --profile reporting --years 20
 
 Repeat with `--anchor-obs-sigma-fixed 0.10` for the second panel. Omitting
 `--anchor-obs-sigma-fixed` reproduces the degenerate mode; run it that way only to
-confirm the diagnosis, and inspect **per-chain** means rather than the pooled
-summary when doing so.
+confirm the diagnosis.
+
+The per-chain audit covers every anchored fit under `output/` and needs no
+arguments. Pass directories to narrow it, and `--strict` to make a contaminated
+run fail a pipeline:
+
+```bash
+python scripts/audit_anchored_chain_health.py --strict
+```
 
 Seeds are deliberately distinct across the three rows. The review recorded that a
 scenario fit sharing seed 47 with its baseline had its MCSE-based materiality
@@ -425,14 +478,14 @@ before summarising.
    does not reach. Curate the control set against published NBDPN prevalence, and
    test the shared-factor restriction against the anchor over 2016-2018, where the
    two overlap.
-4. **Close the degenerate mode in the anchored likelihood, and check whether
-   `DSP007`/`DSP008` have ever silently visited it.** Fixing `anchor_obs_sigma`
-   is sufficient in practice and is preferred on reporting grounds anyway, so make
-   it the default for anchored models. The underlying defect is the gradient-free
-   clip, and removing that is the durable fix. Re-examine the frozen anchored runs
-   for chains sitting in the low-`s`, high-prevalence mode — a per-chain check, not
-   a pooled summary, since three good chains out of four still produced a
-   marginal-looking R-hat of `1.0111`.
+4. **Close the degenerate mode in the anchored likelihood.** Auditing the frozen
+   runs is **done** — none is contaminated — so what remains is prevention.
+   Fixing `anchor_obs_sigma` is sufficient in practice and preferred on reporting
+   grounds anyway, so make it the default for anchored models. The underlying
+   defect is the gradient-free clip; replacing it with a soft penalty or a
+   reparameterisation of `eta` bounded by `1 / max(theta)` is the durable fix, and
+   would let the observation SD stay free for anyone who wants it. Run
+   `scripts/audit_anchored_chain_health.py --strict` after any anchored refit.
 5. **Read divergences at fit time** and fail the gate on them, alongside the
    other verification items in the review's recommendation 7. Add a per-chain
    agreement check too: this failure was invisible in the pooled summary but
