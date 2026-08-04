@@ -162,6 +162,23 @@ its draws with $\eta > 1.5$ and by between-chain dispersion in `recording_s`, an
 exits non-zero when a run is not clean. All anchored fits predating this default
 have been audited and none is contaminated.
 
+Separately, the clip that keeps $\theta\eta$ a valid Binomial probability now
+carries a smooth barrier alongside it, because a clip is flat and cells where it
+binds stop contributing gradient in $\eta$ — which is what let a chain *stay* in the
+anchor-off mode once tuning had put it there. The barrier is
+$-w\sum\mathrm{softplus}\!\left(k(\theta\eta-1)\right)/k$ with $k=200$ and
+$w=1000$, inert while $\theta\eta$ is a valid probability and growing with a
+non-zero gradient once it is not.
+
+The calibration leaves enormous headroom: $\theta$ peaks at `0.038`, so $\theta\eta$
+reaches one only near $\eta=26$, against a posterior $\eta$ of about `0.6`. At
+$\eta=1$ — the $\rho<0$ diagnostic the model deliberately permits — the barrier
+evaluates to $e^{-194}$, zero in double precision. It cannot perturb a reportable
+fit, and does not: at matched seeds the 2016-2024 total moves by about two Monte
+Carlo standard errors and `recording_s` agrees to four decimal places. Fixing the
+observation SD and repairing the clip are **independently sufficient** to close the
+mode, and both are in place.
+
 ## DSP009 post-window allocation controls
 
 Surveillance windows are centred, so with mid-years running to 2018 the anchored

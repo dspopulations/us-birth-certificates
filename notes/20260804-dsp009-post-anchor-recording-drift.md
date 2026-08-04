@@ -150,20 +150,46 @@ figures; one escaped:
 | `prevalence_year` 2004, per 10,000 | `12.69` | `720.9` |
 | `eta_year` 2004 | `0.702` | `39.88` |
 
-The escape route is legible. `anchor_obs_sigma` is estimated, with a
-`HalfNormal(0.05)` prior that does not prevent it reaching `0.84`. At that value
-the surveillance observation equation contributes almost nothing to the
-log-probability, so **the anchor switches off** and latent prevalence is
-unconstrained. Prevalence then runs up until `theta * eta` exceeds one for every
-age, where the guard at `core_reduction.py` clips `p_ds_lb` — and a clip is a
-**flat region with no gradient**, so there is nothing to push a chain back out.
-Recording sensitivity collapses to `0.006` to keep the product near the observed
-recorded rate. The failing coordinates are the *anchored* years, not the drifting
-tail, which is what makes this a defect in the anchor rather than in the drift.
+### What the escaped mode actually is
 
-The clip's comment states that it "never binds at posterior scale (eta is around
-`0.6`) but keeps prior-predictive and early tuning draws well defined." That is
-true of the intended mode and false of this one.
+Decomposing the log-probability at each chain's mean settles the mechanism, and it
+is not the one an earlier draft of this note asserted.
+
+| Component | Chains 0, 2, 3 | Chain 1 | Delta |
+| --- | ---: | ---: | ---: |
+| Cell Binomial log-likelihood | `-3,596.8` | **`-3,513.1`** | `+83.7` |
+| Surveillance observation log-likelihood | `+41.5` | `-157.2` | `-198.7` |
+| `anchor_obs_sigma` prior | `+2.74` | `-138.92` | `-141.66` |
+| `anchor_level_sigma` prior | `+3.51` | `-17.77` | `-21.27` |
+| `recording_s_logit` prior | `-1.15` | `-13.99` | `-12.84` |
+| **Total** | | | **`≈ -291`** |
+
+The escaped mode **fits the recorded counts better**, by `84` log units. It pays
+for that by discarding the surveillance anchor, which an inflated
+`anchor_obs_sigma` makes affordable: at `0.84` the observation equation contributes
+almost nothing, and the prior on the SD is the single largest cost in the table.
+
+So this is the `eta * s` ridge the whole project documents. The cell likelihood on
+its own prefers a lower `s` and a higher total — consistent with Boulet's
+record-linkage sensitivity and with the bounds in the group note, both of which
+suggest the fitted `s` sits at the low end. The anchor is what holds `s` at `0.335`.
+Weaken it and the likelihood slides down the ridge.
+
+It is a **genuine local mode, about `291` log units down**, not a competitive one
+and not a flat plateau. A chain reaches it during tuning, when step sizes are still
+large, and then cannot get back: returning requires `anchor_obs_sigma` to shrink
+while `eta` is still wrong, which is expensive in both terms at once. Tighter
+stepping at `target_accept` `0.99` made return *less* likely, which is why extending
+the run made the diagnostics worse rather than better.
+
+**An earlier draft of this note attributed the mode to the `theta * eta` clip.
+That was wrong.** The clip binds in `16%` of cells there, so the mode is not
+sustained by a gradient-free plateau — `84%` of cells still supply gradient, and the
+mode is a real basin with a real barrier around it. What the clip *does* do is
+weaken the escape: measured on the same graph, the restoring gradient in the latent
+level drops roughly fourteenfold as `eta` crosses `26` and the clip starts to bind.
+So the clip helps hold a chain there without having put it there. That distinction
+matters because it changes the remedy — see below.
 
 **Fixing the observation SD closes it.** Re-running the same extended
 configuration with `--anchor-obs-sigma-fixed 0.05` gives max R-hat `1.0015` and
@@ -182,6 +208,57 @@ without arguments now report an interval roughly twice as wide as before, becaus
 they have stopped asserting that surveillance prevalence is measured to about one
 percent. The mean barely moves — `44,589` against `44,544` for `DSP008` — so this
 is a correction to reported precision, not to the level.
+
+### The clip is now a barrier with a gradient
+
+Fixing the observation SD removes today's route to the mode. It does not remove the
+flat region, and a flat region is a hazard for any future specification that
+reaches it. The clip is therefore retained only for what it is needed for — keeping
+`theta * eta` a valid Binomial probability — with a smooth barrier alongside it that
+supplies the gradient the clip destroys:
+
+```text
+overshoot = sum( softplus(k * (theta * eta - 1)) / k )
+Potential  = -w * overshoot            # k = 200, w = 1000
+```
+
+`softplus(k x) / k` is `~0` for `x` well below zero and `~x` well above, so the term
+is inert while `theta * eta` is a valid probability and grows with a non-zero
+gradient once it is not. The calibration matters and is generous: `theta` peaks at
+`0.038` at age 50, so `theta * eta` reaches one only near `eta = 26`, against a
+posterior `eta` of about `0.6`. Even at `eta = 1` — the anchored prevalence equalling
+the Morris no-reduction expectation, which the model deliberately permits as a
+`rho < 0` diagnostic — the largest `theta * eta` is `0.038` and the barrier
+evaluates to `exp(-194)`, which is zero in double precision. It cannot perturb any
+fit that could be reported, and two tests pin that: the barrier term is below
+`1e-30` at plausible values and the log-probability matches the clip-only graph to a
+relative `1e-12`, while past the clip it costs hundreds of log units and strengthens
+the restoring gradient.
+
+One side effect worth knowing: PyMC warns that potentials are ignored during
+prior-predictive sampling, so anchored fits now emit that warning. It is harmless
+here — prior draws of the latent level stay near the anchored prevalence and never
+approach `eta = 26` — and the review already records that prior-predictive draws are
+saved but never consumed.
+
+**The barrier alone rescues the configuration that failed.** Re-running the exact
+fit that went degenerate — `DSP009` at 4,000 draws with
+`--anchor-obs-sigma-estimated`, so the observation SD is free and the old escape
+route is open — now gives max R-hat `1.0019` and minimum ESS `1,797`, against
+`1.5299` and `7` before. All four chains agree: `anchor_obs_sigma` `0.0123`-`0.0125`,
+`recording_s` `0.335`, `eta` `0.702`. The per-chain audit returns CLEAN.
+
+The mechanism is confirmed by what the barrier did *not* do. The largest overshoot
+term across all 16,000 retained draws is `1.8e-85`, so the barrier never engaged in
+the posterior at all. It engaged only during tuning, and expelled the chain that
+would otherwise have been trapped. So the basin is created by the anchor being
+discardable, but a chain *stays* there because the clip flattens the escape
+gradient. Repairing either is sufficient, and both are now in place.
+
+Fitted results are unchanged, as they must be. At matched seeds and settings the
+2016-2024 total moves `44,544` to `44,555` for `DSP008` and `45,370` to `45,359` for
+`DSP009` — about two Monte Carlo standard errors, in opposite directions, with `s`
+agreeing to four decimal places and interval widths to `0.02` percentage points.
 
 An earlier draft of this note reported `DSP009` results from the standard
 reporting profile. Those are withdrawn: that run had not yet found the second
@@ -487,15 +564,14 @@ before summarising.
    does not reach. Curate the control set against published NBDPN prevalence, and
    test the shared-factor restriction against the anchor over 2016-2018, where the
    two overlap.
-4. **Replace the gradient-free clip.** Auditing the frozen runs is **done** —
-   none is contaminated — and fixing `anchor_obs_sigma` is **done** and now the
-   default, so the mode is closed in practice. What remains is the underlying
-   defect: `pt.clip` on `theta * eta` creates a flat region with no gradient, and
-   any future specification that reaches it will stick there. A soft penalty, or a
-   reparameterisation of `eta` bounded by `1 / max(theta)`, would remove the
-   absorbing state and let the observation SD be estimated safely by anyone who
-   wants it. Until then, run `scripts/audit_anchored_chain_health.py --strict`
-   after any anchored refit that opts out of the fixed SD.
+4. **The anchor-off mode is closed; keep auditing anyway.** All three remedies
+   are **done**: the frozen runs are audited and clean, the observation SD is fixed
+   by default, and the clip now carries a smooth barrier that restores the escape
+   gradient. Either of the last two is independently sufficient. What remains is
+   habit rather than work — run `scripts/audit_anchored_chain_health.py --strict`
+   after any anchored refit, since the audit costs seconds and this failure was
+   invisible in every pooled statistic. If a future specification wants a free
+   observation SD back, it is now safe to try, but check it per chain first.
 5. **Read divergences at fit time** and fail the gate on them, alongside the
    other verification items in the review's recommendation 7. Add a per-chain
    agreement check too: this failure was invisible in the pooled summary but

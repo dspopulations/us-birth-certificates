@@ -601,6 +601,92 @@ def test_anchor_obs_sigma_can_still_be_estimated(tmp_path: Path) -> None:
     assert "anchor_obs_sigma" in {rv.name for rv in estimated.free_RVs}
 
 
+def _inflated_level_point(model: Any, multiplier: float) -> dict[str, Any]:
+    """The initial point with latent prevalence scaled by ``multiplier``."""
+    point = dict(model.initial_point())
+    point["anchor_log_level_start"] = np.array(
+        float(point["anchor_log_level_start"]) + np.log(multiplier)
+    )
+    return point
+
+
+def test_anchor_overshoot_barrier_is_inert_at_plausible_eta(tmp_path: Path) -> None:
+    """The barrier must not perturb any fit that could actually be reported.
+
+    theta peaks near 0.038, so theta * eta reaches one only around eta = 26. A
+    posterior eta is about 0.6, and eta = 1 -- the anchored prevalence equalling the
+    Morris no-reduction expectation, which the model deliberately permits as a
+    diagnostic -- is still well over an order of magnitude away. The barrier term
+    has to be exactly zero there, not merely small.
+    """
+    pytest.importorskip("pymc")
+    import dspopulations_us_birth_certificates.selection.core_reduction as module
+
+    model = _obs_sigma_model(tmp_path)
+    assert "p_ds_lb_overshoot_barrier" in model.named_vars
+    assert float(model["p_ds_lb_overshoot"].eval()) < 1e-30
+
+    # Compare against the clip-only behaviour the barrier replaced. The barrier
+    # term is identically zero here, but adding any term reorders the sum in the
+    # log-probability graph, so the totals agree to floating point rather than
+    # bit-for-bit. A relative tolerance of 1e-12 is far tighter than any effect the
+    # barrier could have and far looser than summation-order noise.
+    saved = module.ANCHOR_OVERSHOOT_PENALTY
+    try:
+        module.ANCHOR_OVERSHOOT_PENALTY = 0.0
+        clip_only = _obs_sigma_model(tmp_path)
+    finally:
+        module.ANCHOR_OVERSHOOT_PENALTY = saved
+
+    with_barrier_logp = model.compile_logp()
+    clip_only_logp = clip_only.compile_logp()
+    for multiplier in (1.0, 10.0):
+        point = _inflated_level_point(model, multiplier)
+        assert float(with_barrier_logp(point)) == pytest.approx(
+            float(clip_only_logp(point)), rel=1e-12
+        )
+
+
+def test_anchor_overshoot_barrier_restores_gradient_past_the_clip(
+    tmp_path: Path,
+) -> None:
+    """Past the clip the barrier must cost, and must push the level back down.
+
+    The clip keeps the Binomial valid but is flat, so cells where it binds stop
+    contributing gradient in eta. That is what removed the restoring force holding
+    a chain out of the anchor-off mode. The barrier has to supply one.
+    """
+    pytest.importorskip("pymc")
+    import dspopulations_us_birth_certificates.selection.core_reduction as module
+
+    model = _obs_sigma_model(tmp_path)
+    saved = module.ANCHOR_OVERSHOOT_PENALTY
+    try:
+        module.ANCHOR_OVERSHOOT_PENALTY = 0.0
+        clip_only = _obs_sigma_model(tmp_path)
+    finally:
+        module.ANCHOR_OVERSHOOT_PENALTY = saved
+
+    names = [value.name for value in model.value_vars]
+    level_index = names.index("anchor_log_level_start")
+    with_logp, with_grad = model.compile_logp(), model.compile_dlogp()
+    clip_logp, clip_grad = clip_only.compile_logp(), clip_only.compile_dlogp()
+
+    # Far enough past eta = 26 that the clip binds at the oldest modelled age.
+    point = _inflated_level_point(model, 400.0)
+    assert float(model["p_ds_lb_overshoot"].eval()) < 1e-30  # still inert at default
+
+    barrier_cost = float(with_logp(point)) - float(clip_logp(point))
+    assert barrier_cost < -100.0
+
+    gradient = float(np.asarray(with_grad(point))[level_index])
+    clip_gradient = float(np.asarray(clip_grad(point))[level_index])
+    # Restoring: pushes the latent level down, and harder than the clip alone.
+    assert gradient < 0.0
+    assert abs(gradient) > abs(clip_gradient)
+    assert np.isfinite(np.asarray(with_grad(point))).all()
+
+
 def _drift_cells(n_year: int) -> pd.DataFrame:
     """Anchored exact-age cells split by certificate revision, as DSP009 needs."""
     rows = []

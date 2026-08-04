@@ -93,6 +93,22 @@ DEFAULT_ANCHOR_OBS_SIGMA = 0.05
 # which re-opens the mode.
 DEFAULT_ANCHOR_OBS_SIGMA_FIXED = 0.05
 
+# Barrier on theta * eta exceeding one, which the Binomial cannot accept. The clip
+# that keeps it valid is flat, so cells where it binds stop contributing gradient
+# in eta; these restore one. softplus(k*x)/k is inert for x well below zero and
+# ~linear above, so the sharpness sets how abruptly the barrier engages and the
+# penalty sets how hard.
+#
+# Both are calibrated to be inert at any plausible parameter value. theta peaks at
+# about 0.038 (age 50), so theta * eta reaches one only near eta = 26 -- against a
+# posterior eta around 0.6, and against eta = 1 (rho = 0, the anchored prevalence
+# equalling the Morris expectation) which the model deliberately permits as a
+# diagnostic. At eta = 1 the largest theta * eta is 0.038 and the barrier
+# evaluates to exp(-194), which is zero in float64. It therefore cannot perturb
+# any legitimate fit, including the rho < 0 diagnostic.
+ANCHOR_OVERSHOOT_SHARPNESS = 200.0
+ANCHOR_OVERSHOOT_PENALTY = 1.0e3
+
 # Per-year logit-scale SD of the random walk on recording sensitivity over the
 # years no surveillance window covers. Calibrated so the cumulative prior width
 # across a four-year unanchored tail spans this repository's own bracketing
@@ -1164,16 +1180,27 @@ def build_core_reduction_model(
                 "recording_s_drift_ratio", recording_s_year[-1] / recording_s
             )
 
+        p_ds_lb_overshoot = None
         if rho_year_age is None:
             p_ds_lb_value = theta[age_idx] * eta_year[year_idx]
             if reduction_model == "anchor":
                 # eta is a ratio of prevalences, not a bounded probability, so an
                 # extreme draw could in principle push theta * eta above 1 and
-                # make the Binomial invalid. The guard never binds at posterior
-                # scale (eta is around 0.6) but keeps prior-predictive and early
-                # tuning draws well defined. Note rho < 0 is deliberately NOT
-                # excluded: it would mean the anchored prevalence exceeds the
-                # Morris no-reduction expectation, which is a real diagnostic.
+                # make the Binomial invalid. Clipping keeps it valid. Note rho < 0
+                # is deliberately NOT excluded: it would mean the anchored
+                # prevalence exceeds the Morris no-reduction expectation, which is
+                # a real diagnostic.
+                #
+                # But a clip is flat, so wherever it binds those cells contribute
+                # no gradient in eta. In the DSP009 fit that exposed the anchor-off
+                # mode, it bound in 16% of cells, which removed exactly the
+                # restoring force that would have pushed eta back down. The clip
+                # did not create that mode -- it is a genuine, much worse local
+                # basin, about 291 log units down, reachable once a free
+                # observation SD lets the anchor be discarded -- but the flat
+                # region helped hold a chain there. The barrier below restores a
+                # gradient that actively expels one.
+                p_ds_lb_overshoot = p_ds_lb_value - 1.0
                 p_ds_lb_value = pt.clip(p_ds_lb_value, 1e-12, 1.0 - 1e-9)
         else:
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
@@ -1207,6 +1234,20 @@ def build_core_reduction_model(
             dims="year",
         )
         pm.Deterministic("true_count_total", pt.dot(n_cell, p_ds_lb))
+
+        if p_ds_lb_overshoot is not None:
+            # Smooth barrier replacing the clip's lost gradient. softplus(k*x)/k is
+            # ~0 for x well below zero and ~x well above, so this is inert while
+            # theta * eta is a valid probability and grows once it is not, with a
+            # gradient throughout.
+            overshoot = pt.sum(
+                pt.softplus(p_ds_lb_overshoot * ANCHOR_OVERSHOOT_SHARPNESS)
+                / ANCHOR_OVERSHOOT_SHARPNESS
+            )
+            pm.Deterministic("p_ds_lb_overshoot", overshoot)
+            pm.Potential(
+                "p_ds_lb_overshoot_barrier", -ANCHOR_OVERSHOOT_PENALTY * overshoot
+            )
 
         pm.Binomial(
             "R_obs",
