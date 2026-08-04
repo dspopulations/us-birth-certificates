@@ -1,0 +1,1378 @@
+state,race6,hisp,state_code,race6_code,hisp_code,births,births_status,ds_cp,ds_cp_status
+Alabama,American Indian or Alaska Native,Hispanic or Latino,01,1002-5,2135-2,414,observed,0,zero
+Alabama,American Indian or Alaska Native,Not Hispanic or Latino,01,1002-5,2186-5,1230,observed,0,zero
+Alabama,American Indian or Alaska Native,Unknown or Not Stated,01,1002-5,9,Suppressed,suppressed,0,zero
+Alabama,Asian,Hispanic or Latino,01,A,2135-2,416,observed,Suppressed,suppressed
+Alabama,Asian,Not Hispanic or Latino,01,A,2186-5,7970,observed,Suppressed,suppressed
+Alabama,Asian,Unknown or Not Stated,01,A,9,Suppressed,suppressed,0,zero
+Alabama,Black or African American,Hispanic or Latino,01,2054-5,2135-2,2624,observed,Suppressed,suppressed
+Alabama,Black or African American,Not Hispanic or Latino,01,2054-5,2186-5,152025,observed,47,observed
+Alabama,Black or African American,Unknown or Not Stated,01,2054-5,9,33,observed,0,zero
+Alabama,More than one race,Hispanic or Latino,01,M,2135-2,568,observed,Suppressed,suppressed
+Alabama,More than one race,Not Hispanic or Latino,01,M,2186-5,9088,observed,Suppressed,suppressed
+Alabama,More than one race,Unknown or Not Stated,01,M,9,Suppressed,suppressed,0,zero
+Alabama,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,01,NHOPI,2135-2,515,observed,0,zero
+Alabama,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,01,NHOPI,2186-5,449,observed,Suppressed,suppressed
+Alabama,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,01,NHOPI,9,Suppressed,suppressed,0,zero
+Alabama,Not Available,Hispanic or Latino,01,NA,2135-2,0,zero,0,zero
+Alabama,Not Available,Not Hispanic or Latino,01,NA,2186-5,0,zero,0,zero
+Alabama,Not Available,Unknown or Not Stated,01,NA,9,0,zero,0,zero
+Alabama,Not Reported,Hispanic or Latino,01,NR,2135-2,0,zero,0,zero
+Alabama,Not Reported,Not Hispanic or Latino,01,NR,2186-5,0,zero,0,zero
+Alabama,Not Reported,Unknown or Not Stated,01,NR,9,0,zero,0,zero
+Alabama,Unknown or Not Stated,Hispanic or Latino,01,UNK,2135-2,0,zero,0,zero
+Alabama,Unknown or Not Stated,Not Hispanic or Latino,01,UNK,2186-5,0,zero,0,zero
+Alabama,Unknown or Not Stated,Unknown or Not Stated,01,UNK,9,0,zero,0,zero
+Alabama,White,Hispanic or Latino,01,2106-3,2135-2,45605,observed,42,observed
+Alabama,White,Not Hispanic or Latino,01,2106-3,2186-5,303061,observed,149,observed
+Alabama,White,Unknown or Not Stated,01,2106-3,9,100,observed,0,zero
+Alaska,American Indian or Alaska Native,Hispanic or Latino,02,1002-5,2135-2,490,observed,0,zero
+Alaska,American Indian or Alaska Native,Not Hispanic or Latino,02,1002-5,2186-5,16262,observed,10,observed
+Alaska,American Indian or Alaska Native,Unknown or Not Stated,02,1002-5,9,275,observed,0,zero
+Alaska,Asian,Hispanic or Latino,02,A,2135-2,179,observed,0,zero
+Alaska,Asian,Not Hispanic or Latino,02,A,2186-5,5146,observed,10,observed
+Alaska,Asian,Unknown or Not Stated,02,A,9,118,observed,Suppressed,suppressed
+Alaska,Black or African American,Hispanic or Latino,02,2054-5,2135-2,439,observed,Suppressed,suppressed
+Alaska,Black or African American,Not Hispanic or Latino,02,2054-5,2186-5,2411,observed,Suppressed,suppressed
+Alaska,Black or African American,Unknown or Not Stated,02,2054-5,9,48,observed,0,zero
+Alaska,More than one race,Hispanic or Latino,02,M,2135-2,703,observed,Suppressed,suppressed
+Alaska,More than one race,Not Hispanic or Latino,02,M,2186-5,8626,observed,Suppressed,suppressed
+Alaska,More than one race,Unknown or Not Stated,02,M,9,138,observed,0,zero
+Alaska,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,02,NHOPI,2135-2,82,observed,0,zero
+Alaska,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,02,NHOPI,2186-5,2750,observed,Suppressed,suppressed
+Alaska,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,02,NHOPI,9,53,observed,0,zero
+Alaska,Not Available,Hispanic or Latino,02,NA,2135-2,0,zero,0,zero
+Alaska,Not Available,Not Hispanic or Latino,02,NA,2186-5,0,zero,0,zero
+Alaska,Not Available,Unknown or Not Stated,02,NA,9,0,zero,0,zero
+Alaska,Not Reported,Hispanic or Latino,02,NR,2135-2,0,zero,0,zero
+Alaska,Not Reported,Not Hispanic or Latino,02,NR,2186-5,0,zero,0,zero
+Alaska,Not Reported,Unknown or Not Stated,02,NR,9,0,zero,0,zero
+Alaska,Unknown or Not Stated,Hispanic or Latino,02,UNK,2135-2,0,zero,0,zero
+Alaska,Unknown or Not Stated,Not Hispanic or Latino,02,UNK,2186-5,0,zero,0,zero
+Alaska,Unknown or Not Stated,Unknown or Not Stated,02,UNK,9,0,zero,0,zero
+Alaska,White,Hispanic or Latino,02,2106-3,2135-2,5221,observed,10,observed
+Alaska,White,Not Hispanic or Latino,02,2106-3,2186-5,43896,observed,40,observed
+Alaska,White,Unknown or Not Stated,02,2106-3,9,878,observed,Suppressed,suppressed
+Arizona,American Indian or Alaska Native,Hispanic or Latino,04,1002-5,2135-2,4820,observed,Suppressed,suppressed
+Arizona,American Indian or Alaska Native,Not Hispanic or Latino,04,1002-5,2186-5,33732,observed,27,observed
+Arizona,American Indian or Alaska Native,Unknown or Not Stated,04,1002-5,9,303,observed,0,zero
+Arizona,Asian,Hispanic or Latino,04,A,2135-2,1227,observed,0,zero
+Arizona,Asian,Not Hispanic or Latino,04,A,2186-5,25300,observed,Suppressed,suppressed
+Arizona,Asian,Unknown or Not Stated,04,A,9,305,observed,0,zero
+Arizona,Black or African American,Hispanic or Latino,04,2054-5,2135-2,4598,observed,Suppressed,suppressed
+Arizona,Black or African American,Not Hispanic or Latino,04,2054-5,2186-5,39141,observed,13,observed
+Arizona,Black or African American,Unknown or Not Stated,04,2054-5,9,378,observed,0,zero
+Arizona,More than one race,Hispanic or Latino,04,M,2135-2,5005,observed,Suppressed,suppressed
+Arizona,More than one race,Not Hispanic or Latino,04,M,2186-5,16654,observed,Suppressed,suppressed
+Arizona,More than one race,Unknown or Not Stated,04,M,9,128,observed,0,zero
+Arizona,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,04,NHOPI,2135-2,321,observed,0,zero
+Arizona,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,04,NHOPI,2186-5,2005,observed,Suppressed,suppressed
+Arizona,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,04,NHOPI,9,28,observed,0,zero
+Arizona,Not Available,Hispanic or Latino,04,NA,2135-2,0,zero,0,zero
+Arizona,Not Available,Not Hispanic or Latino,04,NA,2186-5,0,zero,0,zero
+Arizona,Not Available,Unknown or Not Stated,04,NA,9,0,zero,0,zero
+Arizona,Not Reported,Hispanic or Latino,04,NR,2135-2,0,zero,0,zero
+Arizona,Not Reported,Not Hispanic or Latino,04,NR,2186-5,0,zero,0,zero
+Arizona,Not Reported,Unknown or Not Stated,04,NR,9,0,zero,0,zero
+Arizona,Unknown or Not Stated,Hispanic or Latino,04,UNK,2135-2,0,zero,0,zero
+Arizona,Unknown or Not Stated,Not Hispanic or Latino,04,UNK,2186-5,0,zero,0,zero
+Arizona,Unknown or Not Stated,Unknown or Not Stated,04,UNK,9,0,zero,0,zero
+Arizona,White,Hispanic or Latino,04,2106-3,2135-2,293683,observed,203,observed
+Arizona,White,Not Hispanic or Latino,04,2106-3,2186-5,285558,observed,184,observed
+Arizona,White,Unknown or Not Stated,04,2106-3,9,3521,observed,Suppressed,suppressed
+Arkansas,American Indian or Alaska Native,Hispanic or Latino,05,1002-5,2135-2,478,observed,Suppressed,suppressed
+Arkansas,American Indian or Alaska Native,Not Hispanic or Latino,05,1002-5,2186-5,1865,observed,Suppressed,suppressed
+Arkansas,American Indian or Alaska Native,Unknown or Not Stated,05,1002-5,9,15,observed,0,zero
+Arkansas,Asian,Hispanic or Latino,05,A,2135-2,393,observed,0,zero
+Arkansas,Asian,Not Hispanic or Latino,05,A,2186-5,7192,observed,Suppressed,suppressed
+Arkansas,Asian,Unknown or Not Stated,05,A,9,46,observed,0,zero
+Arkansas,Black or African American,Hispanic or Latino,05,2054-5,2135-2,2255,observed,0,zero
+Arkansas,Black or African American,Not Hispanic or Latino,05,2054-5,2186-5,60044,observed,16,observed
+Arkansas,Black or African American,Unknown or Not Stated,05,2054-5,9,392,observed,0,zero
+Arkansas,More than one race,Hispanic or Latino,05,M,2135-2,358,observed,0,zero
+Arkansas,More than one race,Not Hispanic or Latino,05,M,2186-5,6284,observed,0,zero
+Arkansas,More than one race,Unknown or Not Stated,05,M,9,19,observed,0,zero
+Arkansas,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,05,NHOPI,2135-2,541,observed,Suppressed,suppressed
+Arkansas,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,05,NHOPI,2186-5,4498,observed,Suppressed,suppressed
+Arkansas,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,05,NHOPI,9,83,observed,0,zero
+Arkansas,Not Available,Hispanic or Latino,05,NA,2135-2,0,zero,0,zero
+Arkansas,Not Available,Not Hispanic or Latino,05,NA,2186-5,0,zero,0,zero
+Arkansas,Not Available,Unknown or Not Stated,05,NA,9,0,zero,0,zero
+Arkansas,Not Reported,Hispanic or Latino,05,NR,2135-2,0,zero,0,zero
+Arkansas,Not Reported,Not Hispanic or Latino,05,NR,2186-5,0,zero,0,zero
+Arkansas,Not Reported,Unknown or Not Stated,05,NR,9,0,zero,0,zero
+Arkansas,Unknown or Not Stated,Hispanic or Latino,05,UNK,2135-2,0,zero,0,zero
+Arkansas,Unknown or Not Stated,Not Hispanic or Latino,05,UNK,2186-5,0,zero,0,zero
+Arkansas,Unknown or Not Stated,Unknown or Not Stated,05,UNK,9,0,zero,0,zero
+Arkansas,White,Hispanic or Latino,05,2106-3,2135-2,33478,observed,21,observed
+Arkansas,White,Not Hispanic or Latino,05,2106-3,2186-5,207897,observed,93,observed
+Arkansas,White,Unknown or Not Stated,05,2106-3,9,884,observed,0,zero
+California,American Indian or Alaska Native,Hispanic or Latino,06,1002-5,2135-2,7355,observed,0,zero
+California,American Indian or Alaska Native,Not Hispanic or Latino,06,1002-5,2186-5,12085,observed,Suppressed,suppressed
+California,American Indian or Alaska Native,Unknown or Not Stated,06,1002-5,9,941,observed,0,zero
+California,Asian,Hispanic or Latino,06,A,2135-2,11194,observed,0,zero
+California,Asian,Not Hispanic or Latino,06,A,2186-5,567800,observed,104,observed
+California,Asian,Unknown or Not Stated,06,A,9,39165,observed,15,observed
+California,Black or African American,Hispanic or Latino,06,2054-5,2135-2,16721,observed,Suppressed,suppressed
+California,Black or African American,Not Hispanic or Latino,06,2054-5,2186-5,190880,observed,43,observed
+California,Black or African American,Unknown or Not Stated,06,2054-5,9,11729,observed,Suppressed,suppressed
+California,More than one race,Hispanic or Latino,06,M,2135-2,46386,observed,14,observed
+California,More than one race,Not Hispanic or Latino,06,M,2186-5,96210,observed,35,observed
+California,More than one race,Unknown or Not Stated,06,M,9,357,observed,0,zero
+California,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,06,NHOPI,2135-2,1516,observed,Suppressed,suppressed
+California,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,06,NHOPI,2186-5,14809,observed,Suppressed,suppressed
+California,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,06,NHOPI,9,1067,observed,0,zero
+California,Not Available,Hispanic or Latino,06,NA,2135-2,0,zero,0,zero
+California,Not Available,Not Hispanic or Latino,06,NA,2186-5,0,zero,0,zero
+California,Not Available,Unknown or Not Stated,06,NA,9,0,zero,0,zero
+California,Not Reported,Hispanic or Latino,06,NR,2135-2,0,zero,0,zero
+California,Not Reported,Not Hispanic or Latino,06,NR,2186-5,0,zero,0,zero
+California,Not Reported,Unknown or Not Stated,06,NR,9,0,zero,0,zero
+California,Unknown or Not Stated,Hispanic or Latino,06,UNK,2135-2,0,zero,0,zero
+California,Unknown or Not Stated,Not Hispanic or Latino,06,UNK,2186-5,0,zero,0,zero
+California,Unknown or Not Stated,Unknown or Not Stated,06,UNK,9,0,zero,0,zero
+California,White,Hispanic or Latino,06,2106-3,2135-2,1766134,observed,825,observed
+California,White,Not Hispanic or Latino,06,2106-3,2186-5,1053362,observed,334,observed
+California,White,Unknown or Not Stated,06,2106-3,9,86327,observed,37,observed
+Colorado,American Indian or Alaska Native,Hispanic or Latino,08,1002-5,2135-2,3194,observed,Suppressed,suppressed
+Colorado,American Indian or Alaska Native,Not Hispanic or Latino,08,1002-5,2186-5,3166,observed,0,zero
+Colorado,American Indian or Alaska Native,Unknown or Not Stated,08,1002-5,9,154,observed,0,zero
+Colorado,Asian,Hispanic or Latino,08,A,2135-2,1377,observed,Suppressed,suppressed
+Colorado,Asian,Not Hispanic or Latino,08,A,2186-5,22898,observed,Suppressed,suppressed
+Colorado,Asian,Unknown or Not Stated,08,A,9,477,observed,Suppressed,suppressed
+Colorado,Black or African American,Hispanic or Latino,08,2054-5,2135-2,4820,observed,Suppressed,suppressed
+Colorado,Black or African American,Not Hispanic or Latino,08,2054-5,2186-5,27138,observed,35,observed
+Colorado,Black or African American,Unknown or Not Stated,08,2054-5,9,719,observed,Suppressed,suppressed
+Colorado,More than one race,Hispanic or Latino,08,M,2135-2,3310,observed,Suppressed,suppressed
+Colorado,More than one race,Not Hispanic or Latino,08,M,2186-5,14505,observed,11,observed
+Colorado,More than one race,Unknown or Not Stated,08,M,9,211,observed,Suppressed,suppressed
+Colorado,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,08,NHOPI,2135-2,452,observed,0,zero
+Colorado,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,08,NHOPI,2186-5,1699,observed,0,zero
+Colorado,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,08,NHOPI,9,28,observed,0,zero
+Colorado,Not Available,Hispanic or Latino,08,NA,2135-2,0,zero,0,zero
+Colorado,Not Available,Not Hispanic or Latino,08,NA,2186-5,0,zero,0,zero
+Colorado,Not Available,Unknown or Not Stated,08,NA,9,0,zero,0,zero
+Colorado,Not Reported,Hispanic or Latino,08,NR,2135-2,0,zero,0,zero
+Colorado,Not Reported,Not Hispanic or Latino,08,NR,2186-5,0,zero,0,zero
+Colorado,Not Reported,Unknown or Not Stated,08,NR,9,0,zero,0,zero
+Colorado,Unknown or Not Stated,Hispanic or Latino,08,UNK,2135-2,0,zero,0,zero
+Colorado,Unknown or Not Stated,Not Hispanic or Latino,08,UNK,2186-5,0,zero,0,zero
+Colorado,Unknown or Not Stated,Unknown or Not Stated,08,UNK,9,0,zero,0,zero
+Colorado,White,Hispanic or Latino,08,2106-3,2135-2,155749,observed,161,observed
+Colorado,White,Not Hispanic or Latino,08,2106-3,2186-5,323926,observed,224,observed
+Colorado,White,Unknown or Not Stated,08,2106-3,9,5514,observed,Suppressed,suppressed
+Connecticut,American Indian or Alaska Native,Hispanic or Latino,09,1002-5,2135-2,1908,observed,Suppressed,suppressed
+Connecticut,American Indian or Alaska Native,Not Hispanic or Latino,09,1002-5,2186-5,279,observed,0,zero
+Connecticut,American Indian or Alaska Native,Unknown or Not Stated,09,1002-5,9,Suppressed,suppressed,0,zero
+Connecticut,Asian,Hispanic or Latino,09,A,2135-2,712,observed,0,zero
+Connecticut,Asian,Not Hispanic or Latino,09,A,2186-5,19039,observed,Suppressed,suppressed
+Connecticut,Asian,Unknown or Not Stated,09,A,9,14,observed,0,zero
+Connecticut,Black or African American,Hispanic or Latino,09,2054-5,2135-2,9769,observed,Suppressed,suppressed
+Connecticut,Black or African American,Not Hispanic or Latino,09,2054-5,2186-5,38106,observed,30,observed
+Connecticut,Black or African American,Unknown or Not Stated,09,2054-5,9,46,observed,0,zero
+Connecticut,More than one race,Hispanic or Latino,09,M,2135-2,1937,observed,0,zero
+Connecticut,More than one race,Not Hispanic or Latino,09,M,2186-5,6626,observed,Suppressed,suppressed
+Connecticut,More than one race,Unknown or Not Stated,09,M,9,Suppressed,suppressed,0,zero
+Connecticut,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,09,NHOPI,2135-2,127,observed,Suppressed,suppressed
+Connecticut,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,09,NHOPI,2186-5,65,observed,0,zero
+Connecticut,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,09,NHOPI,9,0,zero,0,zero
+Connecticut,Not Available,Hispanic or Latino,09,NA,2135-2,0,zero,0,zero
+Connecticut,Not Available,Not Hispanic or Latino,09,NA,2186-5,0,zero,0,zero
+Connecticut,Not Available,Unknown or Not Stated,09,NA,9,0,zero,0,zero
+Connecticut,Not Reported,Hispanic or Latino,09,NR,2135-2,0,zero,0,zero
+Connecticut,Not Reported,Not Hispanic or Latino,09,NR,2186-5,0,zero,0,zero
+Connecticut,Not Reported,Unknown or Not Stated,09,NR,9,0,zero,0,zero
+Connecticut,Unknown or Not Stated,Hispanic or Latino,09,UNK,2135-2,0,zero,0,zero
+Connecticut,Unknown or Not Stated,Not Hispanic or Latino,09,UNK,2186-5,0,zero,0,zero
+Connecticut,Unknown or Not Stated,Unknown or Not Stated,09,UNK,9,0,zero,0,zero
+Connecticut,White,Hispanic or Latino,09,2106-3,2135-2,68297,observed,50,observed
+Connecticut,White,Not Hispanic or Latino,09,2106-3,2186-5,166675,observed,64,observed
+Connecticut,White,Unknown or Not Stated,09,2106-3,9,231,observed,0,zero
+Delaware,American Indian or Alaska Native,Hispanic or Latino,10,1002-5,2135-2,93,observed,0,zero
+Delaware,American Indian or Alaska Native,Not Hispanic or Latino,10,1002-5,2186-5,135,observed,0,zero
+Delaware,American Indian or Alaska Native,Unknown or Not Stated,10,1002-5,9,Suppressed,suppressed,0,zero
+Delaware,Asian,Hispanic or Latino,10,A,2135-2,179,observed,0,zero
+Delaware,Asian,Not Hispanic or Latino,10,A,2186-5,5459,observed,Suppressed,suppressed
+Delaware,Asian,Unknown or Not Stated,10,A,9,13,observed,0,zero
+Delaware,Black or African American,Hispanic or Latino,10,2054-5,2135-2,2348,observed,Suppressed,suppressed
+Delaware,Black or African American,Not Hispanic or Latino,10,2054-5,2186-5,24918,observed,14,observed
+Delaware,Black or African American,Unknown or Not Stated,10,2054-5,9,159,observed,0,zero
+Delaware,More than one race,Hispanic or Latino,10,M,2135-2,353,observed,0,zero
+Delaware,More than one race,Not Hispanic or Latino,10,M,2186-5,2701,observed,Suppressed,suppressed
+Delaware,More than one race,Unknown or Not Stated,10,M,9,14,observed,0,zero
+Delaware,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,10,NHOPI,2135-2,134,observed,Suppressed,suppressed
+Delaware,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,10,NHOPI,2186-5,33,observed,0,zero
+Delaware,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,10,NHOPI,9,0,zero,0,zero
+Delaware,Not Available,Hispanic or Latino,10,NA,2135-2,0,zero,0,zero
+Delaware,Not Available,Not Hispanic or Latino,10,NA,2186-5,0,zero,0,zero
+Delaware,Not Available,Unknown or Not Stated,10,NA,9,0,zero,0,zero
+Delaware,Not Reported,Hispanic or Latino,10,NR,2135-2,0,zero,0,zero
+Delaware,Not Reported,Not Hispanic or Latino,10,NR,2186-5,0,zero,0,zero
+Delaware,Not Reported,Unknown or Not Stated,10,NR,9,0,zero,0,zero
+Delaware,Unknown or Not Stated,Hispanic or Latino,10,UNK,2135-2,0,zero,0,zero
+Delaware,Unknown or Not Stated,Not Hispanic or Latino,10,UNK,2186-5,0,zero,0,zero
+Delaware,Unknown or Not Stated,Unknown or Not Stated,10,UNK,9,0,zero,0,zero
+Delaware,White,Hispanic or Latino,10,2106-3,2135-2,13337,observed,21,observed
+Delaware,White,Not Hispanic or Latino,10,2106-3,2186-5,45685,observed,32,observed
+Delaware,White,Unknown or Not Stated,10,2106-3,9,133,observed,Suppressed,suppressed
+District of Columbia,American Indian or Alaska Native,Hispanic or Latino,11,1002-5,2135-2,208,observed,Suppressed,suppressed
+District of Columbia,American Indian or Alaska Native,Not Hispanic or Latino,11,1002-5,2186-5,99,observed,0,zero
+District of Columbia,American Indian or Alaska Native,Unknown or Not Stated,11,1002-5,9,Suppressed,suppressed,0,zero
+District of Columbia,Asian,Hispanic or Latino,11,A,2135-2,347,observed,Suppressed,suppressed
+District of Columbia,Asian,Not Hispanic or Latino,11,A,2186-5,3576,observed,0,zero
+District of Columbia,Asian,Unknown or Not Stated,11,A,9,17,observed,0,zero
+District of Columbia,Black or African American,Hispanic or Latino,11,2054-5,2135-2,3136,observed,Suppressed,suppressed
+District of Columbia,Black or African American,Not Hispanic or Latino,11,2054-5,2186-5,35388,observed,15,observed
+District of Columbia,Black or African American,Unknown or Not Stated,11,2054-5,9,49,observed,0,zero
+District of Columbia,More than one race,Hispanic or Latino,11,M,2135-2,174,observed,0,zero
+District of Columbia,More than one race,Not Hispanic or Latino,11,M,2186-5,1783,observed,Suppressed,suppressed
+District of Columbia,More than one race,Unknown or Not Stated,11,M,9,Suppressed,suppressed,0,zero
+District of Columbia,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,11,NHOPI,2135-2,155,observed,0,zero
+District of Columbia,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,11,NHOPI,2186-5,28,observed,0,zero
+District of Columbia,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,11,NHOPI,9,0,zero,0,zero
+District of Columbia,Not Available,Hispanic or Latino,11,NA,2135-2,0,zero,0,zero
+District of Columbia,Not Available,Not Hispanic or Latino,11,NA,2186-5,0,zero,0,zero
+District of Columbia,Not Available,Unknown or Not Stated,11,NA,9,0,zero,0,zero
+District of Columbia,Not Reported,Hispanic or Latino,11,NR,2135-2,0,zero,0,zero
+District of Columbia,Not Reported,Not Hispanic or Latino,11,NR,2186-5,0,zero,0,zero
+District of Columbia,Not Reported,Unknown or Not Stated,11,NR,9,0,zero,0,zero
+District of Columbia,Unknown or Not Stated,Hispanic or Latino,11,UNK,2135-2,0,zero,0,zero
+District of Columbia,Unknown or Not Stated,Not Hispanic or Latino,11,UNK,2186-5,0,zero,0,zero
+District of Columbia,Unknown or Not Stated,Unknown or Not Stated,11,UNK,9,0,zero,0,zero
+District of Columbia,White,Hispanic or Latino,11,2106-3,2135-2,8164,observed,Suppressed,suppressed
+District of Columbia,White,Not Hispanic or Latino,11,2106-3,2186-5,25631,observed,Suppressed,suppressed
+District of Columbia,White,Unknown or Not Stated,11,2106-3,9,72,observed,0,zero
+Florida,American Indian or Alaska Native,Hispanic or Latino,12,1002-5,2135-2,1637,observed,0,zero
+Florida,American Indian or Alaska Native,Not Hispanic or Latino,12,1002-5,2186-5,2150,observed,0,zero
+Florida,American Indian or Alaska Native,Unknown or Not Stated,12,1002-5,9,Suppressed,suppressed,0,zero
+Florida,Asian,Hispanic or Latino,12,A,2135-2,4671,observed,Suppressed,suppressed
+Florida,Asian,Not Hispanic or Latino,12,A,2186-5,61796,observed,10,observed
+Florida,Asian,Unknown or Not Stated,12,A,9,122,observed,0,zero
+Florida,Black or African American,Hispanic or Latino,12,2054-5,2135-2,49183,observed,12,observed
+Florida,Black or African American,Not Hispanic or Latino,12,2054-5,2186-5,420996,observed,96,observed
+Florida,Black or African American,Unknown or Not Stated,12,2054-5,9,736,observed,0,zero
+Florida,More than one race,Hispanic or Latino,12,M,2135-2,4048,observed,Suppressed,suppressed
+Florida,More than one race,Not Hispanic or Latino,12,M,2186-5,26011,observed,Suppressed,suppressed
+Florida,More than one race,Unknown or Not Stated,12,M,9,61,observed,0,zero
+Florida,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,12,NHOPI,2135-2,642,observed,0,zero
+Florida,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,12,NHOPI,2186-5,1388,observed,0,zero
+Florida,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,12,NHOPI,9,10,observed,0,zero
+Florida,Not Available,Hispanic or Latino,12,NA,2135-2,0,zero,0,zero
+Florida,Not Available,Not Hispanic or Latino,12,NA,2186-5,0,zero,0,zero
+Florida,Not Available,Unknown or Not Stated,12,NA,9,0,zero,0,zero
+Florida,Not Reported,Hispanic or Latino,12,NR,2135-2,0,zero,0,zero
+Florida,Not Reported,Not Hispanic or Latino,12,NR,2186-5,0,zero,0,zero
+Florida,Not Reported,Unknown or Not Stated,12,NR,9,0,zero,0,zero
+Florida,Unknown or Not Stated,Hispanic or Latino,12,UNK,2135-2,0,zero,0,zero
+Florida,Unknown or Not Stated,Not Hispanic or Latino,12,UNK,2186-5,0,zero,0,zero
+Florida,Unknown or Not Stated,Unknown or Not Stated,12,UNK,9,0,zero,0,zero
+Florida,White,Hispanic or Latino,12,2106-3,2135-2,574061,observed,140,observed
+Florida,White,Not Hispanic or Latino,12,2106-3,2186-5,836797,observed,242,observed
+Florida,White,Unknown or Not Stated,12,2106-3,9,2042,observed,0,zero
+Georgia,American Indian or Alaska Native,Hispanic or Latino,13,1002-5,2135-2,798,observed,0,zero
+Georgia,American Indian or Alaska Native,Not Hispanic or Latino,13,1002-5,2186-5,984,observed,0,zero
+Georgia,American Indian or Alaska Native,Unknown or Not Stated,13,1002-5,9,33,observed,0,zero
+Georgia,Asian,Hispanic or Latino,13,A,2135-2,2659,observed,Suppressed,suppressed
+Georgia,Asian,Not Hispanic or Latino,13,A,2186-5,51888,observed,13,observed
+Georgia,Asian,Unknown or Not Stated,13,A,9,497,observed,0,zero
+Georgia,Black or African American,Hispanic or Latino,13,2054-5,2135-2,14191,observed,Suppressed,suppressed
+Georgia,Black or African American,Not Hispanic or Latino,13,2054-5,2186-5,383051,observed,128,observed
+Georgia,Black or African American,Unknown or Not Stated,13,2054-5,9,3016,observed,Suppressed,suppressed
+Georgia,More than one race,Hispanic or Latino,13,M,2135-2,2050,observed,0,zero
+Georgia,More than one race,Not Hispanic or Latino,13,M,2186-5,23377,observed,Suppressed,suppressed
+Georgia,More than one race,Unknown or Not Stated,13,M,9,174,observed,0,zero
+Georgia,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,13,NHOPI,2135-2,1168,observed,0,zero
+Georgia,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,13,NHOPI,2186-5,982,observed,0,zero
+Georgia,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,13,NHOPI,9,38,observed,0,zero
+Georgia,Not Available,Hispanic or Latino,13,NA,2135-2,0,zero,0,zero
+Georgia,Not Available,Not Hispanic or Latino,13,NA,2186-5,0,zero,0,zero
+Georgia,Not Available,Unknown or Not Stated,13,NA,9,0,zero,0,zero
+Georgia,Not Reported,Hispanic or Latino,13,NR,2135-2,0,zero,0,zero
+Georgia,Not Reported,Not Hispanic or Latino,13,NR,2186-5,0,zero,0,zero
+Georgia,Not Reported,Unknown or Not Stated,13,NR,9,0,zero,0,zero
+Georgia,Unknown or Not Stated,Hispanic or Latino,13,UNK,2135-2,0,zero,0,zero
+Georgia,Unknown or Not Stated,Not Hispanic or Latino,13,UNK,2186-5,0,zero,0,zero
+Georgia,Unknown or Not Stated,Unknown or Not Stated,13,UNK,9,0,zero,0,zero
+Georgia,White,Hispanic or Latino,13,2106-3,2135-2,156138,observed,108,observed
+Georgia,White,Not Hispanic or Latino,13,2106-3,2186-5,491289,observed,235,observed
+Georgia,White,Unknown or Not Stated,13,2106-3,9,3728,observed,Suppressed,suppressed
+Hawaii,American Indian or Alaska Native,Hispanic or Latino,15,1002-5,2135-2,31,observed,0,zero
+Hawaii,American Indian or Alaska Native,Not Hispanic or Latino,15,1002-5,2186-5,259,observed,0,zero
+Hawaii,American Indian or Alaska Native,Unknown or Not Stated,15,1002-5,9,0,zero,0,zero
+Hawaii,Asian,Hispanic or Latino,15,A,2135-2,134,observed,0,zero
+Hawaii,Asian,Not Hispanic or Latino,15,A,2186-5,36674,observed,Suppressed,suppressed
+Hawaii,Asian,Unknown or Not Stated,15,A,9,226,observed,0,zero
+Hawaii,Black or African American,Hispanic or Latino,15,2054-5,2135-2,52,observed,0,zero
+Hawaii,Black or African American,Not Hispanic or Latino,15,2054-5,2186-5,3387,observed,Suppressed,suppressed
+Hawaii,Black or African American,Unknown or Not Stated,15,2054-5,9,23,observed,0,zero
+Hawaii,More than one race,Hispanic or Latino,15,M,2135-2,14528,observed,Suppressed,suppressed
+Hawaii,More than one race,Not Hispanic or Latino,15,M,2186-5,38965,observed,Suppressed,suppressed
+Hawaii,More than one race,Unknown or Not Stated,15,M,9,29,observed,0,zero
+Hawaii,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,15,NHOPI,2135-2,45,observed,0,zero
+Hawaii,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,15,NHOPI,2186-5,14093,observed,Suppressed,suppressed
+Hawaii,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,15,NHOPI,9,100,observed,0,zero
+Hawaii,Not Available,Hispanic or Latino,15,NA,2135-2,0,zero,0,zero
+Hawaii,Not Available,Not Hispanic or Latino,15,NA,2186-5,0,zero,0,zero
+Hawaii,Not Available,Unknown or Not Stated,15,NA,9,0,zero,0,zero
+Hawaii,Not Reported,Hispanic or Latino,15,NR,2135-2,0,zero,0,zero
+Hawaii,Not Reported,Not Hispanic or Latino,15,NR,2186-5,0,zero,0,zero
+Hawaii,Not Reported,Unknown or Not Stated,15,NR,9,0,zero,0,zero
+Hawaii,Unknown or Not Stated,Hispanic or Latino,15,UNK,2135-2,0,zero,0,zero
+Hawaii,Unknown or Not Stated,Not Hispanic or Latino,15,UNK,2186-5,0,zero,0,zero
+Hawaii,Unknown or Not Stated,Unknown or Not Stated,15,UNK,9,0,zero,0,zero
+Hawaii,White,Hispanic or Latino,15,2106-3,2135-2,9109,observed,Suppressed,suppressed
+Hawaii,White,Not Hispanic or Latino,15,2106-3,2186-5,28165,observed,Suppressed,suppressed
+Hawaii,White,Unknown or Not Stated,15,2106-3,9,190,observed,0,zero
+Idaho,American Indian or Alaska Native,Hispanic or Latino,16,1002-5,2135-2,954,observed,Suppressed,suppressed
+Idaho,American Indian or Alaska Native,Not Hispanic or Latino,16,1002-5,2186-5,2002,observed,Suppressed,suppressed
+Idaho,American Indian or Alaska Native,Unknown or Not Stated,16,1002-5,9,23,observed,0,zero
+Idaho,Asian,Hispanic or Latino,16,A,2135-2,289,observed,0,zero
+Idaho,Asian,Not Hispanic or Latino,16,A,2186-5,3318,observed,Suppressed,suppressed
+Idaho,Asian,Unknown or Not Stated,16,A,9,28,observed,0,zero
+Idaho,Black or African American,Hispanic or Latino,16,2054-5,2135-2,384,observed,Suppressed,suppressed
+Idaho,Black or African American,Not Hispanic or Latino,16,2054-5,2186-5,2358,observed,12,observed
+Idaho,Black or African American,Unknown or Not Stated,16,2054-5,9,26,observed,Suppressed,suppressed
+Idaho,More than one race,Hispanic or Latino,16,M,2135-2,717,observed,Suppressed,suppressed
+Idaho,More than one race,Not Hispanic or Latino,16,M,2186-5,3821,observed,Suppressed,suppressed
+Idaho,More than one race,Unknown or Not Stated,16,M,9,16,observed,0,zero
+Idaho,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,16,NHOPI,2135-2,128,observed,0,zero
+Idaho,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,16,NHOPI,2186-5,563,observed,0,zero
+Idaho,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,16,NHOPI,9,Suppressed,suppressed,0,zero
+Idaho,Not Available,Hispanic or Latino,16,NA,2135-2,0,zero,0,zero
+Idaho,Not Available,Not Hispanic or Latino,16,NA,2186-5,0,zero,0,zero
+Idaho,Not Available,Unknown or Not Stated,16,NA,9,0,zero,0,zero
+Idaho,Not Reported,Hispanic or Latino,16,NR,2135-2,0,zero,0,zero
+Idaho,Not Reported,Not Hispanic or Latino,16,NR,2186-5,0,zero,0,zero
+Idaho,Not Reported,Unknown or Not Stated,16,NR,9,0,zero,0,zero
+Idaho,Unknown or Not Stated,Hispanic or Latino,16,UNK,2135-2,0,zero,0,zero
+Idaho,Unknown or Not Stated,Not Hispanic or Latino,16,UNK,2186-5,0,zero,0,zero
+Idaho,Unknown or Not Stated,Unknown or Not Stated,16,UNK,9,0,zero,0,zero
+Idaho,White,Hispanic or Latino,16,2106-3,2135-2,32259,observed,43,observed
+Idaho,White,Not Hispanic or Latino,16,2106-3,2186-5,152487,observed,139,observed
+Idaho,White,Unknown or Not Stated,16,2106-3,9,774,observed,0,zero
+Illinois,American Indian or Alaska Native,Hispanic or Latino,17,1002-5,2135-2,624,observed,0,zero
+Illinois,American Indian or Alaska Native,Not Hispanic or Latino,17,1002-5,2186-5,813,observed,Suppressed,suppressed
+Illinois,American Indian or Alaska Native,Unknown or Not Stated,17,1002-5,9,13,observed,Suppressed,suppressed
+Illinois,Asian,Hispanic or Latino,17,A,2135-2,1034,observed,Suppressed,suppressed
+Illinois,Asian,Not Hispanic or Latino,17,A,2186-5,80719,observed,41,observed
+Illinois,Asian,Unknown or Not Stated,17,A,9,931,observed,0,zero
+Illinois,Black or African American,Hispanic or Latino,17,2054-5,2135-2,5987,observed,Suppressed,suppressed
+Illinois,Black or African American,Not Hispanic or Latino,17,2054-5,2186-5,196697,observed,92,observed
+Illinois,Black or African American,Unknown or Not Stated,17,2054-5,9,1898,observed,Suppressed,suppressed
+Illinois,More than one race,Hispanic or Latino,17,M,2135-2,2376,observed,Suppressed,suppressed
+Illinois,More than one race,Not Hispanic or Latino,17,M,2186-5,18676,observed,16,observed
+Illinois,More than one race,Unknown or Not Stated,17,M,9,37,observed,0,zero
+Illinois,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,17,NHOPI,2135-2,194,observed,0,zero
+Illinois,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,17,NHOPI,2186-5,334,observed,Suppressed,suppressed
+Illinois,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,17,NHOPI,9,12,observed,0,zero
+Illinois,Not Available,Hispanic or Latino,17,NA,2135-2,0,zero,0,zero
+Illinois,Not Available,Not Hispanic or Latino,17,NA,2186-5,0,zero,0,zero
+Illinois,Not Available,Unknown or Not Stated,17,NA,9,0,zero,0,zero
+Illinois,Not Reported,Hispanic or Latino,17,NR,2135-2,0,zero,0,zero
+Illinois,Not Reported,Not Hispanic or Latino,17,NR,2186-5,0,zero,0,zero
+Illinois,Not Reported,Unknown or Not Stated,17,NR,9,0,zero,0,zero
+Illinois,Unknown or Not Stated,Hispanic or Latino,17,UNK,2135-2,0,zero,0,zero
+Illinois,Unknown or Not Stated,Not Hispanic or Latino,17,UNK,2186-5,0,zero,0,zero
+Illinois,Unknown or Not Stated,Unknown or Not Stated,17,UNK,9,0,zero,0,zero
+Illinois,White,Hispanic or Latino,17,2106-3,2135-2,263697,observed,280,observed
+Illinois,White,Not Hispanic or Latino,17,2106-3,2186-5,652388,observed,453,observed
+Illinois,White,Unknown or Not Stated,17,2106-3,9,6736,observed,Suppressed,suppressed
+Indiana,American Indian or Alaska Native,Hispanic or Latino,18,1002-5,2135-2,266,observed,0,zero
+Indiana,American Indian or Alaska Native,Not Hispanic or Latino,18,1002-5,2186-5,596,observed,0,zero
+Indiana,American Indian or Alaska Native,Unknown or Not Stated,18,1002-5,9,Suppressed,suppressed,0,zero
+Indiana,Asian,Hispanic or Latino,18,A,2135-2,449,observed,0,zero
+Indiana,Asian,Not Hispanic or Latino,18,A,2186-5,21808,observed,11,observed
+Indiana,Asian,Unknown or Not Stated,18,A,9,49,observed,0,zero
+Indiana,Black or African American,Hispanic or Latino,18,2054-5,2135-2,4104,observed,Suppressed,suppressed
+Indiana,Black or African American,Not Hispanic or Latino,18,2054-5,2186-5,90305,observed,58,observed
+Indiana,Black or African American,Unknown or Not Stated,18,2054-5,9,114,observed,0,zero
+Indiana,More than one race,Hispanic or Latino,18,M,2135-2,980,observed,Suppressed,suppressed
+Indiana,More than one race,Not Hispanic or Latino,18,M,2186-5,14186,observed,Suppressed,suppressed
+Indiana,More than one race,Unknown or Not Stated,18,M,9,15,observed,0,zero
+Indiana,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,18,NHOPI,2135-2,420,observed,0,zero
+Indiana,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,18,NHOPI,2186-5,541,observed,0,zero
+Indiana,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,18,NHOPI,9,Suppressed,suppressed,0,zero
+Indiana,Not Available,Hispanic or Latino,18,NA,2135-2,0,zero,0,zero
+Indiana,Not Available,Not Hispanic or Latino,18,NA,2186-5,0,zero,0,zero
+Indiana,Not Available,Unknown or Not Stated,18,NA,9,0,zero,0,zero
+Indiana,Not Reported,Hispanic or Latino,18,NR,2135-2,0,zero,0,zero
+Indiana,Not Reported,Not Hispanic or Latino,18,NR,2186-5,0,zero,0,zero
+Indiana,Not Reported,Unknown or Not Stated,18,NR,9,0,zero,0,zero
+Indiana,Unknown or Not Stated,Hispanic or Latino,18,UNK,2135-2,0,zero,0,zero
+Indiana,Unknown or Not Stated,Not Hispanic or Latino,18,UNK,2186-5,0,zero,0,zero
+Indiana,Unknown or Not Stated,Unknown or Not Stated,18,UNK,9,0,zero,0,zero
+Indiana,White,Hispanic or Latino,18,2106-3,2135-2,74448,observed,60,observed
+Indiana,White,Not Hispanic or Latino,18,2106-3,2186-5,516452,observed,337,observed
+Indiana,White,Unknown or Not Stated,18,2106-3,9,491,observed,Suppressed,suppressed
+Iowa,American Indian or Alaska Native,Hispanic or Latino,19,1002-5,2135-2,724,observed,0,zero
+Iowa,American Indian or Alaska Native,Not Hispanic or Latino,19,1002-5,2186-5,1317,observed,Suppressed,suppressed
+Iowa,American Indian or Alaska Native,Unknown or Not Stated,19,1002-5,9,0,zero,0,zero
+Iowa,Asian,Hispanic or Latino,19,A,2135-2,371,observed,Suppressed,suppressed
+Iowa,Asian,Not Hispanic or Latino,19,A,2186-5,9969,observed,Suppressed,suppressed
+Iowa,Asian,Unknown or Not Stated,19,A,9,Suppressed,suppressed,0,zero
+Iowa,Black or African American,Hispanic or Latino,19,2054-5,2135-2,1137,observed,Suppressed,suppressed
+Iowa,Black or African American,Not Hispanic or Latino,19,2054-5,2186-5,23700,observed,27,observed
+Iowa,Black or African American,Unknown or Not Stated,19,2054-5,9,Suppressed,suppressed,0,zero
+Iowa,More than one race,Hispanic or Latino,19,M,2135-2,582,observed,0,zero
+Iowa,More than one race,Not Hispanic or Latino,19,M,2186-5,6184,observed,Suppressed,suppressed
+Iowa,More than one race,Unknown or Not Stated,19,M,9,Suppressed,suppressed,0,zero
+Iowa,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,19,NHOPI,2135-2,232,observed,0,zero
+Iowa,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,19,NHOPI,2186-5,2196,observed,Suppressed,suppressed
+Iowa,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,19,NHOPI,9,0,zero,0,zero
+Iowa,Not Available,Hispanic or Latino,19,NA,2135-2,0,zero,0,zero
+Iowa,Not Available,Not Hispanic or Latino,19,NA,2186-5,0,zero,0,zero
+Iowa,Not Available,Unknown or Not Stated,19,NA,9,0,zero,0,zero
+Iowa,Not Reported,Hispanic or Latino,19,NR,2135-2,0,zero,0,zero
+Iowa,Not Reported,Not Hispanic or Latino,19,NR,2186-5,0,zero,0,zero
+Iowa,Not Reported,Unknown or Not Stated,19,NR,9,0,zero,0,zero
+Iowa,Unknown or Not Stated,Hispanic or Latino,19,UNK,2135-2,0,zero,0,zero
+Iowa,Unknown or Not Stated,Not Hispanic or Latino,19,UNK,2186-5,0,zero,0,zero
+Iowa,Unknown or Not Stated,Unknown or Not Stated,19,UNK,9,0,zero,0,zero
+Iowa,White,Hispanic or Latino,19,2106-3,2135-2,32021,observed,39,observed
+Iowa,White,Not Hispanic or Latino,19,2106-3,2186-5,256731,observed,235,observed
+Iowa,White,Unknown or Not Stated,19,2106-3,9,35,observed,0,zero
+Kansas,American Indian or Alaska Native,Hispanic or Latino,20,1002-5,2135-2,427,observed,0,zero
+Kansas,American Indian or Alaska Native,Not Hispanic or Latino,20,1002-5,2186-5,1444,observed,Suppressed,suppressed
+Kansas,American Indian or Alaska Native,Unknown or Not Stated,20,1002-5,9,Suppressed,suppressed,0,zero
+Kansas,Asian,Hispanic or Latino,20,A,2135-2,384,observed,0,zero
+Kansas,Asian,Not Hispanic or Latino,20,A,2186-5,10269,observed,Suppressed,suppressed
+Kansas,Asian,Unknown or Not Stated,20,A,9,35,observed,0,zero
+Kansas,Black or African American,Hispanic or Latino,20,2054-5,2135-2,1699,observed,Suppressed,suppressed
+Kansas,Black or African American,Not Hispanic or Latino,20,2054-5,2186-5,21370,observed,10,observed
+Kansas,Black or African American,Unknown or Not Stated,20,2054-5,9,65,observed,0,zero
+Kansas,More than one race,Hispanic or Latino,20,M,2135-2,957,observed,Suppressed,suppressed
+Kansas,More than one race,Not Hispanic or Latino,20,M,2186-5,7574,observed,Suppressed,suppressed
+Kansas,More than one race,Unknown or Not Stated,20,M,9,30,observed,0,zero
+Kansas,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,20,NHOPI,2135-2,225,observed,0,zero
+Kansas,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,20,NHOPI,2186-5,674,observed,0,zero
+Kansas,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,20,NHOPI,9,Suppressed,suppressed,0,zero
+Kansas,Not Available,Hispanic or Latino,20,NA,2135-2,0,zero,0,zero
+Kansas,Not Available,Not Hispanic or Latino,20,NA,2186-5,0,zero,0,zero
+Kansas,Not Available,Unknown or Not Stated,20,NA,9,0,zero,0,zero
+Kansas,Not Reported,Hispanic or Latino,20,NR,2135-2,0,zero,0,zero
+Kansas,Not Reported,Not Hispanic or Latino,20,NR,2186-5,0,zero,0,zero
+Kansas,Not Reported,Unknown or Not Stated,20,NR,9,0,zero,0,zero
+Kansas,Unknown or Not Stated,Hispanic or Latino,20,UNK,2135-2,0,zero,0,zero
+Kansas,Unknown or Not Stated,Not Hispanic or Latino,20,UNK,2186-5,0,zero,0,zero
+Kansas,Unknown or Not Stated,Unknown or Not Stated,20,UNK,9,0,zero,0,zero
+Kansas,White,Hispanic or Latino,20,2106-3,2135-2,52645,observed,40,observed
+Kansas,White,Not Hispanic or Latino,20,2106-3,2186-5,219412,observed,147,observed
+Kansas,White,Unknown or Not Stated,20,2106-3,9,534,observed,Suppressed,suppressed
+Kentucky,American Indian or Alaska Native,Hispanic or Latino,21,1002-5,2135-2,343,observed,0,zero
+Kentucky,American Indian or Alaska Native,Not Hispanic or Latino,21,1002-5,2186-5,468,observed,0,zero
+Kentucky,American Indian or Alaska Native,Unknown or Not Stated,21,1002-5,9,Suppressed,suppressed,0,zero
+Kentucky,Asian,Hispanic or Latino,21,A,2135-2,464,observed,Suppressed,suppressed
+Kentucky,Asian,Not Hispanic or Latino,21,A,2186-5,10112,observed,Suppressed,suppressed
+Kentucky,Asian,Unknown or Not Stated,21,A,9,60,observed,0,zero
+Kentucky,Black or African American,Hispanic or Latino,21,2054-5,2135-2,2880,observed,Suppressed,suppressed
+Kentucky,Black or African American,Not Hispanic or Latino,21,2054-5,2186-5,44978,observed,23,observed
+Kentucky,Black or African American,Unknown or Not Stated,21,2054-5,9,298,observed,0,zero
+Kentucky,More than one race,Hispanic or Latino,21,M,2135-2,541,observed,0,zero
+Kentucky,More than one race,Not Hispanic or Latino,21,M,2186-5,9154,observed,Suppressed,suppressed
+Kentucky,More than one race,Unknown or Not Stated,21,M,9,25,observed,0,zero
+Kentucky,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,21,NHOPI,2135-2,349,observed,0,zero
+Kentucky,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,21,NHOPI,2186-5,745,observed,0,zero
+Kentucky,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,21,NHOPI,9,Suppressed,suppressed,0,zero
+Kentucky,Not Available,Hispanic or Latino,21,NA,2135-2,0,zero,0,zero
+Kentucky,Not Available,Not Hispanic or Latino,21,NA,2186-5,0,zero,0,zero
+Kentucky,Not Available,Unknown or Not Stated,21,NA,9,0,zero,0,zero
+Kentucky,Not Reported,Hispanic or Latino,21,NR,2135-2,0,zero,0,zero
+Kentucky,Not Reported,Not Hispanic or Latino,21,NR,2186-5,0,zero,0,zero
+Kentucky,Not Reported,Unknown or Not Stated,21,NR,9,0,zero,0,zero
+Kentucky,Unknown or Not Stated,Hispanic or Latino,21,UNK,2135-2,0,zero,0,zero
+Kentucky,Unknown or Not Stated,Not Hispanic or Latino,21,UNK,2186-5,0,zero,0,zero
+Kentucky,Unknown or Not Stated,Unknown or Not Stated,21,UNK,9,0,zero,0,zero
+Kentucky,White,Hispanic or Latino,21,2106-3,2135-2,30410,observed,18,observed
+Kentucky,White,Not Hispanic or Latino,21,2106-3,2186-5,376499,observed,232,observed
+Kentucky,White,Unknown or Not Stated,21,2106-3,9,952,observed,0,zero
+Louisiana,American Indian or Alaska Native,Hispanic or Latino,22,1002-5,2135-2,696,observed,Suppressed,suppressed
+Louisiana,American Indian or Alaska Native,Not Hispanic or Latino,22,1002-5,2186-5,2507,observed,Suppressed,suppressed
+Louisiana,American Indian or Alaska Native,Unknown or Not Stated,22,1002-5,9,Suppressed,suppressed,0,zero
+Louisiana,Asian,Hispanic or Latino,22,A,2135-2,1059,observed,0,zero
+Louisiana,Asian,Not Hispanic or Latino,22,A,2186-5,9874,observed,Suppressed,suppressed
+Louisiana,Asian,Unknown or Not Stated,22,A,9,Suppressed,suppressed,0,zero
+Louisiana,Black or African American,Hispanic or Latino,22,2054-5,2135-2,11112,observed,Suppressed,suppressed
+Louisiana,Black or African American,Not Hispanic or Latino,22,2054-5,2186-5,190579,observed,92,observed
+Louisiana,Black or African American,Unknown or Not Stated,22,2054-5,9,126,observed,0,zero
+Louisiana,More than one race,Hispanic or Latino,22,M,2135-2,470,observed,0,zero
+Louisiana,More than one race,Not Hispanic or Latino,22,M,2186-5,6910,observed,Suppressed,suppressed
+Louisiana,More than one race,Unknown or Not Stated,22,M,9,Suppressed,suppressed,0,zero
+Louisiana,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,22,NHOPI,2135-2,796,observed,0,zero
+Louisiana,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,22,NHOPI,2186-5,266,observed,0,zero
+Louisiana,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,22,NHOPI,9,Suppressed,suppressed,0,zero
+Louisiana,Not Available,Hispanic or Latino,22,NA,2135-2,0,zero,0,zero
+Louisiana,Not Available,Not Hispanic or Latino,22,NA,2186-5,0,zero,0,zero
+Louisiana,Not Available,Unknown or Not Stated,22,NA,9,0,zero,0,zero
+Louisiana,Not Reported,Hispanic or Latino,22,NR,2135-2,0,zero,0,zero
+Louisiana,Not Reported,Not Hispanic or Latino,22,NR,2186-5,0,zero,0,zero
+Louisiana,Not Reported,Unknown or Not Stated,22,NR,9,0,zero,0,zero
+Louisiana,Unknown or Not Stated,Hispanic or Latino,22,UNK,2135-2,0,zero,0,zero
+Louisiana,Unknown or Not Stated,Not Hispanic or Latino,22,UNK,2186-5,0,zero,0,zero
+Louisiana,Unknown or Not Stated,Unknown or Not Stated,22,UNK,9,0,zero,0,zero
+Louisiana,White,Hispanic or Latino,22,2106-3,2135-2,33527,observed,20,observed
+Louisiana,White,Not Hispanic or Latino,22,2106-3,2186-5,264093,observed,146,observed
+Louisiana,White,Unknown or Not Stated,22,2106-3,9,202,observed,Suppressed,suppressed
+Maine,American Indian or Alaska Native,Hispanic or Latino,23,1002-5,2135-2,37,observed,0,zero
+Maine,American Indian or Alaska Native,Not Hispanic or Latino,23,1002-5,2186-5,743,observed,Suppressed,suppressed
+Maine,American Indian or Alaska Native,Unknown or Not Stated,23,1002-5,9,Suppressed,suppressed,0,zero
+Maine,Asian,Hispanic or Latino,23,A,2135-2,36,observed,0,zero
+Maine,Asian,Not Hispanic or Latino,23,A,2186-5,1776,observed,Suppressed,suppressed
+Maine,Asian,Unknown or Not Stated,23,A,9,Suppressed,suppressed,0,zero
+Maine,Black or African American,Hispanic or Latino,23,2054-5,2135-2,123,observed,Suppressed,suppressed
+Maine,Black or African American,Not Hispanic or Latino,23,2054-5,2186-5,5376,observed,11,observed
+Maine,Black or African American,Unknown or Not Stated,23,2054-5,9,Suppressed,suppressed,0,zero
+Maine,More than one race,Hispanic or Latino,23,M,2135-2,104,observed,0,zero
+Maine,More than one race,Not Hispanic or Latino,23,M,2186-5,2082,observed,0,zero
+Maine,More than one race,Unknown or Not Stated,23,M,9,Suppressed,suppressed,0,zero
+Maine,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,23,NHOPI,2135-2,16,observed,0,zero
+Maine,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,23,NHOPI,2186-5,35,observed,0,zero
+Maine,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,23,NHOPI,9,0,zero,0,zero
+Maine,Not Available,Hispanic or Latino,23,NA,2135-2,0,zero,0,zero
+Maine,Not Available,Not Hispanic or Latino,23,NA,2186-5,0,zero,0,zero
+Maine,Not Available,Unknown or Not Stated,23,NA,9,0,zero,0,zero
+Maine,Not Reported,Hispanic or Latino,23,NR,2135-2,0,zero,0,zero
+Maine,Not Reported,Not Hispanic or Latino,23,NR,2186-5,0,zero,0,zero
+Maine,Not Reported,Unknown or Not Stated,23,NR,9,0,zero,0,zero
+Maine,Unknown or Not Stated,Hispanic or Latino,23,UNK,2135-2,0,zero,0,zero
+Maine,Unknown or Not Stated,Not Hispanic or Latino,23,UNK,2186-5,0,zero,0,zero
+Maine,Unknown or Not Stated,Unknown or Not Stated,23,UNK,9,0,zero,0,zero
+Maine,White,Hispanic or Latino,23,2106-3,2135-2,2222,observed,Suppressed,suppressed
+Maine,White,Not Hispanic or Latino,23,2106-3,2186-5,95039,observed,55,observed
+Maine,White,Unknown or Not Stated,23,2106-3,9,346,observed,0,zero
+Maryland,American Indian or Alaska Native,Hispanic or Latino,24,1002-5,2135-2,2798,observed,Suppressed,suppressed
+Maryland,American Indian or Alaska Native,Not Hispanic or Latino,24,1002-5,2186-5,742,observed,Suppressed,suppressed
+Maryland,American Indian or Alaska Native,Unknown or Not Stated,24,1002-5,9,Suppressed,suppressed,0,zero
+Maryland,Asian,Hispanic or Latino,24,A,2135-2,3097,observed,Suppressed,suppressed
+Maryland,Asian,Not Hispanic or Latino,24,A,2186-5,42651,observed,18,observed
+Maryland,Asian,Unknown or Not Stated,24,A,9,172,observed,0,zero
+Maryland,Black or African American,Hispanic or Latino,24,2054-5,2135-2,17559,observed,14,observed
+Maryland,Black or African American,Not Hispanic or Latino,24,2054-5,2186-5,187568,observed,70,observed
+Maryland,Black or African American,Unknown or Not Stated,24,2054-5,9,818,observed,0,zero
+Maryland,More than one race,Hispanic or Latino,24,M,2135-2,1829,observed,0,zero
+Maryland,More than one race,Not Hispanic or Latino,24,M,2186-5,16081,observed,Suppressed,suppressed
+Maryland,More than one race,Unknown or Not Stated,24,M,9,56,observed,0,zero
+Maryland,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,24,NHOPI,2135-2,883,observed,0,zero
+Maryland,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,24,NHOPI,2186-5,307,observed,0,zero
+Maryland,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,24,NHOPI,9,Suppressed,suppressed,0,zero
+Maryland,Not Available,Hispanic or Latino,24,NA,2135-2,0,zero,0,zero
+Maryland,Not Available,Not Hispanic or Latino,24,NA,2186-5,0,zero,0,zero
+Maryland,Not Available,Unknown or Not Stated,24,NA,9,0,zero,0,zero
+Maryland,Not Reported,Hispanic or Latino,24,NR,2135-2,0,zero,0,zero
+Maryland,Not Reported,Not Hispanic or Latino,24,NR,2186-5,0,zero,0,zero
+Maryland,Not Reported,Unknown or Not Stated,24,NR,9,0,zero,0,zero
+Maryland,Unknown or Not Stated,Hispanic or Latino,24,UNK,2135-2,0,zero,0,zero
+Maryland,Unknown or Not Stated,Not Hispanic or Latino,24,UNK,2186-5,0,zero,0,zero
+Maryland,Unknown or Not Stated,Unknown or Not Stated,24,UNK,9,0,zero,0,zero
+Maryland,White,Hispanic or Latino,24,2106-3,2135-2,93483,observed,92,observed
+Maryland,White,Not Hispanic or Latino,24,2106-3,2186-5,254218,observed,80,observed
+Maryland,White,Unknown or Not Stated,24,2106-3,9,772,observed,0,zero
+Massachusetts,American Indian or Alaska Native,Hispanic or Latino,25,1002-5,2135-2,153,observed,0,zero
+Massachusetts,American Indian or Alaska Native,Not Hispanic or Latino,25,1002-5,2186-5,575,observed,0,zero
+Massachusetts,American Indian or Alaska Native,Unknown or Not Stated,25,1002-5,9,31,observed,0,zero
+Massachusetts,Asian,Hispanic or Latino,25,A,2135-2,770,observed,Suppressed,suppressed
+Massachusetts,Asian,Not Hispanic or Latino,25,A,2186-5,52677,observed,22,observed
+Massachusetts,Asian,Unknown or Not Stated,25,A,9,967,observed,Suppressed,suppressed
+Massachusetts,Black or African American,Hispanic or Latino,25,2054-5,2135-2,24684,observed,17,observed
+Massachusetts,Black or African American,Not Hispanic or Latino,25,2054-5,2186-5,62933,observed,59,observed
+Massachusetts,Black or African American,Unknown or Not Stated,25,2054-5,9,1306,observed,0,zero
+Massachusetts,More than one race,Hispanic or Latino,25,M,2135-2,3475,observed,Suppressed,suppressed
+Massachusetts,More than one race,Not Hispanic or Latino,25,M,2186-5,12983,observed,Suppressed,suppressed
+Massachusetts,More than one race,Unknown or Not Stated,25,M,9,13,observed,0,zero
+Massachusetts,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,25,NHOPI,2135-2,136,observed,0,zero
+Massachusetts,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,25,NHOPI,2186-5,176,observed,Suppressed,suppressed
+Massachusetts,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,25,NHOPI,9,Suppressed,suppressed,0,zero
+Massachusetts,Not Available,Hispanic or Latino,25,NA,2135-2,0,zero,0,zero
+Massachusetts,Not Available,Not Hispanic or Latino,25,NA,2186-5,0,zero,0,zero
+Massachusetts,Not Available,Unknown or Not Stated,25,NA,9,0,zero,0,zero
+Massachusetts,Not Reported,Hispanic or Latino,25,NR,2135-2,0,zero,0,zero
+Massachusetts,Not Reported,Not Hispanic or Latino,25,NR,2186-5,0,zero,0,zero
+Massachusetts,Not Reported,Unknown or Not Stated,25,NR,9,0,zero,0,zero
+Massachusetts,Unknown or Not Stated,Hispanic or Latino,25,UNK,2135-2,0,zero,0,zero
+Massachusetts,Unknown or Not Stated,Not Hispanic or Latino,25,UNK,2186-5,0,zero,0,zero
+Massachusetts,Unknown or Not Stated,Unknown or Not Stated,25,UNK,9,0,zero,0,zero
+Massachusetts,White,Hispanic or Latino,25,2106-3,2135-2,101759,observed,72,observed
+Massachusetts,White,Not Hispanic or Latino,25,2106-3,2186-5,347781,observed,195,observed
+Massachusetts,White,Unknown or Not Stated,25,2106-3,9,9244,observed,Suppressed,suppressed
+Michigan,American Indian or Alaska Native,Hispanic or Latino,26,1002-5,2135-2,553,observed,0,zero
+Michigan,American Indian or Alaska Native,Not Hispanic or Latino,26,1002-5,2186-5,3496,observed,Suppressed,suppressed
+Michigan,American Indian or Alaska Native,Unknown or Not Stated,26,1002-5,9,19,observed,0,zero
+Michigan,Asian,Hispanic or Latino,26,A,2135-2,653,observed,0,zero
+Michigan,Asian,Not Hispanic or Latino,26,A,2186-5,38226,observed,Suppressed,suppressed
+Michigan,Asian,Unknown or Not Stated,26,A,9,133,observed,0,zero
+Michigan,Black or African American,Hispanic or Latino,26,2054-5,2135-2,5075,observed,Suppressed,suppressed
+Michigan,Black or African American,Not Hispanic or Latino,26,2054-5,2186-5,168998,observed,49,observed
+Michigan,Black or African American,Unknown or Not Stated,26,2054-5,9,516,observed,0,zero
+Michigan,More than one race,Hispanic or Latino,26,M,2135-2,1945,observed,Suppressed,suppressed
+Michigan,More than one race,Not Hispanic or Latino,26,M,2186-5,22364,observed,Suppressed,suppressed
+Michigan,More than one race,Unknown or Not Stated,26,M,9,81,observed,0,zero
+Michigan,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,26,NHOPI,2135-2,262,observed,Suppressed,suppressed
+Michigan,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,26,NHOPI,2186-5,335,observed,0,zero
+Michigan,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,26,NHOPI,9,Suppressed,suppressed,0,zero
+Michigan,Not Available,Hispanic or Latino,26,NA,2135-2,0,zero,0,zero
+Michigan,Not Available,Not Hispanic or Latino,26,NA,2186-5,0,zero,0,zero
+Michigan,Not Available,Unknown or Not Stated,26,NA,9,0,zero,0,zero
+Michigan,Not Reported,Hispanic or Latino,26,NR,2135-2,0,zero,0,zero
+Michigan,Not Reported,Not Hispanic or Latino,26,NR,2186-5,0,zero,0,zero
+Michigan,Not Reported,Unknown or Not Stated,26,NR,9,0,zero,0,zero
+Michigan,Unknown or Not Stated,Hispanic or Latino,26,UNK,2135-2,0,zero,0,zero
+Michigan,Unknown or Not Stated,Not Hispanic or Latino,26,UNK,2186-5,0,zero,0,zero
+Michigan,Unknown or Not Stated,Unknown or Not Stated,26,UNK,9,0,zero,0,zero
+Michigan,White,Hispanic or Latino,26,2106-3,2135-2,57615,observed,26,observed
+Michigan,White,Not Hispanic or Latino,26,2106-3,2186-5,649505,observed,291,observed
+Michigan,White,Unknown or Not Stated,26,2106-3,9,2900,observed,0,zero
+Minnesota,American Indian or Alaska Native,Hispanic or Latino,27,1002-5,2135-2,1386,observed,0,zero
+Minnesota,American Indian or Alaska Native,Not Hispanic or Latino,27,1002-5,2186-5,7925,observed,Suppressed,suppressed
+Minnesota,American Indian or Alaska Native,Unknown or Not Stated,27,1002-5,9,54,observed,0,zero
+Minnesota,Asian,Hispanic or Latino,27,A,2135-2,858,observed,Suppressed,suppressed
+Minnesota,Asian,Not Hispanic or Latino,27,A,2186-5,45349,observed,28,observed
+Minnesota,Asian,Unknown or Not Stated,27,A,9,144,observed,0,zero
+Minnesota,Black or African American,Hispanic or Latino,27,2054-5,2135-2,2470,observed,Suppressed,suppressed
+Minnesota,Black or African American,Not Hispanic or Latino,27,2054-5,2186-5,70847,observed,57,observed
+Minnesota,Black or African American,Unknown or Not Stated,27,2054-5,9,302,observed,0,zero
+Minnesota,More than one race,Hispanic or Latino,27,M,2135-2,1307,observed,0,zero
+Minnesota,More than one race,Not Hispanic or Latino,27,M,2186-5,15448,observed,14,observed
+Minnesota,More than one race,Unknown or Not Stated,27,M,9,20,observed,0,zero
+Minnesota,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,27,NHOPI,2135-2,220,observed,0,zero
+Minnesota,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,27,NHOPI,2186-5,600,observed,0,zero
+Minnesota,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,27,NHOPI,9,Suppressed,suppressed,0,zero
+Minnesota,Not Available,Hispanic or Latino,27,NA,2135-2,0,zero,0,zero
+Minnesota,Not Available,Not Hispanic or Latino,27,NA,2186-5,0,zero,0,zero
+Minnesota,Not Available,Unknown or Not Stated,27,NA,9,0,zero,0,zero
+Minnesota,Not Reported,Hispanic or Latino,27,NR,2135-2,0,zero,0,zero
+Minnesota,Not Reported,Not Hispanic or Latino,27,NR,2186-5,0,zero,0,zero
+Minnesota,Not Reported,Unknown or Not Stated,27,NR,9,0,zero,0,zero
+Minnesota,Unknown or Not Stated,Hispanic or Latino,27,UNK,2135-2,0,zero,0,zero
+Minnesota,Unknown or Not Stated,Not Hispanic or Latino,27,UNK,2186-5,0,zero,0,zero
+Minnesota,Unknown or Not Stated,Unknown or Not Stated,27,UNK,9,0,zero,0,zero
+Minnesota,White,Hispanic or Latino,27,2106-3,2135-2,44353,observed,34,observed
+Minnesota,White,Not Hispanic or Latino,27,2106-3,2186-5,394541,observed,287,observed
+Minnesota,White,Unknown or Not Stated,27,2106-3,9,1595,observed,Suppressed,suppressed
+Mississippi,American Indian or Alaska Native,Hispanic or Latino,28,1002-5,2135-2,219,observed,0,zero
+Mississippi,American Indian or Alaska Native,Not Hispanic or Latino,28,1002-5,2186-5,2056,observed,0,zero
+Mississippi,American Indian or Alaska Native,Unknown or Not Stated,28,1002-5,9,Suppressed,suppressed,0,zero
+Mississippi,Asian,Hispanic or Latino,28,A,2135-2,272,observed,0,zero
+Mississippi,Asian,Not Hispanic or Latino,28,A,2186-5,3977,observed,0,zero
+Mississippi,Asian,Unknown or Not Stated,28,A,9,Suppressed,suppressed,0,zero
+Mississippi,Black or African American,Hispanic or Latino,28,2054-5,2135-2,4439,observed,Suppressed,suppressed
+Mississippi,Black or African American,Not Hispanic or Latino,28,2054-5,2186-5,134009,observed,12,observed
+Mississippi,Black or African American,Unknown or Not Stated,28,2054-5,9,36,observed,0,zero
+Mississippi,More than one race,Hispanic or Latino,28,M,2135-2,122,observed,0,zero
+Mississippi,More than one race,Not Hispanic or Latino,28,M,2186-5,2722,observed,Suppressed,suppressed
+Mississippi,More than one race,Unknown or Not Stated,28,M,9,Suppressed,suppressed,0,zero
+Mississippi,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,28,NHOPI,2135-2,69,observed,0,zero
+Mississippi,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,28,NHOPI,2186-5,148,observed,0,zero
+Mississippi,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,28,NHOPI,9,Suppressed,suppressed,0,zero
+Mississippi,Not Available,Hispanic or Latino,28,NA,2135-2,0,zero,0,zero
+Mississippi,Not Available,Not Hispanic or Latino,28,NA,2186-5,0,zero,0,zero
+Mississippi,Not Available,Unknown or Not Stated,28,NA,9,0,zero,0,zero
+Mississippi,Not Reported,Hispanic or Latino,28,NR,2135-2,0,zero,0,zero
+Mississippi,Not Reported,Not Hispanic or Latino,28,NR,2186-5,0,zero,0,zero
+Mississippi,Not Reported,Unknown or Not Stated,28,NR,9,0,zero,0,zero
+Mississippi,Unknown or Not Stated,Hispanic or Latino,28,UNK,2135-2,0,zero,0,zero
+Mississippi,Unknown or Not Stated,Not Hispanic or Latino,28,UNK,2186-5,0,zero,0,zero
+Mississippi,Unknown or Not Stated,Unknown or Not Stated,28,UNK,9,0,zero,0,zero
+Mississippi,White,Hispanic or Latino,28,2106-3,2135-2,11409,observed,Suppressed,suppressed
+Mississippi,White,Not Hispanic or Latino,28,2106-3,2186-5,162595,observed,44,observed
+Mississippi,White,Unknown or Not Stated,28,2106-3,9,78,observed,0,zero
+Missouri,American Indian or Alaska Native,Hispanic or Latino,29,1002-5,2135-2,754,observed,0,zero
+Missouri,American Indian or Alaska Native,Not Hispanic or Latino,29,1002-5,2186-5,1466,observed,Suppressed,suppressed
+Missouri,American Indian or Alaska Native,Unknown or Not Stated,29,1002-5,9,18,observed,0,zero
+Missouri,Asian,Hispanic or Latino,29,A,2135-2,585,observed,Suppressed,suppressed
+Missouri,Asian,Not Hispanic or Latino,29,A,2186-5,15348,observed,Suppressed,suppressed
+Missouri,Asian,Unknown or Not Stated,29,A,9,144,observed,Suppressed,suppressed
+Missouri,Black or African American,Hispanic or Latino,29,2054-5,2135-2,3295,observed,Suppressed,suppressed
+Missouri,Black or African American,Not Hispanic or Latino,29,2054-5,2186-5,87566,observed,25,observed
+Missouri,Black or African American,Unknown or Not Stated,29,2054-5,9,994,observed,Suppressed,suppressed
+Missouri,More than one race,Hispanic or Latino,29,M,2135-2,1505,observed,0,zero
+Missouri,More than one race,Not Hispanic or Latino,29,M,2186-5,19640,observed,13,observed
+Missouri,More than one race,Unknown or Not Stated,29,M,9,120,observed,0,zero
+Missouri,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,29,NHOPI,2135-2,424,observed,0,zero
+Missouri,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,29,NHOPI,2186-5,2085,observed,Suppressed,suppressed
+Missouri,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,29,NHOPI,9,61,observed,0,zero
+Missouri,Not Available,Hispanic or Latino,29,NA,2135-2,0,zero,0,zero
+Missouri,Not Available,Not Hispanic or Latino,29,NA,2186-5,0,zero,0,zero
+Missouri,Not Available,Unknown or Not Stated,29,NA,9,0,zero,0,zero
+Missouri,Not Reported,Hispanic or Latino,29,NR,2135-2,0,zero,0,zero
+Missouri,Not Reported,Not Hispanic or Latino,29,NR,2186-5,0,zero,0,zero
+Missouri,Not Reported,Unknown or Not Stated,29,NR,9,0,zero,0,zero
+Missouri,Unknown or Not Stated,Hispanic or Latino,29,UNK,2135-2,0,zero,0,zero
+Missouri,Unknown or Not Stated,Not Hispanic or Latino,29,UNK,2186-5,0,zero,0,zero
+Missouri,Unknown or Not Stated,Unknown or Not Stated,29,UNK,9,0,zero,0,zero
+Missouri,White,Hispanic or Latino,29,2106-3,2135-2,36631,observed,18,observed
+Missouri,White,Not Hispanic or Latino,29,2106-3,2186-5,463470,observed,223,observed
+Missouri,White,Unknown or Not Stated,29,2106-3,9,1873,observed,Suppressed,suppressed
+Montana,American Indian or Alaska Native,Hispanic or Latino,30,1002-5,2135-2,582,observed,Suppressed,suppressed
+Montana,American Indian or Alaska Native,Not Hispanic or Latino,30,1002-5,2186-5,9637,observed,Suppressed,suppressed
+Montana,American Indian or Alaska Native,Unknown or Not Stated,30,1002-5,9,20,observed,0,zero
+Montana,Asian,Hispanic or Latino,30,A,2135-2,58,observed,0,zero
+Montana,Asian,Not Hispanic or Latino,30,A,2186-5,1061,observed,Suppressed,suppressed
+Montana,Asian,Unknown or Not Stated,30,A,9,Suppressed,suppressed,0,zero
+Montana,Black or African American,Hispanic or Latino,30,2054-5,2135-2,122,observed,0,zero
+Montana,Black or African American,Not Hispanic or Latino,30,2054-5,2186-5,562,observed,Suppressed,suppressed
+Montana,Black or African American,Unknown or Not Stated,30,2054-5,9,Suppressed,suppressed,0,zero
+Montana,More than one race,Hispanic or Latino,30,M,2135-2,331,observed,Suppressed,suppressed
+Montana,More than one race,Not Hispanic or Latino,30,M,2186-5,3110,observed,Suppressed,suppressed
+Montana,More than one race,Unknown or Not Stated,30,M,9,Suppressed,suppressed,0,zero
+Montana,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,30,NHOPI,2135-2,39,observed,0,zero
+Montana,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,30,NHOPI,2186-5,127,observed,0,zero
+Montana,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,30,NHOPI,9,Suppressed,suppressed,0,zero
+Montana,Not Available,Hispanic or Latino,30,NA,2135-2,0,zero,0,zero
+Montana,Not Available,Not Hispanic or Latino,30,NA,2186-5,0,zero,0,zero
+Montana,Not Available,Unknown or Not Stated,30,NA,9,0,zero,0,zero
+Montana,Not Reported,Hispanic or Latino,30,NR,2135-2,0,zero,0,zero
+Montana,Not Reported,Not Hispanic or Latino,30,NR,2186-5,0,zero,0,zero
+Montana,Not Reported,Unknown or Not Stated,30,NR,9,0,zero,0,zero
+Montana,Unknown or Not Stated,Hispanic or Latino,30,UNK,2135-2,0,zero,0,zero
+Montana,Unknown or Not Stated,Not Hispanic or Latino,30,UNK,2186-5,0,zero,0,zero
+Montana,Unknown or Not Stated,Unknown or Not Stated,30,UNK,9,0,zero,0,zero
+Montana,White,Hispanic or Latino,30,2106-3,2135-2,4556,observed,0,zero
+Montana,White,Not Hispanic or Latino,30,2106-3,2186-5,81831,observed,78,observed
+Montana,White,Unknown or Not Stated,30,2106-3,9,229,observed,0,zero
+Nebraska,American Indian or Alaska Native,Hispanic or Latino,31,1002-5,2135-2,1524,observed,Suppressed,suppressed
+Nebraska,American Indian or Alaska Native,Not Hispanic or Latino,31,1002-5,2186-5,2705,observed,Suppressed,suppressed
+Nebraska,American Indian or Alaska Native,Unknown or Not Stated,31,1002-5,9,Suppressed,suppressed,0,zero
+Nebraska,Asian,Hispanic or Latino,31,A,2135-2,490,observed,Suppressed,suppressed
+Nebraska,Asian,Not Hispanic or Latino,31,A,2186-5,7718,observed,Suppressed,suppressed
+Nebraska,Asian,Unknown or Not Stated,31,A,9,Suppressed,suppressed,0,zero
+Nebraska,Black or African American,Hispanic or Latino,31,2054-5,2135-2,2037,observed,Suppressed,suppressed
+Nebraska,Black or African American,Not Hispanic or Latino,31,2054-5,2186-5,14515,observed,14,observed
+Nebraska,Black or African American,Unknown or Not Stated,31,2054-5,9,12,observed,0,zero
+Nebraska,More than one race,Hispanic or Latino,31,M,2135-2,679,observed,Suppressed,suppressed
+Nebraska,More than one race,Not Hispanic or Latino,31,M,2186-5,6035,observed,Suppressed,suppressed
+Nebraska,More than one race,Unknown or Not Stated,31,M,9,Suppressed,suppressed,0,zero
+Nebraska,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,31,NHOPI,2135-2,153,observed,0,zero
+Nebraska,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,31,NHOPI,2186-5,312,observed,Suppressed,suppressed
+Nebraska,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,31,NHOPI,9,Suppressed,suppressed,0,zero
+Nebraska,Not Available,Hispanic or Latino,31,NA,2135-2,0,zero,0,zero
+Nebraska,Not Available,Not Hispanic or Latino,31,NA,2186-5,0,zero,0,zero
+Nebraska,Not Available,Unknown or Not Stated,31,NA,9,0,zero,0,zero
+Nebraska,Not Reported,Hispanic or Latino,31,NR,2135-2,0,zero,0,zero
+Nebraska,Not Reported,Not Hispanic or Latino,31,NR,2186-5,0,zero,0,zero
+Nebraska,Not Reported,Unknown or Not Stated,31,NR,9,0,zero,0,zero
+Nebraska,Unknown or Not Stated,Hispanic or Latino,31,UNK,2135-2,0,zero,0,zero
+Nebraska,Unknown or Not Stated,Not Hispanic or Latino,31,UNK,2186-5,0,zero,0,zero
+Nebraska,Unknown or Not Stated,Unknown or Not Stated,31,UNK,9,0,zero,0,zero
+Nebraska,White,Hispanic or Latino,31,2106-3,2135-2,36537,observed,62,observed
+Nebraska,White,Not Hispanic or Latino,31,2106-3,2186-5,151967,observed,117,observed
+Nebraska,White,Unknown or Not Stated,31,2106-3,9,94,observed,0,zero
+Nevada,American Indian or Alaska Native,Hispanic or Latino,32,1002-5,2135-2,787,observed,0,zero
+Nevada,American Indian or Alaska Native,Not Hispanic or Latino,32,1002-5,2186-5,2269,observed,Suppressed,suppressed
+Nevada,American Indian or Alaska Native,Unknown or Not Stated,32,1002-5,9,27,observed,0,zero
+Nevada,Asian,Hispanic or Latino,32,A,2135-2,1211,observed,0,zero
+Nevada,Asian,Not Hispanic or Latino,32,A,2186-5,22869,observed,Suppressed,suppressed
+Nevada,Asian,Unknown or Not Stated,32,A,9,112,observed,0,zero
+Nevada,Black or African American,Hispanic or Latino,32,2054-5,2135-2,3343,observed,Suppressed,suppressed
+Nevada,Black or African American,Not Hispanic or Latino,32,2054-5,2186-5,39179,observed,11,observed
+Nevada,Black or African American,Unknown or Not Stated,32,2054-5,9,233,observed,0,zero
+Nevada,More than one race,Hispanic or Latino,32,M,2135-2,2527,observed,0,zero
+Nevada,More than one race,Not Hispanic or Latino,32,M,2186-5,13254,observed,Suppressed,suppressed
+Nevada,More than one race,Unknown or Not Stated,32,M,9,22,observed,0,zero
+Nevada,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,32,NHOPI,2135-2,399,observed,0,zero
+Nevada,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,32,NHOPI,2186-5,3053,observed,Suppressed,suppressed
+Nevada,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,32,NHOPI,9,13,observed,0,zero
+Nevada,Not Available,Hispanic or Latino,32,NA,2135-2,0,zero,0,zero
+Nevada,Not Available,Not Hispanic or Latino,32,NA,2186-5,0,zero,0,zero
+Nevada,Not Available,Unknown or Not Stated,32,NA,9,0,zero,0,zero
+Nevada,Not Reported,Hispanic or Latino,32,NR,2135-2,0,zero,0,zero
+Nevada,Not Reported,Not Hispanic or Latino,32,NR,2186-5,0,zero,0,zero
+Nevada,Not Reported,Unknown or Not Stated,32,NR,9,0,zero,0,zero
+Nevada,Unknown or Not Stated,Hispanic or Latino,32,UNK,2135-2,0,zero,0,zero
+Nevada,Unknown or Not Stated,Not Hispanic or Latino,32,UNK,2186-5,0,zero,0,zero
+Nevada,Unknown or Not Stated,Unknown or Not Stated,32,UNK,9,0,zero,0,zero
+Nevada,White,Hispanic or Latino,32,2106-3,2135-2,109289,observed,70,observed
+Nevada,White,Not Hispanic or Latino,32,2106-3,2186-5,107909,observed,49,observed
+Nevada,White,Unknown or Not Stated,32,2106-3,9,981,observed,Suppressed,suppressed
+New Hampshire,American Indian or Alaska Native,Hispanic or Latino,33,1002-5,2135-2,36,observed,0,zero
+New Hampshire,American Indian or Alaska Native,Not Hispanic or Latino,33,1002-5,2186-5,93,observed,0,zero
+New Hampshire,American Indian or Alaska Native,Unknown or Not Stated,33,1002-5,9,Suppressed,suppressed,0,zero
+New Hampshire,Asian,Hispanic or Latino,33,A,2135-2,77,observed,0,zero
+New Hampshire,Asian,Not Hispanic or Latino,33,A,2186-5,4120,observed,Suppressed,suppressed
+New Hampshire,Asian,Unknown or Not Stated,33,A,9,33,observed,0,zero
+New Hampshire,Black or African American,Hispanic or Latino,33,2054-5,2135-2,678,observed,Suppressed,suppressed
+New Hampshire,Black or African American,Not Hispanic or Latino,33,2054-5,2186-5,2299,observed,Suppressed,suppressed
+New Hampshire,Black or African American,Unknown or Not Stated,33,2054-5,9,35,observed,0,zero
+New Hampshire,More than one race,Hispanic or Latino,33,M,2135-2,179,observed,0,zero
+New Hampshire,More than one race,Not Hispanic or Latino,33,M,2186-5,1198,observed,Suppressed,suppressed
+New Hampshire,More than one race,Unknown or Not Stated,33,M,9,11,observed,0,zero
+New Hampshire,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,33,NHOPI,2135-2,44,observed,0,zero
+New Hampshire,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,33,NHOPI,2186-5,53,observed,0,zero
+New Hampshire,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,33,NHOPI,9,0,zero,0,zero
+New Hampshire,Not Available,Hispanic or Latino,33,NA,2135-2,0,zero,0,zero
+New Hampshire,Not Available,Not Hispanic or Latino,33,NA,2186-5,0,zero,0,zero
+New Hampshire,Not Available,Unknown or Not Stated,33,NA,9,0,zero,0,zero
+New Hampshire,Not Reported,Hispanic or Latino,33,NR,2135-2,0,zero,0,zero
+New Hampshire,Not Reported,Not Hispanic or Latino,33,NR,2186-5,0,zero,0,zero
+New Hampshire,Not Reported,Unknown or Not Stated,33,NR,9,0,zero,0,zero
+New Hampshire,Unknown or Not Stated,Hispanic or Latino,33,UNK,2135-2,0,zero,0,zero
+New Hampshire,Unknown or Not Stated,Not Hispanic or Latino,33,UNK,2186-5,0,zero,0,zero
+New Hampshire,Unknown or Not Stated,Unknown or Not Stated,33,UNK,9,0,zero,0,zero
+New Hampshire,White,Hispanic or Latino,33,2106-3,2135-2,6105,observed,Suppressed,suppressed
+New Hampshire,White,Not Hispanic or Latino,33,2106-3,2186-5,92854,observed,66,observed
+New Hampshire,White,Unknown or Not Stated,33,2106-3,9,598,observed,0,zero
+New Jersey,American Indian or Alaska Native,Hispanic or Latino,34,1002-5,2135-2,1620,observed,0,zero
+New Jersey,American Indian or Alaska Native,Not Hispanic or Latino,34,1002-5,2186-5,427,observed,0,zero
+New Jersey,American Indian or Alaska Native,Unknown or Not Stated,34,1002-5,9,30,observed,0,zero
+New Jersey,Asian,Hispanic or Latino,34,A,2135-2,4697,observed,Suppressed,suppressed
+New Jersey,Asian,Not Hispanic or Latino,34,A,2186-5,98000,observed,31,observed
+New Jersey,Asian,Unknown or Not Stated,34,A,9,1290,observed,Suppressed,suppressed
+New Jersey,Black or African American,Hispanic or Latino,34,2054-5,2135-2,31685,observed,45,observed
+New Jersey,Black or African American,Not Hispanic or Latino,34,2054-5,2186-5,116984,observed,104,observed
+New Jersey,Black or African American,Unknown or Not Stated,34,2054-5,9,3031,observed,Suppressed,suppressed
+New Jersey,More than one race,Hispanic or Latino,34,M,2135-2,2445,observed,Suppressed,suppressed
+New Jersey,More than one race,Not Hispanic or Latino,34,M,2186-5,10559,observed,Suppressed,suppressed
+New Jersey,More than one race,Unknown or Not Stated,34,M,9,145,observed,0,zero
+New Jersey,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,34,NHOPI,2135-2,1806,observed,Suppressed,suppressed
+New Jersey,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,34,NHOPI,2186-5,295,observed,0,zero
+New Jersey,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,34,NHOPI,9,14,observed,0,zero
+New Jersey,Not Available,Hispanic or Latino,34,NA,2135-2,0,zero,0,zero
+New Jersey,Not Available,Not Hispanic or Latino,34,NA,2186-5,0,zero,0,zero
+New Jersey,Not Available,Unknown or Not Stated,34,NA,9,0,zero,0,zero
+New Jersey,Not Reported,Hispanic or Latino,34,NR,2135-2,0,zero,0,zero
+New Jersey,Not Reported,Not Hispanic or Latino,34,NR,2186-5,0,zero,0,zero
+New Jersey,Not Reported,Unknown or Not Stated,34,NR,9,0,zero,0,zero
+New Jersey,Unknown or Not Stated,Hispanic or Latino,34,UNK,2135-2,0,zero,0,zero
+New Jersey,Unknown or Not Stated,Not Hispanic or Latino,34,UNK,2186-5,0,zero,0,zero
+New Jersey,Unknown or Not Stated,Unknown or Not Stated,34,UNK,9,0,zero,0,zero
+New Jersey,White,Hispanic or Latino,34,2106-3,2135-2,214840,observed,264,observed
+New Jersey,White,Not Hispanic or Latino,34,2106-3,2186-5,413931,observed,229,observed
+New Jersey,White,Unknown or Not Stated,34,2106-3,9,7623,observed,Suppressed,suppressed
+New Mexico,American Indian or Alaska Native,Hispanic or Latino,35,1002-5,2135-2,2237,observed,Suppressed,suppressed
+New Mexico,American Indian or Alaska Native,Not Hispanic or Latino,35,1002-5,2186-5,21694,observed,11,observed
+New Mexico,American Indian or Alaska Native,Unknown or Not Stated,35,1002-5,9,87,observed,0,zero
+New Mexico,Asian,Hispanic or Latino,35,A,2135-2,280,observed,0,zero
+New Mexico,Asian,Not Hispanic or Latino,35,A,2186-5,3615,observed,Suppressed,suppressed
+New Mexico,Asian,Unknown or Not Stated,35,A,9,21,observed,0,zero
+New Mexico,Black or African American,Hispanic or Latino,35,2054-5,2135-2,1338,observed,Suppressed,suppressed
+New Mexico,Black or African American,Not Hispanic or Latino,35,2054-5,2186-5,3404,observed,Suppressed,suppressed
+New Mexico,Black or African American,Unknown or Not Stated,35,2054-5,9,25,observed,0,zero
+New Mexico,More than one race,Hispanic or Latino,35,M,2135-2,1346,observed,0,zero
+New Mexico,More than one race,Not Hispanic or Latino,35,M,2186-5,3215,observed,0,zero
+New Mexico,More than one race,Unknown or Not Stated,35,M,9,Suppressed,suppressed,0,zero
+New Mexico,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,35,NHOPI,2135-2,71,observed,0,zero
+New Mexico,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,35,NHOPI,2186-5,145,observed,0,zero
+New Mexico,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,35,NHOPI,9,0,zero,0,zero
+New Mexico,Not Available,Hispanic or Latino,35,NA,2135-2,0,zero,0,zero
+New Mexico,Not Available,Not Hispanic or Latino,35,NA,2186-5,0,zero,0,zero
+New Mexico,Not Available,Unknown or Not Stated,35,NA,9,0,zero,0,zero
+New Mexico,Not Reported,Hispanic or Latino,35,NR,2135-2,0,zero,0,zero
+New Mexico,Not Reported,Not Hispanic or Latino,35,NR,2186-5,0,zero,0,zero
+New Mexico,Not Reported,Unknown or Not Stated,35,NR,9,0,zero,0,zero
+New Mexico,Unknown or Not Stated,Hispanic or Latino,35,UNK,2135-2,0,zero,0,zero
+New Mexico,Unknown or Not Stated,Not Hispanic or Latino,35,UNK,2186-5,0,zero,0,zero
+New Mexico,Unknown or Not Stated,Unknown or Not Stated,35,UNK,9,0,zero,0,zero
+New Mexico,White,Hispanic or Latino,35,2106-3,2135-2,109914,observed,41,observed
+New Mexico,White,Not Hispanic or Latino,35,2106-3,2186-5,53894,observed,22,observed
+New Mexico,White,Unknown or Not Stated,35,2106-3,9,356,observed,Suppressed,suppressed
+New York,American Indian or Alaska Native,Hispanic or Latino,36,1002-5,2135-2,3359,observed,Suppressed,suppressed
+New York,American Indian or Alaska Native,Not Hispanic or Latino,36,1002-5,2186-5,3129,observed,Suppressed,suppressed
+New York,American Indian or Alaska Native,Unknown or Not Stated,36,1002-5,9,52,observed,0,zero
+New York,Asian,Hispanic or Latino,36,A,2135-2,9384,observed,Suppressed,suppressed
+New York,Asian,Not Hispanic or Latino,36,A,2186-5,203707,observed,43,observed
+New York,Asian,Unknown or Not Stated,36,A,9,1538,observed,0,zero
+New York,Black or African American,Hispanic or Latino,36,2054-5,2135-2,92066,observed,41,observed
+New York,Black or African American,Not Hispanic or Latino,36,2054-5,2186-5,272142,observed,135,observed
+New York,Black or African American,Unknown or Not Stated,36,2054-5,9,2439,observed,0,zero
+New York,More than one race,Hispanic or Latino,36,M,2135-2,12500,observed,Suppressed,suppressed
+New York,More than one race,Not Hispanic or Latino,36,M,2186-5,28537,observed,18,observed
+New York,More than one race,Unknown or Not Stated,36,M,9,243,observed,0,zero
+New York,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,36,NHOPI,2135-2,793,observed,0,zero
+New York,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,36,NHOPI,2186-5,516,observed,0,zero
+New York,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,36,NHOPI,9,15,observed,0,zero
+New York,Not Available,Hispanic or Latino,36,NA,2135-2,0,zero,0,zero
+New York,Not Available,Not Hispanic or Latino,36,NA,2186-5,0,zero,0,zero
+New York,Not Available,Unknown or Not Stated,36,NA,9,0,zero,0,zero
+New York,Not Reported,Hispanic or Latino,36,NR,2135-2,0,zero,0,zero
+New York,Not Reported,Not Hispanic or Latino,36,NR,2186-5,0,zero,0,zero
+New York,Not Reported,Unknown or Not Stated,36,NR,9,0,zero,0,zero
+New York,Unknown or Not Stated,Hispanic or Latino,36,UNK,2135-2,0,zero,0,zero
+New York,Unknown or Not Stated,Not Hispanic or Latino,36,UNK,2186-5,0,zero,0,zero
+New York,Unknown or Not Stated,Unknown or Not Stated,36,UNK,9,0,zero,0,zero
+New York,White,Hispanic or Latino,36,2106-3,2135-2,341059,observed,181,observed
+New York,White,Not Hispanic or Latino,36,2106-3,2186-5,961794,observed,516,observed
+New York,White,Unknown or Not Stated,36,2106-3,9,15479,observed,Suppressed,suppressed
+North Carolina,American Indian or Alaska Native,Hispanic or Latino,37,1002-5,2135-2,3039,observed,Suppressed,suppressed
+North Carolina,American Indian or Alaska Native,Not Hispanic or Latino,37,1002-5,2186-5,12520,observed,Suppressed,suppressed
+North Carolina,American Indian or Alaska Native,Unknown or Not Stated,37,1002-5,9,17,observed,0,zero
+North Carolina,Asian,Hispanic or Latino,37,A,2135-2,3817,observed,Suppressed,suppressed
+North Carolina,Asian,Not Hispanic or Latino,37,A,2186-5,44186,observed,Suppressed,suppressed
+North Carolina,Asian,Unknown or Not Stated,37,A,9,48,observed,0,zero
+North Carolina,Black or African American,Hispanic or Latino,37,2054-5,2135-2,33567,observed,27,observed
+North Carolina,Black or African American,Not Hispanic or Latino,37,2054-5,2186-5,241331,observed,91,observed
+North Carolina,Black or African American,Unknown or Not Stated,37,2054-5,9,220,observed,0,zero
+North Carolina,More than one race,Hispanic or Latino,37,M,2135-2,2921,observed,Suppressed,suppressed
+North Carolina,More than one race,Not Hispanic or Latino,37,M,2186-5,28412,observed,15,observed
+North Carolina,More than one race,Unknown or Not Stated,37,M,9,36,observed,0,zero
+North Carolina,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,37,NHOPI,2135-2,2802,observed,0,zero
+North Carolina,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,37,NHOPI,2186-5,1212,observed,Suppressed,suppressed
+North Carolina,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,37,NHOPI,9,Suppressed,suppressed,0,zero
+North Carolina,Not Available,Hispanic or Latino,37,NA,2135-2,0,zero,0,zero
+North Carolina,Not Available,Not Hispanic or Latino,37,NA,2186-5,0,zero,0,zero
+North Carolina,Not Available,Unknown or Not Stated,37,NA,9,0,zero,0,zero
+North Carolina,Not Reported,Hispanic or Latino,37,NR,2135-2,0,zero,0,zero
+North Carolina,Not Reported,Not Hispanic or Latino,37,NR,2186-5,0,zero,0,zero
+North Carolina,Not Reported,Unknown or Not Stated,37,NR,9,0,zero,0,zero
+North Carolina,Unknown or Not Stated,Hispanic or Latino,37,UNK,2135-2,0,zero,0,zero
+North Carolina,Unknown or Not Stated,Not Hispanic or Latino,37,UNK,2186-5,0,zero,0,zero
+North Carolina,Unknown or Not Stated,Unknown or Not Stated,37,UNK,9,0,zero,0,zero
+North Carolina,White,Hispanic or Latino,37,2106-3,2135-2,140048,observed,86,observed
+North Carolina,White,Not Hispanic or Latino,37,2106-3,2186-5,565564,observed,251,observed
+North Carolina,White,Unknown or Not Stated,37,2106-3,9,536,observed,0,zero
+North Dakota,American Indian or Alaska Native,Hispanic or Latino,38,1002-5,2135-2,497,observed,0,zero
+North Dakota,American Indian or Alaska Native,Not Hispanic or Latino,38,1002-5,2186-5,6593,observed,Suppressed,suppressed
+North Dakota,American Indian or Alaska Native,Unknown or Not Stated,38,1002-5,9,127,observed,0,zero
+North Dakota,Asian,Hispanic or Latino,38,A,2135-2,76,observed,0,zero
+North Dakota,Asian,Not Hispanic or Latino,38,A,2186-5,2195,observed,Suppressed,suppressed
+North Dakota,Asian,Unknown or Not Stated,38,A,9,71,observed,Suppressed,suppressed
+North Dakota,Black or African American,Hispanic or Latino,38,2054-5,2135-2,327,observed,0,zero
+North Dakota,Black or African American,Not Hispanic or Latino,38,2054-5,2186-5,5425,observed,Suppressed,suppressed
+North Dakota,Black or African American,Unknown or Not Stated,38,2054-5,9,346,observed,0,zero
+North Dakota,More than one race,Hispanic or Latino,38,M,2135-2,281,observed,0,zero
+North Dakota,More than one race,Not Hispanic or Latino,38,M,2186-5,2812,observed,Suppressed,suppressed
+North Dakota,More than one race,Unknown or Not Stated,38,M,9,57,observed,0,zero
+North Dakota,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,38,NHOPI,2135-2,226,observed,Suppressed,suppressed
+North Dakota,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,38,NHOPI,2186-5,221,observed,0,zero
+North Dakota,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,38,NHOPI,9,22,observed,0,zero
+North Dakota,Not Available,Hispanic or Latino,38,NA,2135-2,0,zero,0,zero
+North Dakota,Not Available,Not Hispanic or Latino,38,NA,2186-5,0,zero,0,zero
+North Dakota,Not Available,Unknown or Not Stated,38,NA,9,0,zero,0,zero
+North Dakota,Not Reported,Hispanic or Latino,38,NR,2135-2,0,zero,0,zero
+North Dakota,Not Reported,Not Hispanic or Latino,38,NR,2186-5,0,zero,0,zero
+North Dakota,Not Reported,Unknown or Not Stated,38,NR,9,0,zero,0,zero
+North Dakota,Unknown or Not Stated,Hispanic or Latino,38,UNK,2135-2,0,zero,0,zero
+North Dakota,Unknown or Not Stated,Not Hispanic or Latino,38,UNK,2186-5,0,zero,0,zero
+North Dakota,Unknown or Not Stated,Unknown or Not Stated,38,UNK,9,0,zero,0,zero
+North Dakota,White,Hispanic or Latino,38,2106-3,2135-2,4665,observed,Suppressed,suppressed
+North Dakota,White,Not Hispanic or Latino,38,2106-3,2186-5,67096,observed,53,observed
+North Dakota,White,Unknown or Not Stated,38,2106-3,9,1192,observed,Suppressed,suppressed
+Ohio,American Indian or Alaska Native,Hispanic or Latino,39,1002-5,2135-2,628,observed,0,zero
+Ohio,American Indian or Alaska Native,Not Hispanic or Latino,39,1002-5,2186-5,881,observed,Suppressed,suppressed
+Ohio,American Indian or Alaska Native,Unknown or Not Stated,39,1002-5,9,11,observed,0,zero
+Ohio,Asian,Hispanic or Latino,39,A,2135-2,1112,observed,Suppressed,suppressed
+Ohio,Asian,Not Hispanic or Latino,39,A,2186-5,36960,observed,24,observed
+Ohio,Asian,Unknown or Not Stated,39,A,9,88,observed,0,zero
+Ohio,Black or African American,Hispanic or Latino,39,2054-5,2135-2,8946,observed,Suppressed,suppressed
+Ohio,Black or African American,Not Hispanic or Latino,39,2054-5,2186-5,191899,observed,136,observed
+Ohio,Black or African American,Unknown or Not Stated,39,2054-5,9,572,observed,Suppressed,suppressed
+Ohio,More than one race,Hispanic or Latino,39,M,2135-2,2462,observed,Suppressed,suppressed
+Ohio,More than one race,Not Hispanic or Latino,39,M,2186-5,33140,observed,20,observed
+Ohio,More than one race,Unknown or Not Stated,39,M,9,128,observed,0,zero
+Ohio,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,39,NHOPI,2135-2,362,observed,0,zero
+Ohio,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,39,NHOPI,2186-5,871,observed,Suppressed,suppressed
+Ohio,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,39,NHOPI,9,Suppressed,suppressed,0,zero
+Ohio,Not Available,Hispanic or Latino,39,NA,2135-2,0,zero,0,zero
+Ohio,Not Available,Not Hispanic or Latino,39,NA,2186-5,0,zero,0,zero
+Ohio,Not Available,Unknown or Not Stated,39,NA,9,0,zero,0,zero
+Ohio,Not Reported,Hispanic or Latino,39,NR,2135-2,0,zero,0,zero
+Ohio,Not Reported,Not Hispanic or Latino,39,NR,2186-5,0,zero,0,zero
+Ohio,Not Reported,Unknown or Not Stated,39,NR,9,0,zero,0,zero
+Ohio,Unknown or Not Stated,Hispanic or Latino,39,UNK,2135-2,0,zero,0,zero
+Ohio,Unknown or Not Stated,Not Hispanic or Latino,39,UNK,2186-5,0,zero,0,zero
+Ohio,Unknown or Not Stated,Unknown or Not Stated,39,UNK,9,0,zero,0,zero
+Ohio,White,Hispanic or Latino,39,2106-3,2135-2,62003,observed,62,observed
+Ohio,White,Not Hispanic or Latino,39,2106-3,2186-5,844125,observed,634,observed
+Ohio,White,Unknown or Not Stated,39,2106-3,9,1223,observed,0,zero
+Oklahoma,American Indian or Alaska Native,Hispanic or Latino,40,1002-5,2135-2,3830,observed,Suppressed,suppressed
+Oklahoma,American Indian or Alaska Native,Not Hispanic or Latino,40,1002-5,2186-5,40199,observed,34,observed
+Oklahoma,American Indian or Alaska Native,Unknown or Not Stated,40,1002-5,9,63,observed,0,zero
+Oklahoma,Asian,Hispanic or Latino,40,A,2135-2,635,observed,Suppressed,suppressed
+Oklahoma,Asian,Not Hispanic or Latino,40,A,2186-5,11700,observed,Suppressed,suppressed
+Oklahoma,Asian,Unknown or Not Stated,40,A,9,28,observed,0,zero
+Oklahoma,Black or African American,Hispanic or Latino,40,2054-5,2135-2,3231,observed,Suppressed,suppressed
+Oklahoma,Black or African American,Not Hispanic or Latino,40,2054-5,2186-5,35232,observed,16,observed
+Oklahoma,Black or African American,Unknown or Not Stated,40,2054-5,9,96,observed,0,zero
+Oklahoma,More than one race,Hispanic or Latino,40,M,2135-2,1751,observed,0,zero
+Oklahoma,More than one race,Not Hispanic or Latino,40,M,2186-5,34546,observed,15,observed
+Oklahoma,More than one race,Unknown or Not Stated,40,M,9,21,observed,0,zero
+Oklahoma,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,40,NHOPI,2135-2,155,observed,0,zero
+Oklahoma,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,40,NHOPI,2186-5,2117,observed,0,zero
+Oklahoma,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,40,NHOPI,9,Suppressed,suppressed,0,zero
+Oklahoma,Not Available,Hispanic or Latino,40,NA,2135-2,0,zero,0,zero
+Oklahoma,Not Available,Not Hispanic or Latino,40,NA,2186-5,0,zero,0,zero
+Oklahoma,Not Available,Unknown or Not Stated,40,NA,9,0,zero,0,zero
+Oklahoma,Not Reported,Hispanic or Latino,40,NR,2135-2,0,zero,0,zero
+Oklahoma,Not Reported,Not Hispanic or Latino,40,NR,2186-5,0,zero,0,zero
+Oklahoma,Not Reported,Unknown or Not Stated,40,NR,9,0,zero,0,zero
+Oklahoma,Unknown or Not Stated,Hispanic or Latino,40,UNK,2135-2,0,zero,0,zero
+Oklahoma,Unknown or Not Stated,Not Hispanic or Latino,40,UNK,2186-5,0,zero,0,zero
+Oklahoma,Unknown or Not Stated,Unknown or Not Stated,40,UNK,9,0,zero,0,zero
+Oklahoma,White,Hispanic or Latino,40,2106-3,2135-2,62943,observed,42,observed
+Oklahoma,White,Not Hispanic or Latino,40,2106-3,2186-5,244925,observed,125,observed
+Oklahoma,White,Unknown or Not Stated,40,2106-3,9,511,observed,Suppressed,suppressed
+Oregon,American Indian or Alaska Native,Hispanic or Latino,41,1002-5,2135-2,3852,observed,Suppressed,suppressed
+Oregon,American Indian or Alaska Native,Not Hispanic or Latino,41,1002-5,2186-5,3467,observed,Suppressed,suppressed
+Oregon,American Indian or Alaska Native,Unknown or Not Stated,41,1002-5,9,141,observed,0,zero
+Oregon,Asian,Hispanic or Latino,41,A,2135-2,1197,observed,0,zero
+Oregon,Asian,Not Hispanic or Latino,41,A,2186-5,19752,observed,Suppressed,suppressed
+Oregon,Asian,Unknown or Not Stated,41,A,9,426,observed,0,zero
+Oregon,Black or African American,Hispanic or Latino,41,2054-5,2135-2,2283,observed,Suppressed,suppressed
+Oregon,Black or African American,Not Hispanic or Latino,41,2054-5,2186-5,9086,observed,Suppressed,suppressed
+Oregon,Black or African American,Unknown or Not Stated,41,2054-5,9,264,observed,Suppressed,suppressed
+Oregon,More than one race,Hispanic or Latino,41,M,2135-2,2397,observed,0,zero
+Oregon,More than one race,Not Hispanic or Latino,41,M,2186-5,15686,observed,11,observed
+Oregon,More than one race,Unknown or Not Stated,41,M,9,144,observed,0,zero
+Oregon,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,41,NHOPI,2135-2,335,observed,0,zero
+Oregon,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,41,NHOPI,2186-5,3024,observed,Suppressed,suppressed
+Oregon,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,41,NHOPI,9,106,observed,0,zero
+Oregon,Not Available,Hispanic or Latino,41,NA,2135-2,0,zero,0,zero
+Oregon,Not Available,Not Hispanic or Latino,41,NA,2186-5,0,zero,0,zero
+Oregon,Not Available,Unknown or Not Stated,41,NA,9,0,zero,0,zero
+Oregon,Not Reported,Hispanic or Latino,41,NR,2135-2,0,zero,0,zero
+Oregon,Not Reported,Not Hispanic or Latino,41,NR,2186-5,0,zero,0,zero
+Oregon,Not Reported,Unknown or Not Stated,41,NR,9,0,zero,0,zero
+Oregon,Unknown or Not Stated,Hispanic or Latino,41,UNK,2135-2,0,zero,0,zero
+Oregon,Unknown or Not Stated,Not Hispanic or Latino,41,UNK,2186-5,0,zero,0,zero
+Oregon,Unknown or Not Stated,Unknown or Not Stated,41,UNK,9,0,zero,0,zero
+Oregon,White,Hispanic or Latino,41,2106-3,2135-2,65869,observed,63,observed
+Oregon,White,Not Hispanic or Latino,41,2106-3,2186-5,237626,observed,189,observed
+Oregon,White,Unknown or Not Stated,41,2106-3,9,5045,observed,Suppressed,suppressed
+Pennsylvania,American Indian or Alaska Native,Hispanic or Latino,42,1002-5,2135-2,2404,observed,Suppressed,suppressed
+Pennsylvania,American Indian or Alaska Native,Not Hispanic or Latino,42,1002-5,2186-5,957,observed,Suppressed,suppressed
+Pennsylvania,American Indian or Alaska Native,Unknown or Not Stated,42,1002-5,9,52,observed,0,zero
+Pennsylvania,Asian,Hispanic or Latino,42,A,2135-2,3135,observed,Suppressed,suppressed
+Pennsylvania,Asian,Not Hispanic or Latino,42,A,2186-5,55887,observed,20,observed
+Pennsylvania,Asian,Unknown or Not Stated,42,A,9,1255,observed,Suppressed,suppressed
+Pennsylvania,Black or African American,Hispanic or Latino,42,2054-5,2135-2,33781,observed,19,observed
+Pennsylvania,Black or African American,Not Hispanic or Latino,42,2054-5,2186-5,153423,observed,67,observed
+Pennsylvania,Black or African American,Unknown or Not Stated,42,2054-5,9,5142,observed,0,zero
+Pennsylvania,More than one race,Hispanic or Latino,42,M,2135-2,4362,observed,Suppressed,suppressed
+Pennsylvania,More than one race,Not Hispanic or Latino,42,M,2186-5,26960,observed,18,observed
+Pennsylvania,More than one race,Unknown or Not Stated,42,M,9,343,observed,0,zero
+Pennsylvania,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,42,NHOPI,2135-2,1873,observed,Suppressed,suppressed
+Pennsylvania,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,42,NHOPI,2186-5,400,observed,0,zero
+Pennsylvania,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,42,NHOPI,9,13,observed,0,zero
+Pennsylvania,Not Available,Hispanic or Latino,42,NA,2135-2,0,zero,0,zero
+Pennsylvania,Not Available,Not Hispanic or Latino,42,NA,2186-5,0,zero,0,zero
+Pennsylvania,Not Available,Unknown or Not Stated,42,NA,9,0,zero,0,zero
+Pennsylvania,Not Reported,Hispanic or Latino,42,NR,2135-2,0,zero,0,zero
+Pennsylvania,Not Reported,Not Hispanic or Latino,42,NR,2186-5,0,zero,0,zero
+Pennsylvania,Not Reported,Unknown or Not Stated,42,NR,9,0,zero,0,zero
+Pennsylvania,Unknown or Not Stated,Hispanic or Latino,42,UNK,2135-2,0,zero,0,zero
+Pennsylvania,Unknown or Not Stated,Not Hispanic or Latino,42,UNK,2186-5,0,zero,0,zero
+Pennsylvania,Unknown or Not Stated,Unknown or Not Stated,42,UNK,9,0,zero,0,zero
+Pennsylvania,White,Hispanic or Latino,42,2106-3,2135-2,108406,observed,79,observed
+Pennsylvania,White,Not Hispanic or Latino,42,2106-3,2186-5,789601,observed,504,observed
+Pennsylvania,White,Unknown or Not Stated,42,2106-3,9,6880,observed,Suppressed,suppressed
+Rhode Island,American Indian or Alaska Native,Hispanic or Latino,44,1002-5,2135-2,604,observed,Suppressed,suppressed
+Rhode Island,American Indian or Alaska Native,Not Hispanic or Latino,44,1002-5,2186-5,352,observed,0,zero
+Rhode Island,American Indian or Alaska Native,Unknown or Not Stated,44,1002-5,9,Suppressed,suppressed,0,zero
+Rhode Island,Asian,Hispanic or Latino,44,A,2135-2,551,observed,Suppressed,suppressed
+Rhode Island,Asian,Not Hispanic or Latino,44,A,2186-5,4292,observed,Suppressed,suppressed
+Rhode Island,Asian,Unknown or Not Stated,44,A,9,44,observed,0,zero
+Rhode Island,Black or African American,Hispanic or Latino,44,2054-5,2135-2,5207,observed,Suppressed,suppressed
+Rhode Island,Black or African American,Not Hispanic or Latino,44,2054-5,2186-5,7170,observed,13,observed
+Rhode Island,Black or African American,Unknown or Not Stated,44,2054-5,9,71,observed,0,zero
+Rhode Island,More than one race,Hispanic or Latino,44,M,2135-2,594,observed,Suppressed,suppressed
+Rhode Island,More than one race,Not Hispanic or Latino,44,M,2186-5,2575,observed,0,zero
+Rhode Island,More than one race,Unknown or Not Stated,44,M,9,Suppressed,suppressed,0,zero
+Rhode Island,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,44,NHOPI,2135-2,248,observed,Suppressed,suppressed
+Rhode Island,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,44,NHOPI,2186-5,33,observed,0,zero
+Rhode Island,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,44,NHOPI,9,Suppressed,suppressed,0,zero
+Rhode Island,Not Available,Hispanic or Latino,44,NA,2135-2,0,zero,0,zero
+Rhode Island,Not Available,Not Hispanic or Latino,44,NA,2186-5,0,zero,0,zero
+Rhode Island,Not Available,Unknown or Not Stated,44,NA,9,0,zero,0,zero
+Rhode Island,Not Reported,Hispanic or Latino,44,NR,2135-2,0,zero,0,zero
+Rhode Island,Not Reported,Not Hispanic or Latino,44,NR,2186-5,0,zero,0,zero
+Rhode Island,Not Reported,Unknown or Not Stated,44,NR,9,0,zero,0,zero
+Rhode Island,Unknown or Not Stated,Hispanic or Latino,44,UNK,2135-2,0,zero,0,zero
+Rhode Island,Unknown or Not Stated,Not Hispanic or Latino,44,UNK,2186-5,0,zero,0,zero
+Rhode Island,Unknown or Not Stated,Unknown or Not Stated,44,UNK,9,0,zero,0,zero
+Rhode Island,White,Hispanic or Latino,44,2106-3,2135-2,18836,observed,Suppressed,suppressed
+Rhode Island,White,Not Hispanic or Latino,44,2106-3,2186-5,51786,observed,30,observed
+Rhode Island,White,Unknown or Not Stated,44,2106-3,9,388,observed,0,zero
+South Carolina,American Indian or Alaska Native,Hispanic or Latino,45,1002-5,2135-2,864,observed,0,zero
+South Carolina,American Indian or Alaska Native,Not Hispanic or Latino,45,1002-5,2186-5,1137,observed,0,zero
+South Carolina,American Indian or Alaska Native,Unknown or Not Stated,45,1002-5,9,Suppressed,suppressed,0,zero
+South Carolina,Asian,Hispanic or Latino,45,A,2135-2,873,observed,Suppressed,suppressed
+South Carolina,Asian,Not Hispanic or Latino,45,A,2186-5,10538,observed,Suppressed,suppressed
+South Carolina,Asian,Unknown or Not Stated,45,A,9,42,observed,Suppressed,suppressed
+South Carolina,Black or African American,Hispanic or Latino,45,2054-5,2135-2,8193,observed,Suppressed,suppressed
+South Carolina,Black or African American,Not Hispanic or Latino,45,2054-5,2186-5,143645,observed,77,observed
+South Carolina,Black or African American,Unknown or Not Stated,45,2054-5,9,470,observed,0,zero
+South Carolina,More than one race,Hispanic or Latino,45,M,2135-2,1037,observed,0,zero
+South Carolina,More than one race,Not Hispanic or Latino,45,M,2186-5,12918,observed,Suppressed,suppressed
+South Carolina,More than one race,Unknown or Not Stated,45,M,9,17,observed,0,zero
+South Carolina,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,45,NHOPI,2135-2,577,observed,Suppressed,suppressed
+South Carolina,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,45,NHOPI,2186-5,567,observed,0,zero
+South Carolina,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,45,NHOPI,9,Suppressed,suppressed,0,zero
+South Carolina,Not Available,Hispanic or Latino,45,NA,2135-2,0,zero,0,zero
+South Carolina,Not Available,Not Hispanic or Latino,45,NA,2186-5,0,zero,0,zero
+South Carolina,Not Available,Unknown or Not Stated,45,NA,9,0,zero,0,zero
+South Carolina,Not Reported,Hispanic or Latino,45,NR,2135-2,0,zero,0,zero
+South Carolina,Not Reported,Not Hispanic or Latino,45,NR,2186-5,0,zero,0,zero
+South Carolina,Not Reported,Unknown or Not Stated,45,NR,9,0,zero,0,zero
+South Carolina,Unknown or Not Stated,Hispanic or Latino,45,UNK,2135-2,0,zero,0,zero
+South Carolina,Unknown or Not Stated,Not Hispanic or Latino,45,UNK,2186-5,0,zero,0,zero
+South Carolina,Unknown or Not Stated,Unknown or Not Stated,45,UNK,9,0,zero,0,zero
+South Carolina,White,Hispanic or Latino,45,2106-3,2135-2,46110,observed,43,observed
+South Carolina,White,Not Hispanic or Latino,45,2106-3,2186-5,287611,observed,171,observed
+South Carolina,White,Unknown or Not Stated,45,2106-3,9,674,observed,Suppressed,suppressed
+South Dakota,American Indian or Alaska Native,Hispanic or Latino,46,1002-5,2135-2,815,observed,0,zero
+South Dakota,American Indian or Alaska Native,Not Hispanic or Latino,46,1002-5,2186-5,14097,observed,22,observed
+South Dakota,American Indian or Alaska Native,Unknown or Not Stated,46,1002-5,9,35,observed,0,zero
+South Dakota,Asian,Hispanic or Latino,46,A,2135-2,64,observed,0,zero
+South Dakota,Asian,Not Hispanic or Latino,46,A,2186-5,1958,observed,Suppressed,suppressed
+South Dakota,Asian,Unknown or Not Stated,46,A,9,Suppressed,suppressed,0,zero
+South Dakota,Black or African American,Hispanic or Latino,46,2054-5,2135-2,185,observed,Suppressed,suppressed
+South Dakota,Black or African American,Not Hispanic or Latino,46,2054-5,2186-5,3442,observed,Suppressed,suppressed
+South Dakota,Black or African American,Unknown or Not Stated,46,2054-5,9,Suppressed,suppressed,0,zero
+South Dakota,More than one race,Hispanic or Latino,46,M,2135-2,304,observed,0,zero
+South Dakota,More than one race,Not Hispanic or Latino,46,M,2186-5,3689,observed,Suppressed,suppressed
+South Dakota,More than one race,Unknown or Not Stated,46,M,9,Suppressed,suppressed,Suppressed,suppressed
+South Dakota,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,46,NHOPI,2135-2,79,observed,0,zero
+South Dakota,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,46,NHOPI,2186-5,98,observed,0,zero
+South Dakota,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,46,NHOPI,9,0,zero,0,zero
+South Dakota,Not Available,Hispanic or Latino,46,NA,2135-2,0,zero,0,zero
+South Dakota,Not Available,Not Hispanic or Latino,46,NA,2186-5,0,zero,0,zero
+South Dakota,Not Available,Unknown or Not Stated,46,NA,9,0,zero,0,zero
+South Dakota,Not Reported,Hispanic or Latino,46,NR,2135-2,0,zero,0,zero
+South Dakota,Not Reported,Not Hispanic or Latino,46,NR,2186-5,0,zero,0,zero
+South Dakota,Not Reported,Unknown or Not Stated,46,NR,9,0,zero,0,zero
+South Dakota,Unknown or Not Stated,Hispanic or Latino,46,UNK,2135-2,0,zero,0,zero
+South Dakota,Unknown or Not Stated,Not Hispanic or Latino,46,UNK,2186-5,0,zero,0,zero
+South Dakota,Unknown or Not Stated,Unknown or Not Stated,46,UNK,9,0,zero,0,zero
+South Dakota,White,Hispanic or Latino,46,2106-3,2135-2,4997,observed,Suppressed,suppressed
+South Dakota,White,Not Hispanic or Latino,46,2106-3,2186-5,74064,observed,98,observed
+South Dakota,White,Unknown or Not Stated,46,2106-3,9,93,observed,0,zero
+Tennessee,American Indian or Alaska Native,Hispanic or Latino,47,1002-5,2135-2,1815,observed,Suppressed,suppressed
+Tennessee,American Indian or Alaska Native,Not Hispanic or Latino,47,1002-5,2186-5,783,observed,0,zero
+Tennessee,American Indian or Alaska Native,Unknown or Not Stated,47,1002-5,9,Suppressed,suppressed,0,zero
+Tennessee,Asian,Hispanic or Latino,47,A,2135-2,1424,observed,Suppressed,suppressed
+Tennessee,Asian,Not Hispanic or Latino,47,A,2186-5,16746,observed,Suppressed,suppressed
+Tennessee,Asian,Unknown or Not Stated,47,A,9,49,observed,0,zero
+Tennessee,Black or African American,Hispanic or Latino,47,2054-5,2135-2,8714,observed,Suppressed,suppressed
+Tennessee,Black or African American,Not Hispanic or Latino,47,2054-5,2186-5,136344,observed,26,observed
+Tennessee,Black or African American,Unknown or Not Stated,47,2054-5,9,374,observed,0,zero
+Tennessee,More than one race,Hispanic or Latino,47,M,2135-2,904,observed,0,zero
+Tennessee,More than one race,Not Hispanic or Latino,47,M,2186-5,13963,observed,Suppressed,suppressed
+Tennessee,More than one race,Unknown or Not Stated,47,M,9,18,observed,0,zero
+Tennessee,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,47,NHOPI,2135-2,1465,observed,0,zero
+Tennessee,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,47,NHOPI,2186-5,671,observed,0,zero
+Tennessee,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,47,NHOPI,9,Suppressed,suppressed,0,zero
+Tennessee,Not Available,Hispanic or Latino,47,NA,2135-2,0,zero,0,zero
+Tennessee,Not Available,Not Hispanic or Latino,47,NA,2186-5,0,zero,0,zero
+Tennessee,Not Available,Unknown or Not Stated,47,NA,9,0,zero,0,zero
+Tennessee,Not Reported,Hispanic or Latino,47,NR,2135-2,0,zero,0,zero
+Tennessee,Not Reported,Not Hispanic or Latino,47,NR,2186-5,0,zero,0,zero
+Tennessee,Not Reported,Unknown or Not Stated,47,NR,9,0,zero,0,zero
+Tennessee,Unknown or Not Stated,Hispanic or Latino,47,UNK,2135-2,0,zero,0,zero
+Tennessee,Unknown or Not Stated,Not Hispanic or Latino,47,UNK,2186-5,0,zero,0,zero
+Tennessee,Unknown or Not Stated,Unknown or Not Stated,47,UNK,9,0,zero,0,zero
+Tennessee,White,Hispanic or Latino,47,2106-3,2135-2,72077,observed,32,observed
+Tennessee,White,Not Hispanic or Latino,47,2106-3,2186-5,476035,observed,182,observed
+Tennessee,White,Unknown or Not Stated,47,2106-3,9,1160,observed,Suppressed,suppressed
+Texas,American Indian or Alaska Native,Hispanic or Latino,48,1002-5,2135-2,4328,observed,0,zero
+Texas,American Indian or Alaska Native,Not Hispanic or Latino,48,1002-5,2186-5,6003,observed,Suppressed,suppressed
+Texas,American Indian or Alaska Native,Unknown or Not Stated,48,1002-5,9,49,observed,0,zero
+Texas,Asian,Hispanic or Latino,48,A,2135-2,7515,observed,Suppressed,suppressed
+Texas,Asian,Not Hispanic or Latino,48,A,2186-5,185576,observed,50,observed
+Texas,Asian,Unknown or Not Stated,48,A,9,758,observed,0,zero
+Texas,Black or African American,Hispanic or Latino,48,2054-5,2135-2,37547,observed,13,observed
+Texas,Black or African American,Not Hispanic or Latino,48,2054-5,2186-5,424775,observed,118,observed
+Texas,Black or African American,Unknown or Not Stated,48,2054-5,9,1374,observed,0,zero
+Texas,More than one race,Hispanic or Latino,48,M,2135-2,6745,observed,Suppressed,suppressed
+Texas,More than one race,Not Hispanic or Latino,48,M,2186-5,43610,observed,16,observed
+Texas,More than one race,Unknown or Not Stated,48,M,9,81,observed,0,zero
+Texas,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,48,NHOPI,2135-2,1682,observed,Suppressed,suppressed
+Texas,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,48,NHOPI,2186-5,4969,observed,Suppressed,suppressed
+Texas,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,48,NHOPI,9,23,observed,0,zero
+Texas,Not Available,Hispanic or Latino,48,NA,2135-2,0,zero,0,zero
+Texas,Not Available,Not Hispanic or Latino,48,NA,2186-5,0,zero,0,zero
+Texas,Not Available,Unknown or Not Stated,48,NA,9,0,zero,0,zero
+Texas,Not Reported,Hispanic or Latino,48,NR,2135-2,0,zero,0,zero
+Texas,Not Reported,Not Hispanic or Latino,48,NR,2186-5,0,zero,0,zero
+Texas,Not Reported,Unknown or Not Stated,48,NR,9,0,zero,0,zero
+Texas,Unknown or Not Stated,Hispanic or Latino,48,UNK,2135-2,0,zero,0,zero
+Texas,Unknown or Not Stated,Not Hispanic or Latino,48,UNK,2186-5,0,zero,0,zero
+Texas,Unknown or Not Stated,Unknown or Not Stated,48,UNK,9,0,zero,0,zero
+Texas,White,Hispanic or Latino,48,2106-3,2135-2,1601753,observed,703,observed
+Texas,White,Not Hispanic or Latino,48,2106-3,2186-5,1115351,observed,329,observed
+Texas,White,Unknown or Not Stated,48,2106-3,9,4479,observed,Suppressed,suppressed
+Utah,American Indian or Alaska Native,Hispanic or Latino,49,1002-5,2135-2,1119,observed,Suppressed,suppressed
+Utah,American Indian or Alaska Native,Not Hispanic or Latino,49,1002-5,2186-5,3355,observed,Suppressed,suppressed
+Utah,American Indian or Alaska Native,Unknown or Not Stated,49,1002-5,9,70,observed,0,zero
+Utah,Asian,Hispanic or Latino,49,A,2135-2,627,observed,0,zero
+Utah,Asian,Not Hispanic or Latino,49,A,2186-5,10571,observed,14,observed
+Utah,Asian,Unknown or Not Stated,49,A,9,260,observed,0,zero
+Utah,Black or African American,Hispanic or Latino,49,2054-5,2135-2,1229,observed,Suppressed,suppressed
+Utah,Black or African American,Not Hispanic or Latino,49,2054-5,2186-5,5271,observed,13,observed
+Utah,Black or African American,Unknown or Not Stated,49,2054-5,9,220,observed,Suppressed,suppressed
+Utah,More than one race,Hispanic or Latino,49,M,2135-2,1683,observed,Suppressed,suppressed
+Utah,More than one race,Not Hispanic or Latino,49,M,2186-5,10258,observed,19,observed
+Utah,More than one race,Unknown or Not Stated,49,M,9,87,observed,0,zero
+Utah,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,49,NHOPI,2135-2,396,observed,0,zero
+Utah,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,49,NHOPI,2186-5,4764,observed,Suppressed,suppressed
+Utah,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,49,NHOPI,9,128,observed,0,zero
+Utah,Not Available,Hispanic or Latino,49,NA,2135-2,0,zero,0,zero
+Utah,Not Available,Not Hispanic or Latino,49,NA,2186-5,0,zero,0,zero
+Utah,Not Available,Unknown or Not Stated,49,NA,9,0,zero,0,zero
+Utah,Not Reported,Hispanic or Latino,49,NR,2135-2,0,zero,0,zero
+Utah,Not Reported,Not Hispanic or Latino,49,NR,2186-5,0,zero,0,zero
+Utah,Not Reported,Unknown or Not Stated,49,NR,9,0,zero,0,zero
+Utah,Unknown or Not Stated,Hispanic or Latino,49,UNK,2135-2,0,zero,0,zero
+Utah,Unknown or Not Stated,Not Hispanic or Latino,49,UNK,2186-5,0,zero,0,zero
+Utah,Unknown or Not Stated,Unknown or Not Stated,49,UNK,9,0,zero,0,zero
+Utah,White,Hispanic or Latino,49,2106-3,2135-2,72011,observed,112,observed
+Utah,White,Not Hispanic or Latino,49,2106-3,2186-5,304617,observed,379,observed
+Utah,White,Unknown or Not Stated,49,2106-3,9,6283,observed,11,observed
+Vermont,American Indian or Alaska Native,Hispanic or Latino,50,1002-5,2135-2,26,observed,0,zero
+Vermont,American Indian or Alaska Native,Not Hispanic or Latino,50,1002-5,2186-5,109,observed,0,zero
+Vermont,American Indian or Alaska Native,Unknown or Not Stated,50,1002-5,9,Suppressed,suppressed,0,zero
+Vermont,Asian,Hispanic or Latino,50,A,2135-2,30,observed,0,zero
+Vermont,Asian,Not Hispanic or Latino,50,A,2186-5,1242,observed,0,zero
+Vermont,Asian,Unknown or Not Stated,50,A,9,22,observed,0,zero
+Vermont,Black or African American,Hispanic or Latino,50,2054-5,2135-2,77,observed,0,zero
+Vermont,Black or African American,Not Hispanic or Latino,50,2054-5,2186-5,1060,observed,0,zero
+Vermont,Black or African American,Unknown or Not Stated,50,2054-5,9,45,observed,0,zero
+Vermont,More than one race,Hispanic or Latino,50,M,2135-2,46,observed,0,zero
+Vermont,More than one race,Not Hispanic or Latino,50,M,2186-5,675,observed,0,zero
+Vermont,More than one race,Unknown or Not Stated,50,M,9,Suppressed,suppressed,0,zero
+Vermont,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,50,NHOPI,2135-2,Suppressed,suppressed,0,zero
+Vermont,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,50,NHOPI,2186-5,13,observed,0,zero
+Vermont,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,50,NHOPI,9,0,zero,0,zero
+Vermont,Not Available,Hispanic or Latino,50,NA,2135-2,0,zero,0,zero
+Vermont,Not Available,Not Hispanic or Latino,50,NA,2186-5,0,zero,0,zero
+Vermont,Not Available,Unknown or Not Stated,50,NA,9,0,zero,0,zero
+Vermont,Not Reported,Hispanic or Latino,50,NR,2135-2,0,zero,0,zero
+Vermont,Not Reported,Not Hispanic or Latino,50,NR,2186-5,0,zero,0,zero
+Vermont,Not Reported,Unknown or Not Stated,50,NR,9,0,zero,0,zero
+Vermont,Unknown or Not Stated,Hispanic or Latino,50,UNK,2135-2,0,zero,0,zero
+Vermont,Unknown or Not Stated,Not Hispanic or Latino,50,UNK,2186-5,0,zero,0,zero
+Vermont,Unknown or Not Stated,Unknown or Not Stated,50,UNK,9,0,zero,0,zero
+Vermont,White,Hispanic or Latino,50,2106-3,2135-2,1118,observed,0,zero
+Vermont,White,Not Hispanic or Latino,50,2106-3,2186-5,43381,observed,Suppressed,suppressed
+Vermont,White,Unknown or Not Stated,50,2106-3,9,270,observed,0,zero
+Virginia,American Indian or Alaska Native,Hispanic or Latino,51,1002-5,2135-2,1247,observed,Suppressed,suppressed
+Virginia,American Indian or Alaska Native,Not Hispanic or Latino,51,1002-5,2186-5,1267,observed,0,zero
+Virginia,American Indian or Alaska Native,Unknown or Not Stated,51,1002-5,9,Suppressed,suppressed,0,zero
+Virginia,Asian,Hispanic or Latino,51,A,2135-2,5127,observed,Suppressed,suppressed
+Virginia,Asian,Not Hispanic or Latino,51,A,2186-5,65702,observed,17,observed
+Virginia,Asian,Unknown or Not Stated,51,A,9,246,observed,0,zero
+Virginia,Black or African American,Hispanic or Latino,51,2054-5,2135-2,14930,observed,Suppressed,suppressed
+Virginia,Black or African American,Not Hispanic or Latino,51,2054-5,2186-5,175342,observed,51,observed
+Virginia,Black or African American,Unknown or Not Stated,51,2054-5,9,514,observed,0,zero
+Virginia,More than one race,Hispanic or Latino,51,M,2135-2,1333,observed,0,zero
+Virginia,More than one race,Not Hispanic or Latino,51,M,2186-5,17565,observed,Suppressed,suppressed
+Virginia,More than one race,Unknown or Not Stated,51,M,9,17,observed,0,zero
+Virginia,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,51,NHOPI,2135-2,1851,observed,Suppressed,suppressed
+Virginia,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,51,NHOPI,2186-5,1065,observed,0,zero
+Virginia,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,51,NHOPI,9,10,observed,0,zero
+Virginia,Not Available,Hispanic or Latino,51,NA,2135-2,0,zero,0,zero
+Virginia,Not Available,Not Hispanic or Latino,51,NA,2186-5,0,zero,0,zero
+Virginia,Not Available,Unknown or Not Stated,51,NA,9,0,zero,0,zero
+Virginia,Not Reported,Hispanic or Latino,51,NR,2135-2,0,zero,0,zero
+Virginia,Not Reported,Not Hispanic or Latino,51,NR,2186-5,0,zero,0,zero
+Virginia,Not Reported,Unknown or Not Stated,51,NR,9,0,zero,0,zero
+Virginia,Unknown or Not Stated,Hispanic or Latino,51,UNK,2135-2,0,zero,0,zero
+Virginia,Unknown or Not Stated,Not Hispanic or Latino,51,UNK,2186-5,0,zero,0,zero
+Virginia,Unknown or Not Stated,Unknown or Not Stated,51,UNK,9,0,zero,0,zero
+Virginia,White,Hispanic or Latino,51,2106-3,2135-2,111891,observed,64,observed
+Virginia,White,Not Hispanic or Latino,51,2106-3,2186-5,473431,observed,185,observed
+Virginia,White,Unknown or Not Stated,51,2106-3,9,1486,observed,Suppressed,suppressed
+Washington,American Indian or Alaska Native,Hispanic or Latino,53,1002-5,2135-2,5342,observed,Suppressed,suppressed
+Washington,American Indian or Alaska Native,Not Hispanic or Latino,53,1002-5,2186-5,9092,observed,Suppressed,suppressed
+Washington,American Indian or Alaska Native,Unknown or Not Stated,53,1002-5,9,669,observed,0,zero
+Washington,Asian,Hispanic or Latino,53,A,2135-2,3921,observed,Suppressed,suppressed
+Washington,Asian,Not Hispanic or Latino,53,A,2186-5,80320,observed,27,observed
+Washington,Asian,Unknown or Not Stated,53,A,9,3617,observed,Suppressed,suppressed
+Washington,Black or African American,Hispanic or Latino,53,2054-5,2135-2,6059,observed,Suppressed,suppressed
+Washington,Black or African American,Not Hispanic or Latino,53,2054-5,2186-5,34310,observed,21,observed
+Washington,Black or African American,Unknown or Not Stated,53,2054-5,9,3441,observed,Suppressed,suppressed
+Washington,More than one race,Hispanic or Latino,53,M,2135-2,4203,observed,0,zero
+Washington,More than one race,Not Hispanic or Latino,53,M,2186-5,33415,observed,22,observed
+Washington,More than one race,Unknown or Not Stated,53,M,9,588,observed,Suppressed,suppressed
+Washington,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,53,NHOPI,2135-2,1345,observed,0,zero
+Washington,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,53,NHOPI,2186-5,11111,observed,Suppressed,suppressed
+Washington,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,53,NHOPI,9,848,observed,0,zero
+Washington,Not Available,Hispanic or Latino,53,NA,2135-2,0,zero,0,zero
+Washington,Not Available,Not Hispanic or Latino,53,NA,2186-5,0,zero,0,zero
+Washington,Not Available,Unknown or Not Stated,53,NA,9,0,zero,0,zero
+Washington,Not Reported,Hispanic or Latino,53,NR,2135-2,0,zero,0,zero
+Washington,Not Reported,Not Hispanic or Latino,53,NR,2186-5,0,zero,0,zero
+Washington,Not Reported,Unknown or Not Stated,53,NR,9,0,zero,0,zero
+Washington,Unknown or Not Stated,Hispanic or Latino,53,UNK,2135-2,0,zero,0,zero
+Washington,Unknown or Not Stated,Not Hispanic or Latino,53,UNK,2186-5,0,zero,0,zero
+Washington,Unknown or Not Stated,Unknown or Not Stated,53,UNK,9,0,zero,0,zero
+Washington,White,Hispanic or Latino,53,2106-3,2135-2,128625,observed,117,observed
+Washington,White,Not Hispanic or Latino,53,2106-3,2186-5,421418,observed,226,observed
+Washington,White,Unknown or Not Stated,53,2106-3,9,15103,observed,Suppressed,suppressed
+West Virginia,American Indian or Alaska Native,Hispanic or Latino,54,1002-5,2135-2,73,observed,0,zero
+West Virginia,American Indian or Alaska Native,Not Hispanic or Latino,54,1002-5,2186-5,128,observed,0,zero
+West Virginia,American Indian or Alaska Native,Unknown or Not Stated,54,1002-5,9,Suppressed,suppressed,0,zero
+West Virginia,Asian,Hispanic or Latino,54,A,2135-2,55,observed,0,zero
+West Virginia,Asian,Not Hispanic or Latino,54,A,2186-5,1592,observed,Suppressed,suppressed
+West Virginia,Asian,Unknown or Not Stated,54,A,9,16,observed,0,zero
+West Virginia,Black or African American,Hispanic or Latino,54,2054-5,2135-2,272,observed,Suppressed,suppressed
+West Virginia,Black or African American,Not Hispanic or Latino,54,2054-5,2186-5,5333,observed,Suppressed,suppressed
+West Virginia,Black or African American,Unknown or Not Stated,54,2054-5,9,52,observed,0,zero
+West Virginia,More than one race,Hispanic or Latino,54,M,2135-2,207,observed,Suppressed,suppressed
+West Virginia,More than one race,Not Hispanic or Latino,54,M,2186-5,3403,observed,Suppressed,suppressed
+West Virginia,More than one race,Unknown or Not Stated,54,M,9,35,observed,0,zero
+West Virginia,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,54,NHOPI,2135-2,31,observed,0,zero
+West Virginia,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,54,NHOPI,2186-5,38,observed,0,zero
+West Virginia,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,54,NHOPI,9,0,zero,0,zero
+West Virginia,Not Available,Hispanic or Latino,54,NA,2135-2,0,zero,0,zero
+West Virginia,Not Available,Not Hispanic or Latino,54,NA,2186-5,0,zero,0,zero
+West Virginia,Not Available,Unknown or Not Stated,54,NA,9,0,zero,0,zero
+West Virginia,Not Reported,Hispanic or Latino,54,NR,2135-2,0,zero,0,zero
+West Virginia,Not Reported,Not Hispanic or Latino,54,NR,2186-5,0,zero,0,zero
+West Virginia,Not Reported,Unknown or Not Stated,54,NR,9,0,zero,0,zero
+West Virginia,Unknown or Not Stated,Hispanic or Latino,54,UNK,2135-2,0,zero,0,zero
+West Virginia,Unknown or Not Stated,Not Hispanic or Latino,54,UNK,2186-5,0,zero,0,zero
+West Virginia,Unknown or Not Stated,Unknown or Not Stated,54,UNK,9,0,zero,0,zero
+West Virginia,White,Hispanic or Latino,54,2106-3,2135-2,3104,observed,Suppressed,suppressed
+West Virginia,White,Not Hispanic or Latino,54,2106-3,2186-5,144205,observed,101,observed
+West Virginia,White,Unknown or Not Stated,54,2106-3,9,670,observed,0,zero
+Wisconsin,American Indian or Alaska Native,Hispanic or Latino,55,1002-5,2135-2,1121,observed,Suppressed,suppressed
+Wisconsin,American Indian or Alaska Native,Not Hispanic or Latino,55,1002-5,2186-5,5268,observed,Suppressed,suppressed
+Wisconsin,American Indian or Alaska Native,Unknown or Not Stated,55,1002-5,9,67,observed,0,zero
+Wisconsin,Asian,Hispanic or Latino,55,A,2135-2,481,observed,0,zero
+Wisconsin,Asian,Not Hispanic or Latino,55,A,2186-5,25997,observed,20,observed
+Wisconsin,Asian,Unknown or Not Stated,55,A,9,204,observed,0,zero
+Wisconsin,Black or African American,Hispanic or Latino,55,2054-5,2135-2,2332,observed,Suppressed,suppressed
+Wisconsin,Black or African American,Not Hispanic or Latino,55,2054-5,2186-5,56054,observed,39,observed
+Wisconsin,Black or African American,Unknown or Not Stated,55,2054-5,9,338,observed,Suppressed,suppressed
+Wisconsin,More than one race,Hispanic or Latino,55,M,2135-2,1584,observed,Suppressed,suppressed
+Wisconsin,More than one race,Not Hispanic or Latino,55,M,2186-5,12282,observed,Suppressed,suppressed
+Wisconsin,More than one race,Unknown or Not Stated,55,M,9,74,observed,0,zero
+Wisconsin,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,55,NHOPI,2135-2,50,observed,0,zero
+Wisconsin,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,55,NHOPI,2186-5,248,observed,0,zero
+Wisconsin,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,55,NHOPI,9,Suppressed,suppressed,0,zero
+Wisconsin,Not Available,Hispanic or Latino,55,NA,2135-2,0,zero,0,zero
+Wisconsin,Not Available,Not Hispanic or Latino,55,NA,2186-5,0,zero,0,zero
+Wisconsin,Not Available,Unknown or Not Stated,55,NA,9,0,zero,0,zero
+Wisconsin,Not Reported,Hispanic or Latino,55,NR,2135-2,0,zero,0,zero
+Wisconsin,Not Reported,Not Hispanic or Latino,55,NR,2186-5,0,zero,0,zero
+Wisconsin,Not Reported,Unknown or Not Stated,55,NR,9,0,zero,0,zero
+Wisconsin,Unknown or Not Stated,Hispanic or Latino,55,UNK,2135-2,0,zero,0,zero
+Wisconsin,Unknown or Not Stated,Not Hispanic or Latino,55,UNK,2186-5,0,zero,0,zero
+Wisconsin,Unknown or Not Stated,Unknown or Not Stated,55,UNK,9,0,zero,0,zero
+Wisconsin,White,Hispanic or Latino,55,2106-3,2135-2,56298,observed,64,observed
+Wisconsin,White,Not Hispanic or Latino,55,2106-3,2186-5,396152,observed,367,observed
+Wisconsin,White,Unknown or Not Stated,55,2106-3,9,2269,observed,Suppressed,suppressed
+Wyoming,American Indian or Alaska Native,Hispanic or Latino,56,1002-5,2135-2,302,observed,0,zero
+Wyoming,American Indian or Alaska Native,Not Hispanic or Latino,56,1002-5,2186-5,1643,observed,Suppressed,suppressed
+Wyoming,American Indian or Alaska Native,Unknown or Not Stated,56,1002-5,9,117,observed,0,zero
+Wyoming,Asian,Hispanic or Latino,56,A,2135-2,65,observed,0,zero
+Wyoming,Asian,Not Hispanic or Latino,56,A,2186-5,646,observed,Suppressed,suppressed
+Wyoming,Asian,Unknown or Not Stated,56,A,9,37,observed,0,zero
+Wyoming,Black or African American,Hispanic or Latino,56,2054-5,2135-2,164,observed,0,zero
+Wyoming,Black or African American,Not Hispanic or Latino,56,2054-5,2186-5,455,observed,0,zero
+Wyoming,Black or African American,Unknown or Not Stated,56,2054-5,9,22,observed,0,zero
+Wyoming,More than one race,Hispanic or Latino,56,M,2135-2,257,observed,0,zero
+Wyoming,More than one race,Not Hispanic or Latino,56,M,2186-5,1217,observed,0,zero
+Wyoming,More than one race,Unknown or Not Stated,56,M,9,23,observed,0,zero
+Wyoming,Native Hawaiian or Other Pacific Islander,Hispanic or Latino,56,NHOPI,2135-2,31,observed,0,zero
+Wyoming,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,56,NHOPI,2186-5,56,observed,0,zero
+Wyoming,Native Hawaiian or Other Pacific Islander,Unknown or Not Stated,56,NHOPI,9,Suppressed,suppressed,0,zero
+Wyoming,Not Available,Hispanic or Latino,56,NA,2135-2,0,zero,0,zero
+Wyoming,Not Available,Not Hispanic or Latino,56,NA,2186-5,0,zero,0,zero
+Wyoming,Not Available,Unknown or Not Stated,56,NA,9,0,zero,0,zero
+Wyoming,Not Reported,Hispanic or Latino,56,NR,2135-2,0,zero,0,zero
+Wyoming,Not Reported,Not Hispanic or Latino,56,NR,2186-5,0,zero,0,zero
+Wyoming,Not Reported,Unknown or Not Stated,56,NR,9,0,zero,0,zero
+Wyoming,Unknown or Not Stated,Hispanic or Latino,56,UNK,2135-2,0,zero,0,zero
+Wyoming,Unknown or Not Stated,Not Hispanic or Latino,56,UNK,2186-5,0,zero,0,zero
+Wyoming,Unknown or Not Stated,Unknown or Not Stated,56,UNK,9,0,zero,0,zero
+Wyoming,White,Hispanic or Latino,56,2106-3,2135-2,6925,observed,Suppressed,suppressed
+Wyoming,White,Not Hispanic or Latino,56,2106-3,2186-5,44831,observed,39,observed
+Wyoming,White,Unknown or Not Stated,56,2106-3,9,1116,observed,Suppressed,suppressed

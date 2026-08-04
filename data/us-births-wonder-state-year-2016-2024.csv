@@ -1,0 +1,460 @@
+state,year,state_code,year_code,births,births_status,ds_cp,ds_cp_status
+Alabama,2016,01,2016,59151,observed,23,observed
+Alabama,2017,01,2017,58941,observed,28,observed
+Alabama,2018,01,2018,57761,observed,28,observed
+Alabama,2019,01,2019,58615,observed,34,observed
+Alabama,2020,01,2020,57647,observed,28,observed
+Alabama,2021,01,2021,58054,observed,26,observed
+Alabama,2022,01,2022,58149,observed,27,observed
+Alabama,2023,01,2023,57858,observed,29,observed
+Alabama,2024,01,2024,57934,observed,25,observed
+Alaska,2016,02,2016,11209,observed,14,observed
+Alaska,2017,02,2017,10445,observed,12,observed
+Alaska,2018,02,2018,10086,observed,13,observed
+Alaska,2019,02,2019,9822,observed,11,observed
+Alaska,2020,02,2020,9469,observed,Suppressed,suppressed
+Alaska,2021,02,2021,9367,observed,Suppressed,suppressed
+Alaska,2022,02,2022,9359,observed,Suppressed,suppressed
+Alaska,2023,02,2023,9015,observed,17,observed
+Alaska,2024,02,2024,8943,observed,Suppressed,suppressed
+Arizona,2016,04,2016,84520,observed,50,observed
+Arizona,2017,04,2017,81872,observed,48,observed
+Arizona,2018,04,2018,80723,observed,35,observed
+Arizona,2019,04,2019,79375,observed,57,observed
+Arizona,2020,04,2020,76947,observed,45,observed
+Arizona,2021,04,2021,77916,observed,60,observed
+Arizona,2022,04,2022,78547,observed,59,observed
+Arizona,2023,04,2023,78096,observed,49,observed
+Arizona,2024,04,2024,78711,observed,50,observed
+Arkansas,2016,05,2016,38274,observed,21,observed
+Arkansas,2017,05,2017,37520,observed,14,observed
+Arkansas,2018,05,2018,37018,observed,11,observed
+Arkansas,2019,05,2019,36564,observed,16,observed
+Arkansas,2020,05,2020,35251,observed,Suppressed,suppressed
+Arkansas,2021,05,2021,35965,observed,10,observed
+Arkansas,2022,05,2022,35471,observed,16,observed
+Arkansas,2023,05,2023,35264,observed,15,observed
+Arkansas,2024,05,2024,35395,observed,28,observed
+California,2016,06,2016,488827,observed,163,observed
+California,2017,06,2017,471658,observed,152,observed
+California,2018,06,2018,454920,observed,166,observed
+California,2019,06,2019,446479,observed,181,observed
+California,2020,06,2020,420259,observed,157,observed
+California,2021,06,2021,420608,observed,164,observed
+California,2022,06,2022,419104,observed,139,observed
+California,2023,06,2023,400108,observed,163,observed
+California,2024,06,2024,402075,observed,144,observed
+Colorado,2016,08,2016,66613,observed,61,observed
+Colorado,2017,08,2017,64382,observed,50,observed
+Colorado,2018,08,2018,62885,observed,51,observed
+Colorado,2019,08,2019,62869,observed,60,observed
+Colorado,2020,08,2020,61494,observed,54,observed
+Colorado,2021,08,2021,62949,observed,46,observed
+Colorado,2022,08,2022,62383,observed,43,observed
+Colorado,2023,08,2023,61494,observed,47,observed
+Colorado,2024,08,2024,64268,observed,47,observed
+Connecticut,2016,09,2016,36015,observed,18,observed
+Connecticut,2017,09,2017,35221,observed,15,observed
+Connecticut,2018,09,2018,34725,observed,17,observed
+Connecticut,2019,09,2019,34258,observed,12,observed
+Connecticut,2020,09,2020,33460,observed,18,observed
+Connecticut,2021,09,2021,35670,observed,15,observed
+Connecticut,2022,09,2022,35332,observed,24,observed
+Connecticut,2023,09,2023,34559,observed,14,observed
+Connecticut,2024,09,2024,34599,observed,21,observed
+Delaware,2016,10,2016,10992,observed,Suppressed,suppressed
+Delaware,2017,10,2017,10855,observed,18,observed
+Delaware,2018,10,2018,10621,observed,15,observed
+Delaware,2019,10,2019,10562,observed,Suppressed,suppressed
+Delaware,2020,10,2020,10392,observed,Suppressed,suppressed
+Delaware,2021,10,2021,10482,observed,Suppressed,suppressed
+Delaware,2022,10,2022,10816,observed,Suppressed,suppressed
+Delaware,2023,10,2023,10427,observed,Suppressed,suppressed
+Delaware,2024,10,2024,10550,observed,Suppressed,suppressed
+District of Columbia,2016,11,2016,9858,observed,Suppressed,suppressed
+District of Columbia,2017,11,2017,9560,observed,Suppressed,suppressed
+District of Columbia,2018,11,2018,9212,observed,Suppressed,suppressed
+District of Columbia,2019,11,2019,9079,observed,Suppressed,suppressed
+District of Columbia,2020,11,2020,8874,observed,Suppressed,suppressed
+District of Columbia,2021,11,2021,8660,observed,Suppressed,suppressed
+District of Columbia,2022,11,2022,8075,observed,Suppressed,suppressed
+District of Columbia,2023,11,2023,7896,observed,Suppressed,suppressed
+District of Columbia,2024,11,2024,7616,observed,Suppressed,suppressed
+Florida,2016,12,2016,225022,observed,55,observed
+Florida,2017,12,2017,223630,observed,43,observed
+Florida,2018,12,2018,221542,observed,53,observed
+Florida,2019,12,2019,220002,observed,43,observed
+Florida,2020,12,2020,209671,observed,47,observed
+Florida,2021,12,2021,216260,observed,60,observed
+Florida,2022,12,2022,224433,observed,44,observed
+Florida,2023,12,2023,221410,observed,84,observed
+Florida,2024,12,2024,224389,observed,81,observed
+Georgia,2016,13,2016,130042,observed,68,observed
+Georgia,2017,13,2017,129243,observed,52,observed
+Georgia,2018,13,2018,126172,observed,39,observed
+Georgia,2019,13,2019,126371,observed,66,observed
+Georgia,2020,13,2020,122473,observed,58,observed
+Georgia,2021,13,2021,124073,observed,58,observed
+Georgia,2022,13,2022,126130,observed,62,observed
+Georgia,2023,13,2023,125120,observed,51,observed
+Georgia,2024,13,2024,126437,observed,51,observed
+Hawaii,2016,15,2016,18059,observed,Suppressed,suppressed
+Hawaii,2017,15,2017,17517,observed,Suppressed,suppressed
+Hawaii,2018,15,2018,16972,observed,Suppressed,suppressed
+Hawaii,2019,15,2019,16797,observed,Suppressed,suppressed
+Hawaii,2020,15,2020,15785,observed,Suppressed,suppressed
+Hawaii,2021,15,2021,15620,observed,Suppressed,suppressed
+Hawaii,2022,15,2022,15535,observed,Suppressed,suppressed
+Hawaii,2023,15,2023,14808,observed,Suppressed,suppressed
+Hawaii,2024,15,2024,14917,observed,Suppressed,suppressed
+Idaho,2016,16,2016,22482,observed,26,observed
+Idaho,2017,16,2017,22181,observed,17,observed
+Idaho,2018,16,2018,21403,observed,23,observed
+Idaho,2019,16,2019,22063,observed,21,observed
+Idaho,2020,16,2020,21533,observed,18,observed
+Idaho,2021,16,2021,22427,observed,25,observed
+Idaho,2022,16,2022,22391,observed,25,observed
+Idaho,2023,16,2023,22397,observed,22,observed
+Idaho,2024,16,2024,23276,observed,28,observed
+Illinois,2016,17,2016,154445,observed,121,observed
+Illinois,2017,17,2017,149390,observed,107,observed
+Illinois,2018,17,2018,144815,observed,99,observed
+Illinois,2019,17,2019,140128,observed,105,observed
+Illinois,2020,17,2020,133298,observed,106,observed
+Illinois,2021,17,2021,132189,observed,105,observed
+Illinois,2022,17,2022,128350,observed,86,observed
+Illinois,2023,17,2023,124820,observed,90,observed
+Illinois,2024,17,2024,125731,observed,82,observed
+Indiana,2016,18,2016,83091,observed,57,observed
+Indiana,2017,18,2017,82170,observed,51,observed
+Indiana,2018,18,2018,81646,observed,71,observed
+Indiana,2019,18,2019,80859,observed,49,observed
+Indiana,2020,18,2020,78616,observed,66,observed
+Indiana,2021,18,2021,79946,observed,56,observed
+Indiana,2022,18,2022,79649,observed,56,observed
+Indiana,2023,18,2023,79000,observed,38,observed
+Indiana,2024,18,2024,80257,observed,38,observed
+Iowa,2016,19,2016,39403,observed,39,observed
+Iowa,2017,19,2017,38430,observed,38,observed
+Iowa,2018,19,2018,37785,observed,44,observed
+Iowa,2019,19,2019,37649,observed,40,observed
+Iowa,2020,19,2020,36114,observed,34,observed
+Iowa,2021,19,2021,36835,observed,34,observed
+Iowa,2022,19,2022,36506,observed,32,observed
+Iowa,2023,19,2023,36052,observed,28,observed
+Iowa,2024,19,2024,36436,observed,33,observed
+Kansas,2016,20,2016,38053,observed,26,observed
+Kansas,2017,20,2017,36519,observed,25,observed
+Kansas,2018,20,2018,36261,observed,28,observed
+Kansas,2019,20,2019,35395,observed,23,observed
+Kansas,2020,20,2020,34376,observed,24,observed
+Kansas,2021,20,2021,34705,observed,16,observed
+Kansas,2022,20,2022,34401,observed,19,observed
+Kansas,2023,20,2023,34065,observed,18,observed
+Kansas,2024,20,2024,33984,observed,26,observed
+Kentucky,2016,21,2016,55449,observed,27,observed
+Kentucky,2017,21,2017,54752,observed,45,observed
+Kentucky,2018,21,2018,53922,observed,25,observed
+Kentucky,2019,21,2019,53069,observed,35,observed
+Kentucky,2020,21,2020,51668,observed,27,observed
+Kentucky,2021,21,2021,52214,observed,38,observed
+Kentucky,2022,21,2022,52315,observed,28,observed
+Kentucky,2023,21,2023,51984,observed,32,observed
+Kentucky,2024,21,2024,52913,observed,30,observed
+Louisiana,2016,22,2016,63178,observed,31,observed
+Louisiana,2017,22,2017,61018,observed,27,observed
+Louisiana,2018,22,2018,59615,observed,35,observed
+Louisiana,2019,22,2019,58941,observed,23,observed
+Louisiana,2020,22,2020,57328,observed,32,observed
+Louisiana,2021,22,2021,57437,observed,37,observed
+Louisiana,2022,22,2022,56479,observed,29,observed
+Louisiana,2023,22,2023,54927,observed,38,observed
+Louisiana,2024,22,2024,53305,observed,29,observed
+Maine,2016,23,2016,12705,observed,Suppressed,suppressed
+Maine,2017,23,2017,12298,observed,Suppressed,suppressed
+Maine,2018,23,2018,12311,observed,Suppressed,suppressed
+Maine,2019,23,2019,11779,observed,Suppressed,suppressed
+Maine,2020,23,2020,11539,observed,Suppressed,suppressed
+Maine,2021,23,2021,12006,observed,Suppressed,suppressed
+Maine,2022,23,2022,12093,observed,Suppressed,suppressed
+Maine,2023,23,2023,11627,observed,Suppressed,suppressed
+Maine,2024,23,2024,11601,observed,14,observed
+Maryland,2016,24,2016,73136,observed,44,observed
+Maryland,2017,24,2017,71641,observed,38,observed
+Maryland,2018,24,2018,71080,observed,45,observed
+Maryland,2019,24,2019,70178,observed,28,observed
+Maryland,2020,24,2020,68554,observed,21,observed
+Maryland,2021,24,2021,68285,observed,33,observed
+Maryland,2022,24,2022,68782,observed,28,observed
+Maryland,2023,24,2023,65594,observed,21,observed
+Maryland,2024,24,2024,65797,observed,26,observed
+Massachusetts,2016,25,2016,71317,observed,43,observed
+Massachusetts,2017,25,2017,70702,observed,46,observed
+Massachusetts,2018,25,2018,69109,observed,42,observed
+Massachusetts,2019,25,2019,69117,observed,54,observed
+Massachusetts,2020,25,2020,66428,observed,36,observed
+Massachusetts,2021,25,2021,69137,observed,38,observed
+Massachusetts,2022,25,2022,68584,observed,45,observed
+Massachusetts,2023,25,2023,67093,observed,37,observed
+Massachusetts,2024,25,2024,68184,observed,44,observed
+Michigan,2016,26,2016,113315,observed,49,observed
+Michigan,2017,26,2017,111426,observed,55,observed
+Michigan,2018,26,2018,110032,observed,43,observed
+Michigan,2019,26,2019,107886,observed,41,observed
+Michigan,2020,26,2020,104074,observed,29,observed
+Michigan,2021,26,2021,104980,observed,46,observed
+Michigan,2022,26,2022,102321,observed,43,observed
+Michigan,2023,26,2023,99124,observed,36,observed
+Michigan,2024,26,2024,99525,observed,47,observed
+Minnesota,2016,27,2016,69749,observed,42,observed
+Minnesota,2017,27,2017,68595,observed,55,observed
+Minnesota,2018,27,2018,67344,observed,41,observed
+Minnesota,2019,27,2019,66027,observed,57,observed
+Minnesota,2020,27,2020,63443,observed,48,observed
+Minnesota,2021,27,2021,64425,observed,42,observed
+Minnesota,2022,27,2022,64015,observed,47,observed
+Minnesota,2023,27,2023,61715,observed,44,observed
+Minnesota,2024,27,2024,62110,observed,53,observed
+Mississippi,2016,28,2016,37928,observed,Suppressed,suppressed
+Mississippi,2017,28,2017,37357,observed,Suppressed,suppressed
+Mississippi,2018,28,2018,37000,observed,Suppressed,suppressed
+Mississippi,2019,28,2019,36636,observed,10,observed
+Mississippi,2020,28,2020,35473,observed,Suppressed,suppressed
+Mississippi,2021,28,2021,35156,observed,Suppressed,suppressed
+Mississippi,2022,28,2022,34675,observed,Suppressed,suppressed
+Mississippi,2023,28,2023,34459,observed,Suppressed,suppressed
+Mississippi,2024,28,2024,33473,observed,Suppressed,suppressed
+Missouri,2016,29,2016,74705,observed,35,observed
+Missouri,2017,29,2017,73034,observed,27,observed
+Missouri,2018,29,2018,73269,observed,30,observed
+Missouri,2019,29,2019,72127,observed,35,observed
+Missouri,2020,29,2020,69285,observed,30,observed
+Missouri,2021,29,2021,69453,observed,31,observed
+Missouri,2022,29,2022,68985,observed,42,observed
+Missouri,2023,29,2023,67123,observed,32,observed
+Missouri,2024,29,2024,67998,observed,32,observed
+Montana,2016,30,2016,12282,observed,11,observed
+Montana,2017,30,2017,11799,observed,Suppressed,suppressed
+Montana,2018,30,2018,11513,observed,11,observed
+Montana,2019,30,2019,11079,observed,13,observed
+Montana,2020,30,2020,10791,observed,Suppressed,suppressed
+Montana,2021,30,2021,11231,observed,Suppressed,suppressed
+Montana,2022,30,2022,11175,observed,11,observed
+Montana,2023,30,2023,11078,observed,13,observed
+Montana,2024,30,2024,11331,observed,10,observed
+Nebraska,2016,31,2016,26589,observed,34,observed
+Nebraska,2017,31,2017,25821,observed,32,observed
+Nebraska,2018,31,2018,25488,observed,26,observed
+Nebraska,2019,31,2019,24755,observed,30,observed
+Nebraska,2020,31,2020,24291,observed,21,observed
+Nebraska,2021,31,2021,24609,observed,18,observed
+Nebraska,2022,31,2022,24345,observed,15,observed
+Nebraska,2023,31,2023,24111,observed,25,observed
+Nebraska,2024,31,2024,24785,observed,18,observed
+Nevada,2016,32,2016,36260,observed,20,observed
+Nevada,2017,32,2017,35756,observed,11,observed
+Nevada,2018,32,2018,35682,observed,24,observed
+Nevada,2019,32,2019,35072,observed,14,observed
+Nevada,2020,32,2020,33653,observed,22,observed
+Nevada,2021,32,2021,33686,observed,10,observed
+Nevada,2022,32,2022,33193,observed,13,observed
+Nevada,2023,32,2023,31794,observed,12,observed
+Nevada,2024,32,2024,32381,observed,20,observed
+New Hampshire,2016,33,2016,12267,observed,13,observed
+New Hampshire,2017,33,2017,12116,observed,10,observed
+New Hampshire,2018,33,2018,11995,observed,18,observed
+New Hampshire,2019,33,2019,11839,observed,Suppressed,suppressed
+New Hampshire,2020,33,2020,11791,observed,Suppressed,suppressed
+New Hampshire,2021,33,2021,12625,observed,Suppressed,suppressed
+New Hampshire,2022,33,2022,12077,observed,Suppressed,suppressed
+New Hampshire,2023,33,2023,11936,observed,Suppressed,suppressed
+New Hampshire,2024,33,2024,11770,observed,Suppressed,suppressed
+New Jersey,2016,34,2016,102647,observed,84,observed
+New Jersey,2017,34,2017,101250,observed,94,observed
+New Jersey,2018,34,2018,101223,observed,96,observed
+New Jersey,2019,34,2019,99585,observed,83,observed
+New Jersey,2020,34,2020,97954,observed,70,observed
+New Jersey,2021,34,2021,101497,observed,56,observed
+New Jersey,2022,34,2022,102893,observed,68,observed
+New Jersey,2023,34,2023,101001,observed,71,observed
+New Jersey,2024,34,2024,101372,observed,77,observed
+New Mexico,2016,35,2016,24692,observed,10,observed
+New Mexico,2017,35,2017,23767,observed,Suppressed,suppressed
+New Mexico,2018,35,2018,23039,observed,Suppressed,suppressed
+New Mexico,2019,35,2019,22960,observed,Suppressed,suppressed
+New Mexico,2020,35,2020,21903,observed,Suppressed,suppressed
+New Mexico,2021,35,2021,21391,observed,Suppressed,suppressed
+New Mexico,2022,35,2022,21614,observed,19,observed
+New Mexico,2023,35,2023,20951,observed,13,observed
+New Mexico,2024,35,2024,21328,observed,0,zero
+New York,2016,36,2016,234283,observed,136,observed
+New York,2017,36,2017,229737,observed,99,observed
+New York,2018,36,2018,226238,observed,118,observed
+New York,2019,36,2019,221539,observed,112,observed
+New York,2020,36,2020,209338,observed,110,observed
+New York,2021,36,2021,210742,observed,114,observed
+New York,2022,36,2022,207774,observed,101,observed
+New York,2023,36,2023,203612,observed,88,observed
+New York,2024,36,2024,205489,observed,82,observed
+North Carolina,2016,37,2016,120779,observed,52,observed
+North Carolina,2017,37,2017,120125,observed,44,observed
+North Carolina,2018,37,2018,118954,observed,61,observed
+North Carolina,2019,37,2019,118725,observed,67,observed
+North Carolina,2020,37,2020,116730,observed,61,observed
+North Carolina,2021,37,2021,120466,observed,57,observed
+North Carolina,2022,37,2022,121562,observed,51,observed
+North Carolina,2023,37,2023,120082,observed,41,observed
+North Carolina,2024,37,2024,122856,observed,58,observed
+North Dakota,2016,38,2016,11383,observed,Suppressed,suppressed
+North Dakota,2017,38,2017,10737,observed,Suppressed,suppressed
+North Dakota,2018,38,2018,10636,observed,10,observed
+North Dakota,2019,38,2019,10454,observed,Suppressed,suppressed
+North Dakota,2020,38,2020,10059,observed,10,observed
+North Dakota,2021,38,2021,10112,observed,10,observed
+North Dakota,2022,38,2022,9567,observed,Suppressed,suppressed
+North Dakota,2023,38,2023,9647,observed,Suppressed,suppressed
+North Dakota,2024,38,2024,9634,observed,10,observed
+Ohio,2016,39,2016,138085,observed,129,observed
+Ohio,2017,39,2017,136832,observed,104,observed
+Ohio,2018,39,2018,135134,observed,100,observed
+Ohio,2019,39,2019,134461,observed,90,observed
+Ohio,2020,39,2020,129191,observed,112,observed
+Ohio,2021,39,2021,129791,observed,91,observed
+Ohio,2022,39,2022,128231,observed,89,observed
+Ohio,2023,39,2023,126896,observed,89,observed
+Ohio,2024,39,2024,126795,observed,87,observed
+Oklahoma,2016,40,2016,52592,observed,24,observed
+Oklahoma,2017,40,2017,50214,observed,21,observed
+Oklahoma,2018,40,2018,49800,observed,27,observed
+Oklahoma,2019,40,2019,49143,observed,23,observed
+Oklahoma,2020,40,2020,47623,observed,24,observed
+Oklahoma,2021,40,2021,48410,observed,26,observed
+Oklahoma,2022,40,2022,48332,observed,32,observed
+Oklahoma,2023,40,2023,47909,observed,34,observed
+Oklahoma,2024,40,2024,47962,observed,30,observed
+Oregon,2016,41,2016,45535,observed,45,observed
+Oregon,2017,41,2017,43631,observed,35,observed
+Oregon,2018,41,2018,42188,observed,30,observed
+Oregon,2019,41,2019,41858,observed,32,observed
+Oregon,2020,41,2020,39820,observed,29,observed
+Oregon,2021,41,2021,40914,observed,33,observed
+Oregon,2022,41,2022,39493,observed,42,observed
+Oregon,2023,41,2023,38298,observed,21,observed
+Oregon,2024,41,2024,38963,observed,24,observed
+Pennsylvania,2016,42,2016,139409,observed,75,observed
+Pennsylvania,2017,42,2017,137745,observed,98,observed
+Pennsylvania,2018,42,2018,135673,observed,66,observed
+Pennsylvania,2019,42,2019,134230,observed,78,observed
+Pennsylvania,2020,42,2020,130693,observed,66,observed
+Pennsylvania,2021,42,2021,132622,observed,72,observed
+Pennsylvania,2022,42,2022,130252,observed,85,observed
+Pennsylvania,2023,42,2023,126951,observed,100,observed
+Pennsylvania,2024,42,2024,127299,observed,92,observed
+Rhode Island,2016,44,2016,10798,observed,12,observed
+Rhode Island,2017,44,2017,10638,observed,Suppressed,suppressed
+Rhode Island,2018,44,2018,10506,observed,14,observed
+Rhode Island,2019,44,2019,10175,observed,Suppressed,suppressed
+Rhode Island,2020,44,2020,10101,observed,Suppressed,suppressed
+Rhode Island,2021,44,2021,10464,observed,Suppressed,suppressed
+Rhode Island,2022,44,2022,10269,observed,Suppressed,suppressed
+Rhode Island,2023,44,2023,9805,observed,Suppressed,suppressed
+Rhode Island,2024,44,2024,10009,observed,Suppressed,suppressed
+South Carolina,2016,45,2016,57342,observed,41,observed
+South Carolina,2017,45,2017,57029,observed,37,observed
+South Carolina,2018,45,2018,56669,observed,35,observed
+South Carolina,2019,45,2019,57038,observed,41,observed
+South Carolina,2020,45,2020,55704,observed,33,observed
+South Carolina,2021,45,2021,57185,observed,29,observed
+South Carolina,2022,45,2022,57820,observed,25,observed
+South Carolina,2023,45,2023,57729,observed,32,observed
+South Carolina,2024,45,2024,58768,observed,43,observed
+South Dakota,2016,46,2016,12275,observed,15,observed
+South Dakota,2017,46,2017,12134,observed,20,observed
+South Dakota,2018,46,2018,11893,observed,13,observed
+South Dakota,2019,46,2019,11449,observed,16,observed
+South Dakota,2020,46,2020,10960,observed,14,observed
+South Dakota,2021,46,2021,11369,observed,17,observed
+South Dakota,2022,46,2022,11201,observed,20,observed
+South Dakota,2023,46,2023,11201,observed,13,observed
+South Dakota,2024,46,2024,11451,observed,10,observed
+Tennessee,2016,47,2016,80807,observed,28,observed
+Tennessee,2017,47,2017,81016,observed,29,observed
+Tennessee,2018,47,2018,80751,observed,24,observed
+Tennessee,2019,47,2019,80450,observed,26,observed
+Tennessee,2020,47,2020,78689,observed,36,observed
+Tennessee,2021,47,2021,81717,observed,29,observed
+Tennessee,2022,47,2022,82265,observed,22,observed
+Tennessee,2023,47,2023,83021,observed,28,observed
+Tennessee,2024,47,2024,83833,observed,38,observed
+Texas,2016,48,2016,398047,observed,155,observed
+Texas,2017,48,2017,382050,observed,142,observed
+Texas,2018,48,2018,378624,observed,184,observed
+Texas,2019,48,2019,377599,observed,149,observed
+Texas,2020,48,2020,368190,observed,133,observed
+Texas,2021,48,2021,373594,observed,109,observed
+Texas,2022,48,2022,389741,observed,123,observed
+Texas,2023,48,2023,387945,observed,117,observed
+Texas,2024,48,2024,390828,observed,130,observed
+Utah,2016,49,2016,50464,observed,51,observed
+Utah,2017,49,2017,48585,observed,72,observed
+Utah,2018,49,2018,47209,observed,66,observed
+Utah,2019,49,2019,46826,observed,49,observed
+Utah,2020,49,2020,45702,observed,93,observed
+Utah,2021,49,2021,46712,observed,67,observed
+Utah,2022,49,2022,45768,observed,63,observed
+Utah,2023,49,2023,45019,observed,51,observed
+Utah,2024,49,2024,46664,observed,56,observed
+Vermont,2016,50,2016,5756,observed,0,zero
+Vermont,2017,50,2017,5655,observed,Suppressed,suppressed
+Vermont,2018,50,2018,5432,observed,0,zero
+Vermont,2019,50,2019,5361,observed,Suppressed,suppressed
+Vermont,2020,50,2020,5133,observed,0,zero
+Vermont,2021,50,2021,5384,observed,Suppressed,suppressed
+Vermont,2022,50,2022,5316,observed,0,zero
+Vermont,2023,50,2023,5065,observed,0,zero
+Vermont,2024,50,2024,5023,observed,Suppressed,suppressed
+Virginia,2016,51,2016,102460,observed,46,observed
+Virginia,2017,51,2017,100391,observed,32,observed
+Virginia,2018,51,2018,99843,observed,46,observed
+Virginia,2019,51,2019,97429,observed,39,observed
+Virginia,2020,51,2020,94749,observed,41,observed
+Virginia,2021,51,2021,95825,observed,37,observed
+Virginia,2022,51,2022,95630,observed,42,observed
+Virginia,2023,51,2023,92649,observed,29,observed
+Virginia,2024,51,2024,94054,observed,29,observed
+Washington,2016,53,2016,90505,observed,66,observed
+Washington,2017,53,2017,87562,observed,53,observed
+Washington,2018,53,2018,86085,observed,71,observed
+Washington,2019,53,2019,84895,observed,54,observed
+Washington,2020,53,2020,83086,observed,43,observed
+Washington,2021,53,2021,83911,observed,51,observed
+Washington,2022,53,2022,83333,observed,36,observed
+Washington,2023,53,2023,80932,observed,37,observed
+Washington,2024,53,2024,83118,observed,41,observed
+West Virginia,2016,54,2016,19079,observed,11,observed
+West Virginia,2017,54,2017,18675,observed,16,observed
+West Virginia,2018,54,2018,18248,observed,13,observed
+West Virginia,2019,54,2019,18136,observed,13,observed
+West Virginia,2020,54,2020,17323,observed,17,observed
+West Virginia,2021,54,2021,17198,observed,10,observed
+West Virginia,2022,54,2022,16929,observed,Suppressed,suppressed
+West Virginia,2023,54,2023,16606,observed,13,observed
+West Virginia,2024,54,2024,17022,observed,16,observed
+Wisconsin,2016,55,2016,66615,observed,54,observed
+Wisconsin,2017,55,2017,64975,observed,64,observed
+Wisconsin,2018,55,2018,64098,observed,66,observed
+Wisconsin,2019,55,2019,63270,observed,51,observed
+Wisconsin,2020,55,2020,60594,observed,66,observed
+Wisconsin,2021,55,2021,61781,observed,58,observed
+Wisconsin,2022,55,2022,60049,observed,47,observed
+Wisconsin,2023,55,2023,59754,observed,66,observed
+Wisconsin,2024,55,2024,59686,observed,40,observed
+Wyoming,2016,56,2016,7386,observed,Suppressed,suppressed
+Wyoming,2017,56,2017,6903,observed,Suppressed,suppressed
+Wyoming,2018,56,2018,6562,observed,Suppressed,suppressed
+Wyoming,2019,56,2019,6565,observed,Suppressed,suppressed
+Wyoming,2020,56,2020,6128,observed,Suppressed,suppressed
+Wyoming,2021,56,2021,6237,observed,Suppressed,suppressed
+Wyoming,2022,56,2022,6049,observed,Suppressed,suppressed
+Wyoming,2023,56,2023,5990,observed,Suppressed,suppressed
+Wyoming,2024,56,2024,6089,observed,Suppressed,suppressed
