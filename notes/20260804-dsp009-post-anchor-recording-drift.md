@@ -558,12 +558,14 @@ before summarising.
    column H direction is the all-prevalence corner. His answer selects a row.
    Ask 3 — whether windows after 2016-2020 exist or are expected — would retire
    the question outright for part of the span.
-3. **Build the anomaly-panel design as `DSP010`.** It is the only route
-   identified so far that can actually *divide* the post-window decline rather
-   than parameterise the division, and it works in exactly the years the anchor
-   does not reach. Curate the control set against published NBDPN prevalence, and
-   test the shared-factor restriction against the anchor over 2016-2018, where the
-   two overlap.
+3. **Build the anomaly-panel design as `DSP010`** — **done**, see
+   [the `DSP010` note](20260804-dsp010-anomaly-panel-recording-factor.md). It
+   does measure an item-wide recording decline of about `7.5%` over 2016-2024,
+   which contradicts `DSP008`'s constant-`s` reading from an independent channel.
+   It does **not** divide the decline: the four admissible controls disagree at
+   `I² = 91%`, and the five overlap years cut the uncertainty on the Down syndrome
+   loading by only `10%`. The curation against published NBDPN prevalence remains
+   open and is now the highest-value input to it.
 4. **The anchor-off mode is closed; keep auditing anyway.** All three remedies
    are **done**: the frozen runs are audited and clean, the observation SD is fixed
    by default, and the clip now carries a smooth barrier that restores the escape
