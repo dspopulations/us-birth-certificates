@@ -1,0 +1,52 @@
+state,state_code,births,births_status,ds_cp,ds_cp_status,ds_confirmed,ds_confirmed_status
+Alabama,01,524110,observed,248,observed,111,observed
+Alaska,02,87715,observed,91,observed,39,observed
+Arizona,04,716707,observed,453,observed,186,observed
+Arkansas,05,326722,observed,138,observed,38,observed
+California,06,3924038,observed,1429,observed,736,observed
+Colorado,08,569337,observed,459,observed,198,observed
+Connecticut,09,313839,observed,154,observed,63,observed
+Delaware,10,95697,observed,75,observed,28,observed
+District of Columbia,11,78830,observed,32,observed,27,observed
+Florida,12,1986359,observed,510,observed,285,observed
+Georgia,13,1136061,observed,505,observed,218,observed
+Hawaii,15,146010,observed,21,observed,Suppressed,suppressed
+Idaho,16,200153,observed,205,observed,78,observed
+Illinois,17,1233166,observed,901,observed,301,observed
+Indiana,18,725234,observed,482,observed,145,observed
+Iowa,19,335210,observed,322,observed,113,observed
+Kansas,20,317759,observed,205,observed,57,observed
+Kentucky,21,478286,observed,287,observed,135,observed
+Louisiana,22,522228,observed,281,observed,161,observed
+Maine,23,107959,observed,74,observed,28,observed
+Maryland,24,623047,observed,284,observed,93,observed
+Massachusetts,25,619671,observed,385,observed,267,observed
+Michigan,26,952683,observed,389,observed,180,observed
+Minnesota,27,587423,observed,429,observed,186,observed
+Mississippi,28,322157,observed,69,observed,27,observed
+Missouri,29,635979,observed,294,observed,90,observed
+Montana,30,102279,observed,92,observed,34,observed
+Nebraska,31,224794,observed,219,observed,98,observed
+Nevada,32,307477,observed,146,observed,88,observed
+New Hampshire,33,108416,observed,77,observed,36,observed
+New Jersey,34,909422,observed,699,observed,423,observed
+New Mexico,35,201645,observed,81,observed,44,observed
+New York,36,1948752,observed,960,observed,511,observed
+North Carolina,37,1080279,observed,492,observed,191,observed
+North Dakota,38,92229,observed,78,observed,15,observed
+Ohio,39,1185416,observed,891,observed,369,observed
+Oklahoma,40,441985,observed,241,observed,78,observed
+Oregon,41,370700,observed,291,observed,157,observed
+Pennsylvania,42,1194874,observed,732,observed,301,observed
+Rhode Island,44,92765,observed,62,observed,32,observed
+South Carolina,45,515284,observed,316,observed,155,observed
+South Dakota,46,103933,observed,138,observed,42,observed
+Tennessee,47,732549,observed,260,observed,101,observed
+Texas,48,3446618,observed,1242,observed,500,observed
+Utah,49,422949,observed,568,observed,346,observed
+Vermont,50,48125,observed,Suppressed,suppressed,Suppressed,suppressed
+Virginia,51,873030,observed,341,observed,174,observed
+Washington,53,763427,observed,452,observed,208,observed
+West Virginia,54,159216,observed,118,observed,36,observed
+Wisconsin,55,560822,observed,512,observed,229,observed
+Wyoming,56,57909,observed,48,observed,Suppressed,suppressed
