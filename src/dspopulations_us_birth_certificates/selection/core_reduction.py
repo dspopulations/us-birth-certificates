@@ -54,6 +54,111 @@ DEFAULT_REDUCTION_ERROR_CORRELATION = 0.0
 DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT = 0.0
 RecordedDefinition = Literal["confirmed_or_pending", "confirmed_only"]
 
+DEFAULT_ANCHOR_CSV = Path("output/degraaf_surveillance/expected_births_anchor.csv")
+DEFAULT_ANCHOR_WINDOW_HALF_WIDTH = 2
+# Year-to-year SD of log surveillance prevalence measured at 1.5-1.8% in the
+# model-family review, so a half-normal at 0.02 is weakly informative around it
+# rather than an invention.
+DEFAULT_ANCHOR_LEVEL_SIGMA = 0.02
+DEFAULT_ANCHOR_TREND_SIGMA = 0.01
+# The workbook attaches no uncertainty to the surveillance prevalences at all.
+# This is the prior scale for a *free* observation SD, so the fit reports how
+# well the windows are actually reconciled instead of asserting it.
+DEFAULT_ANCHOR_OBS_SIGMA = 0.05
+
+
+@dataclass(frozen=True)
+class SurveillanceAnchor:
+    """Observed surveillance prevalence for overlapping centred windows.
+
+    ``mid_year_idx`` is zero-based against the model's first year.  Each window
+    constrains the mean prevalence over ``2 * half_width + 1`` consecutive years,
+    which is what makes the overlap between windows harmless: overlapping
+    windows share latent years rather than double-counting evidence.
+
+    ``log_prevalence`` is the log of the surveillance prevalence per live birth
+    (not per 10,000), so it composes directly with the model's probabilities.
+    """
+
+    mid_year_idx: np.ndarray
+    log_prevalence: np.ndarray
+    half_width: int = DEFAULT_ANCHOR_WINDOW_HALF_WIDTH
+    source: str = ""
+    mid_years: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if len(self.mid_year_idx) != len(self.log_prevalence):
+            raise ValueError("anchor index and prevalence arrays must align")
+        if len(self.mid_year_idx) == 0:
+            raise ValueError("surveillance anchor requires at least one window")
+        if self.half_width < 0:
+            raise ValueError("anchor half_width must be non-negative")
+        if not np.all(np.isfinite(self.log_prevalence)):
+            raise ValueError("anchor log prevalences must be finite")
+
+    @classmethod
+    def from_csv(
+        cls,
+        *,
+        year_range: tuple[int, int],
+        path: Path | str = DEFAULT_ANCHOR_CSV,
+        half_width: int = DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
+        prevalence_column: str = "prevalence_per10k",
+    ) -> SurveillanceAnchor:
+        """Load windows whose mid-year falls inside ``year_range``.
+
+        The latent prevalence series is padded by ``half_width`` either side of
+        the modelled years, so a window centred on the first or last modelled
+        year is still usable.  Windows centred outside the range are dropped
+        rather than partially applied.
+        """
+        path = Path(path)
+        table = pd.read_csv(path)
+        required = {"mid_year", prevalence_column}
+        missing = required - set(table.columns)
+        if missing:
+            raise ValueError(f"{path} is missing required columns: {sorted(missing)}")
+
+        from_year, to_year = year_range
+        inside = table[
+            (table["mid_year"] >= from_year) & (table["mid_year"] <= to_year)
+        ].sort_values("mid_year")
+        if inside.empty:
+            raise ValueError(
+                f"{path} has no surveillance window centred within "
+                f"{from_year}-{to_year}"
+            )
+        prevalence = inside[prevalence_column].to_numpy(dtype=float) / 1e4
+        if not np.all(prevalence > 0.0):
+            raise ValueError("anchor prevalences must be positive")
+        return cls(
+            mid_year_idx=inside["mid_year"].to_numpy(dtype=int) - from_year,
+            log_prevalence=np.log(prevalence),
+            half_width=half_width,
+            source=str(path),
+            mid_years=tuple(int(y) for y in inside["mid_year"]),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "half_width": self.half_width,
+            "mid_years": list(self.mid_years),
+            "n_windows": len(self.mid_year_idx),
+            "log_prevalence": self.log_prevalence.tolist(),
+            "prevalence_per10k": (np.exp(self.log_prevalence) * 1e4).tolist(),
+            # Overlapping windows are not independent observations. The birth-year
+            # span they jointly cover, divided by the window width, is the honest
+            # count: 17 five-year windows over 2000-2018 span 23 birth-years and
+            # so carry about 4.6 independent observations, not 17.
+            "effective_independent_windows": (
+                int(self.mid_year_idx.max() - self.mid_year_idx.min())
+                + 1
+                + 2 * self.half_width
+            )
+            / (2 * self.half_width + 1),
+        }
+
 
 @dataclass(frozen=True)
 class CoreReductionPriors:
@@ -205,6 +310,7 @@ class CoreReductionModelConfig:
     age_endpoint_convention: dict[str, str] | None = None
     template_id: str = DSP001.template_id
     comparison_parent: str | None = DSP001.comparison_parent
+    surveillance_anchor: dict[str, Any] | None = None
 
     @classmethod
     def from_priors(
@@ -215,6 +321,8 @@ class CoreReductionModelConfig:
         model_definition: CoreModelDefinition = DSP001,
         recorded_definition: RecordedDefinition = "confirmed_or_pending",
         notes: str = "",
+        anchor: SurveillanceAnchor | None = None,
+        anchor_hyperpriors: dict[str, float] | None = None,
     ) -> CoreReductionModelConfig:
         if recorded_definition not in {"confirmed_or_pending", "confirmed_only"}:
             raise ValueError(
@@ -223,6 +331,20 @@ class CoreReductionModelConfig:
         priors = priors_obj.to_dict()
         exact_age = model_definition.age_model == "single_year"
         priors["theta_lb_age_used"] = not exact_age
+        anchored = model_definition.reduction_model == "anchor"
+        if anchored and anchor is None:
+            raise ValueError(
+                f"{model_definition.model_id} is anchored but no "
+                "SurveillanceAnchor was supplied to the config"
+            )
+        # An anchored fit does not consume the reduction prior. Say so in the
+        # serialised config, so a reader of the report cannot mistake the
+        # retained comparison series for the prior the model actually used.
+        priors["reduction_prior_enters_likelihood"] = not anchored
+        anchor_record: dict[str, Any] | None = None
+        if anchor is not None:
+            anchor_record = anchor.to_dict()
+            anchor_record["hyperpriors"] = dict(anchor_hyperpriors or {})
         return cls(
             year_range=year_range,
             priors=priors,
@@ -249,6 +371,7 @@ class CoreReductionModelConfig:
             ),
             template_id=model_definition.template_id,
             comparison_parent=model_definition.comparison_parent,
+            surveillance_anchor=anchor_record,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -270,6 +393,11 @@ class CoreReductionModelConfig:
             "comparison_parent": self.comparison_parent,
             "year_range": list(self.year_range),
             "priors": dict(self.priors),
+            "surveillance_anchor": (
+                dict(self.surveillance_anchor)
+                if self.surveillance_anchor is not None
+                else None
+            ),
             "notes": self.notes,
         }
 
@@ -447,8 +575,26 @@ def build_core_reduction_model(
     n_year: int | None = None,
     recording_model: RecordingModel = "constant",
     reduction_model: ReductionModel = "year",
+    anchor: SurveillanceAnchor | None = None,
+    anchor_level_sigma: float = DEFAULT_ANCHOR_LEVEL_SIGMA,
+    anchor_trend_sigma: float = DEFAULT_ANCHOR_TREND_SIGMA,
+    anchor_obs_sigma: float = DEFAULT_ANCHOR_OBS_SIGMA,
+    anchor_obs_sigma_fixed: float | None = None,
 ) -> Any:
-    """Build the PyMC core reduction-recording model."""
+    """Build the PyMC core reduction-recording model.
+
+    With ``reduction_model='anchor'`` the year level is not sampled from the
+    reduction-rate CSV at all.  Instead a latent annual log Down-syndrome
+    live-birth prevalence follows a local linear trend, is observed through the
+    surveillance programmes' overlapping five-year window means, and sets
+    ``eta_year`` by the accounting identity
+
+        eta_year = prevalence_year / Morris_expected_prevalence_year
+
+    so the reduction becomes a *consequence* of an anchored prevalence rather
+    than an imported prior.  Years beyond the last observed window are forecast
+    by the same state equation, with intervals that widen as they should.
+    """
     import pymc as pm
     import pytensor.tensor as pt
 
@@ -459,8 +605,27 @@ def build_core_reduction_model(
             "recording_model='revision' requires cells prepared with "
             "split_revision=True"
         )
-    if reduction_model not in {"year", "year_age"}:
-        raise ValueError("reduction_model must be 'year' or 'year_age'")
+    if reduction_model not in {"year", "year_age", "anchor"}:
+        raise ValueError("reduction_model must be 'year', 'year_age' or 'anchor'")
+    if reduction_model == "anchor":
+        if anchor is None:
+            raise ValueError("reduction_model='anchor' requires a SurveillanceAnchor")
+        for name, value in (
+            ("anchor_level_sigma", anchor_level_sigma),
+            ("anchor_trend_sigma", anchor_trend_sigma),
+            ("anchor_obs_sigma", anchor_obs_sigma),
+        ):
+            if not np.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be finite and positive")
+        if anchor_obs_sigma_fixed is not None and (
+            not np.isfinite(anchor_obs_sigma_fixed) or anchor_obs_sigma_fixed <= 0.0
+        ):
+            raise ValueError("anchor_obs_sigma_fixed must be finite and positive")
+    elif anchor is not None:
+        raise ValueError(
+            "a SurveillanceAnchor was supplied but reduction_model is "
+            f"{reduction_model!r}; pass reduction_model='anchor' to use it"
+        )
     if recording_model == "year" and priors.recording_s_year_sigma <= 0.0:
         raise ValueError(
             "recording_s_year_sigma must be positive when recording_model='year'"
@@ -478,20 +643,31 @@ def build_core_reduction_model(
         raise ValueError("core model requires at least one age-year cell")
     if n_year is None:
         n_year = int(cells.attrs.get("n_year", cells["year_idx"].max() + 1))
-    if len(priors.reduction_logit) != n_year:
-        raise ValueError(
-            f"reduction prior has length {len(priors.reduction_logit)}, "
-            f"but n_year={n_year}"
-        )
-    if len(priors.reduction_sigma) != n_year:
-        raise ValueError(
-            f"reduction prior sigma has length {len(priors.reduction_sigma)}, "
-            f"but n_year={n_year}"
-        )
-    if not np.all(np.isfinite(priors.reduction_sigma)) or np.any(
-        priors.reduction_sigma <= 0.0
-    ):
-        raise ValueError("reduction_sigma values must be finite and positive")
+    # An anchored fit does not consume the reduction prior, but the fit script
+    # still loads it so the report can contrast the superseded prior with the
+    # anchored posterior. Only require alignment, not presence.
+    require_reduction_prior = reduction_model != "anchor"
+    if require_reduction_prior or len(priors.reduction_logit):
+        if len(priors.reduction_logit) != n_year:
+            raise ValueError(
+                f"reduction prior has length {len(priors.reduction_logit)}, "
+                f"but n_year={n_year}"
+            )
+    if require_reduction_prior or len(priors.reduction_sigma):
+        if len(priors.reduction_sigma) != n_year:
+            raise ValueError(
+                f"reduction prior sigma has length {len(priors.reduction_sigma)}, "
+                f"but n_year={n_year}"
+            )
+        if not np.all(np.isfinite(priors.reduction_sigma)) or np.any(
+            priors.reduction_sigma <= 0.0
+        ):
+            raise ValueError("reduction_sigma values must be finite and positive")
+    if anchor is not None:
+        if anchor.mid_year_idx.min() < 0 or anchor.mid_year_idx.max() >= n_year:
+            raise ValueError(
+                "anchor window mid-years must fall inside the modelled year range"
+            )
 
     age_idx = cells["age_idx"].to_numpy()
     year_idx = cells["year_idx"].to_numpy()
@@ -541,6 +717,16 @@ def build_core_reduction_model(
     if reduction_model == "year_age":
         coords["age_step"] = age_values[1:]
         age_step_scale = np.sqrt(np.diff(age_values).astype(float))
+    if reduction_model == "anchor":
+        assert anchor is not None
+        # The latent prevalence series is padded either side of the modelled
+        # years so a window centred on the first or last modelled year still has
+        # all five of its years available.
+        n_latent = n_year + 2 * anchor.half_width
+        coords["latent_year"] = np.arange(
+            -anchor.half_width, n_year + anchor.half_width
+        )
+        coords["anchor_window"] = np.asarray(anchor.mid_years, dtype=int)
 
     year_age_n = np.zeros((n_year, n_age), dtype=float)
     np.add.at(year_age_n, (year_idx, age_idx), n_cell)
@@ -548,6 +734,10 @@ def build_core_reduction_model(
     natural_count_year = natural_count_year_age.sum(axis=1)
     if np.any(natural_count_year <= 0.0):
         raise ValueError("each modelled year must have positive age-expected DS births")
+    births_year = year_age_n.sum(axis=1)
+    # Morris-expected prevalence absent any prenatal reduction. Dividing an
+    # anchored prevalence by this gives eta directly.
+    natural_prevalence_year = natural_count_year / births_year
     natural_ds_weight_year_age = (
         natural_count_year_age / natural_count_year[:, np.newaxis]
     )
@@ -564,93 +754,199 @@ def build_core_reduction_model(
             dims=("year", "age"),
         )
 
-        reduction_mu = priors.reduction_logit + priors.reduction_calibration_shift_logit
-        correlation = priors.reduction_error_correlation
-        if correlation == 0.0:
-            rho_logit = pm.Normal(
-                "rho_logit_year",
-                mu=reduction_mu,
-                sigma=priors.reduction_sigma,
-                dims="year",
-            )
-        else:
-            covariance = _reduction_error_covariance(
-                priors.reduction_sigma,
-                correlation,
-            )
-            cholesky = np.linalg.cholesky(covariance)
-            raw_error = pm.Normal(
-                "rho_logit_year_raw",
-                mu=0.0,
-                sigma=1.0,
-                dims="year",
-            )
-            rho_logit = pm.Deterministic(
-                "rho_logit_year",
-                reduction_mu + pt.dot(cholesky, raw_error),
-                dims="year",
-            )
-        if reduction_model == "year":
-            rho_year = pm.Deterministic(
-                "rho_year", pm.math.invlogit(rho_logit), dims="year"
-            )
-            eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
-            rho_year_age = None
-        else:
-            rho_year_anchor = pm.Deterministic(
-                "rho_year_anchor", pm.math.invlogit(rho_logit), dims="year"
-            )
-            rho_age_step = pm.Normal(
-                "rho_age_step",
-                mu=0.0,
-                sigma=priors.reduction_age_step_sigma * age_step_scale,
-                dims="age_step",
-            )
-            rho_age_offset_uncentred = pt.concatenate(
-                [pt.zeros((1,), dtype=rho_age_step.dtype), pt.cumsum(rho_age_step)]
-            )
-            rho_age_offset = pm.Deterministic(
-                "rho_age_offset",
-                rho_age_offset_uncentred - rho_age_offset_uncentred.mean(),
-                dims="age",
-            )
+        if reduction_model == "anchor":
+            assert anchor is not None
+            pm.Data("natural_prevalence_year", natural_prevalence_year, dims="year")
+            half = anchor.half_width
+            width = 2 * half + 1
 
-            # Calibrate a separate intercept for each year so the smooth age
-            # curve preserves the sampled surveillance-informed national
-            # reduction margin. The weights are expected DS births absent
-            # prenatal reduction: N(year, age) * Morris(age).
-            rho_year_intercept = rho_logit
-            for _ in range(12):
-                rho_candidate = pm.math.invlogit(
-                    rho_year_intercept[:, None] + rho_age_offset[None, :]
-                )
-                margin_residual = (natural_weight * rho_candidate).sum(
-                    axis=1
-                ) - rho_year_anchor
-                margin_derivative = (
-                    natural_weight * rho_candidate * (1.0 - rho_candidate)
-                ).sum(axis=1)
-                rho_year_intercept = rho_year_intercept - margin_residual / pt.maximum(
-                    margin_derivative, 1e-12
-                )
-            rho_year_intercept = pm.Deterministic(
-                "rho_year_intercept", rho_year_intercept, dims="year"
+            # Local linear trend on log prevalence, non-centred. The level
+            # innovation absorbs year-to-year variation; the slope innovation lets
+            # the trend itself drift, which is what makes the forecast interval
+            # widen rather than extrapolate one fixed gradient forever.
+            # Centred on the first observed window. 0.25 on the log scale is
+            # +-28% at one SD: weakly informative about the level, while keeping
+            # theta * eta a valid probability even in prior-predictive draws.
+            level_start = pm.Normal(
+                "anchor_log_level_start",
+                mu=float(anchor.log_prevalence[0]),
+                sigma=0.25,
             )
-            rho_year_age = pm.Deterministic(
-                "rho_year_age",
-                pm.math.invlogit(rho_year_intercept[:, None] + rho_age_offset[None, :]),
-                dims=("year", "age"),
+            slope_start = pm.Normal(
+                "anchor_log_slope_start", mu=0.0, sigma=anchor_trend_sigma * 5.0
             )
-            rho_year = pm.Deterministic(
-                "rho_year", (natural_weight * rho_year_age).sum(axis=1), dims="year"
+            sigma_level = pm.HalfNormal("anchor_level_sigma", sigma=anchor_level_sigma)
+            sigma_trend = pm.HalfNormal("anchor_trend_sigma", sigma=anchor_trend_sigma)
+            level_innovation = pm.Normal(
+                "anchor_level_innovation_raw", mu=0.0, sigma=1.0, shape=n_latent - 1
+            )
+            trend_innovation = pm.Normal(
+                "anchor_trend_innovation_raw", mu=0.0, sigma=1.0, shape=n_latent - 1
+            )
+            slope = slope_start + pt.concatenate(
+                [pt.zeros((1,)), pt.cumsum(trend_innovation * sigma_trend)]
+            )
+            log_prevalence_latent = pm.Deterministic(
+                "anchor_log_prevalence_latent",
+                level_start
+                + pt.concatenate(
+                    [
+                        pt.zeros((1,)),
+                        pt.cumsum(slope[:-1] + level_innovation * sigma_level),
+                    ]
+                ),
+                dims="latent_year",
+            )
+            prevalence_latent = pt.exp(log_prevalence_latent)
+
+            # Each window constrains the mean of its five latent years. Averaging
+            # inside the observation equation is what makes overlapping windows
+            # share latent years instead of double-counting evidence.
+            window_starts = anchor.mid_year_idx  # latent index of window start
+            window_means = pt.stack(
+                [
+                    prevalence_latent[start : start + width].mean()
+                    for start in window_starts
+                ]
             )
             pm.Deterministic(
-                "rho_year_margin_error",
-                rho_year - rho_year_anchor,
+                "anchor_window_prevalence", window_means, dims="anchor_window"
+            )
+            # Estimating the observation SD measures only whether the windows are
+            # mutually consistent with a smooth path -- it cannot measure whether
+            # the surveillance programmes' prevalences are *accurate*, because the
+            # workbook supplies no uncertainty. Fixing it larger is therefore the
+            # honest sensitivity axis, not a wider prior (which the data would
+            # simply overrule).
+            if anchor_obs_sigma_fixed is None:
+                sigma_obs: Any = pm.HalfNormal(
+                    "anchor_obs_sigma", sigma=anchor_obs_sigma
+                )
+            else:
+                sigma_obs = anchor_obs_sigma_fixed
+                pm.Deterministic(
+                    "anchor_obs_sigma", pt.as_tensor_variable(anchor_obs_sigma_fixed)
+                )
+            pm.Normal(
+                "anchor_obs",
+                mu=pt.log(window_means),
+                sigma=sigma_obs,
+                observed=anchor.log_prevalence,
+                dims="anchor_window",
+            )
+
+            prevalence_year = pm.Deterministic(
+                "prevalence_year",
+                prevalence_latent[half : half + n_year],
                 dims="year",
             )
-            eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
-            pm.Deterministic("eta_year_age", 1.0 - rho_year_age, dims=("year", "age"))
+            # The accounting identity: reduction is whatever reconciles an
+            # anchored prevalence with the Morris no-reduction expectation.
+            eta_year = pm.Deterministic(
+                "eta_year",
+                prevalence_year / natural_prevalence_year,
+                dims="year",
+            )
+            pm.Deterministic("rho_year", 1.0 - eta_year, dims="year")
+            rho_year_age = None
+            rho_logit = None
+        else:
+            reduction_mu = (
+                priors.reduction_logit + priors.reduction_calibration_shift_logit
+            )
+            correlation = priors.reduction_error_correlation
+            if correlation == 0.0:
+                rho_logit = pm.Normal(
+                    "rho_logit_year",
+                    mu=reduction_mu,
+                    sigma=priors.reduction_sigma,
+                    dims="year",
+                )
+            else:
+                covariance = _reduction_error_covariance(
+                    priors.reduction_sigma,
+                    correlation,
+                )
+                cholesky = np.linalg.cholesky(covariance)
+                raw_error = pm.Normal(
+                    "rho_logit_year_raw",
+                    mu=0.0,
+                    sigma=1.0,
+                    dims="year",
+                )
+                rho_logit = pm.Deterministic(
+                    "rho_logit_year",
+                    reduction_mu + pt.dot(cholesky, raw_error),
+                    dims="year",
+                )
+            if reduction_model == "year":
+                rho_year = pm.Deterministic(
+                    "rho_year", pm.math.invlogit(rho_logit), dims="year"
+                )
+                eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
+                rho_year_age = None
+            else:
+                rho_year_anchor = pm.Deterministic(
+                    "rho_year_anchor", pm.math.invlogit(rho_logit), dims="year"
+                )
+                rho_age_step = pm.Normal(
+                    "rho_age_step",
+                    mu=0.0,
+                    sigma=priors.reduction_age_step_sigma * age_step_scale,
+                    dims="age_step",
+                )
+                rho_age_offset_uncentred = pt.concatenate(
+                    [pt.zeros((1,), dtype=rho_age_step.dtype), pt.cumsum(rho_age_step)]
+                )
+                rho_age_offset = pm.Deterministic(
+                    "rho_age_offset",
+                    rho_age_offset_uncentred - rho_age_offset_uncentred.mean(),
+                    dims="age",
+                )
+
+                # Calibrate a separate intercept for each year so the smooth age
+                # curve preserves the sampled surveillance-informed national
+                # reduction margin. The weights are expected DS births absent
+                # prenatal reduction: N(year, age) * Morris(age).
+                rho_year_intercept = rho_logit
+                for _ in range(12):
+                    rho_candidate = pm.math.invlogit(
+                        rho_year_intercept[:, None] + rho_age_offset[None, :]
+                    )
+                    margin_residual = (natural_weight * rho_candidate).sum(
+                        axis=1
+                    ) - rho_year_anchor
+                    margin_derivative = (
+                        natural_weight * rho_candidate * (1.0 - rho_candidate)
+                    ).sum(axis=1)
+                    rho_year_intercept = (
+                        rho_year_intercept
+                        - margin_residual / pt.maximum(margin_derivative, 1e-12)
+                    )
+                rho_year_intercept = pm.Deterministic(
+                    "rho_year_intercept", rho_year_intercept, dims="year"
+                )
+                rho_year_age = pm.Deterministic(
+                    "rho_year_age",
+                    pm.math.invlogit(
+                        rho_year_intercept[:, None] + rho_age_offset[None, :]
+                    ),
+                    dims=("year", "age"),
+                )
+                rho_year = pm.Deterministic(
+                    "rho_year",
+                    (natural_weight * rho_year_age).sum(axis=1),
+                    dims="year",
+                )
+                pm.Deterministic(
+                    "rho_year_margin_error",
+                    rho_year - rho_year_anchor,
+                    dims="year",
+                )
+                eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
+                pm.Deterministic(
+                    "eta_year_age", 1.0 - rho_year_age, dims=("year", "age")
+                )
 
         s_logit = pm.Normal(
             "recording_s_logit",
@@ -705,6 +1001,15 @@ def build_core_reduction_model(
 
         if rho_year_age is None:
             p_ds_lb_value = theta[age_idx] * eta_year[year_idx]
+            if reduction_model == "anchor":
+                # eta is a ratio of prevalences, not a bounded probability, so an
+                # extreme draw could in principle push theta * eta above 1 and
+                # make the Binomial invalid. The guard never binds at posterior
+                # scale (eta is around 0.6) but keeps prior-predictive and early
+                # tuning draws well defined. Note rho < 0 is deliberately NOT
+                # excluded: it would mean the anchored prevalence exceeds the
+                # Morris no-reduction expectation, which is a real diagnostic.
+                p_ds_lb_value = pt.clip(p_ds_lb_value, 1e-12, 1.0 - 1e-9)
         else:
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
         p_ds_lb = pm.Deterministic("p_ds_lb", p_ds_lb_value, dims="cell")

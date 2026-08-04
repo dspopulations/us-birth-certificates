@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 RecordingModel = Literal["constant", "year", "revision"]
-ReductionModel = Literal["year", "year_age"]
+ReductionModel = Literal["year", "year_age", "anchor"]
 AgeModel = Literal["band", "single_year"]
 
 CORE_REDUCTION_FAMILY_ID = "selection_core_reduction"
@@ -116,6 +116,42 @@ DSP006 = CoreModelDefinition(
     comparison_parent="DSP004",
 )
 
+DSP007 = CoreModelDefinition(
+    model_id="DSP007",
+    slug="anchor_constant_s_exact_age",
+    title="Surveillance-anchored core model with constant s and exact age",
+    description=(
+        "Replaces the reduction-rate prior with a latent annual Down-syndrome "
+        "live-birth prevalence, observed through the surveillance programmes' "
+        "overlapping five-year window means and following a local linear trend. "
+        "The reduction becomes a consequence of the anchored prevalence rather "
+        "than an imported prior, so the level is identified by data. Direct "
+        "counterpart of DSP004."
+    ),
+    recording_model="constant",
+    reduction_model="anchor",
+    age_model="single_year",
+    introduced="2026-08-04",
+    comparison_parent="DSP004",
+)
+
+DSP008 = CoreModelDefinition(
+    model_id="DSP008",
+    slug="anchor_s_revision_exact_age",
+    title="Surveillance-anchored core model with revision-split s and exact age",
+    description=(
+        "Combines the surveillance-anchored level of DSP007 with the "
+        "revised/unrevised recording split of DSP006. Requires a year range "
+        "spanning both the 2004-2015 revision phase-in and at least one "
+        "surveillance window."
+    ),
+    recording_model="revision",
+    reduction_model="anchor",
+    age_model="single_year",
+    introduced="2026-08-04",
+    comparison_parent="DSP007",
+)
+
 CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp001": DSP001,
     "dsp002": DSP002,
@@ -123,6 +159,8 @@ CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp004": DSP004,
     "dsp005": DSP005,
     "dsp006": DSP006,
+    "dsp007": DSP007,
+    "dsp008": DSP008,
 }
 
 
@@ -139,9 +177,10 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
             f"{definition.model_id}.recording_model must be 'constant', 'year' "
             "or 'revision'."
         )
-    if definition.reduction_model not in {"year", "year_age"}:
+    if definition.reduction_model not in {"year", "year_age", "anchor"}:
         raise ValueError(
-            f"{definition.model_id}.reduction_model must be 'year' or 'year_age'."
+            f"{definition.model_id}.reduction_model must be 'year', 'year_age' "
+            "or 'anchor'."
         )
     if definition.age_model not in {"band", "single_year"}:
         raise ValueError(
@@ -222,6 +261,8 @@ __all__ = [
     "DSP004",
     "DSP005",
     "DSP006",
+    "DSP007",
+    "DSP008",
     "AgeModel",
     "CoreModelDefinition",
     "RecordingModel",
