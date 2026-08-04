@@ -968,9 +968,7 @@ def _panel(
         years=tuple(2004 + panel_from_idx + offset for offset in range(n_panel_year)),
         flags=np.rint(rate * births[:, np.newaxis]),
         births=births,
-        expected_share=np.broadcast_to(
-            base_rate, (n_panel_year, n_condition)
-        ).copy(),
+        expected_share=np.broadcast_to(base_rate, (n_panel_year, n_condition)).copy(),
         true_trend_log_per_year=np.asarray(
             true_trend_log_per_year or tuple(0.0 for _ in conditions), dtype=float
         ),
@@ -1249,8 +1247,11 @@ def test_panel_denominators_must_match_the_certificate_cells(tmp_path: Path) -> 
 
 
 def test_panel_rejects_years_before_full_revised_coverage() -> None:
-    """Earlier years would read changing state composition as recording."""
-    duckdb.connect()  # the guard fires before any query, so no fixture is needed
+    """Earlier years would read changing state composition as recording.
+
+    The guard fires before any query runs, so an empty in-memory connection is
+    enough and no births fixture is needed.
+    """
     from dspopulations_us_birth_certificates.selection.anomaly_panel import (
         prepare_anomaly_panel,
     )

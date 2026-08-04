@@ -263,12 +263,12 @@ Two exclusions carry more information than the inclusions, and are named in the
 table rather than dropped silently:
 
 - **Gastroschisis** has no material reduction channel and would otherwise
-  qualify. Its composition-adjusted recorded rate falls `26.0%` over 2016-2018 to
+  qualify. Its composition-adjusted recorded rate falls `25.9%` over 2016-2018 to
   2022-2024, which is a genuine decline in US birth prevalence after a long rise.
   Reading that as recording would be wrong, and it is the clearest demonstration
   that "no reduction channel" is not sufficient — the control's own prevalence
   must also be stable.
-- **Cyanotic congenital heart disease** *rose* `14.5%` over the same window while
+- **Cyanotic congenital heart disease** *rose* `14.6%` over the same window while
   every control fell, because universal newborn pulse-oximetry screening was
   phased in across the states over 2011-2018. A single item-wide recording factor
   is therefore refuted for at least one checkbox on the item, which is why the
@@ -335,9 +335,16 @@ which *both* channels speak — the only place the loading is testable — and
 comparable with `DSP006`, `DSP008` and `DSP009`. The factor is carried separately
 as `recording_s_panel_logit`, exactly zero before 2016 and at the reference year
 itself, with `recording_s_panel_ratio` reporting the final year's sensitivity
-relative to that level — the same headline as `recording_s_drift_ratio`, on the
-same scale, so the prior-driven and panel-driven allocations can be read side by
-side.
+relative to that level.
+
+**`recording_s_panel_ratio` and `recording_s_drift_ratio` are not on the same
+scale, despite the parallel names.** Each divides by its own model's reference
+level, and those references are different years: `DSP009`'s drift is zero until the
+last window closes, so its ratio spans 2020-2024, while `DSP010`'s factor starts at
+the 2016 panel reference and spans 2016-2024. Comparing the two ratios directly
+inverts the annual rates — `0.9623` over four years is `-0.94%` a year against
+`0.9521` over eight years at `-0.60%`. Compare the totals, or divide by the span
+first; do not read the two ratios side by side.
 
 The panel's denominators are checked against the certificate cells' per-year
 births, so the two channels cannot silently describe different populations.

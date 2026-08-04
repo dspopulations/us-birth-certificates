@@ -21,12 +21,11 @@ movement should read as the item's recording sensitivity in exactly the years no
 surveillance window reaches. It works, and it says the item's recording
 sensitivity fell about `7.5%` over 2016-2024 — which contradicts `DSP008`'s
 constant-`s` reading of the same years from an independent channel. But the two
-things that
-would turn that into an identification of the Down syndrome split both fail: the
-controls **disagree with each other** at `I² = 91%`, and the five years where the
-panel and the anchor overlap carry **almost no information** about whether Down
-syndrome recording tracked the item at all. The panel narrows the range that
-`DSP009`'s prior alone would give. It does not divide the decline.
+things that would turn that into an identification of the Down syndrome split both
+fail: the controls **disagree with each other** at `I² = 91%`, and the five years
+where the panel and the anchor overlap carry **almost no information** about
+whether Down syndrome recording tracked the item at all. The panel narrows the
+range that `DSP009`'s prior alone would give. It does not divide the decline.
 
 ## Question
 
@@ -62,13 +61,13 @@ essentially never terminated in the US), and **limb reduction defect**
 Two exclusions carry more information than the inclusions.
 
 **Gastroschisis** has no material reduction channel and would otherwise qualify
-on the stated criterion. Its composition-adjusted recorded rate falls `26.0%`
+on the stated criterion. Its composition-adjusted recorded rate falls `25.9%`
 across 2016-2018 to 2022-2024, which is a real decline in US birth prevalence
 after a long rise. Reading that as recording would be simply wrong, and it shows
 that "no reduction channel" is not sufficient: the control's *own prevalence* must
 also be stable.
 
-**Cyanotic congenital heart disease** *rose* `14.5%` over the same window while
+**Cyanotic congenital heart disease** *rose* `14.6%` over the same window while
 every control fell, because universal newborn pulse-oximetry screening was phased
 in across the states over 2011-2018. So a single item-wide recording factor is
 already refuted for at least one checkbox on the item. That is why the Down
@@ -122,8 +121,12 @@ letting a fit quietly include them.
 **`recording_s` keeps its meaning.** The factor is exactly zero before 2016 and at
 the 2016 reference year itself, so `recording_s` remains the reference-year
 revised sensitivity and stays directly comparable with `DSP006`, `DSP008` and
-`DSP009`. `recording_s_panel_ratio` reports the final year against that level —
-the same headline as `recording_s_drift_ratio`, on the same scale.
+`DSP009`. `recording_s_panel_ratio` reports the final year against that level.
+
+Note that `recording_s_panel_ratio` is **not** comparable with
+`recording_s_drift_ratio` despite the parallel names: each divides by its own
+model's reference level, and those levels sit in different years — 2016 here,
+2020 for the drift. See the caution under the results table.
 
 ## The controls disagree, and that changed the specification twice
 
@@ -177,17 +180,26 @@ draws at `target_accept` `0.99`, surveillance observation SD fixed at `0.05`,
 distinct seeds, **zero divergences throughout**, max R-hat between `1.0008` and
 `1.0036`.
 
-| Fit | 2016-2024 total | 89% ETI | Width | vs. corner | `s₂₀₂₄`/reference | Prevalence 2024 vs 2018 |
+| Fit | 2016-2024 total | 89% ETI | Width | vs. corner | `s₂₀₂₄` vs. own reference | Prevalence 2024 vs 2018 |
 | --- | ---: | --- | ---: | ---: | ---: | ---: |
-| `DSP008` — all prevalence | `44,536` | `43,290`–`45,795` | `5.63%` | — | `1.0000` | `-6.22%` |
-| `DSP009` — drift prior `0.06` | `45,370` | `43,596`–`47,186` | `7.91%` | `+1.87%` | `0.9623` | `-1.60%` |
-| `DSP009` — flat + `0.20`, all recording | `45,780` | `44,321`–`47,253` | `6.40%` | `+2.79%` | `0.9444` | `+0.18%` |
-| **`DSP010` — panel** | **`45,821`** | **`43,896`–`48,013`** | **`8.99%`** | **`+2.89%`** | **`0.9521`** | **`-2.48%`** |
-| `DSP010` — exclusion asserted exactly | `45,813` | `43,969`–`47,852` | `8.48%` | `+2.87%` | `0.9520` | `-2.44%` |
-| `DSP010` — loading pinned at `1` | `45,963` | `44,111`–`47,867` | `8.17%` | `+3.20%` | `0.9462` | `-2.03%` |
+| `DSP008` — all prevalence | `44,536` | `43,290`–`45,795` | `5.63%` | — | `1.0000` (constant) | `-6.22%` |
+| `DSP009` — drift prior `0.06` | `45,370` | `43,596`–`47,186` | `7.91%` | `+1.87%` | `0.9623` (vs `2020`) | `-1.60%` |
+| `DSP009` — flat + `0.20`, all recording | `45,780` | `44,321`–`47,253` | `6.40%` | `+2.79%` | `0.9444` (vs `2020`) | `+0.18%` |
+| **`DSP010` — panel** | **`45,821`** | **`43,896`–`48,013`** | **`8.99%`** | **`+2.89%`** | **`0.9521` (vs `2016`)** | **`-2.48%`** |
+| `DSP010` — exclusion asserted exactly | `45,813` | `43,969`–`47,852` | `8.48%` | `+2.87%` | `0.9520` (vs `2016`) | `-2.44%` |
+| `DSP010` — loading pinned at `1` | `45,963` | `44,111`–`47,867` | `8.17%` | `+3.20%` | `0.9462` (vs `2016`) | `-2.03%` |
 
 `recording_s` is `0.3363`–`0.3371` across all six, so the anchored level is
 untouched to three decimals and every difference sits in the post-2016 factor.
+
+**The `s` ratios in that column are not comparable across models, and the
+denominators are shown because of it.** `DSP009`'s drift is zero until the last
+window closes, so its ratio spans 2020-2024; `DSP010`'s factor starts at the 2016
+panel reference, so its ratio spans 2016-2024. Per year that reverses the naive
+reading of the column: `DSP009`'s prior-driven drift is `-0.94%` a year against
+`DSP010`'s panel-measured `-0.60%`. **The panel implies a shallower annual
+recording decline than `DSP009`'s default prior, applied over twice as many
+years.** Only the total and its interval are directly comparable between rows.
 
 ### What the panel measures
 
@@ -207,12 +219,20 @@ Three of those rows are the whole story.
 refuted by an independent channel: booking the entire recorded decline to
 prevalence requires the controls to have held flat, and they did not.
 
-**The loading is not identified.** Its posterior SD is `0.450` against a prior of
-`0.500` — the five overlap years reduced the uncertainty about whether Down
-syndrome recording tracked the item by **10%**. The falsification test the
-`DSP009` note asked for now exists, and it cannot discriminate. Pinning the
-loading at `1` moves the total by `+0.31%`, well inside a Monte Carlo standard
-error of the difference, so nothing in the data prefers either.
+**The loading is not identified, and the total is sensitive to it anyway.** Its
+posterior SD is `0.450` against a prior of `0.500` — the five overlap years
+reduced the uncertainty about whether Down syndrome recording tracked the item by
+**10%**. The falsification test the `DSP009` note asked for now exists, and it
+cannot discriminate.
+
+That does *not* make the choice harmless. Pinning the loading at `1` moves the
+2016-2024 total by `+141.6` births, `+0.31%`. Against a Monte Carlo standard error
+of `14.2` on the difference that is **10 standard errors** — a real difference
+between the two posteriors, not sampling noise. So the total moves measurably with
+an assumption the data cannot pin, which is the worst of both and exactly the thing
+worth reporting. (An earlier draft of this note called that difference "well inside
+a Monte Carlo standard error". That was wrong by a factor of ten, and the corrected
+figure argues the point more strongly than the error did.)
 
 **The common prevalence trend is untouched.** Posterior `0.0001 ± 0.0039` against
 a prior of `0 ± 0.004`: the panel returns the prior essentially unchanged, exactly
@@ -297,6 +317,25 @@ data-availability wish into the binding constraint on this whole line of work.
   carried as a prior at `0.004` log per year and the posterior returns the prior
   essentially unchanged, which is the correct behaviour and also a statement that
   this assumption is doing real work without any evidence behind it.
+- **Two of the four controls are not independent, and the model assumes they
+  are.** Each condition gets its own Binomial on the same birth denominator, which
+  treats the four as independent outcomes. They are not quite: `ca_clpal` ("cleft
+  palate alone") and `ca_cleft` ("cleft lip with or without cleft palate") are
+  definitionally mutually exclusive on the certificate, yet co-occur on `1,254`
+  records over 2016-2024 — `16.3%` of all cleft-palate-alone flags. That is a
+  certificate coding inconsistency, not a clinical fact, and it means the panel
+  has fewer than four effectively independent controls, so the estimated
+  between-condition SD is slightly too precise. The other five pairs overlap on
+  under `1%` each, and `3.4%` of flagged records carry two or more control flags
+  overall.
+
+  **Checked, and it changes nothing material.** Refitting with the overlapping
+  control dropped (`--panel-conditions ca_hypo,ca_cleft,ca_limb`, same profile and
+  a distinct seed) moves the 2016-2024 total from `45,821` to `45,805` — `16`
+  births, inside a Monte Carlo standard error — and *widens* the interval from
+  `8.99%` to `9.26%`, which is the expected direction with one fewer control. The
+  item recording factor moves `-7.51%` to `-6.92%` and the loading's prior-SD
+  ratio stays at `0.89`. Every conclusion in this note survives.
 - **Four controls is a small sample of an unobservable population.** The estimand
   is "how the item's completion changed", and the panel estimates it from four
   conditions selected by judgement. `panel_condition_trend_mean` is reported so
@@ -336,7 +375,12 @@ python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 \
     --panel-prevalence-trend-sigma 0 --profile reporting --draws 4000 \
     --tune 4000 --chains 4 --target-accept 0.99
 
-# Sensitivity: add a condition back deliberately
+# Robustness: drop the control that overlaps another (see caveats)
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 \
+    --panel-conditions ca_hypo,ca_cleft,ca_limb --profile reporting \
+    --draws 4000 --tune 4000 --chains 4 --target-accept 0.99
+
+# Sensitivity: add an excluded condition back deliberately
 python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 \
     --panel-conditions ca_hypo,ca_clpal,ca_cleft,ca_limb,ca_gast
 
@@ -364,9 +408,16 @@ python scripts/audit_anchored_chain_health.py --strict
    to the panel's *residual* — what recording did beyond what the controls
    explain — would be identified and would let the panel inform rather than
    replace the drift. That is a different model, and worth one.
-4. **Read divergences at fit time.** Still open from the `DSP009` note, and now
+4. **Decide how to handle the cleft overlap properly.** The two cleft checkboxes
+   are definitionally exclusive but co-flagged on `16.3%` of cleft-palate-alone
+   records, so the panel's four Binomials are not four independent observations.
+   The robustness check above says it does not matter for any conclusion here, but
+   the clean fixes are to merge them into one "any cleft" control or to model the
+   panel as a multinomial over the item's checkboxes, and the second would handle
+   every pair at once.
+5. **Read divergences at fit time.** Still open from the `DSP009` note, and now
    applies to a model with a second likelihood channel where a mis-specified
    panel would plausibly show up there first.
-5. **Do not report a single post-2020 total.** Across `DSP008`, `DSP009` and
+6. **Do not report a single post-2020 total.** Across `DSP008`, `DSP009` and
    `DSP010` the envelope is what is defensible. `DSP010` narrows it and explains
    part of it; it does not collapse it to a point.
