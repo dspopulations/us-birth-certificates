@@ -137,6 +137,32 @@ def _exact_cells() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _split_revision_cells(cells: pd.DataFrame) -> pd.DataFrame:
+    """Split every cell into unrevised and revised halves.
+
+    Mirrors ``prepare_core_age_year_cells(..., split_revision=True)``: two rows
+    per (year_idx, age_idx) whose births and recorded cases sum to the pooled
+    cell. Later years lean revised, as the 2003-revision phase-in does.
+    """
+    rows = []
+    for row in cells.to_dict("records"):
+        revised_share = 0.25 + 0.5 * int(row["year_idx"])
+        revised_births = int(round(row["N_cell"] * revised_share))
+        revised_recorded = int(round(row["R_cell"] * revised_share))
+        for revised, births, recorded in (
+            (
+                0,
+                int(row["N_cell"]) - revised_births,
+                int(row["R_cell"]) - revised_recorded,
+            ),
+            (1, revised_births, revised_recorded),
+        ):
+            rows.append(
+                {**row, "revised": revised, "N_cell": births, "R_cell": recorded}
+            )
+    return pd.DataFrame(rows).astype({"revised": "int8"})
+
+
 def _write_common_grid_run(
     run_dir: Path,
     *,
@@ -169,6 +195,8 @@ def _write_common_grid_run(
     (run_dir / "config.json").write_text(json.dumps(config), encoding="utf-8")
     if age_model == "single_year":
         cells = exact
+        if recording_model == "revision":
+            cells = _split_revision_cells(cells)
     else:
         band_idx = np.select(
             [
@@ -194,14 +222,26 @@ def _write_common_grid_run(
         [0.30 + 0.002 * draw, 0.38 + 0.002 * draw],
         axis=1,
     )[None, :, :]
-    recording = np.stack(
-        [0.40 + 0.001 * draw, 0.42 + 0.001 * draw],
-        axis=1,
-    )[None, :, :]
+    recording_s = (0.40 + 0.001 * draw)[None, :]
+    if recording_model == "revision":
+        # A revision fit holds ``recording_s_year`` constant at the revised
+        # sensitivity and carries the unrevised level as a separate scalar.
+        recording = np.repeat(recording_s[:, :, None], 2, axis=2)
+    else:
+        recording = np.stack(
+            [0.40 + 0.001 * draw, 0.42 + 0.001 * draw],
+            axis=1,
+        )[None, :, :]
     posterior_variables: dict[str, tuple[tuple[str, ...], np.ndarray]] = {
         "rho_year": (("chain", "draw", "year"), rho),
         "recording_s_year": (("chain", "draw", "year"), recording),
     }
+    if recording_model == "revision":
+        posterior_variables["recording_s"] = (("chain", "draw"), recording_s)
+        posterior_variables["recording_s_unrevised"] = (
+            ("chain", "draw"),
+            recording_s - 0.15,
+        )
     if age_reduction:
         offset = np.array([-0.08, -0.02, 0.03, 0.10])
         posterior_variables["rho_year_age"] = (
@@ -377,6 +417,90 @@ def test_compare_exact_age_ablation_on_reconstructed_common_grid(
     comparison_config = json.loads(paths["config"].read_text(encoding="utf-8"))
     assert comparison_config["common_grid_ppc_comparison"] is True
     assert comparison_config["raw_loo_or_waic_compared"] is False
+
+
+def test_compare_revision_split_runs_pools_the_revision_dimension(
+    tmp_path: Path,
+) -> None:
+    """Two revision-split runs compare on one row per (year, age) cell.
+
+    ``prepare_core_age_year_cells(..., split_revision=True)`` emits a revised
+    and an unrevised cell per (year_idx, age_idx). The common-grid PPC pools
+    them, so the CSV and its heatmap both key on the pooled cell.
+    """
+    baseline = tmp_path / "baseline"
+    extension = tmp_path / "extension"
+    output = tmp_path / "comparison"
+    _write_common_grid_run(
+        baseline,
+        model_id="DSP008",
+        age_model="single_year",
+        recording_model="revision",
+    )
+    _write_common_grid_run(
+        extension,
+        model_id="DSP008b",
+        age_model="single_year",
+        recording_model="revision",
+    )
+
+    paths = compare_core_reduction_models.compare_core_model_outputs(
+        baseline,
+        extension,
+        output,
+    )
+
+    assert paths["common_grid_ppc_plot_png"].is_file()
+    common_grid = pd.read_csv(paths["common_grid_ppc"])
+    pooled_cells = _exact_cells()
+    assert len(common_grid) == len(pooled_cells)
+    assert not common_grid.duplicated(["year", "age"]).any()
+    # Pooling must conserve the cohort the split cells jointly describe.
+    assert common_grid["births"].sum() == pooled_cells["N_cell"].sum()
+    assert common_grid["observed"].sum() == pooled_cells["R_cell"].sum()
+    assert set(common_grid["revision_pooling"]) == {
+        "revised and unrevised cells summed"
+    }
+    summary = pd.read_csv(paths["common_grid_ppc_summary"])
+    assert (summary["n_exact_age_year_cells"] == len(pooled_cells)).all()
+    bands = pd.read_csv(paths["common_age_band_ppc"])
+    assert bands["births"].sum() == pooled_cells["N_cell"].sum()
+    assert bands["observed"].sum() == pooled_cells["R_cell"].sum()
+
+
+def test_revision_split_prediction_uses_the_unrevised_sensitivity(
+    tmp_path: Path,
+) -> None:
+    """Unrevised cells are predicted with ``recording_s_unrevised``.
+
+    A revision fit reports ``recording_s_year`` as the *revised* sensitivity
+    only, so reconstructing every cell from it would overstate the unrevised
+    half of the phase-in years.
+    """
+    run_dir = tmp_path / "dsp008"
+    _write_common_grid_run(
+        run_dir,
+        model_id="DSP008",
+        age_model="single_year",
+        recording_model="revision",
+    )
+    grid = pd.read_parquet(run_dir / "cells.parquet")
+
+    revision_aware = compare_core_reduction_models._common_grid_prediction(
+        run_dir,
+        grid,
+    )
+    revised_only = compare_core_reduction_models._common_grid_prediction(
+        run_dir,
+        grid.assign(revised=1),
+    )
+
+    assert len(revision_aware.table) == len(_exact_cells())
+    # Treating every cell as revised inflates the predicted recorded counts.
+    assert (
+        revision_aware.table["predicted_mean"].sum()
+        < revised_only.table["predicted_mean"].sum()
+    )
 
 
 def test_compare_dsp004_with_dsp003_on_native_exact_grid(tmp_path: Path) -> None:

@@ -32,6 +32,7 @@ HEADLINE_METRICS = (
     "recording_s",
 )
 COMMON_GRID_RANDOM_SEED = 47_113
+GRID_KEY_COLUMNS = ("year_idx", "age_idx", "maternal_age", "N_cell", "R_cell")
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class _CommonGridPrediction:
 
     table: pd.DataFrame
     draws: np.ndarray
+    revision_pooled: bool
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -94,6 +96,10 @@ def _false_positive_rate(config: dict[str, Any]) -> float:
     return float(priors.get("false_positive_rate", FALSE_POSITIVE_RATE))
 
 
+def _recording_model(config: dict[str, Any]) -> str:
+    return str(config.get("recording_model", "constant"))
+
+
 def _maternal_age_band_index(maternal_age: np.ndarray) -> np.ndarray:
     age = np.asarray(maternal_age, dtype=int)
     return np.select(
@@ -101,6 +107,64 @@ def _maternal_age_band_index(maternal_age: np.ndarray) -> np.ndarray:
         [0, 1, 2, 3, 4, 5],
         default=6,
     ).astype(int)
+
+
+def _pool_cells_over_revision(cells: pd.DataFrame) -> pd.DataFrame:
+    """Sum revised and unrevised cells back into one cell per age-year.
+
+    ``prepare_core_age_year_cells(..., split_revision=True)`` emits one cell per
+    certificate version, so a revision fit's grid carries two rows per
+    (year_idx, age_idx). Reporting keys on the pooled cell that the two versions
+    jointly describe, matching ``posterior_predictive_age_year_table`` in the
+    single-run reports. Cells without a ``revised`` column pass through.
+    """
+    if "revised" not in cells:
+        return cells.reset_index(drop=True)
+    keys = [
+        column
+        for column in ("year_idx", "age_idx", "maternal_age", "maternal_age_label")
+        if column in cells
+    ]
+    return (
+        cells.groupby(keys, as_index=False, observed=True)[["N_cell", "R_cell"]]
+        .sum()
+        .sort_values(["year_idx", "age_idx"], ignore_index=True)
+    )
+
+
+def _revision_pooling_matrix(
+    cells: pd.DataFrame,
+    pooled: pd.DataFrame,
+) -> np.ndarray:
+    """Return the 0/1 matrix that sums split cells into their pooled cell."""
+    keys = ["year_idx", "age_idx"]
+    target = pd.MultiIndex.from_arrays(
+        [pooled[key].to_numpy(dtype="int64") for key in keys]
+    ).get_indexer(
+        pd.MultiIndex.from_arrays([cells[key].to_numpy(dtype="int64") for key in keys])
+    )
+    if np.any(target < 0):
+        raise ValueError("Revision-split cells do not map onto the pooled grid.")
+    matrix = np.zeros((len(cells), len(pooled)), dtype="int64")
+    matrix[np.arange(len(cells)), target] = 1
+    return matrix
+
+
+def _sorted_exact_cells(run_dir: Path) -> pd.DataFrame:
+    cells = _run_cells(run_dir)
+    sort_columns = ["year_idx", "age_idx"]
+    if "revised" in cells:
+        sort_columns.append("revised")
+    return cells.sort_values(sort_columns, ignore_index=True)
+
+
+def _grid_signature(cells: pd.DataFrame, *, split: bool) -> pd.DataFrame:
+    """Return a dtype-normalised grid identity for cross-run comparison."""
+    frame = cells if split else _pool_cells_over_revision(cells)
+    columns = [*GRID_KEY_COLUMNS, *(["revised"] if split else [])]
+    return pd.DataFrame(
+        {column: frame[column].to_numpy(dtype="int64") for column in columns}
+    )
 
 
 def _exact_grid_for_comparison(
@@ -137,34 +201,31 @@ def _exact_grid_for_comparison(
     ):
         raise ValueError("Common-grid PPC requires the same false-positive rate.")
 
-    exact = _run_cells(exact_dirs[0]).sort_values(
-        ["year_idx", "age_idx"],
-        ignore_index=True,
+    candidates = [_sorted_exact_cells(run_dir) for run_dir in exact_dirs]
+    for candidate in candidates:
+        missing = set(GRID_KEY_COLUMNS).difference(candidate.columns)
+        if missing:
+            raise ValueError(
+                f"Exact-age cells are missing columns: {sorted(missing)!r}."
+            )
+    # Prefer a revision-split grid when one run supplies it: it is the finest
+    # shared cell definition, and a fit made on pooled cells reconstructs on it
+    # exactly, because both halves of a cell then share one sensitivity and
+    # their predictive counts sum back to the pooled cell's.
+    exact = next(
+        (cells for cells in candidates if "revised" in cells),
+        candidates[0],
     )
-    required = {
-        "year_idx",
-        "age_idx",
-        "maternal_age",
-        "N_cell",
-        "R_cell",
-    }
-    missing = required.difference(exact.columns)
-    if missing:
-        raise ValueError(f"Exact-age cells are missing columns: {sorted(missing)!r}.")
 
-    for exact_dir in exact_dirs[1:]:
-        candidate = _run_cells(exact_dir).sort_values(
-            ["year_idx", "age_idx"],
-            ignore_index=True,
-        )
-        compare_columns = [
-            "year_idx",
-            "age_idx",
-            "maternal_age",
-            "N_cell",
-            "R_cell",
-        ]
-        if not exact[compare_columns].equals(candidate[compare_columns]):
+    for candidate in candidates:
+        if candidate is exact:
+            continue
+        # Grid identity is the pooled age-year cell, so a revision-split run and
+        # a pooled one over the same births count as the same grid.
+        both_split = "revised" in exact and "revised" in candidate
+        if not _grid_signature(exact, split=both_split).equals(
+            _grid_signature(candidate, split=both_split)
+        ):
             raise ValueError("Exact-age runs do not share the same evaluation grid.")
 
     for run_dir in (baseline_dir, extension_dir):
@@ -210,6 +271,57 @@ def _theta_on_exact_grid(
     return theta_age[exact_cells["age_idx"].to_numpy(dtype=int)], "single_year"
 
 
+def _recording_s_on_exact_grid(
+    idata: Any,
+    config: dict[str, Any],
+    exact_cells: pd.DataFrame,
+) -> tuple[np.ndarray, str]:
+    """Return per-cell recording sensitivity draws for a supplied grid.
+
+    A revision fit's ``recording_s_year`` is the *revised* sensitivity held
+    constant across years, so the unrevised cells have to be reconstructed from
+    ``recording_s_unrevised`` instead; using the year series for both would
+    overstate recorded counts through the 2004-2015 phase-in.
+    """
+    recording_model = _recording_model(config)
+    if recording_model != "revision":
+        recording_s_year = _stack_posterior(
+            idata.posterior["recording_s_year"],
+            "year",
+        )
+        return (
+            recording_s_year[:, exact_cells["year_idx"].to_numpy(dtype=int)],
+            recording_model,
+        )
+
+    if "revised" not in exact_cells:
+        raise ValueError(
+            "A revision-split fit cannot be reconstructed on a grid without a "
+            "'revised' column; recording_s_year carries only the revised "
+            "sensitivity."
+        )
+    missing = [
+        name
+        for name in ("recording_s", "recording_s_unrevised")
+        if name not in idata.posterior
+    ]
+    if missing:
+        raise ValueError(
+            f"recording_model='revision' posterior is missing {missing!r}."
+        )
+    revised_cell = exact_cells["revised"].to_numpy(dtype=int)
+    if not np.all(np.isin(revised_cell, (0, 1))):
+        raise ValueError("revised must be 0/1 in a revision-split grid.")
+    s_revised = _stack_posterior(idata.posterior["recording_s"])
+    s_unrevised = _stack_posterior(idata.posterior["recording_s_unrevised"])
+    s_cell = np.where(
+        revised_cell[None, :] == 1,
+        s_revised[:, None],
+        s_unrevised[:, None],
+    )
+    return s_cell, "revision_split"
+
+
 def _common_grid_prediction(
     run_dir: Path,
     exact_cells: pd.DataFrame,
@@ -217,7 +329,11 @@ def _common_grid_prediction(
     random_seed: int = COMMON_GRID_RANDOM_SEED,
     interval_prob: float = DEFAULT_ETI_PROB,
 ) -> _CommonGridPrediction:
-    """Reconstruct one fitted model's PPC on a supplied exact-age grid."""
+    """Reconstruct one fitted model's PPC on a supplied exact-age grid.
+
+    Draws are taken per supplied cell, then pooled over the revision dimension,
+    so the returned table and draws carry one entry per (year_idx, age_idx).
+    """
     config = _run_config(run_dir)
     idata = az.from_netcdf(_require_file(run_dir / "idata.nc"))
     theta_cell, theta_resolution = _theta_on_exact_grid(idata, config, exact_cells)
@@ -238,33 +354,40 @@ def _common_grid_prediction(
             "age",
         )
         survival = 1.0 - rho_year_age[:, year_idx, age_idx]
-    recording_s_year = _stack_posterior(
-        idata.posterior["recording_s_year"],
-        "year",
+    s_cell, recording_resolution = _recording_s_on_exact_grid(
+        idata,
+        config,
+        exact_cells,
     )
-    if recording_s_year.shape[0] != survival.shape[0]:
-        raise ValueError("rho and recording_s_year have incompatible draw counts.")
+    if s_cell.shape[0] != survival.shape[0]:
+        raise ValueError("rho and recording sensitivity have incompatible draw counts.")
     p_ds_lb = theta_cell[None, :] * survival
     false_positive_rate = _false_positive_rate(config)
-    p_recorded = (
-        p_ds_lb * recording_s_year[:, year_idx] + (1.0 - p_ds_lb) * false_positive_rate
-    )
+    p_recorded = p_ds_lb * s_cell + (1.0 - p_ds_lb) * false_positive_rate
     rng = np.random.default_rng(random_seed)
     predictive = rng.binomial(n_cell[None, :], np.clip(p_recorded, 0.0, 1.0))
+
+    # Summarise on the pooled cell: the standardised residual belongs to the
+    # age-year cell that the two certificate versions jointly describe, and
+    # summing the draws first keeps the pooled interval and sd exact.
+    pooled_cells = _pool_cells_over_revision(exact_cells)
+    revision_pooled = len(pooled_cells) != len(exact_cells)
+    if revision_pooled:
+        predictive = predictive @ _revision_pooling_matrix(exact_cells, pooled_cells)
 
     tail = (1.0 - interval_prob) / 2.0
     mean = predictive.mean(axis=0)
     lo, hi = np.quantile(predictive, [tail, 1.0 - tail], axis=0)
     sd = predictive.std(axis=0, ddof=1) if len(predictive) > 1 else np.zeros(len(mean))
-    observed = exact_cells["R_cell"].to_numpy(dtype=int)
+    observed = pooled_cells["R_cell"].to_numpy(dtype=int)
     residual = observed - mean
     year_start = int(config["year_range"][0])
     labels = (
-        exact_cells["maternal_age_label"].astype(str)
-        if "maternal_age_label" in exact_cells
-        else exact_cells["maternal_age"].astype(str)
+        pooled_cells["maternal_age_label"].astype(str)
+        if "maternal_age_label" in pooled_cells
+        else pooled_cells["maternal_age"].astype(str)
     )
-    table = exact_cells[
+    table = pooled_cells[
         ["year_idx", "age_idx", "maternal_age", "N_cell", "R_cell"]
     ].copy()
     table.insert(1, "year", year_start + table["year_idx"])
@@ -284,8 +407,13 @@ def _common_grid_prediction(
     table["observed_in_interval"] = (lo <= observed) & (observed <= hi)
     table["model_id"] = str(config.get("model_id", run_dir.name))
     table["theta_resolution"] = theta_resolution
+    table["recording_resolution"] = recording_resolution
     table["interval_prob"] = interval_prob
-    return _CommonGridPrediction(table=table, draws=predictive)
+    return _CommonGridPrediction(
+        table=table,
+        draws=predictive,
+        revision_pooled=revision_pooled,
+    )
 
 
 def headline_comparison_table(
@@ -510,6 +638,7 @@ def common_grid_ppc_comparison_table(
         "observed_in_interval",
         "model_id",
         "theta_resolution",
+        "recording_resolution",
     ]
     merged = baseline.table[keys + metrics].merge(
         extension.table[keys + metrics],
@@ -532,6 +661,11 @@ def common_grid_ppc_comparison_table(
         - merged["standardized_residual_baseline"].abs()
     )
     merged["comparison_grid"] = "shared exact maternal-age by year cells"
+    merged["revision_pooling"] = (
+        "revised and unrevised cells summed"
+        if baseline.revision_pooled
+        else "not applicable; cells are not revision-split"
+    )
     merged["evidence_scope"] = (
         "reconstructed in-sample posterior-predictive check; not held-out evidence"
     )
@@ -553,6 +687,9 @@ def common_grid_ppc_summary_table(comparison: pd.DataFrame) -> pd.DataFrame:
                 "comparison_role": role,
                 "model_id": comparison[f"model_id_{role}"].iloc[0],
                 "theta_resolution": comparison[f"theta_resolution_{role}"].iloc[0],
+                "recording_resolution": (
+                    comparison[f"recording_resolution_{role}"].iloc[0]
+                ),
                 "n_exact_age_year_cells": len(comparison),
                 "coverage_count": int(coverage.sum()),
                 "coverage_fraction": float(coverage.mean()),
@@ -578,8 +715,14 @@ def _band_prediction_table(
     *,
     interval_prob: float = DEFAULT_ETI_PROB,
 ) -> pd.DataFrame:
-    """Reaggregate a common-grid reconstruction to the seven reporting bands."""
+    """Reaggregate a common-grid reconstruction to the seven reporting bands.
+
+    ``exact_cells`` must be revision-pooled, so its rows line up with the
+    pooled draws that ``_common_grid_prediction`` returns.
+    """
     band_idx = _maternal_age_band_index(exact_cells["maternal_age"].to_numpy(dtype=int))
+    if prediction.draws.shape[1] != len(exact_cells):
+        raise ValueError("Band reaggregation cells do not match the prediction draws.")
     tail = (1.0 - interval_prob) / 2.0
     rows = []
     for idx, label in enumerate(AGE_LEVELS):
@@ -607,6 +750,9 @@ def _band_prediction_table(
                 "observed_in_interval": bool(lo <= observed <= hi),
                 "model_id": prediction.table["model_id"].iloc[0],
                 "theta_resolution": prediction.table["theta_resolution"].iloc[0],
+                "recording_resolution": (
+                    prediction.table["recording_resolution"].iloc[0]
+                ),
                 "interval_prob": interval_prob,
             }
         )
@@ -619,8 +765,9 @@ def common_age_band_ppc_comparison_table(
     exact_cells: pd.DataFrame,
 ) -> pd.DataFrame:
     """Compare reconstructed PPCs after a shared seven-band reaggregation."""
-    baseline_band = _band_prediction_table(baseline, exact_cells)
-    extension_band = _band_prediction_table(extension, exact_cells)
+    pooled_cells = _pool_cells_over_revision(exact_cells)
+    baseline_band = _band_prediction_table(baseline, pooled_cells)
+    extension_band = _band_prediction_table(extension, pooled_cells)
     keys = ["age_band_idx", "age_band", "births", "observed"]
     metrics = [
         "predicted_mean",
@@ -632,6 +779,7 @@ def common_age_band_ppc_comparison_table(
         "observed_in_interval",
         "model_id",
         "theta_resolution",
+        "recording_resolution",
     ]
     merged = baseline_band[keys + metrics].merge(
         extension_band[keys + metrics],
@@ -903,6 +1051,9 @@ def compare_core_model_outputs(
         "extension_model_id": _run_label(extension_dir),
         "age_reduction_comparison": age_reduction is not None,
         "common_grid_ppc_comparison": exact_grid is not None,
+        "common_grid_revision_pooled": (
+            exact_grid is not None and "revised" in exact_grid
+        ),
         "raw_loo_or_waic_compared": False,
         "information_criterion_note": (
             "Raw pointwise LOO/WAIC is not compared across different cell "
