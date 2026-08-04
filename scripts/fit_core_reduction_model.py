@@ -36,6 +36,7 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     DEFAULT_ANCHOR_TREND_SIGMA,
     DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
+    DEFAULT_RECORDING_S_DRIFT_SIGMA,
     DEFAULT_REDUCTION_AGE_STEP_SIGMA,
     DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT,
     DEFAULT_REDUCTION_CSV,
@@ -136,6 +137,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--recording-s-drift-sigma",
+        type=float,
+        default=DEFAULT_RECORDING_S_DRIFT_SIGMA,
+        help=(
+            "Per-year logit-scale SD of the random walk on recording sensitivity "
+            "over the years no surveillance window covers. Used only by models "
+            "with recording_drift='post_anchor'. Set 0 for the all-prevalence "
+            "corner, which reproduces the undrifted parent model exactly."
+        ),
+    )
+    p.add_argument(
+        "--anchor-forecast-flat",
+        action="store_true",
+        help=(
+            "Hold latent prevalence at its last anchored value instead of "
+            "forecasting it, so the whole post-window decline in the recorded "
+            "rate is absorbed by recording. This is the all-recording corner "
+            "opposite --recording-s-drift-sigma 0."
+        ),
+    )
+    p.add_argument(
         "--reduction-age-step-sigma",
         type=float,
         default=DEFAULT_REDUCTION_AGE_STEP_SIGMA,
@@ -233,6 +255,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     except ValueError as exc:
         p.error(str(exc))
     ns.year_range = _parse_years(ns.years, (2016, 2024))
+    if ns.anchor_forecast_flat and ns.model_definition.reduction_model != "anchor":
+        p.error(
+            "--anchor-forecast-flat applies only to surveillance-anchored models; "
+            f"{ns.model_definition.model_id} sets its level from the reduction CSV"
+        )
     ns.recorded_definition = (
         "confirmed_only" if ns.confirmed_only else "confirmed_or_pending"
     )
@@ -332,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
         recording_s_mean=ns.recording_s_mean,
         recording_s_sigma=ns.recording_s_sigma,
         recording_s_year_sigma=ns.recording_s_year_sigma,
+        recording_s_drift_sigma=ns.recording_s_drift_sigma,
         reduction_age_step_sigma=ns.reduction_age_step_sigma,
         false_positive_rate=ns.false_positive_rate,
     )
@@ -351,8 +379,34 @@ def main(argv: list[str] | None = None) -> int:
             "recording sensitivity: partially pooled s_year offsets "
             f"(sigma={ns.recording_s_year_sigma})"
         )
+    elif ns.model_definition.recording_model == "revision":
+        cli_output.info(
+            "recording sensitivity: separate levels for revised and unrevised "
+            "certificates (recording_s is the revised level)"
+        )
     else:
         cli_output.info("recording sensitivity: constant s")
+    if ns.model_definition.recording_drift == "post_anchor":
+        if ns.recording_s_drift_sigma > 0.0:
+            cli_output.info(
+                "recording drift: random walk on logit s over the years no "
+                f"surveillance window covers (sigma={ns.recording_s_drift_sigma}). "
+                "The split of the post-window decline between prevalence and "
+                "recording is set by this prior, NOT identified by the data - "
+                "report both corners alongside it"
+            )
+        else:
+            cli_output.warning(
+                "recording drift: switched off (sigma=0). This is the "
+                "all-prevalence corner and reproduces the undrifted parent model "
+                "exactly."
+            )
+    if ns.anchor_forecast_flat:
+        cli_output.info(
+            "anchor forecast: latent prevalence held flat past the last window, "
+            "so the whole post-window decline is attributed to recording "
+            "(all-recording corner)"
+        )
     if ns.model_definition.reduction_model == "year_age":
         cli_output.info(
             "combined reduction: exact-age Morris curve with centred RW1 age "
@@ -399,11 +453,13 @@ def main(argv: list[str] | None = None) -> int:
         n_year=cells.attrs["n_year"],
         recording_model=ns.model_definition.recording_model,
         reduction_model=ns.model_definition.reduction_model,
+        recording_drift=ns.model_definition.recording_drift,
         anchor=anchor,
         anchor_level_sigma=ns.anchor_level_sigma,
         anchor_trend_sigma=ns.anchor_trend_sigma,
         anchor_obs_sigma=ns.anchor_obs_sigma,
         anchor_obs_sigma_fixed=ns.anchor_obs_sigma_fixed,
+        anchor_forecast_flat=ns.anchor_forecast_flat,
     )
 
     cli_output.section("Sample")
@@ -422,6 +478,7 @@ def main(argv: list[str] | None = None) -> int:
             "trend_sigma": ns.anchor_trend_sigma,
             "obs_sigma": ns.anchor_obs_sigma,
             "obs_sigma_fixed": ns.anchor_obs_sigma_fixed,
+            "forecast_flat": ns.anchor_forecast_flat,
         },
     )
     context = FitContext(
@@ -460,6 +517,14 @@ def main(argv: list[str] | None = None) -> int:
         summary_vars.insert(4, "recording_s_year_offset")
     if "recording_s_unrevised" in idata.posterior:
         summary_vars[3:3] = ["recording_s_unrevised", "recording_s_unrevised_offset"]
+    if "recording_s_drift_logit" in idata.posterior:
+        # The innovations are the actual free random variables, so the convergence
+        # gate has to see them and not only their cumulated transform.
+        summary_vars[3:3] = [
+            "recording_s_drift_ratio",
+            "recording_s_drift_logit",
+            "recording_s_drift_innovation_raw",
+        ]
     if "prevalence_year" in idata.posterior:
         summary_vars[0:0] = [
             "prevalence_year",

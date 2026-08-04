@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import duckdb
 import numpy as np
@@ -17,9 +19,12 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     DSP003,
     DSP004,
     DSP005,
+    DSP008,
+    DSP009,
     CoreModelDefinition,
     core_model_names,
     get_core_model_definition,
+    validate_core_model_definition,
 )
 from dspopulations_us_birth_certificates.selection.core_reduction import (
     CoreReductionModelConfig,
@@ -43,6 +48,7 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "DSP006",
         "DSP007",
         "DSP008",
+        "DSP009",
     )
     assert set(CORE_MODEL_REGISTRY) == {
         "dsp001",
@@ -53,6 +59,7 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "dsp006",
         "dsp007",
         "dsp008",
+        "dsp009",
     }
     assert get_core_model_definition("dsp001").recording_model == "constant"
     assert get_core_model_definition("DSP002").recording_model == "year"
@@ -69,6 +76,38 @@ def test_core_model_registry_indexes_dsp_models() -> None:
     assert DSP005.reduction_model == "year"
     assert DSP005.age_model == "single_year"
     assert DSP005.comparison_parent == "DSP004"
+    # DSP009 is DSP008 plus post-window recording drift, and nothing else.
+    assert DSP009.recording_model == DSP008.recording_model == "revision"
+    assert DSP009.reduction_model == DSP008.reduction_model == "anchor"
+    assert DSP009.age_model == DSP008.age_model == "single_year"
+    assert DSP008.recording_drift == "none"
+    assert DSP009.recording_drift == "post_anchor"
+    assert DSP009.comparison_parent == "DSP008"
+    # Every other model must stay undrifted, so the drift cannot be introduced
+    # silently by editing a shared default.
+    assert {
+        definition.model_id
+        for definition in CORE_MODEL_REGISTRY.values()
+        if definition.recording_drift == "post_anchor"
+    } == {"DSP009"}
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"recording_drift": "sometimes"}, "recording_drift must be"),
+        # Without an anchor there is no last covered year to drift from.
+        ({"reduction_model": "year"}, "reduction_model='anchor'"),
+        # Centred year offsets and a post-anchor walk are the same parameter.
+        ({"recording_model": "year"}, "cannot combine"),
+    ],
+)
+def test_validate_core_model_rejects_incoherent_drift(
+    overrides: dict[str, str],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        validate_core_model_definition(replace(DSP009, **overrides))
 
 
 def _make_row(
@@ -532,6 +571,258 @@ def test_anchor_obs_sigma_can_be_fixed(tmp_path: Path) -> None:
     named = {rv.name for rv in model.free_RVs}
     assert "anchor_obs_sigma" not in named
     assert "anchor_obs_sigma" in model.named_vars
+
+
+def _drift_cells(n_year: int) -> pd.DataFrame:
+    """Anchored exact-age cells split by certificate revision, as DSP009 needs."""
+    rows = []
+    for year in range(n_year):
+        for age_idx, maternal_age in enumerate((30, 40)):
+            for revised in (0, 1):
+                rows.append(
+                    {
+                        "year_idx": year,
+                        "age_idx": age_idx,
+                        "maternal_age": maternal_age,
+                        "revised": revised,
+                        "N_cell": 100_000 if maternal_age == 30 else 25_000,
+                        "R_cell": 15 if maternal_age == 30 else 30,
+                    }
+                )
+    cells = pd.DataFrame(rows)
+    cells.attrs["n_year"] = n_year
+    cells.attrs["year_range"] = (2004, 2004 + n_year - 1)
+    return cells
+
+
+def _drift_model(
+    tmp_path: Path,
+    *,
+    n_year: int = 13,
+    mid_years: list[int] | None = None,
+    drift_sigma: float = 0.06,
+    recording_model: str = "revision",
+    anchor_forecast_flat: bool = False,
+    recording_drift: str = "post_anchor",
+) -> tuple[Any, SurveillanceAnchor]:
+    path = _anchor_csv(tmp_path, mid_years or [2006, 2008], [12.5, 13.0])
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2004 + n_year - 1), path=path
+    )
+    model = build_core_reduction_model(
+        _drift_cells(n_year),
+        CoreReductionPriors(recording_s_drift_sigma=drift_sigma),
+        n_year=n_year,
+        recording_model=recording_model,
+        reduction_model="anchor",
+        recording_drift=recording_drift,
+        anchor=anchor,
+        anchor_forecast_flat=anchor_forecast_flat,
+    )
+    return model, anchor
+
+
+def test_post_anchor_drift_starts_after_the_last_covered_year(tmp_path: Path) -> None:
+    """The drift must be exactly zero for every year a window still reaches."""
+    pytest.importorskip("pymc")
+
+    n_year = 13
+    model, anchor = _drift_model(tmp_path, n_year=n_year)
+    named = {rv.name for rv in model.free_RVs}
+    assert "recording_s_drift_innovation_raw" in named
+
+    # Windows centred on 2006 and 2008 with half-width 2 reach 2010, model-year
+    # index 6, so 2011-2016 (indices 7-12) are the unanchored tail.
+    last_anchored = int(anchor.mid_year_idx.max()) + anchor.half_width
+    assert last_anchored == 6
+    n_drift = n_year - 1 - last_anchored
+    assert n_drift == 6
+    assert model["recording_s_drift_innovation_raw"].eval().shape == (n_drift,)
+
+    drift = np.asarray(model["recording_s_drift_logit"].eval())
+    assert drift.shape == (n_year,)
+    assert np.array_equal(drift[: last_anchored + 1], np.zeros(last_anchored + 1))
+    # The tail is a random walk, so it must not be identically zero as well.
+    assert np.any(drift[last_anchored + 1 :] != 0.0)
+
+    s_year = np.asarray(model["recording_s_year"].eval())
+    s_anchored = float(model["recording_s"].eval())
+    assert np.allclose(s_year[: last_anchored + 1], s_anchored)
+    assert float(model["recording_s_drift_ratio"].eval()) == pytest.approx(
+        s_year[-1] / s_anchored
+    )
+
+
+def test_zero_drift_sigma_reproduces_the_undrifted_model(tmp_path: Path) -> None:
+    """The all-prevalence corner must be DSP008 exactly, not merely close."""
+    pytest.importorskip("pymc")
+
+    undrifted, _ = _drift_model(tmp_path, recording_drift="none")
+    zero_drift, _ = _drift_model(tmp_path, drift_sigma=0.0)
+
+    assert {rv.name for rv in undrifted.free_RVs} == {
+        rv.name for rv in zero_drift.free_RVs
+    }
+    assert set(undrifted.named_vars) == set(zero_drift.named_vars)
+    assert "recording_s_drift_logit" not in zero_drift.named_vars
+    point = undrifted.initial_point()
+    assert float(zero_drift.compile_logp()(point)) == float(
+        undrifted.compile_logp()(point)
+    )
+
+
+def test_drift_moves_both_certificate_versions_together(tmp_path: Path) -> None:
+    """The drift is a recording-behaviour trend, not a change in the version gap."""
+    pm = pytest.importorskip("pymc")
+
+    model, _ = _drift_model(tmp_path)
+    with model:
+        prior = pm.sample_prior_predictive(draws=6, random_seed=3)
+
+    # Cells are ordered (year, age, revised), so within a year each unrevised
+    # cell is immediately followed by its revised counterpart.
+    p_recorded = np.asarray(prior.prior["p_recorded"].values)
+    assert p_recorded.shape[-1] == 4 * 13
+    drawn = np.asarray(prior.prior["recording_s_drift_logit"].values)
+    assert drawn.shape[-1] == 13
+    assert np.allclose(drawn[..., :7], 0.0)
+    for name in ("recording_s", "recording_s_unrevised", "recording_s_year"):
+        values = np.asarray(prior.prior[name].values)
+        assert ((0.0 < values) & (values < 1.0)).all()
+
+
+def test_anchor_forecast_flat_holds_prevalence_past_the_last_window(
+    tmp_path: Path,
+) -> None:
+    """The all-recording corner pins prevalence instead of forecasting it."""
+    pytest.importorskip("pymc")
+
+    model, anchor = _drift_model(tmp_path, anchor_forecast_flat=True)
+    last_anchored = int(anchor.mid_year_idx.max()) + anchor.half_width
+
+    latent = np.asarray(model["anchor_log_prevalence_latent"].eval())
+    last_anchored_latent = int(anchor.mid_year_idx.max()) + 2 * anchor.half_width
+    assert np.allclose(latent[last_anchored_latent:], latent[last_anchored_latent])
+    # The anchored years themselves must still move.
+    assert not np.allclose(latent[:last_anchored_latent], latent[0])
+
+    prevalence = np.asarray(model["prevalence_year"].eval())
+    assert np.allclose(prevalence[last_anchored:], prevalence[last_anchored])
+
+    # Without the flag the same graph forecasts rather than pinning.
+    forecasting, _ = _drift_model(tmp_path)
+    forecast_prevalence = np.asarray(forecasting["prevalence_year"].eval())
+    assert not np.allclose(
+        forecast_prevalence[last_anchored:], forecast_prevalence[last_anchored]
+    )
+
+
+def test_post_anchor_drift_requires_an_unanchored_year(tmp_path: Path) -> None:
+    """A window reaching the final modelled year leaves nothing to drift over."""
+    pytest.importorskip("pymc")
+
+    # Mid-2008 with half-width 2 covers 2010, the last year of a 2004-2010 range.
+    with pytest.raises(ValueError, match="at least one modelled year beyond"):
+        _drift_model(tmp_path, n_year=7, mid_years=[2006, 2008])
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"recording_drift": "annual"}, "recording_drift must be"),
+        ({"recording_model": "year"}, "cannot be combined"),
+    ],
+)
+def test_build_rejects_incoherent_drift_configurations(
+    tmp_path: Path,
+    kwargs: dict[str, str],
+    message: str,
+) -> None:
+    pytest.importorskip("pymc")
+    with pytest.raises(ValueError, match=message):
+        _drift_model(tmp_path, **kwargs)
+
+
+def test_unanchored_model_rejects_drift_and_flat_forecast() -> None:
+    """Both drift controls are meaningless without a surveillance anchor."""
+    pytest.importorskip("pymc")
+
+    priors = CoreReductionPriors(
+        reduction_mean=np.full(9, 0.35),
+        reduction_logit=logit(np.full(9, 0.35)),
+        reduction_sigma=np.full(9, 0.2),
+    )
+    with pytest.raises(ValueError, match="requires reduction_model='anchor'"):
+        build_core_reduction_model(
+            _drift_cells(9),
+            priors,
+            n_year=9,
+            recording_model="revision",
+            reduction_model="year",
+            recording_drift="post_anchor",
+        )
+    with pytest.raises(ValueError, match="anchor_forecast_flat requires"):
+        build_core_reduction_model(
+            _drift_cells(9),
+            priors,
+            n_year=9,
+            recording_model="revision",
+            reduction_model="year",
+            anchor_forecast_flat=True,
+        )
+
+
+def test_drift_config_records_whether_the_prior_is_live(tmp_path: Path) -> None:
+    """A reader must not have to infer a live drift from the sigma alone."""
+    path = tmp_path / "reduction.csv"
+    years = list(range(2004, 2017))
+    pd.DataFrame({"year": years, "reduction": [0.35] * len(years)}).to_csv(
+        path, index=False
+    )
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2016),
+        path=_anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0]),
+    )
+
+    for drift_sigma, expected in ((0.06, True), (0.0, False)):
+        priors = CoreReductionPriors.from_reduction_csv(
+            year_range=(2004, 2016),
+            path=path,
+            recording_s_drift_sigma=drift_sigma,
+        )
+        config = CoreReductionModelConfig.from_priors(
+            year_range=(2004, 2016),
+            priors_obj=priors,
+            model_definition=DSP009,
+            anchor=anchor,
+        ).to_dict()
+        assert config["model_id"] == "DSP009"
+        assert config["recording_drift"] == "post_anchor"
+        assert config["priors"]["recording_s_drift_sigma"] == drift_sigma
+        assert config["priors"]["recording_drift_enters_likelihood"] is expected
+        # An anchored fit never consumes the reduction prior, drifted or not.
+        assert config["priors"]["reduction_prior_enters_likelihood"] is False
+
+    undrifted = CoreReductionModelConfig.from_priors(
+        year_range=(2004, 2016),
+        priors_obj=CoreReductionPriors.from_reduction_csv(
+            year_range=(2004, 2016), path=path
+        ),
+        model_definition=DSP008,
+        anchor=anchor,
+    ).to_dict()
+    assert undrifted["recording_drift"] == "none"
+    assert undrifted["priors"]["recording_drift_enters_likelihood"] is False
+
+
+def test_core_reduction_priors_reject_negative_drift_sigma(tmp_path: Path) -> None:
+    path = tmp_path / "reduction.csv"
+    pd.DataFrame({"year": [2020], "reduction": [0.35]}).to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="recording_s_drift_sigma"):
+        CoreReductionPriors.from_reduction_csv(
+            year_range=(2020, 2020), path=path, recording_s_drift_sigma=-0.01
+        )
 
 
 def test_core_reduction_priors_from_csv(tmp_path: Path) -> None:

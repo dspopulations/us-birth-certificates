@@ -15,8 +15,12 @@ not imply that the highest-numbered model is preferred.
 | `DSP003` | Age-structure diagnostic | NCHS single-age codes | Constant `s` | Smooth age pattern within year | Tests how much residual age structure can be absorbed by combined reduction while preserving each year's natural-DS-weighted surveillance margin. |
 | `DSP004` | Preferred structure; conditional reference | NCHS single-age codes | Constant `s` | One value per year | Removes the broad-band Morris approximation while retaining the simplest transparent reduction-recording structure; totals remain conditional on calibration scenarios. |
 | `DSP005` | Year-recording sensitivity | NCHS single-age codes | Partially pooled `s_year` | One value per year | Tests whether year-specific recording materially changes the preferred exact-age baseline. |
+| `DSP006` | Measurement-era control | NCHS single-age codes | Separate revised / unrevised `s` | One value per year | Splits recording sensitivity by 2003-certificate revision so a window spanning the 2004-2015 phase-in can identify that measurement shift instead of absorbing it into a time trend. Needs a year range crossing the phase-in. |
+| `DSP007` | Level identification | NCHS single-age codes | Constant `s` | Consequence of an anchored prevalence | Replaces the reduction-rate prior with a latent annual prevalence observed through the surveillance programmes' overlapping five-year window means, so the level is set by data rather than imported. |
+| `DSP008` | Level identification with era control | NCHS single-age codes | Separate revised / unrevised `s` | Consequence of an anchored prevalence | Combines the `DSP007` anchor with the `DSP006` revision split. Both fixes matter independently, so this is the specification that carries them together. |
+| `DSP009` | Post-window allocation candour | NCHS single-age codes | Revised / unrevised `s`, drifting past the last window | Consequence of an anchored prevalence | Adds a random walk on `logit s` over the years no surveillance window covers. `DSP008` holds `s` constant there, so a falling recorded rate can only be read as falling prevalence; `DSP009` makes that allocation an explicit prior. It does not identify the split — see below. |
 
-All five models use the same Quarto template at
+All models use the same Quarto template at
 `docs/models/selection_core_reduction/index.qmd`. The fit CLI copies that
 template into each run directory and records the selected model in `config.json`.
 
@@ -32,6 +36,9 @@ python scripts/fit_core_reduction_model.py DSP002 --profile reporting --render
 python scripts/fit_core_reduction_model.py DSP003 --profile reporting --render
 python scripts/fit_core_reduction_model.py DSP004 --profile reporting --render
 python scripts/fit_core_reduction_model.py DSP005 --profile reporting --render
+python scripts/fit_core_reduction_model.py DSP006 --profile reporting --years 2004-2024
+python scripts/fit_core_reduction_model.py DSP008 --profile reporting --years 2004-2024
+python scripts/fit_core_reduction_model.py DSP009 --profile reporting --years 2004-2024
 python scripts/compare_core_reduction_models.py \
   output/selection_core_reduction/DSP001/<timestamp> \
   output/selection_core_reduction/DSP004/<timestamp>
@@ -110,6 +117,58 @@ Broad-age posterior-predictive coverage remains `1/7`: coherent surveillance
 calibration does not resolve the residual maternal-age allocation. The next
 model-adequacy gate is the mirrored age-on-recording diagnostic; neither age
 allocation should be treated as identified from certificates alone.
+
+## DSP009 post-window allocation controls
+
+Surveillance windows are centred, so with mid-years running to 2018 the anchored
+span ends at 2020 and the years after it carry no external observation of
+prevalence at all. Every anchored model except `DSP009` holds `s` constant
+across those years, which means a falling recorded rate has only one place to go:
+the fit reports falling prevalence. That is a consequence of the constant-`s`
+default rather than a finding, and a specification letting `s` drift instead fits
+the same data equally well.
+
+`DSP009` makes the choice explicit. Two controls set where the post-window
+decline is booked, and **neither is identified by the data** — nothing after the
+last window distinguishes falling prevalence from falling recording, so the split
+is decided by the prior. Report the corners with any drifted fit.
+
+| Configuration | Post-window decline attributed to | Command |
+| --- | --- | --- |
+| All prevalence | Prevalence | `DSP009 --recording-s-drift-sigma 0` (identical to `DSP008`) |
+| Divided by prior | Both, in the ratio of the drift SD to the anchor's state variances | `DSP009` (drift SD `0.06`) |
+| All recording | Recording | `DSP009 --anchor-forecast-flat --recording-s-drift-sigma 0.20` |
+
+The default drift SD of `0.06` per year is calibrated so its cumulative width
+over a four-year unanchored tail spans this repository's own bracketing
+allocation: the de Graaf-derived recording anchor in
+`notes/figures/recording_rates_anchor.csv` has `s` for Non-Hispanic White falling
+17% over 2016-2024, about `0.12` logit units across four years, or one cumulative
+SD at that value. It is a stated assumption, not evidence.
+
+`recording_s` remains the anchored-era revised sensitivity in a drifted fit, so
+it stays directly comparable with `DSP006` and `DSP008`. The drift is carried
+separately as `recording_s_drift_logit`, exactly zero for every year a window
+still reaches, with `recording_s_drift_ratio` reporting the final modelled year's
+sensitivity relative to its anchored-era level. `--anchor-forecast-flat` holds
+latent prevalence at its last anchored value instead of forecasting it, and
+applies to `DSP007` and `DSP008` as well.
+
+Two properties are worth stating because they bound what the model can be asked
+to do. The drift shifts revised and unrevised certificates together: it models
+recording behaviour over time, not a change in the gap between certificate
+versions. And a drifted fit should be expected to **widen** the interval on the
+2016-2024 total rather than narrow it, because it stops asserting an allocation
+the data cannot supply.
+
+`DSP009` needs more tuning than `DSP008` does. The drift deliberately opens a
+ridge — prevalence and recording trade off exactly along it after the last window
+— and short chains wander along that ridge instead of exploring it. At 150 tune
+plus 150 draws `DSP008` converges to max R-hat `1.024` while `DSP009` reaches
+`2.3` with an effective sample size near `3` and posterior means far outside any
+plausible range. Both profiles are healthy; do not shorten them for `DSP009`, and
+read the R-hat on `recording_s_drift_innovation_raw` rather than only on the
+cumulated `recording_s_drift_logit`.
 
 ## DSP004 race-surveillance audit
 
