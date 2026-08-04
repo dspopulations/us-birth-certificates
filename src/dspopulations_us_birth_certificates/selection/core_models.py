@@ -8,6 +8,7 @@ from typing import Literal
 
 RecordingModel = Literal["constant", "year", "revision"]
 RecordingDrift = Literal["none", "post_anchor"]
+RecordingPanel = Literal["none", "anomaly"]
 ReductionModel = Literal["year", "year_age", "anchor"]
 AgeModel = Literal["band", "single_year"]
 
@@ -27,6 +28,7 @@ class CoreModelDefinition:
     reduction_model: ReductionModel = "year"
     age_model: AgeModel = "band"
     recording_drift: RecordingDrift = "none"
+    recording_panel: RecordingPanel = "none"
     template_id: str = CORE_REDUCTION_FAMILY_ID
     comparison_parent: str | None = None
 
@@ -177,6 +179,32 @@ DSP009 = CoreModelDefinition(
     comparison_parent="DSP008",
 )
 
+DSP010 = CoreModelDefinition(
+    model_id="DSP010",
+    slug="anchor_s_revision_panel_exact_age",
+    title="Surveillance-anchored core model with an anomaly-panel recording factor",
+    description=(
+        "Extends DSP008 with a second observation channel: the recorded rates of "
+        "congenital-anomaly checkboxes that share the Down syndrome certificate "
+        "item but have no prenatal detection-and-termination channel. Their "
+        "common movement measures the item's recording sensitivity directly, in "
+        "exactly the years no surveillance window reaches. Where DSP009 divides "
+        "the post-window decline by prior width alone, DSP010 estimates the "
+        "recording component from data and ties Down syndrome to it through a "
+        "loading the anchored panel years inform. Two assumptions remain "
+        "explicit rather than implicit: a prevalence trend shared by every "
+        "control would be read as recording, carried as "
+        "panel_prevalence_trend_sigma, and the controls disagree with each other "
+        "enough that the loading is only weakly identified."
+    ),
+    recording_model="revision",
+    reduction_model="anchor",
+    age_model="single_year",
+    recording_panel="anomaly",
+    introduced="2026-08-04",
+    comparison_parent="DSP008",
+)
+
 CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp001": DSP001,
     "dsp002": DSP002,
@@ -187,6 +215,7 @@ CORE_MODEL_REGISTRY: dict[str, CoreModelDefinition] = {
     "dsp007": DSP007,
     "dsp008": DSP008,
     "dsp009": DSP009,
+    "dsp010": DSP010,
 }
 
 
@@ -216,6 +245,10 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
         raise ValueError(
             f"{definition.model_id}.recording_drift must be 'none' or 'post_anchor'."
         )
+    if definition.recording_panel not in {"none", "anomaly"}:
+        raise ValueError(
+            f"{definition.model_id}.recording_panel must be 'none' or 'anomaly'."
+        )
     if (
         definition.reduction_model == "year_age"
         and definition.age_model != "single_year"
@@ -243,6 +276,37 @@ def validate_core_model_definition(definition: CoreModelDefinition) -> None:
         raise ValueError(
             f"{definition.model_id} cannot combine recording_model='year' with "
             "recording_drift='post_anchor'."
+        )
+    if (
+        definition.recording_panel == "anomaly"
+        and definition.reduction_model != "anchor"
+    ):
+        # The panel measures how the item's recording sensitivity *moved*, not
+        # its level. Something else has to supply the level, and the anchored
+        # years are also the only place the Down syndrome loading is estimable.
+        raise ValueError(
+            f"{definition.model_id} must use reduction_model='anchor' when "
+            "recording_panel='anomaly'"
+        )
+    if definition.recording_panel == "anomaly" and definition.recording_model == "year":
+        # Free centred year offsets would absorb the panel factor entirely,
+        # leaving the loading determined by its prior alone.
+        raise ValueError(
+            f"{definition.model_id} cannot combine recording_model='year' with "
+            "recording_panel='anomaly'."
+        )
+    if (
+        definition.recording_panel == "anomaly"
+        and definition.recording_drift == "post_anchor"
+    ):
+        # Both would vary s freely over the unanchored years with nothing to
+        # separate them, so the drift would silently reabsorb whatever the panel
+        # attributes to recording. A hybrid needs the drift confined to the
+        # panel's *residual*, which is a different model.
+        raise ValueError(
+            f"{definition.model_id} cannot combine recording_drift='post_anchor' "
+            "with recording_panel='anomaly'; the post-anchor walk and the panel "
+            "factor are not separately identified over the unanchored years."
         )
     if definition.comparison_parent is not None and not re.fullmatch(
         r"DSP\d{3}", definition.comparison_parent
@@ -314,10 +378,12 @@ __all__ = [
     "DSP007",
     "DSP008",
     "DSP009",
+    "DSP010",
     "AgeModel",
     "CoreModelDefinition",
     "RecordingDrift",
     "RecordingModel",
+    "RecordingPanel",
     "ReductionModel",
     "core_model_names",
     "get_core_model_definition",

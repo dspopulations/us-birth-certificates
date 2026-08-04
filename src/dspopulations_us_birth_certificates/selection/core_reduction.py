@@ -27,6 +27,14 @@ from dspopulations_us_birth_certificates.chance import (
     get_ds_lb_nt_probability_array,
 )
 from dspopulations_us_birth_certificates.intervals import posterior_mean_eti
+from dspopulations_us_birth_certificates.selection.anomaly_panel import (
+    DEFAULT_PANEL_CONDITION_TREND_SIGMA,
+    DEFAULT_PANEL_FACTOR_SIGMA,
+    DEFAULT_PANEL_IDIOSYNCRATIC_SIGMA,
+    DEFAULT_PANEL_LOADING_SIGMA,
+    DEFAULT_PANEL_PREVALENCE_TREND_SIGMA,
+    AnomalyPanel,
+)
 from dspopulations_us_birth_certificates.selection.core_models import (
     CORE_REDUCTION_FAMILY_ID,
     DSP001,
@@ -34,6 +42,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     CoreModelDefinition,
     RecordingDrift,
     RecordingModel,
+    RecordingPanel,
     ReductionModel,
 )
 from dspopulations_us_birth_certificates.selection.data import (
@@ -372,12 +381,14 @@ class CoreReductionModelConfig:
     reduction_model: ReductionModel = DSP001.reduction_model
     age_model: AgeModel = DSP001.age_model
     recording_drift: RecordingDrift = DSP001.recording_drift
+    recording_panel: RecordingPanel = DSP001.recording_panel
     recorded_definition: RecordedDefinition = "confirmed_or_pending"
     theta_model: str = "seven_band_fixed"
     age_endpoint_convention: dict[str, str] | None = None
     template_id: str = DSP001.template_id
     comparison_parent: str | None = DSP001.comparison_parent
     surveillance_anchor: dict[str, Any] | None = None
+    anomaly_panel: dict[str, Any] | None = None
 
     @classmethod
     def from_priors(
@@ -390,6 +401,8 @@ class CoreReductionModelConfig:
         notes: str = "",
         anchor: SurveillanceAnchor | None = None,
         anchor_hyperpriors: dict[str, Any] | None = None,
+        panel: AnomalyPanel | None = None,
+        panel_hyperpriors: dict[str, Any] | None = None,
     ) -> CoreReductionModelConfig:
         if recorded_definition not in {"confirmed_or_pending", "confirmed_only"}:
             raise ValueError(
@@ -415,10 +428,32 @@ class CoreReductionModelConfig:
         priors["recording_drift_enters_likelihood"] = (
             drifted and priors_obj.recording_s_drift_sigma > 0.0
         )
+        panelled = model_definition.recording_panel == "anomaly"
+        if panelled and panel is None:
+            raise ValueError(
+                f"{model_definition.model_id} uses the anomaly panel but no "
+                "AnomalyPanel was supplied to the config"
+            )
+        # Whether the panel is actually doing the allocation work, and how much of
+        # it stays prior-driven. A reader must not have to infer either from the
+        # hyperprior block.
+        priors["recording_panel_enters_likelihood"] = panelled
+        if panelled:
+            hyperpriors = dict(panel_hyperpriors or {})
+            priors["panel_loading_estimated"] = (
+                hyperpriors.get("panel_loading_fixed") is None
+            )
+            priors["panel_common_prevalence_trend_is_prior_only"] = (
+                float(hyperpriors.get("panel_prevalence_trend_sigma", 0.0)) > 0.0
+            )
         anchor_record: dict[str, Any] | None = None
         if anchor is not None:
             anchor_record = anchor.to_dict()
             anchor_record["hyperpriors"] = dict(anchor_hyperpriors or {})
+        panel_record: dict[str, Any] | None = None
+        if panel is not None:
+            panel_record = panel.to_dict()
+            panel_record["hyperpriors"] = dict(panel_hyperpriors or {})
         return cls(
             year_range=year_range,
             priors=priors,
@@ -430,6 +465,7 @@ class CoreReductionModelConfig:
             reduction_model=model_definition.reduction_model,
             age_model=model_definition.age_model,
             recording_drift=model_definition.recording_drift,
+            recording_panel=model_definition.recording_panel,
             recorded_definition=recorded_definition,
             theta_model=(
                 "morris_double_logistic_by_age_code"
@@ -447,6 +483,7 @@ class CoreReductionModelConfig:
             template_id=model_definition.template_id,
             comparison_parent=model_definition.comparison_parent,
             surveillance_anchor=anchor_record,
+            anomaly_panel=panel_record,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -458,6 +495,7 @@ class CoreReductionModelConfig:
             "reduction_model": self.reduction_model,
             "age_model": self.age_model,
             "recording_drift": self.recording_drift,
+            "recording_panel": self.recording_panel,
             "recorded_definition": self.recorded_definition,
             "theta_model": self.theta_model,
             "age_endpoint_convention": (
@@ -473,6 +511,9 @@ class CoreReductionModelConfig:
                 dict(self.surveillance_anchor)
                 if self.surveillance_anchor is not None
                 else None
+            ),
+            "anomaly_panel": (
+                dict(self.anomaly_panel) if self.anomaly_panel is not None else None
             ),
             "notes": self.notes,
         }
@@ -652,12 +693,20 @@ def build_core_reduction_model(
     recording_model: RecordingModel = "constant",
     reduction_model: ReductionModel = "year",
     recording_drift: RecordingDrift = "none",
+    recording_panel: RecordingPanel = "none",
     anchor: SurveillanceAnchor | None = None,
     anchor_level_sigma: float = DEFAULT_ANCHOR_LEVEL_SIGMA,
     anchor_trend_sigma: float = DEFAULT_ANCHOR_TREND_SIGMA,
     anchor_obs_sigma: float = DEFAULT_ANCHOR_OBS_SIGMA,
     anchor_obs_sigma_fixed: float | None = DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
     anchor_forecast_flat: bool = False,
+    panel: AnomalyPanel | None = None,
+    panel_prevalence_trend_sigma: float = DEFAULT_PANEL_PREVALENCE_TREND_SIGMA,
+    panel_loading_sigma: float = DEFAULT_PANEL_LOADING_SIGMA,
+    panel_loading_fixed: float | None = None,
+    panel_factor_sigma: float = DEFAULT_PANEL_FACTOR_SIGMA,
+    panel_condition_trend_sigma: float = DEFAULT_PANEL_CONDITION_TREND_SIGMA,
+    panel_idiosyncratic_sigma: float = DEFAULT_PANEL_IDIOSYNCRATIC_SIGMA,
 ) -> Any:
     """Build the PyMC core reduction-recording model.
 
@@ -677,6 +726,28 @@ def build_core_reduction_model(
     ``DEFAULT_ANCHOR_OBS_SIGMA_FIXED``.  Passing ``anchor_obs_sigma_fixed=None``
     estimates it instead, which both overstates precision and re-opens a
     degenerate mode; see that constant's rationale before doing so.
+
+    ``recording_panel='anomaly'`` adds a *second observation channel* instead of
+    another prior.  Control conditions sharing the Down syndrome certificate item
+    but carrying no prenatal detection-and-termination channel are observed
+    through their own Binomial likelihood, and their common movement estimates how
+    the item's recording sensitivity changed.  Down syndrome is tied to it by a
+    loading, which the years covered by *both* a surveillance window and the panel
+    make estimable rather than purely prior-driven.
+
+    That is a genuine gain over ``recording_drift='post_anchor'``, whose split is
+    set by prior width alone, but it is not identification.  Two assumptions
+    survive and are represented as parameters rather than left implicit:
+
+    * ``panel_prevalence_trend_sigma`` — a true-prevalence trend *shared by every
+      control* is indistinguishable from a recording trend, because no comparison
+      inside the panel can see it.  Zero asserts the exclusion restriction
+      exactly; larger values move the model back towards ``DSP009``.
+    * ``panel_loading_sigma`` — how far Down syndrome recording is allowed to
+      depart from the item-wide factor.  Setting ``panel_loading_fixed=1.0``
+      imposes the strict shared-factor restriction, which the panel's own
+      internal disagreement argues against; it is a reportable corner, not the
+      default.
 
     ``recording_drift='post_anchor'`` adds a random walk on ``logit s`` over
     exactly those unanchored years.  Holding ``s`` constant there — what every
@@ -742,6 +813,51 @@ def build_core_reduction_model(
             or priors.recording_s_drift_sigma < 0.0
         ):
             raise ValueError("recording_s_drift_sigma must be finite and non-negative")
+    if recording_panel not in {"none", "anomaly"}:
+        raise ValueError("recording_panel must be 'none' or 'anomaly'")
+    if recording_panel == "anomaly":
+        if panel is None:
+            raise ValueError("recording_panel='anomaly' requires an AnomalyPanel")
+        if reduction_model != "anchor":
+            raise ValueError(
+                "recording_panel='anomaly' requires reduction_model='anchor'; the "
+                "panel measures how recording moved, not its level"
+            )
+        if recording_model == "year":
+            raise ValueError(
+                "recording_panel='anomaly' cannot be combined with "
+                "recording_model='year'; free centred year offsets would absorb "
+                "the panel factor entirely"
+            )
+        if recording_drift == "post_anchor":
+            raise ValueError(
+                "recording_panel='anomaly' cannot be combined with "
+                "recording_drift='post_anchor'; the post-anchor walk and the "
+                "panel factor are not separately identified over the unanchored "
+                "years"
+            )
+        for name, value in (
+            ("panel_loading_sigma", panel_loading_sigma),
+            ("panel_factor_sigma", panel_factor_sigma),
+            ("panel_condition_trend_sigma", panel_condition_trend_sigma),
+            ("panel_idiosyncratic_sigma", panel_idiosyncratic_sigma),
+        ):
+            if not np.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be finite and positive")
+        if (
+            not np.isfinite(panel_prevalence_trend_sigma)
+            or panel_prevalence_trend_sigma < 0.0
+        ):
+            raise ValueError(
+                "panel_prevalence_trend_sigma must be finite and non-negative"
+            )
+        if panel_loading_fixed is not None and not np.isfinite(panel_loading_fixed):
+            raise ValueError("panel_loading_fixed must be finite")
+    elif panel is not None:
+        raise ValueError(
+            "an AnomalyPanel was supplied but recording_panel is "
+            f"{recording_panel!r}; pass recording_panel='anomaly' to use it"
+        )
     if anchor_forecast_flat and reduction_model != "anchor":
         raise ValueError("anchor_forecast_flat requires reduction_model='anchor'")
     if recording_model == "year" and priors.recording_s_year_sigma <= 0.0:
@@ -785,6 +901,11 @@ def build_core_reduction_model(
         if anchor.mid_year_idx.min() < 0 or anchor.mid_year_idx.max() >= n_year:
             raise ValueError(
                 "anchor window mid-years must fall inside the modelled year range"
+            )
+    if panel is not None:
+        if panel.year_idx.min() < 0 or panel.year_idx.max() >= n_year:
+            raise ValueError(
+                "anomaly panel years must fall inside the modelled year range"
             )
 
     # The last modelled year any window reaches. A window centred on model-year
@@ -864,6 +985,10 @@ def build_core_reduction_model(
             -anchor.half_width, n_year + anchor.half_width
         )
         coords["anchor_window"] = np.asarray(anchor.mid_years, dtype=int)
+    if recording_panel == "anomaly":
+        assert panel is not None
+        coords["panel_year"] = np.asarray(panel.years, dtype=int)
+        coords["panel_condition"] = np.asarray(panel.condition, dtype=object)
 
     year_age_n = np.zeros((n_year, n_age), dtype=float)
     np.add.at(year_age_n, (year_idx, age_idx), n_cell)
@@ -872,6 +997,24 @@ def build_core_reduction_model(
     if np.any(natural_count_year <= 0.0):
         raise ValueError("each modelled year must have positive age-expected DS births")
     births_year = year_age_n.sum(axis=1)
+    if panel is not None:
+        # Both channels must describe the same population, or the panel would be
+        # measuring recording behaviour in a population the certificate cells do
+        # not cover. The two queries apply the same row filter, so any mismatch
+        # means one of them has drifted.
+        panel_births_expected = births_year[panel.year_idx]
+        if not np.array_equal(panel.births, panel_births_expected):
+            mismatched = [
+                int(year)
+                for year, got, want in zip(
+                    panel.years, panel.births, panel_births_expected, strict=True
+                )
+                if got != want
+            ]
+            raise ValueError(
+                "anomaly panel denominators do not match the certificate cells' "
+                f"births in years {mismatched}; the two row filters have diverged"
+            )
     # Morris-expected prevalence absent any prenatal reduction. Dividing an
     # anchored prevalence by this gives eta directly.
     natural_prevalence_year = natural_count_year / births_year
@@ -1122,12 +1265,215 @@ def build_core_reduction_model(
                 ),
                 dims="year",
             )
-        s_logit_year = s_logit if s_drift_logit is None else s_logit + s_drift_logit
-        # Keep the undrifted graph byte-identical to what it was before the drift
-        # existed, so a zero drift sigma reproduces the parent model exactly.
+        # The anomaly panel: a second observation channel on conditions that share
+        # the Down syndrome certificate item but have no reduction channel, so
+        # their common movement reads as the item's recording sensitivity.
+        s_panel_logit: Any = None
+        if recording_panel == "anomaly":
+            assert panel is not None
+            n_panel_year = panel.n_year
+            years_since_reference = panel.years_since_reference
+            reference_idx = panel.reference_year_idx
+            reference_share = panel.expected_share[reference_idx]
+
+            # Maternal-age composition, centred on the reference year, so the
+            # level parameter is a reference-year level and this offset carries
+            # only composition *change*.
+            log_composition = np.log(
+                panel.expected_share / reference_share[np.newaxis, :]
+            )
+            # Any externally known true-prevalence trend, entered as a fixed
+            # offset rather than estimated. Zero for every curated control today:
+            # pinning these against published surveillance is the open input.
+            known_log_trend = (
+                years_since_reference[:, np.newaxis]
+                * panel.true_trend_log_per_year[np.newaxis, :]
+            )
+
+            condition_level = pm.Normal(
+                "panel_condition_logit_level",
+                mu=logit(reference_share),
+                sigma=1.0,
+                dims="panel_condition",
+            )
+
+            # The common log-rate change across the controls. This is the part the
+            # panel *measures*: what every control did together, relative to the
+            # reference year. Modelled as a random walk so it interpolates smoothly
+            # rather than fitting one free effect per year.
+            #
+            # The innovation scale is FIXED, not estimated. Estimating it makes the
+            # common change carry its own adaptive shrinkage towards zero, which
+            # then competes with the shrinkage on the per-condition deviations
+            # below -- and since the two are confounded, the posterior splits the
+            # controls' common movement wherever those two priors happen to
+            # balance rather than where the data put it. Measured: an estimated
+            # scale moved the fitted common change from -10.0% to -4.6% while the
+            # total across factor and deviations stayed put. The common change is
+            # the estimand, so it must not be shrunk; only the deviations may be.
+            common_innovation = pm.Normal(
+                "panel_common_innovation_raw",
+                mu=0.0,
+                sigma=1.0,
+                shape=n_panel_year - 1,
+            )
+            common_walk = pt.concatenate(
+                [
+                    pt.zeros((1,)),
+                    pt.cumsum(common_innovation * panel_factor_sigma),
+                ]
+            )
+            common_log_change = pm.Deterministic(
+                "panel_common_log_change",
+                common_walk - common_walk[reference_idx],
+                dims="panel_year",
+            )
+
+            # The one thing the panel cannot see: a true-prevalence trend shared
+            # by every control. It is perfectly confounded with a common recording
+            # trend, so it is carried as a prior and *subtracted* rather than being
+            # allowed to compete with the walk for the same signal. Keeping the
+            # data-driven and prior-driven parts in separate parameters also keeps
+            # the geometry clean -- there is no ridge for the sampler to wander.
+            if panel_prevalence_trend_sigma > 0.0:
+                prevalence_trend: Any = pm.Normal(
+                    "panel_prevalence_trend",
+                    mu=0.0,
+                    sigma=panel_prevalence_trend_sigma,
+                )
+            else:
+                prevalence_trend = pt.zeros(())
+                pm.Deterministic("panel_prevalence_trend", prevalence_trend)
+
+            # What is left is the shared *recording* factor, which is the whole
+            # point of the panel.
+            panel_recording_log_factor = pm.Deterministic(
+                "panel_recording_log_factor",
+                common_log_change - prevalence_trend * years_since_reference,
+                dims="panel_year",
+            )
+            pm.Deterministic(
+                "panel_recording_factor_ratio",
+                pt.exp(panel_recording_log_factor[-1]),
+            )
+            pm.Deterministic("panel_common_change_ratio", pt.exp(common_log_change[-1]))
+
+            # Per-condition trend deviations: a hierarchical random effect with an
+            # *estimated* scale, deliberately NOT centred to sum to zero.
+            #
+            # Hard centring would assert that the controls' own trends average
+            # exactly to the item-wide factor -- that these four hand-picked
+            # conditions are interchangeable measurements of one thing. They are
+            # not: the load-time heterogeneity statistic puts I-squared near 90%
+            # with a between-condition SD around 0.012 log per year. Centring
+            # returns a common factor with an SD near 1.7% where a random-effects
+            # treatment of the same data gives about 4%, which is the fixed-effect
+            # fallacy and exactly the kind of unsupported precision this family has
+            # been bitten by before (see DEFAULT_ANCHOR_OBS_SIGMA_FIXED).
+            #
+            # Leaving the deviations uncentred means the common trend is confounded
+            # with their mean, and the prior resolves it: with n conditions the
+            # common trend inherits an extra uncertainty of scale / sqrt(n). That
+            # is the widening the disagreement earns.
+            condition_trend_scale = pm.HalfNormal(
+                "panel_condition_trend_scale", sigma=panel_condition_trend_sigma
+            )
+            condition_trend_raw = pm.Normal(
+                "panel_condition_trend_raw",
+                mu=0.0,
+                sigma=1.0,
+                dims="panel_condition",
+            )
+            condition_trend = pm.Deterministic(
+                "panel_condition_trend",
+                condition_trend_raw * condition_trend_scale,
+                dims="panel_condition",
+            )
+            # The quantity the common trend is confounded with. Reporting it makes
+            # the confounding legible instead of buried in the parameterisation:
+            # if it sits far from zero, the control set is lop-sided and the
+            # "common" factor is carrying a shared quirk.
+            pm.Deterministic("panel_condition_trend_mean", condition_trend.mean())
+
+            panel_idiosyncratic_scale = pm.HalfNormal(
+                "panel_idiosyncratic_scale", sigma=panel_idiosyncratic_sigma
+            )
+            idiosyncratic_raw = pm.Normal(
+                "panel_idiosyncratic_raw",
+                mu=0.0,
+                sigma=1.0,
+                dims=("panel_year", "panel_condition"),
+            )
+
+            # Rates here are of order 5e-4, so a logit-scale offset is a
+            # multiplicative change in the rate to within the rate itself.
+            panel_logit = (
+                condition_level[np.newaxis, :]
+                + log_composition
+                + known_log_trend
+                + common_log_change[:, np.newaxis]
+                + condition_trend[np.newaxis, :] * years_since_reference[:, np.newaxis]
+                + idiosyncratic_raw * panel_idiosyncratic_scale
+            )
+            panel_rate = pm.Deterministic(
+                "panel_condition_rate",
+                pm.math.invlogit(panel_logit),
+                dims=("panel_year", "panel_condition"),
+            )
+            pm.Binomial(
+                "panel_obs",
+                n=np.repeat(
+                    panel.births[:, np.newaxis].astype("int64"),
+                    panel.n_condition,
+                    axis=1,
+                ),
+                p=panel_rate,
+                observed=panel.flags.astype("int64"),
+                dims=("panel_year", "panel_condition"),
+            )
+
+            # Down syndrome's loading on the item-wide factor. A value of 1 is the
+            # strict shared-factor restriction; the years covered by both a
+            # surveillance window and the panel are what make it estimable.
+            if panel_loading_fixed is None:
+                loading: Any = pm.Normal(
+                    "panel_loading_ds", mu=1.0, sigma=panel_loading_sigma
+                )
+            else:
+                loading = pt.as_tensor_variable(float(panel_loading_fixed))
+                pm.Deterministic("panel_loading_ds", loading)
+
+            # Scatter the panel years back onto the model's year coordinate. A
+            # fixed 0/1 selection matrix rather than ``set_subtensor``: it is the
+            # same idiom as ``year_by_cell_n``, and it avoids a pytensor rewrite
+            # that fails noisily on every compile when a scalar is added to a
+            # sparse write. Years before the panel starts stay at zero, so
+            # ``recording_s`` keeps its meaning as the reference-year revised level
+            # and stays comparable across the family.
+            panel_year_selector = np.zeros((n_year, n_panel_year))
+            panel_year_selector[panel.year_idx, np.arange(n_panel_year)] = 1.0
+            s_panel_logit = pm.Deterministic(
+                "recording_s_panel_logit",
+                loading * pt.dot(panel_year_selector, panel_recording_log_factor),
+                dims="year",
+            )
+
+        s_year_logit_offset = None
+        for offset in (s_drift_logit, s_panel_logit):
+            if offset is not None:
+                s_year_logit_offset = (
+                    offset
+                    if s_year_logit_offset is None
+                    else s_year_logit_offset + offset
+                )
+        s_logit_year = (
+            s_logit if s_year_logit_offset is None else s_logit + s_year_logit_offset
+        )
+        # Keep the undrifted, unpanelled graph byte-identical to what it was before
+        # either existed, so a zero drift sigma reproduces the parent model exactly.
         recording_s_year_value = (
             pt.ones((n_year,)) * recording_s
-            if s_drift_logit is None
+            if s_year_logit_offset is None
             else pm.math.invlogit(s_logit_year)
         )
 
@@ -1184,6 +1530,12 @@ def build_core_reduction_model(
             pm.Deterministic(
                 "recording_s_drift_ratio", recording_s_year[-1] / recording_s
             )
+        if s_panel_logit is not None:
+            # The panel's counterpart of that headline, on the same scale, so the
+            # prior-driven and panel-driven allocations can be read side by side.
+            pm.Deterministic(
+                "recording_s_panel_ratio", recording_s_year[-1] / recording_s
+            )
 
         p_ds_lb_overshoot = None
         if rho_year_age is None:
@@ -1211,13 +1563,14 @@ def build_core_reduction_model(
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
         p_ds_lb = pm.Deterministic("p_ds_lb", p_ds_lb_value, dims="cell")
         if recording_model == "revision":
-            # The drift shifts both certificate versions together: it models the
-            # certificate's recording behaviour over time, not a change in the gap
-            # between the two versions. Unrevised records only exist before 2016,
-            # which is always inside the anchored span, so in practice the drift
-            # term is zero wherever ``revised_cell`` is 0.
+            # The drift and the panel factor both shift the two certificate
+            # versions together: they model the certificate's recording behaviour
+            # over time, not a change in the gap between the versions. Unrevised
+            # records only exist before 2016, so in practice both terms are zero
+            # wherever ``revised_cell`` is 0 -- the drift because those years are
+            # anchored, the panel because it starts at 2016 by construction.
             s_cell = pm.math.invlogit(
-                (s_logit if s_drift_logit is None else s_logit_year[year_idx])
+                (s_logit if s_year_logit_offset is None else s_logit_year[year_idx])
                 + s_unrevised_offset * (1.0 - revised_cell)
             )
         else:
