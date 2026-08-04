@@ -560,12 +560,14 @@ before summarising.
    the question outright for part of the span.
 3. **Build the anomaly-panel design as `DSP010`** — **done**, see
    [the `DSP010` note](20260804-dsp010-anomaly-panel-recording-factor.md). It
-   does measure an item-wide recording decline of about `7.5%` over 2016-2024,
-   which contradicts `DSP008`'s constant-`s` reading from an independent channel.
-   It does **not** divide the decline: the four admissible controls disagree at
-   `I² = 91%`, and the five overlap years cut the uncertainty on the Down syndrome
-   loading by only `10%`. The curation against published NBDPN prevalence remains
-   open and is now the highest-value input to it.
+   does measure an item-wide recording decline — `6.34%` over 2016-2024 in the
+   headline fit — which contradicts `DSP008`'s constant-`s` reading from an
+   independent channel. It does **not** divide the decline: the four admissible
+   controls disagree at `I² = 91%`, and the five overlap years cut the uncertainty
+   on the Down syndrome loading by only `10%`. The controls' own prevalence trends
+   are no longer assumed: three of four are now pinned from active surveillance
+   ([the trend-pin note](20260804-dsp010-control-prevalence-trend-pins.md)), which
+   is what moved the factor from the `7.5%` an earlier draft of this item quoted.
 4. **The anchor-off mode is closed; keep auditing anyway.** All three remedies
    are **done**: the frozen runs are audited and clean, the observation SD is fixed
    by default, and the clip now carries a smooth barrier that restores the escape
