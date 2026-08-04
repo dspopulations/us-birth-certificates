@@ -7,6 +7,7 @@
 # Organisations and datasets
 CDC
 EUROCAT
+FBDR
 MACDP
 NAPHSIS
 NBDPN
@@ -114,6 +115,7 @@ livebirth
 livebirths
 invlogit
 logit
+logits
 MCMC
 MCSE
 MCSEs
