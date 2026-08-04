@@ -141,6 +141,8 @@ sigmoidal
 sklearn
 stratifier
 thresholded
+trendline
+trendlines
 unlabeled
 vars
 WAIC
@@ -164,6 +166,7 @@ ruff
 zstd
 
 # Project / repo
+degraaf
 dspop
 dspopulations
 rprime

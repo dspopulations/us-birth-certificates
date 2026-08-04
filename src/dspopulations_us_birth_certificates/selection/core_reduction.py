@@ -296,12 +296,21 @@ def prepare_core_age_year_cells(
     columns: dict[str, str] | None = None,
     age_model: AgeModel = "band",
     recorded_definition: RecordedDefinition = "confirmed_or_pending",
+    split_revision: bool = False,
 ) -> pd.DataFrame:
     """Aggregate births into age-by-year cells for the core model.
 
     Unlike ``prepare_cells`` for the full selection model, this does not
     require complete clinical flags. The core model only uses year, maternal
     age, and the recorded DS indicator.
+
+    ``split_revision`` additionally splits every cell by whether the record
+    carries the 2003-revision congenital-anomaly checkbox (``ca_down`` or
+    ``ca_downs`` populated) rather than the unrevised ``uca_downs`` field only.
+    Revised certificates record materially more Down syndrome than unrevised
+    ones in the same year, so a window spanning the 2004-2015 phase-in can
+    identify that measurement shift directly instead of absorbing it into a
+    time trend. The split is redundant from 2016, when coverage reaches 100%.
     """
     if age_model not in {"band", "single_year"}:
         raise ValueError("age_model must be 'band' or 'single_year'")
@@ -310,7 +319,13 @@ def prepare_core_age_year_cells(
             "recorded_definition must be 'confirmed_or_pending' or 'confirmed_only'"
         )
 
-    cols = {"ca_down_c": "ca_down_c", **DEFAULT_COLUMNS, **(columns or {})}
+    cols = {
+        "ca_down_c": "ca_down_c",
+        "ca_down": "ca_down",
+        "ca_downs": "ca_downs",
+        **DEFAULT_COLUMNS,
+        **(columns or {}),
+    }
     from_year, to_year = year_range
     if age_model == "band":
         age_select = f"{_age_case(cols['mage_c'])} AS age_idx"
@@ -334,11 +349,21 @@ def prepare_core_age_year_cells(
             f"CASE WHEN UPPER(CAST({cols['ca_down_c']} AS VARCHAR)) = 'C' "
             "THEN 1 ELSE 0 END"
         )
+    if split_revision:
+        revision_select = (
+            f"CASE WHEN {cols['ca_down']} IS NOT NULL "
+            f"OR {cols['ca_downs']} IS NOT NULL THEN 1 ELSE 0 END AS revised,"
+        )
+        group_columns = f"{age_columns}, revised"
+    else:
+        revision_select = ""
+        group_columns = age_columns
     sql = f"""
         WITH coded AS (
             SELECT
                 CAST({cols["year"]} AS INTEGER) - {from_year} AS year_idx,
                 {age_select},
+                {revision_select}
                 {recorded_expr} AS recorded_ind
             FROM {table}
             WHERE {cols["year"]} BETWEEN {from_year} AND {to_year}
@@ -347,12 +372,12 @@ def prepare_core_age_year_cells(
         )
         SELECT
             year_idx,
-            {age_columns},
+            {group_columns},
             COUNT(*) AS N_cell,
             SUM(recorded_ind) AS R_cell
         FROM coded
-        GROUP BY year_idx, {age_columns}
-        ORDER BY year_idx, {age_columns}
+        GROUP BY year_idx, {group_columns}
+        ORDER BY year_idx, {group_columns}
     """
     cells = con.execute(sql).df()
     cells["year_idx"] = cells["year_idx"].astype("int32")
@@ -377,6 +402,8 @@ def prepare_core_age_year_cells(
         )
     cells["N_cell"] = cells["N_cell"].astype("int64")
     cells["R_cell"] = cells["R_cell"].astype("int64")
+    if split_revision:
+        cells["revised"] = cells["revised"].astype("int8")
     n_year = to_year - from_year + 1
     n_age = len(age_values)
     cells.attrs.update(
@@ -385,6 +412,7 @@ def prepare_core_age_year_cells(
             "n_age": n_age,
             "age_model": age_model,
             "age_values": age_values,
+            "split_revision": split_revision,
             "age_labels": [
                 "10-12" if age == 12 else "50+" if age == 50 else str(age)
                 for age in age_values
@@ -424,8 +452,13 @@ def build_core_reduction_model(
     import pymc as pm
     import pytensor.tensor as pt
 
-    if recording_model not in {"constant", "year"}:
-        raise ValueError("recording_model must be 'constant' or 'year'")
+    if recording_model not in {"constant", "year", "revision"}:
+        raise ValueError("recording_model must be 'constant', 'year' or 'revision'")
+    if recording_model == "revision" and "revised" not in cells:
+        raise ValueError(
+            "recording_model='revision' requires cells prepared with "
+            "split_revision=True"
+        )
     if reduction_model not in {"year", "year_age"}:
         raise ValueError("reduction_model must be 'year' or 'year_age'")
     if recording_model == "year" and priors.recording_s_year_sigma <= 0.0:
@@ -464,6 +497,13 @@ def build_core_reduction_model(
     year_idx = cells["year_idx"].to_numpy()
     n_cell = cells["N_cell"].to_numpy(dtype=float)
     r_cell = cells["R_cell"].to_numpy(dtype=int)
+    revised_cell = (
+        cells["revised"].to_numpy(dtype=float)
+        if recording_model == "revision"
+        else None
+    )
+    if revised_cell is not None and not np.all(np.isin(revised_cell, (0.0, 1.0))):
+        raise ValueError("revised must be 0/1 for recording_model='revision'")
     exact_age = "maternal_age" in cells
     if reduction_model == "year_age" and not exact_age:
         raise ValueError(
@@ -618,7 +658,28 @@ def build_core_reduction_model(
             sigma=priors.recording_s_sigma,
         )
         recording_s = pm.Deterministic("recording_s", pm.math.invlogit(s_logit))
-        if recording_model == "constant":
+        if recording_model == "revision":
+            # ``recording_s`` is the revised-certificate sensitivity, so it stays
+            # directly comparable with fits confined to 2016 onward where every
+            # record is revised. The unrevised sensitivity is a logit offset from
+            # it, identified by years in which both certificate versions are in
+            # use. Sum-to-zero centring would be wrong here: the two levels are
+            # distinguishable measurement regimes, not exchangeable groups.
+            s_unrevised_offset = pm.Normal(
+                "recording_s_unrevised_offset",
+                mu=0.0,
+                sigma=priors.recording_s_sigma,
+            )
+            pm.Deterministic(
+                "recording_s_unrevised",
+                pm.math.invlogit(s_logit + s_unrevised_offset),
+            )
+            recording_s_year = pm.Deterministic(
+                "recording_s_year",
+                pt.ones((n_year,)) * recording_s,
+                dims="year",
+            )
+        elif recording_model == "constant":
             recording_s_year = pm.Deterministic(
                 "recording_s_year",
                 pt.ones((n_year,)) * recording_s,
@@ -647,10 +708,15 @@ def build_core_reduction_model(
         else:
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
         p_ds_lb = pm.Deterministic("p_ds_lb", p_ds_lb_value, dims="cell")
+        if recording_model == "revision":
+            s_cell = pm.math.invlogit(
+                s_logit + s_unrevised_offset * (1.0 - revised_cell)
+            )
+        else:
+            s_cell = recording_s_year[year_idx]
         p_recorded = pm.Deterministic(
             "p_recorded",
-            p_ds_lb * recording_s_year[year_idx]
-            + (1.0 - p_ds_lb) * priors.false_positive_rate,
+            p_ds_lb * s_cell + (1.0 - p_ds_lb) * priors.false_positive_rate,
             dims="cell",
         )
 

@@ -8,6 +8,10 @@
 *.parquet
 *.db
 *.sas7bdat
+# Collaborators' working spreadsheets. Extract them to aggregate CSVs instead
+# (see scripts/extract_degraaf_surveillance.py); use `git add -f` to track one
+# deliberately.
+/data/*.xlsx
 __pycache__/
 *.pyc
 /.vscode

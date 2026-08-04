@@ -245,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
             year_range=ns.year_range,
             age_model=ns.model_definition.age_model,
             recorded_definition=ns.recorded_definition,
+            split_revision=ns.model_definition.recording_model == "revision",
         )
     finally:
         con.close()
@@ -360,6 +361,8 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if "recording_s_year_offset" in idata.posterior:
         summary_vars.insert(4, "recording_s_year_offset")
+    if "recording_s_unrevised" in idata.posterior:
+        summary_vars[3:3] = ["recording_s_unrevised", "recording_s_unrevised_offset"]
     if "rho_age_offset" in idata.posterior:
         summary_vars.insert(2, "rho_age_offset")
     if "rho_logit_year_raw" in idata.posterior:
