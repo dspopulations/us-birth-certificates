@@ -181,6 +181,125 @@ def _write_workbook(
     return path
 
 
+def _series_frame(condition: str, years, counts, offsets) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "condition": condition,
+            "year": list(years),
+            "cases": list(counts),
+            "denominator": list(offsets),
+        }
+    )
+
+
+def test_dispersion_gate_refuses_a_series_no_line_describes():
+    """The gate the breakpoint scan cannot supply: is a line the right model at all?
+
+    Built so the break scan alone would pass it -- a symmetric zig-zag has no single
+    level shift -- while the straight-line fit is hopeless.
+    """
+    years = np.arange(2010, 2023)
+    offsets = np.full(len(years), 400_000.0)
+    swing = np.where(np.arange(len(years)) % 2 == 0, 0.6, 1.4)
+    counts = np.round(offsets * 3.5e-3 * swing)
+    frame = _series_frame("ca_hypo", years, counts, offsets)
+    findings = EXTRACT.Findings()
+    trends = fit_one(frame, findings)
+    row = trends.iloc[0]
+    assert row["dispersion"] > EXTRACT.DEFAULT_MAX_DISPERSION
+    assert abs(row["break_z"]) <= EXTRACT.DEFAULT_BREAK_Z, (
+        "break scan should not fire here"
+    )
+    assert not row["pinnable"]
+    assert "dispersion" in row["pin_note"]
+    assert findings.refused_pins
+
+
+def test_a_clean_series_passes_both_gates():
+    years = np.arange(2010, 2023)
+    offsets = np.full(len(years), 400_000.0)
+    counts = np.round(offsets * 3.5e-3 * np.exp(-0.01 * (years - years.min())))
+    findings = EXTRACT.Findings()
+    row = fit_one(_series_frame("ca_hypo", years, counts, offsets), findings).iloc[0]
+    assert row["dispersion"] <= EXTRACT.DEFAULT_MAX_DISPERSION
+    assert abs(row["break_z"]) <= EXTRACT.DEFAULT_BREAK_Z
+    assert row["pinnable"]
+    assert row["pin_note"] == ""
+    assert not findings.refused_pins
+    # Rounding counts to whole cases perturbs the slope slightly off the exact -0.01.
+    assert row["slope_log_per_year"] == pytest.approx(-0.01, abs=1e-4)
+
+
+def fit_one(frame: pd.DataFrame, findings: EXTRACT.Findings) -> pd.DataFrame:
+    return EXTRACT.fit_windows(
+        frame,
+        {"primary": (2010, 2022)},
+        EXTRACT.DEFAULT_BREAK_Z,
+        EXTRACT.DEFAULT_MAX_DISPERSION,
+        findings,
+    )
+
+
+def test_denominator_cross_check_accepts_agreement(tmp_path: Path):
+    wonder = tmp_path / "wonder.csv"
+    pd.DataFrame(
+        {
+            "state": ["Texas"] * 3,
+            "year": [2016, 2017, 2018],
+            "births": [398047, 382050, 378624],
+        }
+    ).to_csv(wonder, index=False)
+    findings = EXTRACT.Findings()
+    table = EXTRACT.check_denominators_against_wonder(
+        {2016: 396_989.0, 2017: 381_861.0, 2018: 376_543.0}, wonder, "Texas", findings
+    )
+    assert len(table) == 3
+    assert not findings.denominator_drift
+    assert table["relative_drift"].abs().max() < 0.01
+
+
+def test_denominator_cross_check_reports_a_bad_denominator(tmp_path: Path):
+    """A wrong denominator would rescale every slope silently, so it must be loud."""
+    wonder = tmp_path / "wonder.csv"
+    pd.DataFrame({"state": ["Texas"], "year": [2016], "births": [398047]}).to_csv(
+        wonder, index=False
+    )
+    findings = EXTRACT.Findings()
+    EXTRACT.check_denominators_against_wonder(
+        {2016: 200_000.0}, wonder, "Texas", findings
+    )
+    assert findings.denominator_drift
+    assert findings.has_discrepancies
+    assert findings.denominator_drift[0]["year"] == 2016
+
+
+def test_denominator_cross_check_skips_a_missing_file(tmp_path: Path):
+    findings = EXTRACT.Findings()
+    table = EXTRACT.check_denominators_against_wonder(
+        {2016: 1.0}, tmp_path / "absent.csv", "Texas", findings
+    )
+    assert table.empty
+    assert findings.denominator_notes
+    assert not findings.has_discrepancies
+
+
+def test_the_shipped_denominators_agree_with_tracked_wonder_births():
+    """The real check, on the real workbook, against a source already in the repo."""
+    workbook = REPO_ROOT / "data" / "1999-2022-tbdr-2-prevbyyear.xlsx"
+    wonder = REPO_ROOT / "data" / "us-births-wonder-state-year-2016-2024.csv"
+    if not (workbook.exists() and wonder.exists()):
+        pytest.skip("source workbook or WONDER extract not present")
+    findings = EXTRACT.Findings()
+    live, male = EXTRACT.derive_denominators(
+        EXTRACT.read_single_year_sheet(workbook), findings
+    )
+    table = EXTRACT.check_denominators_against_wonder(live, wonder, "Texas", findings)
+    assert not findings.denominator_drift, table.to_string()
+    assert table["relative_drift"].abs().max() < 0.01
+    share = np.mean([male[year] / live[year] for year in male])
+    assert EXTRACT.MALE_SHARE_BAND[0] <= share <= EXTRACT.MALE_SHARE_BAND[1]
+
+
 def _trend_frame(pinnable: bool) -> pd.DataFrame:
     return pd.DataFrame.from_records(
         [

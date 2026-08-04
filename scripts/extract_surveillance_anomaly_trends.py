@@ -102,6 +102,10 @@ DEFAULT_SENSITIVITY_WINDOW = (2016, 2022)
 # trend.  Three sigma is deliberately permissive -- it refuses only unmistakable
 # discontinuities, not ordinary annual wobble.
 DEFAULT_BREAK_Z = 3.0
+# The model-free companion to the breakpoint scan: if a straight line fits this much
+# worse than Poisson, the series is not a trend plus noise and its slope means nothing,
+# whatever the reason.  Set well above the 1.2-1.8 the well-behaved controls show.
+DEFAULT_MAX_DISPERSION = 3.0
 # Each side of a candidate breakpoint needs enough points to define a slope.
 MIN_SEGMENT_YEARS = 3
 
@@ -178,6 +182,13 @@ TBDR_SOURCE = (
 # the hypospadias denominator was not recovered correctly.
 MALE_SHARE_BAND = (0.505, 0.517)
 
+# The recovered denominators are checked against an entirely separate source already in
+# the repository. A wrong denominator would rescale every slope silently, and the report
+# tabulates its own denominators only in an appendix this script does not parse.
+DEFAULT_WONDER_CSV = Path("data/us-births-wonder-state-year-2016-2024.csv")
+DEFAULT_WONDER_STATE = "Texas"
+MAX_DENOMINATOR_DRIFT = 0.01
+
 
 def _column_index(ref: str) -> int:
     """Translate a spreadsheet cell reference's column letters to a 0-based index."""
@@ -198,10 +209,16 @@ class Findings:
     denominator_notes: list[str] = field(default_factory=list)
     sign_disagreements: list[dict[str, Any]] = field(default_factory=list)
     missing_years: list[dict[str, Any]] = field(default_factory=list)
+    denominator_drift: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def has_discrepancies(self) -> bool:
-        return bool(self.refused_pins or self.sign_disagreements or self.missing_years)
+        return bool(
+            self.refused_pins
+            or self.sign_disagreements
+            or self.missing_years
+            or self.denominator_drift
+        )
 
 
 def read_single_year_sheet(path: Path) -> dict[str, dict[int, tuple[int, float]]]:
@@ -291,6 +308,47 @@ def derive_denominators(
                 f"{MALE_SHARE_BAND[0]}-{MALE_SHARE_BAND[1]}"
             )
     return live_births, male_births
+
+
+def check_denominators_against_wonder(
+    live_births: dict[int, float],
+    wonder_csv: Path,
+    state: str,
+    findings: Findings,
+) -> pd.DataFrame:
+    """Compare the recovered denominators against CDC WONDER resident live births.
+
+    The two numbers come from unrelated places -- one backed out of printed rates in a
+    state registry report, the other a national vital-statistics query already tracked in
+    this repository -- so agreement is real evidence that the denominators are right.
+    """
+    if not wonder_csv.exists():
+        findings.denominator_notes.append(
+            f"denominator cross-check skipped: {wonder_csv} not present"
+        )
+        return pd.DataFrame()
+    wonder = pd.read_csv(wonder_csv)
+    official = wonder[wonder["state"] == state].set_index("year")["births"]
+    records: list[dict[str, Any]] = []
+    for year in sorted(set(live_births) & set(official.index)):
+        implied = float(live_births[year])
+        reference = float(official.loc[year])
+        drift = implied / reference - 1
+        if abs(drift) > MAX_DENOMINATOR_DRIFT:
+            findings.denominator_drift.append(
+                {"year": year, "implied": implied, "wonder": reference, "drift": drift}
+            )
+        records.append(
+            {
+                "year": year,
+                "wonder_births": reference,
+                "implied_births": implied,
+                "relative_drift": drift,
+                "state": state,
+                "source": f"CDC WONDER via {wonder_csv}",
+            }
+        )
+    return pd.DataFrame.from_records(records)
 
 
 def quasi_poisson_trend(
@@ -423,9 +481,18 @@ def fit_windows(
     frame: pd.DataFrame,
     windows: dict[str, tuple[int, int]],
     break_z: float,
+    max_dispersion: float,
     findings: Findings,
 ) -> pd.DataFrame:
-    """Fit every condition over every window and decide which trends may be pinned."""
+    """Fit every condition over every window and decide which trends may be pinned.
+
+    Two independent gates, because each alone rests on a parametric choice the other
+    does not.  The breakpoint scan asks "is there a level shift?", but it measures the
+    shift against a fitted trend, so a sceptic can always dispute the trend and shrink
+    the shift.  The dispersion gate asks the model-free question "does a straight line
+    describe this series at all?" -- and a line that fits five times worse than Poisson
+    has no slope worth pinning whatever the reason.
+    """
     records: list[dict[str, Any]] = []
     for window_name, (start, end) in windows.items():
         for condition in [*CONDITION_LABELS, *REFERENCE_LABELS]:
@@ -441,16 +508,25 @@ def fit_windows(
             offsets = block["denominator"].to_numpy()
             fit = quasi_poisson_trend(years, counts, offsets)
             fit.update(scan_for_break(years, counts, offsets))
-            pinnable = condition in CONDITION_LABELS and abs(fit["break_z"]) <= break_z
+            failed = []
+            if abs(fit["break_z"]) > break_z:
+                failed.append(
+                    f"level shift of {100 * (np.exp(fit['break_log_shift']) - 1):+.1f}% "
+                    f"at {fit['break_year']} (z={fit['break_z']:+.1f}), so the fitted "
+                    f"slope averages a discontinuity rather than measuring a trend"
+                )
+            if fit["dispersion"] > max_dispersion:
+                failed.append(
+                    f"dispersion {fit['dispersion']:.2f} against a limit of "
+                    f"{max_dispersion:.2f}, so a straight line does not describe the "
+                    f"series and its slope is not a prevalence trend"
+                )
+            pinnable = condition in CONDITION_LABELS and not failed
             reason = ""
             if condition not in CONDITION_LABELS:
                 reason = "reference series only, never pinned"
-            elif not pinnable:
-                reason = (
-                    f"level shift of {100 * (np.exp(fit['break_log_shift']) - 1):+.1f}% at "
-                    f"{fit['break_year']} (z={fit['break_z']:+.1f}) means the fitted slope "
-                    f"averages a discontinuity rather than measuring a trend"
-                )
+            elif failed:
+                reason = "; ".join(failed)
                 if window_name == "primary":
                     findings.refused_pins.append(
                         {
@@ -625,6 +701,13 @@ def report(
         print("\n== pins refused ==")
         for item in findings.refused_pins:
             print(f"  {item['condition']} ({item['window']}): {item['reason']}")
+    if findings.denominator_drift:
+        print("\n== denominators disagree with CDC WONDER ==")
+        for item in findings.denominator_drift:
+            print(
+                f"  {item['year']}: implied {item['implied']:,.0f} vs WONDER "
+                f"{item['wonder']:,.0f} ({100 * item['drift']:+.2f}%)"
+            )
     if findings.denominator_notes:
         print("\n== denominator warnings ==")
         for note in findings.denominator_notes:
@@ -641,6 +724,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--conditions-csv", type=Path, default=DEFAULT_CONDITIONS_CSV)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
+    parser.add_argument("--wonder-csv", type=Path, default=DEFAULT_WONDER_CSV)
+    parser.add_argument("--wonder-state", default=DEFAULT_WONDER_STATE)
     parser.add_argument(
         "--primary-window",
         type=int,
@@ -662,6 +747,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=DEFAULT_BREAK_Z,
         help="refuse to pin a condition whose level shift exceeds this z (default %(default)s)",
+    )
+    parser.add_argument(
+        "--max-dispersion",
+        type=float,
+        default=DEFAULT_MAX_DISPERSION,
+        help="refuse to pin a condition whose straight-line fit is this over-dispersed (default %(default)s)",
     )
     parser.add_argument(
         "--no-install",
@@ -699,12 +790,22 @@ def main(argv: list[str] | None = None) -> int:
         f"male share {np.mean([male_births[y] / live_births[y] for y in male_births]):.4f}"
     )
 
+    denominator_check = check_denominators_against_wonder(
+        live_births, args.wonder_csv, args.wonder_state, findings
+    )
+    if not denominator_check.empty:
+        worst = denominator_check["relative_drift"].abs().max()
+        print(
+            f"denominators cross-checked against CDC WONDER {args.wonder_state} for "
+            f"{len(denominator_check)} years; worst drift {100 * worst:.2f}%"
+        )
+
     frame = build_series_frame(series, live_births, male_births, findings)
     windows = {
         "primary": tuple(args.primary_window),
         "sensitivity": tuple(args.sensitivity_window),
     }
-    trends = fit_windows(frame, windows, args.break_z, findings)
+    trends = fit_windows(frame, windows, args.break_z, args.max_dispersion, findings)
     cross_check = cross_check_national(frame, findings)
     pinned = build_pinned_conditions(args.conditions_csv, trends, "primary")
     report(trends, cross_check, findings, "primary")
@@ -715,6 +816,7 @@ def main(argv: list[str] | None = None) -> int:
         "us-births-anomaly-panel-conditions-pinned.csv": pinned,
         "surveillance_series.csv": frame,
         "national_cross_check.csv": cross_check,
+        "denominator_cross_check.csv": denominator_check,
     }
     for name, table in outputs.items():
         table.to_csv(args.output_root / name, index=False)
