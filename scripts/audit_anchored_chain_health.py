@@ -141,6 +141,11 @@ def audit_run(run_dir: Path) -> tuple[dict[str, Any], pd.DataFrame]:
         "run": str(run_dir),
         "model_id": section.get("model_id"),
         "recording_drift": section.get("recording_drift") or "none",
+        # The panel is a separate axis from the drift, so without this column a
+        # DSP010 run is indistinguishable from DSP008 in the audit table -- and
+        # what varies s after the last window is exactly what the factorial in
+        # notes/20260804-dsp009-post-anchor-recording-drift.md turns on.
+        "recording_panel": section.get("recording_panel") or "none",
         "obs_sigma_fixed": hyperpriors.get("obs_sigma_fixed"),
         "forecast_flat": bool(hyperpriors.get("forecast_flat") or False),
         "chains": int(eta.shape[0]),
@@ -211,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     columns = [
         "model_id",
         "recording_drift",
+        "recording_panel",
         "obs_sigma_fixed",
         "chains",
         "draws",

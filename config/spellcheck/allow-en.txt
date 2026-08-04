@@ -236,4 +236,5 @@ unmodelled
 
 # Clinical terms
 Apgars
+gastroschisis
 preimplantation

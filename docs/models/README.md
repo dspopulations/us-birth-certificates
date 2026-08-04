@@ -19,6 +19,7 @@ not imply that the highest-numbered model is preferred.
 | `DSP007` | Level identification | NCHS single-age codes | Constant `s` | Consequence of an anchored prevalence | Replaces the reduction-rate prior with a latent annual prevalence observed through the surveillance programmes' overlapping five-year window means, so the level is set by data rather than imported. |
 | `DSP008` | Level identification with era control | NCHS single-age codes | Separate revised / unrevised `s` | Consequence of an anchored prevalence | Combines the `DSP007` anchor with the `DSP006` revision split. Both fixes matter independently, so this is the specification that carries them together. |
 | `DSP009` | Post-window allocation candour | NCHS single-age codes | Revised / unrevised `s`, drifting past the last window | Consequence of an anchored prevalence | Adds a random walk on `logit s` over the years no surveillance window covers. `DSP008` holds `s` constant there, so a falling recorded rate can only be read as falling prevalence; `DSP009` makes that allocation an explicit prior. It does not identify the split — see below. |
+| `DSP010` | Post-window allocation evidence | NCHS single-age codes | Revised / unrevised `s`, moving with an anomaly-panel factor | Consequence of an anchored prevalence | Adds a *second observation channel*: congenital-anomaly checkboxes sharing the Down syndrome certificate item that have no prenatal reduction channel, so their common movement measures the item's recording sensitivity where no surveillance window reaches. Replaces `DSP009`'s prior-only split with a weakly identified one, and does not eliminate the assumptions — see below. |
 
 All models use the same Quarto template at
 `docs/models/selection_core_reduction/index.qmd`. The fit CLI copies that
@@ -136,12 +137,14 @@ says plainly not to report it.
 **Numerical.** A free SD admits a degenerate mode. Its half-normal prior does not
 prevent it reaching `0.84`, and at that value the observation equation contributes
 almost nothing to the log-probability, so the anchor effectively switches off.
-Latent prevalence then runs up until $\theta\eta$ exceeds one for every maternal
-age, where `p_ds_lb` is clipped — a flat region with no gradient, and therefore an
-absorbing state. Recording sensitivity collapses towards zero to keep the product
-near the observed recorded rate. One chain in four escaped there in a `DSP009` fit
-at 4,000 draws per chain, and pooled convergence statistics did not make it
-obvious: three healthy chains still gave a max R-hat of `1.0111`.
+Latent prevalence then runs up and recording sensitivity collapses towards zero to
+keep the product near the observed recorded rate. This is a genuine local basin
+about `291` log units down rather than a numerical artefact: it fits the recorded
+cell counts *better*, by `84` log units, and pays for that by discarding the
+anchor. It is the $\eta s$ ridge, and the anchor is what holds `s` at `0.335`. One
+chain in four reached it in a `DSP009` fit at 4,000 draws per chain, and pooled
+convergence statistics did not make it obvious: three healthy chains still gave a
+max R-hat of `1.0111`.
 
 The fixed value is an **assumption about surveillance accuracy, not an estimate**.
 Report across the sensitivity axis and say which value was chosen:
@@ -230,6 +233,131 @@ plus 150 draws `DSP008` converges to max R-hat `1.024` while `DSP009` reaches
 plausible range. Both profiles are healthy; do not shorten them for `DSP009`, and
 read the R-hat on `recording_s_drift_innovation_raw` rather than only on the
 cumulated `recording_s_drift_logit`.
+
+## DSP010 anomaly-panel recording factor
+
+`DSP009` states the post-window allocation as a prior. `DSP010` brings evidence to
+it. The 2003 certificate revision records Down syndrome as one checkbox in a
+single congenital-anomaly item, and several other checkboxes on that same item
+describe conditions with no prenatal detection-and-termination channel worth
+speaking of. Their recorded rate is therefore close to a direct reading of the
+item's recording sensitivity, and it is available in exactly the years the
+surveillance anchor does not reach.
+
+That is an **exclusion restriction**, and it is the only route identified so far
+that could *divide* the post-window decline rather than parameterise the division.
+
+### The control set is curated, with reasons
+
+`data/us-births-anomaly-panel-conditions.csv` names every checkbox on the item
+with a role and the reason for it. Four are controls:
+
+| Control | Why it qualifies |
+| --- | --- |
+| Hypospadias | Male-only and not prenatally diagnosable, so there is no detection-and-termination channel at all. The strongest available control. |
+| Cleft palate alone | Poorly detectable on routine ultrasound; termination essentially unrecorded in the US. |
+| Cleft lip ± palate | Detectable from the second trimester, but isolated cleft lip is essentially never terminated in the US. |
+| Limb reduction defect | Detectable; termination rare and confined to severe multi-limb cases. |
+
+Two exclusions carry more information than the inclusions, and are named in the
+table rather than dropped silently:
+
+- **Gastroschisis** has no material reduction channel and would otherwise
+  qualify. Its composition-adjusted recorded rate falls `25.9%` over 2016-2018 to
+  2022-2024, which is a genuine decline in US birth prevalence after a long rise.
+  Reading that as recording would be wrong, and it is the clearest demonstration
+  that "no reduction channel" is not sufficient — the control's own prevalence
+  must also be stable.
+- **Cyanotic congenital heart disease** *rose* `14.6%` over the same window while
+  every control fell, because universal newborn pulse-oximetry screening was
+  phased in across the states over 2011-2018. A single item-wide recording factor
+  is therefore refuted for at least one checkbox on the item, which is why the
+  Down syndrome loading is estimated rather than assumed.
+
+### The controls disagree, and the model says so
+
+The four controls do not agree about the common recording change. On the current
+set, composition-adjusted, 2016-2018 against 2022-2024:
+
+| Control | Change | Poisson SE |
+| --- | ---: | ---: |
+| Hypospadias | `-15.5%` | `1.8%` |
+| Limb reduction | `-12.9%` | `3.8%` |
+| Cleft palate alone | `-7.7%` | `2.8%` |
+| Cleft lip ± palate | `-2.2%` | `1.9%` |
+
+That is `I² = 91%` — `Q = 33.4` on 3 degrees of freedom, between-condition SD
+`7.4%`. A fixed-effect mean of these is `-9.3% ± 1.1%`; the honest random-effects
+mean is `-9.6% ± 4.0%`. `panel_heterogeneity` computes this at load time, it
+travels in every `config.json`, and the fit warns when `I²` exceeds `50%`, so a
+run cannot quietly present a shared factor the panel itself contradicts.
+
+Two specification consequences follow, both settled by measurement rather than
+taste:
+
+- **Per-condition trend deviations are not centred to sum to zero.** Centring
+  asserts that the controls' trends average exactly to the item-wide factor — that
+  these four hand-picked conditions are interchangeable measurements of one thing.
+  Given the disagreement above that is the fixed-effect fallacy, and it returns a
+  common-change SD of `1.7%` where a random-effects treatment of the same data
+  gives `4.0%`. Uncentred with an estimated scale reproduces the honest width.
+- **The common walk's innovation scale is fixed, not estimated.** An estimated
+  scale shrinks the common change, which is the quantity being measured, and that
+  shrinkage then competes with the deviations' shrinkage for the same confounded
+  signal. Measured: it moved the fitted common change from `-10.0%` to `-4.6%`
+  while the total across factor and deviations stayed put.
+
+### What stays prior-driven
+
+`DSP010` narrows the allocation; it does not identify it. Two assumptions survive
+as parameters rather than as silence:
+
+| Control | Meaning | Corner |
+| --- | --- | --- |
+| `--panel-prevalence-trend-sigma` | Prior SD on a true-prevalence trend shared by *every* control, log per year. Perfectly confounded with a recording trend; no comparison inside the panel can see it. | `0` asserts the exclusion restriction exactly; raising it moves back towards `DSP009`. |
+| `--panel-loading-fixed` | Pins how far Down syndrome recording departs from the item factor. | `1.0` is the strict shared-factor restriction, which the panel's own disagreement argues against. |
+
+The default prevalence-trend SD of `0.004` log per year puts one prior SD at about
+`3.3%` over the eight-year panel span, against a common recorded decline near
+`10%` — so it admits that up to roughly a third of that decline might be real
+prevalence. It is a stated judgement, not a measurement.
+
+### Geometry and scope
+
+The panel starts in **2016**, when revised-certificate coverage reaches 100%.
+Earlier years would read a changing, non-random set of revising states as
+recording behaviour, and `prepare_anomaly_panel` refuses them. With windows
+centred to 2018 the anchored span ends at 2020, so 2016-2020 are the five years in
+which *both* channels speak — the only place the loading is testable — and
+2021-2024 are where the panel does work the anchor cannot.
+
+`recording_s` remains the reference-year revised sensitivity, so it stays directly
+comparable with `DSP006`, `DSP008` and `DSP009`. The factor is carried separately
+as `recording_s_panel_logit`, exactly zero before 2016 and at the reference year
+itself, with `recording_s_panel_ratio` reporting the final year's sensitivity
+relative to that level.
+
+**`recording_s_panel_ratio` and `recording_s_drift_ratio` are not on the same
+scale, despite the parallel names.** Each divides by its own model's reference
+level, and those references are different years: `DSP009`'s drift is zero until the
+last window closes, so its ratio spans 2020-2024, while `DSP010`'s factor starts at
+the 2016 panel reference and spans 2016-2024. Comparing the two ratios directly
+inverts the annual rates — `0.9623` over four years is `-0.94%` a year against
+`0.9521` over eight years at `-0.60%`. Compare the totals, or divide by the span
+first; do not read the two ratios side by side.
+
+The panel's denominators are checked against the certificate cells' per-year
+births, so the two channels cannot silently describe different populations.
+Hypospadias is male-only and so its denominator is nominally wrong; the male share
+of US births is stable to within `0.08%` across 2016-2024 against double-digit
+changes in the rates, so the mis-scaling is absorbed by the condition's own level
+and contributes no trend.
+
+```bash
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-loading-fixed 1.0
+python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-prevalence-trend-sigma 0
+```
 
 ## DSP004 race-surveillance audit
 

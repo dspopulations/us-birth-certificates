@@ -14,6 +14,13 @@ import pytest
 import xarray as xr
 
 from dspopulations_us_birth_certificates.chance import get_ds_lb_nt_probability_array
+from dspopulations_us_birth_certificates.selection.anomaly_panel import (
+    DEFAULT_ANOMALY_CONDITIONS_CSV,
+    DEFAULT_PANEL_FROM_YEAR,
+    AnomalyPanel,
+    AnomalyPanelConditions,
+    panel_heterogeneity,
+)
 from dspopulations_us_birth_certificates.selection.core_models import (
     CORE_MODEL_REGISTRY,
     DSP003,
@@ -21,6 +28,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     DSP005,
     DSP008,
     DSP009,
+    DSP010,
     CoreModelDefinition,
     core_model_names,
     get_core_model_definition,
@@ -50,6 +58,7 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "DSP007",
         "DSP008",
         "DSP009",
+        "DSP010",
     )
     assert set(CORE_MODEL_REGISTRY) == {
         "dsp001",
@@ -61,6 +70,7 @@ def test_core_model_registry_indexes_dsp_models() -> None:
         "dsp007",
         "dsp008",
         "dsp009",
+        "dsp010",
     }
     assert get_core_model_definition("dsp001").recording_model == "constant"
     assert get_core_model_definition("DSP002").recording_model == "year"
@@ -927,6 +937,491 @@ def test_drift_config_records_whether_the_prior_is_live(tmp_path: Path) -> None:
     ).to_dict()
     assert undrifted["recording_drift"] == "none"
     assert undrifted["priors"]["recording_drift_enters_likelihood"] is False
+
+
+def _panel(
+    *,
+    n_year: int = 13,
+    panel_from_idx: int = 8,
+    n_panel_year: int = 5,
+    conditions: tuple[str, ...] = ("ca_hypo", "ca_cleft"),
+    log_trend_per_year: tuple[float, ...] | None = None,
+    true_trend_log_per_year: tuple[float, ...] | None = None,
+    reference_year_idx: int = 0,
+) -> AnomalyPanel:
+    """Synthetic control panel over the tail of an anchored year range.
+
+    ``log_trend_per_year`` sets each condition's realised log-rate trend, so a
+    test can make the controls agree or disagree on purpose.
+    """
+    n_condition = len(conditions)
+    trends = log_trend_per_year or tuple(0.0 for _ in conditions)
+    births = np.full(n_panel_year, 1_000_000.0)
+    base_rate = np.full(n_condition, 5.0e-4)
+    year_offsets = np.arange(n_panel_year, dtype=float)
+    rate = base_rate[np.newaxis, :] * np.exp(
+        year_offsets[:, np.newaxis] * np.asarray(trends)[np.newaxis, :]
+    )
+    return AnomalyPanel(
+        condition=conditions,
+        year_idx=np.arange(panel_from_idx, panel_from_idx + n_panel_year, dtype=int),
+        years=tuple(2004 + panel_from_idx + offset for offset in range(n_panel_year)),
+        flags=np.rint(rate * births[:, np.newaxis]),
+        births=births,
+        expected_share=np.broadcast_to(base_rate, (n_panel_year, n_condition)).copy(),
+        true_trend_log_per_year=np.asarray(
+            true_trend_log_per_year or tuple(0.0 for _ in conditions), dtype=float
+        ),
+        reference_year_idx=reference_year_idx,
+        labels=conditions,
+    )
+
+
+def _panel_cells(n_year: int) -> pd.DataFrame:
+    """Revision-split cells whose per-year births match ``_panel``'s denominator."""
+    rows = []
+    for year in range(n_year):
+        for age_idx, maternal_age in enumerate((30, 40)):
+            for revised in (0, 1):
+                rows.append(
+                    {
+                        "year_idx": year,
+                        "age_idx": age_idx,
+                        "maternal_age": maternal_age,
+                        "revised": revised,
+                        # 4 cells per year summing to the panel's 1,000,000.
+                        "N_cell": 400_000 if maternal_age == 30 else 100_000,
+                        "R_cell": 60 if maternal_age == 30 else 120,
+                    }
+                )
+    cells = pd.DataFrame(rows)
+    cells.attrs["n_year"] = n_year
+    cells.attrs["year_range"] = (2004, 2004 + n_year - 1)
+    return cells
+
+
+def _panel_model(
+    tmp_path: Path,
+    *,
+    n_year: int = 13,
+    panel: AnomalyPanel | None = None,
+    recording_panel: str = "anomaly",
+    **kwargs: Any,
+) -> tuple[Any, AnomalyPanel]:
+    path = _anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0])
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2004 + n_year - 1), path=path
+    )
+    panel = panel if panel is not None else _panel(n_year=n_year)
+    model = build_core_reduction_model(
+        _panel_cells(n_year),
+        CoreReductionPriors(),
+        n_year=n_year,
+        recording_model="revision",
+        reduction_model="anchor",
+        recording_panel=recording_panel,
+        anchor=anchor,
+        panel=panel if recording_panel == "anomaly" else None,
+        **kwargs,
+    )
+    return model, panel
+
+
+def _evaluate(model: Any, names: list[str], point: dict[str, Any]) -> list[Any]:
+    """Evaluate named variables at a value point.
+
+    ``replace_rvs_by_values`` is the essential step: compiling the raw random
+    variable graph would resample every free variable rather than reading it from
+    the point, which silently returns numbers unrelated to the point supplied.
+    """
+    import pytensor
+
+    value_vars = model.value_vars
+    outs = model.replace_rvs_by_values([model[name] for name in names])
+    fn = pytensor.function(value_vars, outs, on_unused_input="ignore")
+    return fn(*[point[var.name] for var in value_vars])
+
+
+def test_shipped_anomaly_curation_is_coherent() -> None:
+    """The tracked curation table must justify every inclusion and exclusion."""
+    conditions = AnomalyPanelConditions.from_csv(DEFAULT_ANOMALY_CONDITIONS_CSV)
+    controls = conditions.controls()
+
+    # A control with any reduction channel is not a control: its recorded rate
+    # would mix prevalence with recording, which is the whole thing being
+    # separated.
+    assert set(controls["prenatal_reduction"]) == {"none"}
+    assert len(controls) >= 2
+    assert set(controls["condition"]) == {"ca_hypo", "ca_clpal", "ca_cleft", "ca_limb"}
+
+    excluded = conditions.excluded().set_index("condition")
+    # Cyanotic heart disease is the named counter-example to a single item-wide
+    # factor, and gastroschisis to the flat-prevalence assumption. Both must stay
+    # excluded, with the reason recorded rather than dropped silently.
+    for condition in ("ca_cchd", "ca_gast", "ca_anen", "ca_disor"):
+        assert condition in excluded.index
+        assert len(str(excluded.loc[condition, "reason"])) > 40
+    assert conditions.table["true_trend_log_per_year"].eq(0.0).all()
+
+
+def test_panel_condition_selection_rejects_unusable_sets() -> None:
+    conditions = AnomalyPanelConditions.from_csv(DEFAULT_ANOMALY_CONDITIONS_CSV)
+
+    with pytest.raises(ValueError, match="unknown anomaly conditions"):
+        conditions.select(["ca_hypo", "ca_not_a_checkbox"])
+    with pytest.raises(ValueError, match="duplicate conditions requested"):
+        conditions.select(["ca_hypo", "ca_hypo"])
+    # One control cannot disagree with itself, so the "shared" factor would just
+    # be that condition's own trend wearing a different name.
+    with pytest.raises(ValueError, match="at least two control conditions"):
+        conditions.select(["ca_hypo"])
+    # An excluded condition may be named back deliberately for a sensitivity fit.
+    assert list(conditions.select(["ca_hypo", "ca_cchd"])["condition"]) == [
+        "ca_hypo",
+        "ca_cchd",
+    ]
+
+
+def test_panel_heterogeneity_separates_agreement_from_disagreement() -> None:
+    """The load-time diagnostic must distinguish these, since it gates the claim."""
+    agreeing = panel_heterogeneity(
+        _panel(
+            n_panel_year=6,
+            conditions=("a", "b", "c"),
+            log_trend_per_year=(-0.02, -0.02, -0.02),
+        ),
+        span_years=2,
+    )
+    disagreeing = panel_heterogeneity(
+        _panel(
+            n_panel_year=6,
+            conditions=("a", "b", "c"),
+            log_trend_per_year=(-0.06, 0.0, -0.03),
+        ),
+        span_years=2,
+    )
+
+    assert agreeing["available"] and disagreeing["available"]
+    assert agreeing["i_squared"] < 0.5
+    assert disagreeing["i_squared"] > 0.8
+    # Identical trends leave nothing between conditions to widen the mean, while
+    # disagreement must widen it: that widening is the point of the diagnostic.
+    assert agreeing["tau"] == pytest.approx(0.0, abs=1e-9)
+    assert disagreeing["tau"] > 0.0
+    assert disagreeing["random_effect_se"] > disagreeing["fixed_effect_se"]
+    assert agreeing["random_effect_se"] == pytest.approx(
+        agreeing["fixed_effect_se"], rel=1e-9
+    )
+
+
+def test_panel_factor_is_zero_before_the_panel_and_at_its_reference_year(
+    tmp_path: Path,
+) -> None:
+    """``recording_s`` must keep meaning the reference-year revised level."""
+    pytest.importorskip("pymc")
+
+    n_year = 13
+    panel = _panel(n_year=n_year, panel_from_idx=8, n_panel_year=5)
+    model, _ = _panel_model(tmp_path, n_year=n_year, panel=panel)
+
+    named = {rv.name for rv in model.free_RVs}
+    assert {"panel_common_innovation_raw", "panel_loading_ds"} <= named
+
+    point = dict(model.initial_point())
+    point["panel_common_innovation_raw"] = -np.ones(panel.n_year - 1)
+    point["panel_prevalence_trend"] = np.array(0.0)
+    offset, factor, loading = _evaluate(
+        model,
+        ["recording_s_panel_logit", "panel_recording_log_factor", "panel_loading_ds"],
+        point,
+    )
+    offset = np.asarray(offset)
+
+    assert offset.shape == (n_year,)
+    # Years before the panel starts carry no factor at all.
+    assert np.array_equal(offset[:8], np.zeros(8))
+    # Nor does the reference year itself, by construction of the walk.
+    assert offset[panel.year_idx[panel.reference_year_idx]] == 0.0
+    # Every later panel year does, and it is exactly the loaded factor.
+    assert np.any(offset[9:] != 0.0)
+    assert np.allclose(offset[panel.year_idx], float(loading) * np.asarray(factor))
+
+
+def test_zero_loading_leaves_recording_sensitivity_flat(tmp_path: Path) -> None:
+    """A zero loading severs Down syndrome from the panel without removing it."""
+    pytest.importorskip("pymc")
+
+    model, _ = _panel_model(tmp_path, panel_loading_fixed=0.0)
+    point = dict(model.initial_point())
+    point["panel_common_innovation_raw"] = -np.ones(
+        point["panel_common_innovation_raw"].shape
+    )
+    offset, s_year, s_anchored = _evaluate(
+        model, ["recording_s_panel_logit", "recording_s_year", "recording_s"], point
+    )
+
+    assert np.array_equal(np.asarray(offset), np.zeros(13))
+    assert np.allclose(np.asarray(s_year), float(s_anchored))
+    # The panel channel is still observed: severing the tie is not the same as
+    # dropping the data.
+    assert "panel_obs" in {rv.name for rv in model.observed_RVs}
+
+
+def test_panel_loading_and_prevalence_trend_can_each_be_pinned(
+    tmp_path: Path,
+) -> None:
+    """Both corners must become fixed quantities, not tightly-primed free ones."""
+    pytest.importorskip("pymc")
+
+    estimated, _ = _panel_model(tmp_path)
+    assert "panel_loading_ds" in {rv.name for rv in estimated.free_RVs}
+    assert "panel_prevalence_trend" in {rv.name for rv in estimated.free_RVs}
+
+    pinned, _ = _panel_model(
+        tmp_path, panel_loading_fixed=1.0, panel_prevalence_trend_sigma=0.0
+    )
+    free = {rv.name for rv in pinned.free_RVs}
+    assert "panel_loading_ds" not in free
+    assert "panel_prevalence_trend" not in free
+    assert float(pinned["panel_loading_ds"].eval()) == 1.0
+    assert float(pinned["panel_prevalence_trend"].eval()) == 0.0
+
+
+def test_prevalence_trend_is_subtracted_from_the_recording_factor(
+    tmp_path: Path,
+) -> None:
+    """The prior-driven part must move recording in the opposite direction."""
+    pytest.importorskip("pymc")
+
+    model, panel = _panel_model(tmp_path)
+    point = dict(model.initial_point())
+    # A flat common change: whatever the controls did together, they did nothing.
+    point["panel_common_innovation_raw"] = np.zeros(
+        point["panel_common_innovation_raw"].shape
+    )
+    point["panel_prevalence_trend"] = np.array(-0.01)
+    common, factor = _evaluate(
+        model, ["panel_common_log_change", "panel_recording_log_factor"], point
+    )
+
+    assert np.allclose(np.asarray(common), 0.0)
+    # If their true prevalence was falling 1% a year while their recorded rate
+    # held flat, recording must have been *rising*.
+    assert np.allclose(np.asarray(factor), 0.01 * panel.years_since_reference)
+
+
+def test_condition_trends_are_not_centred_to_sum_to_zero(tmp_path: Path) -> None:
+    """Guards the deliberate choice against being "tidied" into hard centring.
+
+    Centring would assert the controls' trends average exactly to the item-wide
+    factor. With the observed between-condition disagreement that is the
+    fixed-effect fallacy, and it returned a common-change SD of 1.7% where a
+    random-effects treatment of the same data gives about 4%.
+    """
+    pytest.importorskip("pymc")
+
+    model, _ = _panel_model(tmp_path)
+    assert "panel_condition_trend_scale" in {rv.name for rv in model.free_RVs}
+
+    point = dict(model.initial_point())
+    point["panel_condition_trend_raw"] = np.array([2.0, 1.0])
+    point["panel_condition_trend_scale_log__"] = np.array(np.log(0.02))
+    trend, trend_mean = _evaluate(
+        model, ["panel_condition_trend", "panel_condition_trend_mean"], point
+    )
+
+    assert np.allclose(np.asarray(trend), np.array([0.04, 0.02]))
+    # A centred parameterisation would force this to zero. It must not be, and it
+    # must be reported so the confounding with the common trend stays legible.
+    assert float(trend_mean) == pytest.approx(0.03)
+
+
+def test_panel_denominators_must_match_the_certificate_cells(tmp_path: Path) -> None:
+    """A silent population mismatch would make the two channels incomparable."""
+    pytest.importorskip("pymc")
+
+    panel = _panel()
+    mismatched = replace(panel, births=panel.births * 0.9)
+    with pytest.raises(ValueError, match="do not match the certificate cells"):
+        _panel_model(tmp_path, panel=mismatched)
+
+
+def test_panel_rejects_years_before_full_revised_coverage() -> None:
+    """Earlier years would read changing state composition as recording.
+
+    The guard fires before any query runs, so an empty in-memory connection is
+    enough and no births fixture is needed.
+    """
+    from dspopulations_us_birth_certificates.selection.anomaly_panel import (
+        prepare_anomaly_panel,
+    )
+
+    with pytest.raises(ValueError, match="revised-certificate coverage"):
+        prepare_anomaly_panel(
+            duckdb.connect(),
+            year_range=(2004, 2024),
+            panel_from_year=DEFAULT_PANEL_FROM_YEAR - 1,
+        )
+
+
+def test_unpanelled_model_rejects_a_stray_panel(tmp_path: Path) -> None:
+    """Supplying panel data without asking for the channel must fail loudly."""
+    pytest.importorskip("pymc")
+
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2016),
+        path=_anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0]),
+    )
+    with pytest.raises(ValueError, match="pass recording_panel='anomaly'"):
+        build_core_reduction_model(
+            _panel_cells(13),
+            CoreReductionPriors(),
+            n_year=13,
+            recording_model="revision",
+            reduction_model="anchor",
+            recording_panel="none",
+            anchor=anchor,
+            panel=_panel(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        # The panel measures how recording moved, so something else must set the
+        # level -- and the anchored years are the only test of the loading.
+        ({"reduction_model": "year"}, "reduction_model='anchor'"),
+        # Free centred year offsets would absorb the panel factor entirely.
+        ({"recording_model": "year"}, "cannot combine"),
+        # Both would vary s freely over the unanchored years with nothing to
+        # separate them.
+        ({"recording_drift": "post_anchor"}, "not separately identified"),
+    ],
+)
+def test_validate_core_model_rejects_incoherent_panel(
+    overrides: dict[str, str],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        validate_core_model_definition(replace(DSP010, **overrides))
+
+
+def test_build_rejects_incoherent_panel_configurations(tmp_path: Path) -> None:
+    pytest.importorskip("pymc")
+
+    with pytest.raises(ValueError, match="requires an AnomalyPanel"):
+        build_core_reduction_model(
+            _panel_cells(13),
+            CoreReductionPriors(),
+            n_year=13,
+            recording_model="revision",
+            reduction_model="anchor",
+            recording_panel="anomaly",
+            anchor=SurveillanceAnchor.from_csv(
+                year_range=(2004, 2016),
+                path=_anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0]),
+            ),
+        )
+    with pytest.raises(ValueError, match="not separately identified"):
+        _panel_model(tmp_path, recording_drift="post_anchor")
+    with pytest.raises(ValueError, match="panel_prevalence_trend_sigma"):
+        _panel_model(tmp_path, panel_prevalence_trend_sigma=-0.1)
+
+
+def test_panel_config_records_what_stays_prior_driven(tmp_path: Path) -> None:
+    """A reader must not have to infer the allocation's provenance."""
+    priors = CoreReductionPriors()
+    panel = _panel()
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2016),
+        path=_anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0]),
+    )
+    config = CoreReductionModelConfig.from_priors(
+        year_range=(2004, 2016),
+        priors_obj=priors,
+        model_definition=DSP010,
+        anchor=anchor,
+        panel=panel,
+        panel_hyperpriors={
+            "panel_prevalence_trend_sigma": 0.004,
+            "panel_loading_fixed": None,
+        },
+    ).to_dict()
+
+    assert config["recording_panel"] == "anomaly"
+    assert config["priors"]["recording_panel_enters_likelihood"] is True
+    assert config["priors"]["panel_loading_estimated"] is True
+    assert config["priors"]["panel_common_prevalence_trend_is_prior_only"] is True
+    # The controls' disagreement travels with every fit, not just the run log.
+    assert config["anomaly_panel"]["heterogeneity"]["available"] is True
+    assert config["anomaly_panel"]["conditions"] == list(panel.condition)
+
+    pinned = CoreReductionModelConfig.from_priors(
+        year_range=(2004, 2016),
+        priors_obj=priors,
+        model_definition=DSP010,
+        anchor=anchor,
+        panel=panel,
+        panel_hyperpriors={
+            "panel_prevalence_trend_sigma": 0.0,
+            "panel_loading_fixed": 1.0,
+        },
+    ).to_dict()
+    assert pinned["priors"]["panel_loading_estimated"] is False
+    assert pinned["priors"]["panel_common_prevalence_trend_is_prior_only"] is False
+
+    unpanelled = CoreReductionModelConfig.from_priors(
+        year_range=(2004, 2016),
+        priors_obj=priors,
+        model_definition=DSP008,
+        anchor=anchor,
+    ).to_dict()
+    assert unpanelled["recording_panel"] == "none"
+    assert unpanelled["priors"]["recording_panel_enters_likelihood"] is False
+    assert unpanelled["anomaly_panel"] is None
+
+
+def test_panelled_config_requires_a_panel(tmp_path: Path) -> None:
+    anchor = SurveillanceAnchor.from_csv(
+        year_range=(2004, 2016),
+        path=_anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0]),
+    )
+    with pytest.raises(ValueError, match="no AnomalyPanel was supplied"):
+        CoreReductionModelConfig.from_priors(
+            year_range=(2004, 2016),
+            priors_obj=CoreReductionPriors(),
+            model_definition=DSP010,
+            anchor=anchor,
+        )
+
+
+def test_panel_leaves_the_unpanelled_models_untouched(tmp_path: Path) -> None:
+    """DSP008 and DSP009 must be byte-identical to before the panel existed."""
+    pytest.importorskip("pymc")
+
+    unpanelled, _ = _panel_model(tmp_path, recording_panel="none")
+    assert not [name for name in unpanelled.named_vars if "panel" in name]
+    assert {rv.name for rv in unpanelled.observed_RVs} == {"anchor_obs", "R_obs"}
+
+    panelled, _ = _panel_model(tmp_path)
+    assert {rv.name for rv in panelled.observed_RVs} == {
+        "anchor_obs",
+        "panel_obs",
+        "R_obs",
+    }
+    # The panel adds parameters; it must not remove or rename any.
+    assert {rv.name for rv in unpanelled.free_RVs} <= {
+        rv.name for rv in panelled.free_RVs
+    }
+
+
+def test_anchored_overlap_years_are_the_testable_ones(tmp_path: Path) -> None:
+    """The overlap is what makes the loading estimable rather than prior-only."""
+    panel = _panel(panel_from_idx=4, n_panel_year=6)
+    # Windows centred on 2006 and 2008 with half-width 2 reach model-year index 6.
+    assert panel.anchored_overlap_years(6) == (2008, 2009, 2010)
+    # A panel starting past the anchor has no testable year at all.
+    assert _panel(panel_from_idx=8, n_panel_year=5).anchored_overlap_years(6) == ()
 
 
 def test_core_reduction_priors_reject_negative_drift_sigma(tmp_path: Path) -> None:
