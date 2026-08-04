@@ -174,6 +174,15 @@ windows are *mutually consistent*, never whether the surveillance prevalences ar
 preference and the numerical requirement coincide, so every fit reported below
 fixes it.
 
+**A fixed observation SD is now the default for anchored models**, at `0.05`, in
+`build_core_reduction_model` as well as the fit CLI, so the escape route is closed
+by default rather than by remembering a flag. `--anchor-obs-sigma-estimated` opts
+back out and the fit warns when it does. Note what this changes: anchored fits run
+without arguments now report an interval roughly twice as wide as before, because
+they have stopped asserting that surveillance prevalence is measured to about one
+percent. The mean barely moves — `44,589` against `44,544` for `DSP008` — so this
+is a correction to reported precision, not to the level.
+
 An earlier draft of this note reported `DSP009` results from the standard
 reporting profile. Those are withdrawn: that run had not yet found the second
 mode, so its interval was an artefact of incomplete exploration.
@@ -478,14 +487,15 @@ before summarising.
    does not reach. Curate the control set against published NBDPN prevalence, and
    test the shared-factor restriction against the anchor over 2016-2018, where the
    two overlap.
-4. **Close the degenerate mode in the anchored likelihood.** Auditing the frozen
-   runs is **done** — none is contaminated — so what remains is prevention.
-   Fixing `anchor_obs_sigma` is sufficient in practice and preferred on reporting
-   grounds anyway, so make it the default for anchored models. The underlying
-   defect is the gradient-free clip; replacing it with a soft penalty or a
-   reparameterisation of `eta` bounded by `1 / max(theta)` is the durable fix, and
-   would let the observation SD stay free for anyone who wants it. Run
-   `scripts/audit_anchored_chain_health.py --strict` after any anchored refit.
+4. **Replace the gradient-free clip.** Auditing the frozen runs is **done** —
+   none is contaminated — and fixing `anchor_obs_sigma` is **done** and now the
+   default, so the mode is closed in practice. What remains is the underlying
+   defect: `pt.clip` on `theta * eta` creates a flat region with no gradient, and
+   any future specification that reaches it will stick there. A soft penalty, or a
+   reparameterisation of `eta` bounded by `1 / max(theta)`, would remove the
+   absorbing state and let the observation SD be estimated safely by anyone who
+   wants it. Until then, run `scripts/audit_anchored_chain_health.py --strict`
+   after any anchored refit that opts out of the fixed SD.
 5. **Read divergences at fit time** and fail the gate on them, alongside the
    other verification items in the review's recommendation 7. Add a per-chain
    agreement check too: this failure was invisible in the pooled summary but

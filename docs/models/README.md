@@ -118,6 +118,50 @@ calibration does not resolve the residual maternal-age allocation. The next
 model-adequacy gate is the mirrored age-on-recording diagnostic; neither age
 allocation should be treated as identified from certificates alone.
 
+## Anchored models: the surveillance observation SD is fixed
+
+Anchored models (`DSP007` onward) hold the surveillance observation SD **fixed**,
+at `0.05` by default, rather than estimating it. Two independent reasons point the
+same way.
+
+**Reporting.** An estimated SD measures only whether the overlapping windows are
+mutually *consistent* with a smooth latent path. It cannot measure whether the
+surveillance prevalences are *accurate*, because the source workbook supplies no
+uncertainty at all. Estimating it returns about `0.012` and an interval on the
+2016-2024 total of `2.87%`, which amounts to asserting that surveillance
+prevalence is measured to about one percent. Nothing supports that, and the
+[workbook note](../../notes/20260803-degraaf-surveillance-workbook-extraction.md)
+says plainly not to report it.
+
+**Numerical.** A free SD admits a degenerate mode. Its half-normal prior does not
+prevent it reaching `0.84`, and at that value the observation equation contributes
+almost nothing to the log-probability, so the anchor effectively switches off.
+Latent prevalence then runs up until $\theta\eta$ exceeds one for every maternal
+age, where `p_ds_lb` is clipped — a flat region with no gradient, and therefore an
+absorbing state. Recording sensitivity collapses towards zero to keep the product
+near the observed recorded rate. One chain in four escaped there in a `DSP009` fit
+at 4,000 draws per chain, and pooled convergence statistics did not make it
+obvious: three healthy chains still gave a max R-hat of `1.0111`.
+
+The fixed value is an **assumption about surveillance accuracy, not an estimate**.
+Report across the sensitivity axis and say which value was chosen:
+
+```bash
+python scripts/fit_core_reduction_model.py DSP008 --years 2004-2024 --anchor-obs-sigma-fixed 0.10
+```
+
+`--anchor-obs-sigma-estimated` opts back out. It is not recommended, the fit warns
+when it is used, and any such run should be checked per chain:
+
+```bash
+python scripts/audit_anchored_chain_health.py --strict
+```
+
+That audit walks every anchored fit under `output/`, flags a chain by the share of
+its draws with $\eta > 1.5$ and by between-chain dispersion in `recording_s`, and
+exits non-zero when a run is not clean. All anchored fits predating this default
+have been audited and none is contaminated.
+
 ## DSP009 post-window allocation controls
 
 Surveillance windows are centred, so with mid-years running to 2018 the anchored

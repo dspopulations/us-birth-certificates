@@ -63,9 +63,35 @@ DEFAULT_ANCHOR_WINDOW_HALF_WIDTH = 2
 DEFAULT_ANCHOR_LEVEL_SIGMA = 0.02
 DEFAULT_ANCHOR_TREND_SIGMA = 0.01
 # The workbook attaches no uncertainty to the surveillance prevalences at all.
-# This is the prior scale for a *free* observation SD, so the fit reports how
-# well the windows are actually reconciled instead of asserting it.
+# This is the prior scale used only when the observation SD is estimated, which is
+# no longer the default; see DEFAULT_ANCHOR_OBS_SIGMA_FIXED.
 DEFAULT_ANCHOR_OBS_SIGMA = 0.05
+
+# The surveillance observation SD is FIXED by default, for two independent
+# reasons that point the same way.
+#
+# Reporting: an estimated SD measures only whether the overlapping windows are
+# mutually *consistent* with a smooth latent path -- it cannot measure whether the
+# surveillance prevalences are *accurate*, because the workbook supplies no
+# uncertainty at all. Estimating it produced 0.012 and an interval on the
+# 2016-2024 total of 2.87%, which asserts that surveillance prevalence is measured
+# to about one percent. Nothing supports that.
+#
+# Numerical: a free SD admits a degenerate mode. Its HalfNormal prior does not
+# stop it reaching 0.84, and at that value the observation equation contributes
+# almost nothing to the log-probability, so the anchor effectively switches off.
+# Latent prevalence then runs up until theta * eta exceeds one for every age,
+# where p_ds_lb is clipped -- a flat region with no gradient, and so an absorbing
+# state. One chain in four escaped there in a DSP009 fit at 4,000 draws. See
+# notes/20260804-dsp009-post-anchor-recording-drift.md and
+# scripts/audit_anchored_chain_health.py.
+#
+# 0.05 is about four times the internal-consistency value, so it is the
+# conservative end of that comparison rather than a tight assertion. It remains an
+# assumption: report across the sensitivity axis (0.05 / 0.10 / 0.20) and say
+# which value was chosen. Pass anchor_obs_sigma_fixed=None to estimate it instead,
+# which re-opens the mode.
+DEFAULT_ANCHOR_OBS_SIGMA_FIXED = 0.05
 
 # Per-year logit-scale SD of the random walk on recording sensitivity over the
 # years no surveillance window covers. Calibrated so the cumulative prior width
@@ -609,7 +635,7 @@ def build_core_reduction_model(
     anchor_level_sigma: float = DEFAULT_ANCHOR_LEVEL_SIGMA,
     anchor_trend_sigma: float = DEFAULT_ANCHOR_TREND_SIGMA,
     anchor_obs_sigma: float = DEFAULT_ANCHOR_OBS_SIGMA,
-    anchor_obs_sigma_fixed: float | None = None,
+    anchor_obs_sigma_fixed: float | None = DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
     anchor_forecast_flat: bool = False,
 ) -> Any:
     """Build the PyMC core reduction-recording model.
@@ -625,6 +651,11 @@ def build_core_reduction_model(
     so the reduction becomes a *consequence* of an anchored prevalence rather
     than an imported prior.  Years beyond the last observed window are forecast
     by the same state equation, with intervals that widen as they should.
+
+    The surveillance observation SD is **fixed** by default, at
+    ``DEFAULT_ANCHOR_OBS_SIGMA_FIXED``.  Passing ``anchor_obs_sigma_fixed=None``
+    estimates it instead, which both overstates precision and re-opens a
+    degenerate mode; see that constant's rationale before doing so.
 
     ``recording_drift='post_anchor'`` adds a random walk on ``logit s`` over
     exactly those unanchored years.  Holding ``s`` constant there — what every
@@ -1224,6 +1255,7 @@ def core_year_summary(idata: Any, cells: pd.DataFrame) -> pd.DataFrame:
 
 __all__ = [
     "CORE_REDUCTION_MODEL_ID",
+    "DEFAULT_ANCHOR_OBS_SIGMA_FIXED",
     "DEFAULT_RECORDING_S_DRIFT_SIGMA",
     "DEFAULT_REDUCTION_AGE_STEP_SIGMA",
     "DEFAULT_EXTRAPOLATED_REDUCTION_START",

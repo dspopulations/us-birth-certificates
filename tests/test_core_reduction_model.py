@@ -27,6 +27,7 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     validate_core_model_definition,
 )
 from dspopulations_us_birth_certificates.selection.core_reduction import (
+    DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
     CoreReductionModelConfig,
     CoreReductionPriors,
     SurveillanceAnchor,
@@ -472,11 +473,12 @@ def test_anchored_model_derives_eta_from_prevalence(tmp_path: Path) -> None:
         "anchor_log_slope_start",
         "anchor_level_sigma",
         "anchor_trend_sigma",
-        "anchor_obs_sigma",
         "anchor_level_innovation_raw",
         "anchor_trend_innovation_raw",
         "recording_s_logit",
     } <= named
+    # The observation SD is fixed by default, so it must not be a free variable.
+    assert "anchor_obs_sigma" not in named
 
     with model:
         prior = pm.sample_prior_predictive(draws=6, random_seed=0)
@@ -555,22 +557,48 @@ def test_unanchored_model_rejects_a_stray_anchor(tmp_path: Path) -> None:
         )
 
 
-def test_anchor_obs_sigma_can_be_fixed(tmp_path: Path) -> None:
-    """Fixing the observation SD is the sensitivity axis for accuracy."""
-    pytest.importorskip("pymc")
+def _obs_sigma_model(tmp_path: Path, **kwargs: Any) -> Any:
     path = _anchor_csv(tmp_path, [2006, 2008], [12.5, 13.0])
-    anchor = SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path)
-    model = build_core_reduction_model(
+    return build_core_reduction_model(
         _anchor_cells(9),
         CoreReductionPriors(),
         n_year=9,
         reduction_model="anchor",
-        anchor=anchor,
-        anchor_obs_sigma_fixed=0.1,
+        anchor=SurveillanceAnchor.from_csv(year_range=(2004, 2012), path=path),
+        **kwargs,
     )
-    named = {rv.name for rv in model.free_RVs}
-    assert "anchor_obs_sigma" not in named
-    assert "anchor_obs_sigma" in model.named_vars
+
+
+def test_anchor_obs_sigma_is_fixed_by_default(tmp_path: Path) -> None:
+    """A free observation SD overstates precision and admits a degenerate mode.
+
+    Estimating it measures only whether the overlapping windows are mutually
+    consistent with a smooth latent path, never whether the surveillance
+    prevalences are accurate. It also lets the SD inflate until the observation
+    equation stops contributing, at which point the anchor switches off and latent
+    prevalence runs onto the gradient-free ``theta * eta`` clip. Fixed is the
+    default for both reasons.
+    """
+    pytest.importorskip("pymc")
+
+    default = _obs_sigma_model(tmp_path)
+    assert "anchor_obs_sigma" not in {rv.name for rv in default.free_RVs}
+    assert "anchor_obs_sigma" in default.named_vars
+    assert float(default["anchor_obs_sigma"].eval()) == pytest.approx(
+        DEFAULT_ANCHOR_OBS_SIGMA_FIXED
+    )
+
+    explicit = _obs_sigma_model(tmp_path, anchor_obs_sigma_fixed=0.1)
+    assert "anchor_obs_sigma" not in {rv.name for rv in explicit.free_RVs}
+    assert float(explicit["anchor_obs_sigma"].eval()) == pytest.approx(0.1)
+
+
+def test_anchor_obs_sigma_can_still_be_estimated(tmp_path: Path) -> None:
+    """The opt-out remains available for diagnosing the mode itself."""
+    pytest.importorskip("pymc")
+
+    estimated = _obs_sigma_model(tmp_path, anchor_obs_sigma_fixed=None)
+    assert "anchor_obs_sigma" in {rv.name for rv in estimated.free_RVs}
 
 
 def _drift_cells(n_year: int) -> pd.DataFrame:

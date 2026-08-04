@@ -33,6 +33,7 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     DEFAULT_ANCHOR_CSV,
     DEFAULT_ANCHOR_LEVEL_SIGMA,
     DEFAULT_ANCHOR_OBS_SIGMA,
+    DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
     DEFAULT_ANCHOR_TREND_SIGMA,
     DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
     DEFAULT_EXTRAPOLATED_REDUCTION_START,
@@ -201,19 +202,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=DEFAULT_ANCHOR_OBS_SIGMA,
         help=(
-            "Half-normal prior scale for the surveillance observation SD. The "
-            "workbook supplies no uncertainty, so this SD is estimated, not fixed."
+            "Half-normal prior scale for the surveillance observation SD. Used "
+            "only with --anchor-obs-sigma-estimated, since the SD is fixed by "
+            "default."
         ),
     )
     p.add_argument(
         "--anchor-obs-sigma-fixed",
         type=float,
-        default=None,
+        default=DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
         help=(
-            "Fix the surveillance observation SD instead of estimating it. The "
-            "estimated SD only measures whether the windows agree with a smooth "
-            "path, so fixing it larger is the sensitivity axis for surveillance "
-            "accuracy."
+            "Surveillance observation SD, held fixed. This is the sensitivity axis "
+            "for surveillance accuracy: report across 0.05 / 0.10 / 0.20 and say "
+            "which value was chosen."
+        ),
+    )
+    p.add_argument(
+        "--anchor-obs-sigma-estimated",
+        action="store_true",
+        help=(
+            "Estimate the surveillance observation SD instead of fixing it. NOT "
+            "recommended: the estimate measures only whether the windows agree "
+            "with a smooth path, not whether surveillance is accurate, and a free "
+            "SD admits a degenerate mode in which the anchor switches off. Audit "
+            "any such fit with scripts/audit_anchored_chain_health.py."
         ),
     )
     p.add_argument(
@@ -255,6 +267,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     except ValueError as exc:
         p.error(str(exc))
     ns.year_range = _parse_years(ns.years, (2016, 2024))
+    if ns.anchor_obs_sigma_estimated:
+        if ns.anchor_obs_sigma_fixed != DEFAULT_ANCHOR_OBS_SIGMA_FIXED:
+            p.error(
+                "--anchor-obs-sigma-estimated and --anchor-obs-sigma-fixed are "
+                "mutually exclusive; pick one"
+            )
+        # Downstream the two controls are a single value: None means estimate.
+        ns.anchor_obs_sigma_fixed = None
     if ns.anchor_forecast_flat and ns.model_definition.reduction_model != "anchor":
         p.error(
             "--anchor-forecast-flat applies only to surveillance-anchored models; "
@@ -439,7 +459,14 @@ def main(argv: list[str] | None = None) -> int:
                 ("window width", 2 * anchor.half_width + 1),
                 ("level sigma prior", ns.anchor_level_sigma),
                 ("trend sigma prior", ns.anchor_trend_sigma),
-                ("obs sigma prior", ns.anchor_obs_sigma),
+                (
+                    "obs sigma",
+                    (
+                        f"estimated (prior scale {ns.anchor_obs_sigma})"
+                        if ns.anchor_obs_sigma_fixed is None
+                        else f"fixed at {ns.anchor_obs_sigma_fixed}"
+                    ),
+                ),
             ],
         )
         cli_output.info(
@@ -447,6 +474,22 @@ def main(argv: list[str] | None = None) -> int:
             "through centred window means; the reduction-rate CSV prior is "
             "loaded for comparison only and does NOT enter the likelihood"
         )
+        if ns.anchor_obs_sigma_fixed is None:
+            cli_output.warning(
+                "surveillance observation SD is ESTIMATED. It measures only "
+                "whether the windows agree with a smooth path, not whether "
+                "surveillance is accurate, so the resulting interval overstates "
+                "precision - and a free SD admits a degenerate mode in which the "
+                "anchor switches off. Audit this fit with "
+                "scripts/audit_anchored_chain_health.py before citing it."
+            )
+        else:
+            cli_output.info(
+                "surveillance observation SD fixed at "
+                f"{ns.anchor_obs_sigma_fixed}: this is an assumption about "
+                "surveillance accuracy, not an estimate. Report across the "
+                "0.05 / 0.10 / 0.20 axis and say which value was chosen"
+            )
     model = build_core_reduction_model(
         cells,
         priors,

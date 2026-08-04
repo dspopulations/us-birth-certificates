@@ -11,10 +11,10 @@ runs up until ``theta * eta`` exceeds one for every maternal age, where
 gradient, so there is nothing to push a chain back out, and recording sensitivity
 collapses towards zero to keep the product near the observed recorded rate.
 
-This was found in a ``DSP009`` fit where one chain in four escaped.  It is not a
-``DSP009`` defect: the escape needs only an inflated ``anchor_obs_sigma``, which
-every anchored model with a free observation SD permits.  A drifted fit merely
-reaches it sooner.
+This was found in a ``DSP009`` fit where one chain in four escaped.  Fixing the
+observation SD closes the escape route and is now the default, so new fits are
+safe unless ``--anchor-obs-sigma-estimated`` is passed deliberately.  This audit
+exists for the fits that predate that default, and for any run that opts back out.
 
 Pooled summaries are the wrong instrument.  Three healthy chains out of four
 still produced a max R-hat of ``1.0111``, which reads as "needs a slightly longer
@@ -231,9 +231,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"\n{len(unclean)} of {len(summary)} runs are not CLEAN. A DEGENERATE "
             "verdict means at least one chain sat in the anchor-off mode; those "
-            "draws must not be pooled into any reported quantity. Re-fit with "
-            "--anchor-obs-sigma-fixed, which closes the escape route and is "
-            "preferred on reporting grounds anyway."
+            "draws must not be pooled into any reported quantity. Re-fit without "
+            "--anchor-obs-sigma-estimated: a fixed observation SD is the default "
+            "and closes the escape route."
         )
     else:
         print(f"\nAll {len(summary)} audited runs are CLEAN.")
