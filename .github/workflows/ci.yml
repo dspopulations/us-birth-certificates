@@ -54,7 +54,7 @@ jobs:
         # dse-research-utils from the public git tag and the editable package.
         # This replaces the uv/pip-only install so the compiled scientific stack
         # comes from conda-forge and stays consistent across DSE research repos.
-        uses: mamba-org/setup-micromamba@v3.1.0
+        uses: mamba-org/setup-micromamba@v3.2.1
         with:
           environment-file: environment.yml
           cache-environment: true
