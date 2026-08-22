@@ -224,8 +224,8 @@ class Findings:
 def read_single_year_sheet(path: Path) -> dict[str, dict[int, tuple[int, float]]]:
     """Parse Table 2A into ``{defect label: {year: (cases, rate per 10,000)}}``.
 
-    Read with the standard library only, so the canonical conda environment needs no
-    Excel dependency.  Long defect blocks repeat their label when the printed table
+    Read with the standard library only, so the canonical environment needs no Excel
+    dependency.  Long defect blocks repeat their label when the printed table
     breaks across a page, so the label is carried forward and repeated blocks merge.
     """
     with zipfile.ZipFile(path) as archive:

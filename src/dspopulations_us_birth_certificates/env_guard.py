@@ -2,7 +2,7 @@
 
 Importing this module (for its side effect) sets ``MKL_NUM_THREADS`` /
 ``OMP_NUM_THREADS`` / ``MKL_THREADING_LAYER`` via ``os.environ.setdefault``.
-On this project's Windows/conda environment, ``pm.sample`` / nutpie and
+On this project's former Windows conda/MKL environment, ``pm.sample`` / nutpie and
 other numpy/numba paths crash inside MKL's threadpool
 (``OSError [WinError 0xc06d007f]``) unless MKL threading is tamed first.
 ``setdefault`` keeps any caller override and is a harmless thread cap on

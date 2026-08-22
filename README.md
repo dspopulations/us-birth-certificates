@@ -36,19 +36,20 @@ git clone https://github.com/dspopulations/us-birth-certificates.git
 
 #### Fitting models
 
-To fit models, a recent Python installation is required. Some of our dependencies are best installed from [conda-forge](https://conda-forge.org/), for which either [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main) or [Miniforge](https://conda-forge.org/download/) is required.
-
-Then, to install Python dependencies, from the repository root:
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). Install it ([instructions](https://docs.astral.sh/uv/getting-started/installation/)), then create the environment from the repository root:
 
 ```bash
-conda env update -f environment.yml
+uv sync
 ```
 
-For uv/pip-based installs, use the single development extra that CI also uses:
+uv provisions the Python interpreter itself from `.python-version` (**3.14**), resolves from the committed `uv.lock`, and installs this package editable. Prefix commands with `uv run` — for example `uv run pytest` or `uv run python scripts/fit_model.py`.
 
-```bash
-uv pip install -e '.[dev]'
-```
+Supported platforms are Linux (x86-64 and arm64), Apple Silicon macOS, and native Windows. Intel macOS is not supported: numba publishes no macOS x86-64 wheels.
+
+Two system-level prerequisites are not Python packages and are not installed by `uv sync`:
+
+- **macOS only** — LLVM's OpenMP runtime, which the `lightgbm` and `xgboost` wheels link against: `brew install libomp`.
+- **Graph plotting only** — the Graphviz `dot` binary, alongside the Python bindings: `brew install graphviz`, `apt install graphviz`, or `winget install Graphviz.Graphviz`.
 
 #### Creating reports
 

@@ -11,61 +11,63 @@ requires-python = ">=3.14"
 license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Frank Buckley" }]
 
+# The scientific stack is inherited, not restated. `dse-research-utils` declares
+# the canonical floors (numpy/scipy/pandas/pyarrow/numba/matplotlib/scikit-learn/
+# statsmodels/pymc/pytensor/nutpie/arviz*/preliz/xarray) in its own metadata, so
+# they cannot drift between DSE research repos. Extras compose the optional
+# layers this repo actually uses:
+#   boosting   lightgbm, shap, xgboost
+#   columnar   duckdb, polars, pyreadstat
+#   dependence dcor (stats_utils.distance_corr_matrix)
+#   graphs     graphviz bindings, networkx — ALSO needs the system `dot` binary
+#   io         orjson, tabulate
+#   jax        jax, numpyro — `nuts_sampler` is read from run config, so the
+#              NumPyro backend is selectable at runtime even though nothing
+#              imports it directly
+#   notebook   jupyter, jupytext
+#   storage    h5py, h5netcdf, zarr (InferenceData on disk)
+#   tuning     optuna, optuna-integration
 dependencies = [
-  "arviz-plots>=1.3.0",
-  "arviz-stats>=1.3.0",
-  "arviz>=1.3.0",
-  "duckdb>=1.5.5",
-  "h5netcdf>=1.8.1",  # NetCDF backend arviz/xarray use to write idata.nc
-  "h5py>=3.16.0",     # h5netcdf's HDF5 engine (not pulled automatically via pip)
-  # jaxlib is conda-owned but only arrives transitively via jax; environment.yml
-  # does not declare it. Keep this floor at or below what the conda layer may
-  # solve to — conda's jax 0.10.2 admits jaxlib >=0.10.1,<=0.10.2 — or
-  # `conda env update` makes pip try to take ownership of a conda package and
-  # fails with "no RECORD file".
-  "jaxlib>=0.10.1",
-  "matplotlib>=3.11.1",
-  "numpy>=2.4.6,<2.5",  # pymc -> pytensor -> numba pins numpy <2.5; matches the shared conda core
-  "numpyro>=0.21.0",
-  "nutpie>=0.16.11",
-  "pandas>=3.0.5",
-  "preliz>=0.27.1",
-  "pymc>=6.3.1",
-  "scipy>=1.18.0",
-  "dse-research-utils>=0.10.0",
+  "dse-research-utils[boosting,columnar,dependence,graphs,io,jax,notebook,storage,tuning]",
+  "fastparquet",     # scripts/make_all.py writes parquet with engine="fastparquet"; no extra carries it
+  "joblib>=1.4.0",   # imported at module top by tuning/training/models.lgbm_pipeline, so a runtime dep
+  "truststore",      # scripts/download_data.py calls truststore.inject_into_ssl() at import
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
+# Development and CI tooling. PEP 735 groups are never written into published
+# package metadata, so nothing here reaches anything installing this package.
+# Everything the old `dev` extra carried that is now an extra on
+# dse-research-utils (dcor, lightgbm, shap, optuna, polars, notebook) or one of
+# its base dependencies (pyarrow, rich, scikit-learn) has been dropped from here;
+# joblib moved up to [project.dependencies], since `src` imports it at run time.
 dev = [
-  # Single pip-resolved development/CI extra. Keep aligned with environment.yml
-  # rather than splitting test, modelling, and data-preparation dependencies
-  # across multiple extras. Floors track the shared reconciled spec.
-  "dcor>=0.6",
   "ipython>=9.11.0",
   "ipywidgets>=8.1.8",
-  "joblib>=1.4.0",
-  "lightgbm>=4.7.0",
-  # numba is a transitive shap dep; keep the explicit floor or the resolver
-  # backtracks to numba 0.53.1 / llvmlite 0.36.0, which has no Python 3.14
-  # wheel. The cap tracks the shared conda core: current pytensor 3.3.0 admits
-  # numba <=0.66.0, so 0.66.0 is the newest compatible release.
-  "numba>=0.65.1,<=0.66.0",
-  "notebook>=7.5.5",
-  "optuna>=4.9.0",
-  "polars>=1.43.2",
-  "pyarrow>=24.0.0",
   "pytest>=9.1.1",
-  "rich>=15.0.0",
   "ruff>=0.16.1",
-  "scikit-learn>=1.9.0",
-  "shap>=0.52.0",
+]
+
+[tool.uv]
+# Platforms the lockfile is resolved for — the same set as the research repo, so
+# a solve here matches a solve there. Intel macOS is deliberately absent: numba
+# publishes no macosx x86_64 wheels and shap pins numba<0.63 there, so upstream
+# has dropped it. Native win-amd64 is now covered; it could not be before,
+# because conda-forge has no win-64 jaxlib.
+environments = [
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "sys_platform == 'linux' and platform_machine == 'aarch64'",
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]
 
 [tool.uv.sources]
-# dse-research-utils isn't published to PyPI — resolve it from the public git
-# tag. (The conda env in environment.yml installs it from the same tag in its
-# pip layer; this entry is only consumed by uv.)
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.10.0" }
+# dse-research-utils isn't published to PyPI — resolve it from the public git tag.
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.11.0" }
+# Local-dev override — to develop against a sibling checkout of research (note
+# the ../../ — this repo lives under dspopulations/, not dseinternational/),
+# comment the git line above and uncomment this instead:
+# dse-research-utils = { path = "../../dseinternational/research/src/python", editable = true }
 
 [tool.hatch.version]
 path = "src/dspopulations_us_birth_certificates/__init__.py"
