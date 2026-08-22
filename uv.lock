@@ -604,8 +604,8 @@ wheels = [
 
 [[package]]
 name = "dse-research-utils"
-version = "0.11.0"
-source = { git = "https://github.com/dseinternational/research.git?subdirectory=src%2Fpython&tag=v0.11.0#fbc022fd6db48917ae57f9ba38b12ccf239523a9" }
+version = "0.11.2"
+source = { git = "https://github.com/dseinternational/research.git?subdirectory=src%2Fpython&tag=v0.11.2#2d19c5ef2d2f3a66c64a92a232760f36ee580a37" }
 dependencies = [
     { name = "arviz" },
     { name = "arviz-base" },
@@ -613,6 +613,8 @@ dependencies = [
     { name = "arviz-stats" },
     { name = "azure-identity" },
     { name = "azure-storage-blob" },
+    { name = "h5netcdf" },
+    { name = "h5py" },
     { name = "matplotlib" },
     { name = "numba" },
     { name = "numpy" },
@@ -661,11 +663,6 @@ notebook = [
     { name = "jupyter" },
     { name = "jupytext" },
 ]
-storage = [
-    { name = "h5netcdf" },
-    { name = "h5py" },
-    { name = "zarr" },
-]
 tuning = [
     { name = "optuna" },
     { name = "optuna-integration" },
@@ -675,7 +672,7 @@ tuning = [
 name = "dspopulations-us-birth-certificates"
 source = { editable = "." }
 dependencies = [
-    { name = "dse-research-utils", extra = ["boosting", "columnar", "dependence", "graphs", "io", "jax", "notebook", "storage", "tuning"] },
+    { name = "dse-research-utils", extra = ["boosting", "columnar", "dependence", "graphs", "io", "jax", "notebook", "tuning"] },
     { name = "fastparquet" },
     { name = "joblib" },
     { name = "truststore" },
@@ -691,7 +688,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dse-research-utils", extras = ["boosting", "columnar", "dependence", "graphs", "io", "jax", "notebook", "storage", "tuning"], git = "https://github.com/dseinternational/research.git?subdirectory=src%2Fpython&tag=v0.11.0" },
+    { name = "dse-research-utils", extras = ["boosting", "columnar", "dependence", "graphs", "io", "jax", "notebook", "tuning"], git = "https://github.com/dseinternational/research.git?subdirectory=src%2Fpython&tag=v0.11.2" },
     { name = "fastparquet" },
     { name = "joblib", specifier = ">=1.4.0" },
     { name = "truststore" },
