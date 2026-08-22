@@ -161,15 +161,18 @@ bdat
 duckdb
 elif
 getsize
+Graphviz
 hatchling
 iloc
 jupytext
 Jupytext
 Matplotlib
+numba
 Optuna
 pytest
 resumable
 ruff
+venv
 zstd
 
 # Project / repo

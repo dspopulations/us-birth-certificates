@@ -7,25 +7,26 @@ This document describes the pipeline that turns raw NCHS/NVSS natality SAS micro
 
 ## Prerequisites
 
-### Conda environment
+### Environment
 
-The pipeline runs in a conda environment named `dspop-us-birth-certificates` (Python **3.14**, channel `conda-forge`). Create and activate it from the repo root:
+The pipeline runs in the [uv](https://docs.astral.sh/uv/)-managed environment. Create it from the repo root:
 
 ```bash
-conda env create -f environment.yml
-conda activate dspop-us-birth-certificates
+uv sync
 ```
 
-The package itself installs editable (`-e ./`) as part of `environment.yml`, and the sibling `dse_research_utils` installs editable from `-e ../../dseinternational/research/src/python` (the `research` repo must be cloned alongside this one).
+uv provisions Python **3.14** from `.python-version`, resolves from the committed `uv.lock`, and installs this package editable. Run every command below through `uv run` so it uses that environment.
 
-Key data-pipeline packages (note the channel split): `polars>=1.40.1`, `pyarrow>=23.0.1`, and `pandas>=3.0.1` come from conda-forge, while `duckdb>=1.5.2`, `pyreadstat>=1.3.4` (reads `.sas7bdat`), `fastparquet`, and `truststore` come from the `pip:` subsection. `truststore` is imported at module top in the download script and `truststore.inject_into_ssl()` runs on import, so the environment must be active or the download script fails immediately.
+The shared `dse_research_utils` library is resolved from a public git tag via `[tool.uv.sources]` in `pyproject.toml`; the same block carries a commented path override for developing against a sibling `research` checkout at `../../dseinternational/research/src/python`.
+
+Key data-pipeline packages: `duckdb`, `polars`, and `pyreadstat` (reads `.sas7bdat`) arrive through the `columnar` extra on `dse-research-utils`, while `pandas` and `pyarrow` are base dependencies of that library. `fastparquet` and `truststore` are declared directly in this repo's `[project.dependencies]`, as no extra carries them. `truststore` is imported at module top in the download script and `truststore.inject_into_ssl()` runs on import, so running the downloader outside the environment fails immediately.
 
 ### Source data via `scripts/download_data.py`
 
 Run the downloader from the repo root:
 
 ```bash
-python scripts/download_data.py
+uv run python scripts/download_data.py
 ```
 
 It creates `data/` if absent (`os.makedirs('data')`) and downloads, in this order:
@@ -70,14 +71,14 @@ All scripts are run **from the repo root** (paths are CWD-relative). There is cu
 
 ## Running the pipeline
 
-With the environment active and from the repo root:
+From the repo root:
 
 ```bash
-python scripts/import_parquet.py
-python scripts/combine_parquet.py
-python scripts/prepare_parquet.py
-python scripts/duckdb_create.py
-python scripts/duckdb_prepare.py
+uv run python scripts/import_parquet.py
+uv run python scripts/combine_parquet.py
+uv run python scripts/prepare_parquet.py
+uv run python scripts/duckdb_create.py
+uv run python scripts/duckdb_prepare.py
 ```
 
 ## Stages in detail
@@ -265,7 +266,7 @@ These scripts form a separate side branch and are **not** part of the SAS -> par
 ### `make_all.py`
 
 ```bash
-python scripts/make_all.py
+uv run python scripts/make_all.py
 ```
 
 `merge_years()` reads the 11 per-year parquets for **2014-2024** (hardcoded), applies `variables.set_imported_column_types(df)` to each (not `set_all_column_types`, which would `KeyError` because COMPUTED columns do not exist in per-year parquets yet), concatenates with `pd.concat(...)`, and writes `data/us_births_all.parquet` using `engine='fastparquet'`. The name is **misleading**: it builds only a 2014-2024 modelling subset, not the full pipeline. `pd.concat` does not reset the index, so the output carries non-unique per-year row indices.
@@ -273,7 +274,7 @@ python scripts/make_all.py
 ### `export_spss.py`
 
 ```bash
-python scripts/export_spss.py
+uv run python scripts/export_spss.py
 ```
 
 `export_spss()` computes one run timestamp (`%Y%m%d_%H%M`) shared by all outputs, then for each source reads the parquet and writes an SPSS `.sav` via `pyreadstat.write_sav`, compressing it into a `.zip` (`ZipFile(..., 'x', ZIP_DEFLATED)`). Sources are the **2014-2022** per-year parquets plus `data/us_births_all.parquet` (10 in total - note no 2023/2024 per-year files, unlike `make_all.py`). It must run after `make_all.py` (it consumes `us_births_all.parquet`). The intermediate `.sav` is left on disk alongside the `.zip`; the `'x'` (exclusive-create) mode raises `FileExistsError` if a target `.zip` already exists (possible only on reruns within the same minute).

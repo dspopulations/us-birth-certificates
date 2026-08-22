@@ -29,32 +29,38 @@ Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 
 ## Environment and commands
 
-Python **3.14** via a hybrid conda/pip environment (env name: `dspop-us-birth-certificates`). The compiled scientific core (`numpy`/`scipy`/`pandas`/`pymc`/`nutpie`/`jax`/`arviz`, …) comes from **conda-forge** and must match the canonical spec shared across DSE research repos (verify with `dse-check-env environment.yml`); the pure-Python tail and `dse-research-utils` install in the pip layer. On Windows there is no conda-forge `jax`/`jaxlib` win-64 build, so use **WSL** (Ubuntu, linux-64); GPU is an opt-in `jax[cuda]` overlay.
+Python **3.14** via [uv](https://docs.astral.sh/uv/). There is no conda layer: PyMC 6 compiles with the Numba backend by default, so no C toolchain or BLAS is needed and every package in the scientific stack ships a CPython 3.14 wheel.
 
 ```bash
-conda env create -f environment.yml   # create env
-conda activate dspop-us-birth-certificates
+uv sync          # create/refresh .venv from uv.lock (uv provisions Python from .python-version)
+uv run pytest    # run anything inside that environment
 ```
 
-The package itself is installed editable (`-e ./`) as part of `environment.yml`. For uv/pip installs, use the single development extra: `uv pip install -e '.[dev]'`. CI uses the same `.[dev]` extra; do not add a separate CI/test/modelling dependency split. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
+Supported platforms are linux-x86_64, linux-aarch64, macOS-arm64 and win-amd64 (see `[tool.uv] environments` in `pyproject.toml`). **Windows contributors no longer need WSL.** Intel macOS is not supported — numba publishes no macOS x86-64 wheels. GPU acceleration remains an opt-in `jax[cuda]` overlay.
+
+Two system-level prerequisites are not Python packages: the LLVM OpenMP runtime on macOS (`brew install libomp`), which the `lightgbm`/`xgboost` wheels link against, and the Graphviz `dot` binary for the notebook graph-plotting paths.
+
+`uv sync` installs this package editable. Dependency layout: the scientific stack is inherited from `dse-research-utils` extras rather than restated (see the comment above `[project.dependencies]`), repo-only runtime needs go in `[project.dependencies]`, and tooling goes in the `dev` `[dependency-groups]` entry — do not reintroduce `[project.optional-dependencies]` or split test/modelling/data-preparation dependencies across several extras. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
+
+`uv.lock` is committed. Regenerate it with `uv lock` whenever you change dependencies, and commit the result — CI runs `uv sync --locked`, which fails on a stale lockfile.
 
 ## Shared utilities (`dse_research_utils`)
 
 Notebooks and scripts reference a shared external package (`dse_research_utils`) from the sibling [`research`](https://github.com/dseinternational/research) repository for environment setup, plot styling, and metadata reporting. Import paths start with `dse_research_utils.*`.
 
-- `environment.yml` installs it from the public git tag `v0.10.0` in its pip layer: `dse-research-utils[notebook,dependence,tuning,io] @ git+https://github.com/dseinternational/research.git@v0.10.0#subdirectory=src/python`. A commented local-dev override installs it editable from the sibling checkout instead — `-e ../../dseinternational/research/src/python[...]` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`), which must be cloned alongside this one.
+- `pyproject.toml` resolves it from the public git tag `v0.11.0` via `[tool.uv.sources]`, with the extras `[boosting,columnar,dependence,graphs,io,jax,notebook,storage,tuning]`. Those extras are where the scientific stack comes from — add a package to the right extra upstream rather than re-declaring it here. A commented local-dev override in the same block points at a sibling checkout instead — `../../dseinternational/research/src/python` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`), which must be cloned alongside this one.
 - Scripts call `dse_research_utils.environment.setup.init_script()` at the top of `main()` to apply the default matplotlib style.
 - Notebooks call `dse_research_utils.environment.setup.init_workbook()` (style + environment summary) followed by `dse_research_utils.metadata.packages.report_package_versions(PACKAGE_LIST)` for reproducibility.
 - Plotting code imports `dse_research_utils.plot.styles` and uses its `FIGSIZE_*`, `COLOUR_*`, `DPI_*` constants instead of hardcoded literals.
 - The project-wide `PACKAGE_LIST` (used for version reporting) is re-exported from `dspopulations_us_birth_certificates`.
 - `src/.../repl_utils.py` is a thin compatibility shim that delegates to the shared library — new code should import from `dse_research_utils` directly.
 
-- Lint: `ruff check`
-- Format: `ruff format`
-- Tests: `pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, default `-q -m 'not slow'`). Tests marked `@pytest.mark.slow` fit real Bayesian models with enough draws to support posterior-quality assertions — invoke with `pytest -m slow` when you need to run them (locally, not in CI).
+- Lint: `uv run ruff check`
+- Format: `uv run ruff format`
+- Tests: `uv run pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, default `-q -m 'not slow'`). Tests marked `@pytest.mark.slow` fit real Bayesian models with enough draws to support posterior-quality assertions — invoke with `uv run pytest -m slow` when you need to run them (locally, not in CI).
 - Spellcheck (markdown and `docs/**/*.qmd`): `npm run spellcheck`. Dictionary at `config/spellcheck/allow-en.txt`; language is **en-GB**.
 
-**Before creating a PR, always run both `ruff check src tests scripts` and `npm run spellcheck` and resolve any findings.** Fix real lint errors; for false-positive unknown-word flags from cspell, add the term to `config/spellcheck/allow-en.txt` rather than rewording the prose.
+**Before creating a PR, always run both `uv run ruff check src tests scripts` and `npm run spellcheck` and resolve any findings.** Fix real lint errors; for false-positive unknown-word flags from cspell, add the term to `config/spellcheck/allow-en.txt` rather than rewording the prose.
 
 ## Notebooks
 

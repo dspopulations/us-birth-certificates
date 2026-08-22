@@ -12,8 +12,8 @@ from ``data/us_births.db`` rather than trusting the workbook's own denominators,
 which disagree with ours in specific years -- the multi-race code introduced in
 2014 is included in some years and excluded in others, and Pacific Islander
 births are grouped with American Indian/Alaska Native in four years.  It reads
-the ``.xlsx`` with the standard library only, so the canonical conda environment
-does not need an Excel dependency.
+the ``.xlsx`` with the standard library only, so the canonical environment does
+not need an Excel dependency.
 
 The primary outputs are:
 

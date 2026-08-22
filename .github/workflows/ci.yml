@@ -15,11 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: astral-sh/setup-uv@v7
-      - name: Install ruff
-        run: uv tool install 'ruff>=0.15.18'
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install the locked environment
+        run: uv sync --locked
+
       - name: Ruff check
-        run: ruff check src scripts tests
+        run: uv run --no-sync ruff check src scripts tests
 
   spellcheck:
     name: Spellcheck (cspell)
@@ -38,30 +42,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Native Windows is intentionally omitted: jax/jaxlib have no conda-forge
-        # win-64 build, so the compiled stack cannot solve there. Windows users
-        # work in Ubuntu on WSL (linux-64), which the ubuntu runner covers.
-        os: [ubuntu-26.04, macos-latest]
+        # Native Windows is now covered. It was previously omitted because
+        # jax/jaxlib have no conda-forge win-64 build, which forced Windows
+        # contributors onto WSL; on PyPI jaxlib publishes cp314 win_amd64
+        # wheels, so the whole stack installs natively.
+        #
+        # Intel macOS is absent because upstream has dropped it: numba ships no
+        # macosx x86_64 wheels at all. See `tool.uv.environments` in
+        # pyproject.toml.
+        os: [ubuntu-26.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - name: Setup conda environment
-        # Hybrid env: conda-forge compiled core + a pip layer that installs
-        # dse-research-utils from the public git tag and the editable package.
-        # This replaces the uv/pip-only install so the compiled scientific stack
-        # comes from conda-forge and stays consistent across DSE research repos.
-        uses: mamba-org/setup-micromamba@v3.2.1
-        with:
-          environment-file: environment.yml
-          cache-environment: true
-          cache-downloads: true
+      # The PyPI lightgbm/xgboost wheels for macOS-arm64 link against LLVM's
+      # OpenMP runtime and do not bundle it — conda-forge used to supply it via
+      # llvm-openmp. Without this the `boosting` extra fails to import with
+      # "Library not loaded: @rpath/libomp.dylib". Linux and Windows wheels
+      # carry their own OpenMP runtime, so this is macOS-only.
+      - name: Install OpenMP runtime (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libomp
 
-      - name: Verify environment core matches the canonical spec
-        run: dse-check-env environment.yml
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      # --locked fails the build if uv.lock is stale rather than silently
+      # resolving something different from what was reviewed. uv provisions the
+      # interpreter itself from .python-version, so there is no setup-python step.
+      - name: Install the locked environment
+        run: uv sync --locked
 
       - name: Run pytest
-        run: pytest
+        run: uv run --no-sync pytest
