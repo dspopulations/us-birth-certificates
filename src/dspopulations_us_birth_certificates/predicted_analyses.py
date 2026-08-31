@@ -264,10 +264,13 @@ class CategoryGrouping:
     and also fixes the row order used everywhere downstream.
     ``legend_title`` is what the plot legend shows; ``not_null_filter``
     is an optional SQL predicate applied before grouping.
-    ``colormap`` is the matplotlib colormap name used for the stacked
-    segments — default ``tab10`` works up to 10 categories; use a
-    continuous map (e.g. ``viridis``) for ordinal variables or when
-    there are more than 10 levels.
+    ``colormap`` is an optional matplotlib colormap name for the
+    stacked segments, passed through to
+    :func:`dse_research_utils.plot.styles.categorical_palette`. Leave it
+    ``None`` to take that function's qualitative default (``tab10``,
+    widening to ``tab20`` above 10 categories); name a continuous map
+    (e.g. ``viridis``) for ordinal variables, which is then sampled
+    evenly across its range rather than cycled.
     """
 
     variable: str
@@ -276,7 +279,7 @@ class CategoryGrouping:
     group_sql: str
     labels: dict[int, str]
     not_null_filter: str | None = None
-    colormap: str = "tab10"
+    colormap: str | None = None
 
 
 CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
@@ -755,29 +758,12 @@ def _stack_bottoms_and_tops(
     return cum[:-1], cum[1:]
 
 
-def _pick_category_colours(colormap: str, n_cats: int) -> list:
-    """Return ``n_cats`` colours sampled from ``colormap``.
-
-    Discrete palettes (``tab10``, ``Set1``, etc. — small ``cmap.N``)
-    cycle their entries by index. Continuous palettes (``viridis``,
-    ``plasma``, etc. — ``cmap.N == 256``) are sampled evenly across the
-    full range so the ordering of categories reads as ordinal. Note
-    that matplotlib 3.x represents continuous palettes like viridis as
-    ``ListedColormap`` with 256 entries, so ``isinstance`` can't be
-    used — discriminate on ``cmap.N``.
-    """
-    cmap = plt.get_cmap(colormap)
-    if cmap.N <= 32:
-        return [cmap(i % cmap.N) for i in range(n_cats)]
-    return [cmap(i / max(n_cats - 1, 1)) for i in range(n_cats)]
-
-
 def plot_stacked_proportions(
     counts: pd.DataFrame,
     *,
     title: str,
     legend_title: str,
-    colormap: str = "tab10",
+    colormap: str | None = None,
     save: bool = False,
     output_dir: str = ".",
     file_name: str = "recorded_vs_predicted",
@@ -815,7 +801,7 @@ def plot_stacked_proportions(
     x_positions = np.arange(len(columns), dtype=float)
     bar_width = 0.45
 
-    colours = _pick_category_colours(colormap, n_cats)
+    colours = styles.categorical_palette(n_cats, colormap)
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_XL)
 
