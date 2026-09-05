@@ -17,7 +17,6 @@ from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
 from dspopulations_us_birth_certificates.selection import (
     FitContext,
     copy_docs_template,
-    diagnostics,
     render_report,
     sample,
     save_artefacts,
@@ -53,17 +52,27 @@ from dspopulations_us_birth_certificates.selection.core_reduction import (
     DEFAULT_REDUCTION_CALIBRATION_SHIFT_LOGIT,
     DEFAULT_REDUCTION_CSV,
     DEFAULT_REDUCTION_ERROR_CORRELATION,
-    CoreReductionModelConfig,
     CoreReductionPriors,
     SurveillanceAnchor,
-    build_core_reduction_model,
     core_year_summary,
     prepare_core_age_year_cells,
 )
 from dspopulations_us_birth_certificates.selection.core_reporting import (
     render_core_all,
 )
-from dspopulations_us_birth_certificates.selection.priors import FALSE_POSITIVE_RATE
+from dspopulations_us_birth_certificates.selection.core_specification import (
+    AnchorSettings,
+    CoreFitSpecification,
+    PanelSettings,
+)
+from dspopulations_us_birth_certificates.selection.fit_validation import (
+    validate_fit,
+    write_validation,
+)
+from dspopulations_us_birth_certificates.selection.priors import (
+    FALSE_POSITIVE_RATE,
+    logit,
+)
 
 
 def _parse_years(raw: str | None, fallback: tuple[int, int]) -> tuple[int, int]:
@@ -96,6 +105,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Year range as 'YYYY-YYYY'. Defaults to 2016-2024.",
     )
     p.add_argument("--random-seed", type=int, default=47)
+    p.add_argument(
+        "--anchor-level-prior-prevalence",
+        type=float,
+        default=0.0013,
+        help="Fixed prior median annual prevalence, independent of the surveillance observations; log-scale SD is 0.25.",
+    )
+    p.add_argument(
+        "--anchor-overlap-share",
+        type=float,
+        default=1.0,
+        help="Share of anchor residual variance due to overlapping annual errors; 0 is the independent-error sensitivity.",
+    )
+    p.add_argument(
+        "--anchor-non-overlapping",
+        action="store_true",
+        help="Use a deterministic subset of non-overlapping surveillance windows.",
+    )
+    p.add_argument(
+        "--anchor-window-weighting",
+        choices=("births", "equal_years"),
+        default="births",
+        help="Birth-weight the pooled anchor; equal_years reproduces the old weighting assumption.",
+    )
     p.add_argument(
         "--duckdb-path",
         type=Path,
@@ -295,10 +327,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Pin the Down syndrome loading instead of estimating it. "
-            "--panel-loading-fixed 1.0 is the strict shared-factor corner: it "
-            "asserts DS recording moved exactly with the item, which the panel's "
-            "own internal disagreement argues against. A reportable corner, not "
-            "a default."
+            "A value of 1 shares log-odds changes, not proportional changes in "
+            "recording sensitivity. This is a sensitivity setting, not a default."
         ),
     )
     p.add_argument(
@@ -456,6 +486,21 @@ def main(argv: list[str] | None = None) -> int:
     cli_output.section("Load age-year cells")
     con = duckdb.connect(str(ns.duckdb_path), read_only=True)
     try:
+        anchor_births = None
+        if (
+            ns.model_definition.reduction_model == "anchor"
+            and ns.anchor_window_weighting == "births"
+        ):
+            # The source anchor pools all births, including unknown DS flags.
+            # Use its denominators, not the smaller model-cell population.
+            totals = con.execute(
+                "SELECT year, COUNT(*) AS births FROM us_births WHERE year BETWEEN ? AND ? GROUP BY year",
+                [
+                    ns.year_range[0] - ns.anchor_half_width,
+                    ns.year_range[1] + ns.anchor_half_width,
+                ],
+            ).fetchall()
+            anchor_births = {int(year): int(births) for year, births in totals}
         cells = prepare_core_age_year_cells(
             con,
             year_range=ns.year_range,
@@ -494,32 +539,44 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cli_output.section("Build model")
-    priors = CoreReductionPriors.from_reduction_csv(
-        year_range=ns.year_range,
-        path=ns.reduction_csv,
-        observed_logit_sigma=ns.observed_reduction_sigma,
-        extrapolated_logit_sigma=ns.extrapolated_reduction_sigma,
-        reduction_error_correlation=ns.reduction_error_correlation,
-        reduction_calibration_shift_logit=ns.reduction_calibration_shift_logit,
-        extrapolated_start=ns.extrapolated_start,
-        recording_s_mean=ns.recording_s_mean,
-        recording_s_sigma=ns.recording_s_sigma,
-        recording_s_year_sigma=ns.recording_s_year_sigma,
-        recording_s_drift_sigma=ns.recording_s_drift_sigma,
-        reduction_age_step_sigma=ns.reduction_age_step_sigma,
-        false_positive_rate=ns.false_positive_rate,
-    )
-    cli_output.info(
-        "reduction prior: "
-        f"observed sigma={ns.observed_reduction_sigma}, "
-        f"extrapolated sigma={ns.extrapolated_reduction_sigma} "
-        f"from {ns.extrapolated_start}"
-    )
-    cli_output.info(
-        "reduction calibration: "
-        f"year-error correlation={ns.reduction_error_correlation}, "
-        f"fixed logit shift={ns.reduction_calibration_shift_logit:+.3g}"
-    )
+    if ns.model_definition.reduction_model != "anchor":
+        priors = CoreReductionPriors.from_reduction_csv(
+            year_range=ns.year_range,
+            path=ns.reduction_csv,
+            observed_logit_sigma=ns.observed_reduction_sigma,
+            extrapolated_logit_sigma=ns.extrapolated_reduction_sigma,
+            reduction_error_correlation=ns.reduction_error_correlation,
+            reduction_calibration_shift_logit=ns.reduction_calibration_shift_logit,
+            extrapolated_start=ns.extrapolated_start,
+            recording_s_mean=ns.recording_s_mean,
+            recording_s_sigma=ns.recording_s_sigma,
+            recording_s_year_sigma=ns.recording_s_year_sigma,
+            recording_s_drift_sigma=ns.recording_s_drift_sigma,
+            reduction_age_step_sigma=ns.reduction_age_step_sigma,
+            false_positive_rate=ns.false_positive_rate,
+        )
+        cli_output.info(
+            "reduction prior: "
+            f"observed sigma={ns.observed_reduction_sigma}, "
+            f"extrapolated sigma={ns.extrapolated_reduction_sigma} "
+            f"from {ns.extrapolated_start}"
+        )
+        cli_output.info(
+            "reduction calibration: "
+            f"year-error correlation={ns.reduction_error_correlation}, "
+            f"fixed logit shift={ns.reduction_calibration_shift_logit:+.3g}"
+        )
+    else:
+        if not 0 < ns.recording_s_mean < 1:
+            raise ValueError("recording_s_mean must lie in (0, 1)")
+        priors = CoreReductionPriors(
+            recording_s_logit=float(logit(ns.recording_s_mean)),
+            recording_s_sigma=ns.recording_s_sigma,
+            recording_s_year_sigma=ns.recording_s_year_sigma,
+            recording_s_drift_sigma=ns.recording_s_drift_sigma,
+            false_positive_rate=ns.false_positive_rate,
+            reduction_source="",
+        )
     if ns.model_definition.recording_model == "year":
         cli_output.info(
             "recording sensitivity: partially pooled s_year offsets "
@@ -570,6 +627,8 @@ def main(argv: list[str] | None = None) -> int:
             year_range=ns.year_range,
             path=ns.anchor_csv,
             half_width=ns.anchor_half_width,
+            births_by_year=anchor_births,
+            non_overlapping=ns.anchor_non_overlapping,
         )
         details = anchor.to_dict()
         cli_output.print_kv(
@@ -579,8 +638,8 @@ def main(argv: list[str] | None = None) -> int:
                 ("windows", details["n_windows"]),
                 ("mid_years", f"{anchor.mid_years[0]}-{anchor.mid_years[-1]}"),
                 (
-                    "effective independent",
-                    f"{details['effective_independent_windows']:.1f}",
+                    "covered span / window width (not effective sample size)",
+                    f"{details['covered_span_in_window_widths']:.1f}",
                 ),
                 ("window width", 2 * anchor.half_width + 1),
                 ("level sigma prior", ns.anchor_level_sigma),
@@ -598,7 +657,7 @@ def main(argv: list[str] | None = None) -> int:
         cli_output.info(
             "level: latent log prevalence with a local linear trend, observed "
             "through centred window means; the reduction-rate CSV prior is "
-            "loaded for comparison only and does NOT enter the likelihood"
+            "not used; residual overlap and window weighting are recorded in config.json"
         )
         if ns.anchor_obs_sigma_fixed is None:
             cli_output.warning(
@@ -660,8 +719,8 @@ def main(argv: list[str] | None = None) -> int:
         if not overlap:
             cli_output.warning(
                 "no panel year is covered by a surveillance window, so the Down "
-                "syndrome loading is determined by its prior alone and the panel "
-                "cannot be tested against the anchor at all"
+                "syndrome loading has no direct overlap check against the anchor. "
+                "Any update also depends on the prevalence forecast and priors"
             )
         if heterogeneity.get("available"):
             # The panel's credibility is its controls' agreement. Print it every
@@ -703,57 +762,49 @@ def main(argv: list[str] | None = None) -> int:
                 "whole common movement of the controls is attributed to recording"
             )
 
-    model = build_core_reduction_model(
-        cells,
-        priors,
-        n_year=cells.attrs["n_year"],
-        recording_model=ns.model_definition.recording_model,
-        reduction_model=ns.model_definition.reduction_model,
-        recording_drift=ns.model_definition.recording_drift,
-        recording_panel=ns.model_definition.recording_panel,
+    specification = CoreFitSpecification(
+        definition=ns.model_definition,
+        priors=priors,
+        year_range=ns.year_range,
+        recorded_definition=ns.recorded_definition,
         anchor=anchor,
-        anchor_level_sigma=ns.anchor_level_sigma,
-        anchor_trend_sigma=ns.anchor_trend_sigma,
-        anchor_obs_sigma=ns.anchor_obs_sigma,
-        anchor_obs_sigma_fixed=ns.anchor_obs_sigma_fixed,
-        anchor_forecast_flat=ns.anchor_forecast_flat,
         panel=panel,
-        panel_prevalence_trend_sigma=ns.panel_prevalence_trend_sigma,
-        panel_loading_sigma=ns.panel_loading_sigma,
-        panel_loading_fixed=ns.panel_loading_fixed,
-        panel_factor_sigma=ns.panel_factor_sigma,
-        panel_condition_trend_sigma=ns.panel_condition_trend_sigma,
-        panel_idiosyncratic_sigma=ns.panel_idiosyncratic_sigma,
+        anchor_settings=AnchorSettings(
+            level_sigma=ns.anchor_level_sigma,
+            trend_sigma=ns.anchor_trend_sigma,
+            obs_sigma=ns.anchor_obs_sigma,
+            obs_sigma_fixed=ns.anchor_obs_sigma_fixed,
+            forecast_flat=ns.anchor_forecast_flat,
+            overlap_share=ns.anchor_overlap_share,
+            level_prior_prevalence=ns.anchor_level_prior_prevalence,
+        ),
+        panel_settings=PanelSettings(
+            prevalence_trend_sigma=ns.panel_prevalence_trend_sigma,
+            loading_sigma=ns.panel_loading_sigma,
+            loading_fixed=ns.panel_loading_fixed,
+            factor_sigma=ns.panel_factor_sigma,
+            condition_trend_sigma=ns.panel_condition_trend_sigma,
+            idiosyncratic_sigma=ns.panel_idiosyncratic_sigma,
+        ),
     )
-
+    model = specification.build(cells)
+    model_config = specification.to_config()
+    write_validation(ns.output_dir, {"status": "sampling", "scope": "not_validated"})
     cli_output.section("Sample")
     idata = sample(model, config=run_config, prior_only=ns.prior_only)
-
+    validation = {"status": "prior_only", "scope": "not_validated"}
+    summary = None
+    if not ns.prior_only:
+        try:
+            summary, validation = validate_fit(idata, model)
+        except (ValueError, TypeError, KeyError) as exc:
+            validation = {
+                "status": "failed",
+                "scope": "diagnostics_unavailable",
+                "failures": [f"{type(exc).__name__}: {exc}"],
+            }
+    write_validation(ns.output_dir, validation)
     cli_output.section("Save artefacts")
-    model_config = CoreReductionModelConfig.from_priors(
-        year_range=ns.year_range,
-        priors_obj=priors,
-        model_definition=ns.model_definition,
-        recorded_definition=ns.recorded_definition,
-        notes=f"profile={ns.profile}",
-        anchor=anchor,
-        anchor_hyperpriors={
-            "level_sigma": ns.anchor_level_sigma,
-            "trend_sigma": ns.anchor_trend_sigma,
-            "obs_sigma": ns.anchor_obs_sigma,
-            "obs_sigma_fixed": ns.anchor_obs_sigma_fixed,
-            "forecast_flat": ns.anchor_forecast_flat,
-        },
-        panel=panel,
-        panel_hyperpriors={
-            "panel_prevalence_trend_sigma": ns.panel_prevalence_trend_sigma,
-            "panel_loading_sigma": ns.panel_loading_sigma,
-            "panel_loading_fixed": ns.panel_loading_fixed,
-            "panel_factor_sigma": ns.panel_factor_sigma,
-            "panel_condition_trend_sigma": ns.panel_condition_trend_sigma,
-            "panel_idiosyncratic_sigma": ns.panel_idiosyncratic_sigma,
-        },
-    )
     context = FitContext(
         config=model_config,
         run_config=run_config,
@@ -761,6 +812,7 @@ def main(argv: list[str] | None = None) -> int:
         cells=cells,
         model=model,
         idata=idata,
+        metrics={"validation_status": validation["status"]},
     )
     save_artefacts(context, ns.output_dir)
     cli_output.success(f"idata.nc, cells.parquet, config.json -> {ns.output_dir}")
@@ -778,92 +830,36 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     cli_output.section("Posterior summary")
-    summary_vars = [
-        "rho_year",
-        "eta_year",
-        "recording_s",
-        "recording_s_year",
-        "true_count_year",
-        "true_count_total",
-    ]
-    if "recording_s_year_offset" in idata.posterior:
-        summary_vars.insert(4, "recording_s_year_offset")
-    if "recording_s_unrevised" in idata.posterior:
-        summary_vars[3:3] = ["recording_s_unrevised", "recording_s_unrevised_offset"]
-    if "recording_s_drift_logit" in idata.posterior:
-        # The innovations are the actual free random variables, so the convergence
-        # gate has to see them and not only their cumulated transform.
-        summary_vars[3:3] = [
-            "recording_s_drift_ratio",
-            "recording_s_drift_logit",
-            "recording_s_drift_innovation_raw",
-        ]
-    if "panel_recording_log_factor" in idata.posterior:
-        # As with the drift, the walk innovations are the free variables and the
-        # cumulated factor is a transform, so the gate must see both. The
-        # anchored-era coordinates of recording_s_panel_logit are identically zero
-        # and return NaN diagnostics by construction, so it is deliberately absent.
-        summary_vars[3:3] = [
-            "recording_s_panel_ratio",
-            "panel_loading_ds",
-            "panel_prevalence_trend",
-            "panel_recording_factor_ratio",
-            "panel_common_change_ratio",
-            "panel_recording_log_factor",
-            "panel_common_innovation_raw",
-            "panel_condition_trend",
-            "panel_condition_trend_raw",
-            "panel_condition_trend_scale",
-            "panel_condition_trend_mean",
-            "panel_condition_logit_level",
-            "panel_idiosyncratic_scale",
-            "panel_idiosyncratic_raw",
-        ]
-    if "prevalence_year" in idata.posterior:
-        summary_vars[0:0] = [
-            "prevalence_year",
-            "anchor_window_prevalence",
-            "anchor_obs_sigma",
-            "anchor_level_sigma",
-            "anchor_trend_sigma",
-        ]
-    if "rho_age_offset" in idata.posterior:
-        summary_vars.insert(2, "rho_age_offset")
-    if "rho_logit_year_raw" in idata.posterior:
-        summary_vars.insert(2, "rho_logit_year_raw")
-    summary = diagnostics.summary_table(
-        idata,
-        var_names=tuple(summary_vars),
-    )
+    if summary is None:
+        cli_output.warning(
+            "Diagnostic calculation failed; raw artefacts retained. See validation.json."
+        )
+        return 2
     save_summary(summary, ns.output_dir)
     year_summary = core_year_summary(idata, cells)
     year_summary.to_csv(ns.output_dir / "year_summary.csv", index=False)
-    health = diagnostics.convergence_health(summary)
-    cli_output.info(
-        f"max Rhat=[bold]{health['max_rhat']:.4f}[/bold] "
-        f"(target <{health['rhat_threshold']}), "
-        f"min ESS=[bold]{health['min_ess']:.0f}[/bold] "
-        f"(target >={health['ess_threshold']:.0f})"
-    )
-    if health["all_ok"]:
-        cli_output.success("Convergence checks passed.")
+    if validation["status"] == "passed":
+        cli_output.success(
+            "Numerical validation passed; scientific assumptions remain conditional."
+        )
     else:
-        cli_output.warning("Convergence checks did not all pass - inspect summary.csv.")
+        cli_output.warning("UNVALIDATED FIT: " + "; ".join(validation["failures"]))
 
     cli_output.section("Report outputs")
     render_core_all(
         idata,
         cells,
         ns.output_dir,
-        priors_config=priors.to_dict(),
+        priors_config=model_config.priors,
         year_range=ns.year_range,
         recording_model=ns.model_definition.recording_model,
+        model_config=model_config.to_dict(),
     )
     cli_output.success(f"plots/ and tables/ -> {ns.output_dir}")
     render_report(qmd_path, do_render=ns.render)
 
     cli_output.section("Done")
-    return 0
+    return 0 if validation["status"] == "passed" else 2
 
 
 if __name__ == "__main__":

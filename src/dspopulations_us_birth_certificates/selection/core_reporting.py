@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 from typing import Any
@@ -204,12 +205,18 @@ def _prior_rho_table(
     logit_shift = float(priors_config.get("reduction_calibration_shift_logit", 0.0))
     correlation = float(priors_config.get("reduction_error_correlation", 0.0))
     shifted_mu = mu + logit_shift
-    mean = _inv_logit(shifted_mu)
+    centre = _inv_logit(shifted_mu)
+    nodes, weights = np.polynomial.hermite.hermgauss(40)
+    mean = (
+        _inv_logit(shifted_mu[:, None] + np.sqrt(2) * sigma[:, None] * nodes)
+        @ weights
+        / np.sqrt(np.pi)
+    )
     z = normal_interval_z(interval_prob)
     return pd.DataFrame(
         {
             "rho_prior_mean": mean,
-            "rho_prior_centre": mean,
+            "rho_prior_centre": centre,
             "rho_prior_location_logit": shifted_mu,
             "rho_prior_lo": _inv_logit(shifted_mu - z * sigma),
             "rho_prior_hi": _inv_logit(shifted_mu + z * sigma),
@@ -226,6 +233,84 @@ def _prior_rho_table(
     )
 
 
+def _draw_prior_stats(idata: Any, variable: str, year: int | None, prob: float):
+    """Use the fitted model's prior draws, not a reconstructed different model."""
+    prior = getattr(idata, "prior", None)
+    if prior is None or variable not in prior:
+        return None
+    draws = prior[variable]
+    if year is not None:
+        draws = draws.isel(year=year)
+    values = np.asarray(draws.values, dtype=float)
+    if not values.size or not np.all(np.isfinite(values)):
+        raise ValueError(f"non-finite or empty prior draws for {variable}")
+    return {**_summary(values, interval_prob=prob), "centre": float(np.median(values))}
+
+
+def _report_model(idata: Any, model_config: dict | None) -> dict:
+    """Prefer the saved specification; inference is for older artefacts only."""
+    if model_config is not None:
+        return model_config
+    return {
+        "reduction_model": "anchor" if "prevalence_year" in idata.posterior else "year",
+        "recording_drift": "post_anchor"
+        if "recording_s_drift_logit" in idata.posterior
+        else "none",
+        "recording_panel": "anomaly"
+        if "recording_s_panel_logit" in idata.posterior
+        else "none",
+    }
+
+
+def _fitted_reduction_prior(idata, priors_config, years, interval_prob, model_config):
+    anchored = model_config.get("reduction_model") == "anchor"
+    n_year = len(years)
+    if len(priors_config.get("reduction_logit", [])) == n_year:
+        table = _prior_rho_table(
+            {**priors_config, "year_start": years[0]}, interval_prob=interval_prob
+        )
+    else:
+        table = pd.DataFrame(index=range(n_year))
+    if anchored:
+        # Preserve the old series only as an explicitly unused external reference.
+        for suffix in ("mean", "centre", "lo", "hi"):
+            table[f"rho_external_reference_{suffix}"] = table.get(
+                f"rho_prior_{suffix}", np.nan
+            )
+        for column in (
+            "rho_prior_mean",
+            "rho_prior_centre",
+            "rho_prior_location_logit",
+            "rho_prior_lo",
+            "rho_prior_hi",
+            "rho_prior_sigma_logit",
+            "rho_surveillance_anchor_mean",
+            "reduction_calibration_shift_logit",
+            "reduction_calibration_shift_odds_multiplier",
+            "reduction_error_correlation",
+        ):
+            table[column] = np.nan
+        table["extrapolated"] = False
+    table["rho_prior_source"] = (
+        "unavailable" if anchored else "analytic_reduction_prior"
+    )
+    # Old anchored prior-predictive draws did not include the probability barrier.
+    validated_prior = (
+        getattr(idata, "attrs", {}).get("dsp_prior_sampling") == "rejection_weighted"
+    )
+    for year in range(n_year):
+        stats = (
+            None
+            if anchored and not validated_prior
+            else _draw_prior_stats(idata, "rho_year", year, interval_prob)
+        )
+        if stats is not None:
+            for suffix in ("mean", "centre", "lo", "hi"):
+                table.loc[year, f"rho_prior_{suffix}"] = stats[suffix]
+            table.loc[year, "rho_prior_source"] = "fitted_model_prior_draws"
+    return table
+
+
 def accounting_by_year_table(
     idata: Any,
     cells: pd.DataFrame,
@@ -233,6 +318,7 @@ def accounting_by_year_table(
     *,
     year_range: tuple[int, int] | None,
     interval_prob: float = DEFAULT_INTERVAL_PROB,
+    model_config: dict | None = None,
 ) -> pd.DataFrame:
     """Build the main by-year accounting table."""
     years = _year_labels(cells, year_range)
@@ -250,9 +336,8 @@ def accounting_by_year_table(
     natural = _natural_expected_by_year(cells, theta, n_year=n_year)
     observed = cells.groupby("year_idx", observed=True)["R_cell"].sum()
     births = cells.groupby("year_idx", observed=True)["N_cell"].sum()
-    prior = _prior_rho_table(
-        {**priors_config, "year_start": years[0] if years else 0},
-        interval_prob=interval_prob,
+    prior = _fitted_reduction_prior(
+        idata, priors_config, years, interval_prob, _report_model(idata, model_config)
     )
 
     rows = []
@@ -278,6 +363,9 @@ def accounting_by_year_table(
             row[f"{var}_mean"] = stats["mean"]
             row[f"{var}_lo"] = stats["lo"]
             row[f"{var}_hi"] = stats["hi"]
+        for suffix in ("mean", "lo", "hi"):
+            row[f"expected_ds_count_year_{suffix}"] = row[f"true_count_year_{suffix}"]
+        row["count_estimand"] = "expected_burden_not_realised_count"
         for col in prior.columns:
             row[col] = prior.iloc[y][col]
         rows.append(row)
@@ -332,10 +420,10 @@ def headline_table(
                 "notes": "Morris/de Graaf age-expected DS livebirths before reduction",
             },
             {
-                "metric": "true_ds_livebirths",
+                "metric": "expected_ds_livebirths",
                 **total_true,
                 "notes": (
-                    f"Posterior true DS livebirth total ({interval_label(interval_prob)}"
+                    f"Posterior expected DS livebirth total ({interval_label(interval_prob)}"
                     " ETI)"
                 ),
             },
@@ -351,7 +439,7 @@ def headline_table(
                 **recording_s,
                 "notes": (
                     "Global certificate recording-sensitivity centre; "
-                    "equals overall sensitivity in constant-s models; prior mean "
+                    "equals overall sensitivity in constant-s models; prior median "
                     f"{recording_prior_mean:.3f}; "
                     f"{interval_label(interval_prob)} ETI"
                 ),
@@ -365,8 +453,9 @@ def reduction_prior_posterior_table(
 ) -> pd.DataFrame:
     """Table comparing the marginal rho prior and posterior by year.
 
-    ``rho_prior_mean`` is retained as a backwards-compatible alias for the
-    logit-normal centre/median recorded in ``rho_prior_centre``.
+    New accounting tables distinguish the prior mean and median. Older tables
+    used rho_prior_mean as a median alias; inspect rho_prior_source before using
+    a legacy file as a description of the fitted model.
     """
     cols = [
         "year",
@@ -387,6 +476,9 @@ def reduction_prior_posterior_table(
         "extrapolated",
     ]
     out = accounting[cols].copy()
+    for column in accounting:
+        if column.startswith("rho_external_reference_") or column == "rho_prior_source":
+            out[column] = accounting[column]
     out["rho_year_definition"] = (
         "natural-DS-weighted marginal reduction across maternal-age cells"
     )
@@ -592,13 +684,19 @@ def recording_s_table(
     mu = float(priors_config.get("recording_s_logit", logit(0.5)))
     sigma = float(priors_config.get("recording_s_sigma", 1.0))
     z = normal_interval_z(interval_prob)
+    stats = _draw_prior_stats(idata, "recording_s", None, interval_prob)
+    nodes, weights = np.polynomial.hermite.hermgauss(40)
+    prior_mean = float(
+        np.dot(weights, _inv_logit(mu + np.sqrt(2) * sigma * nodes)) / np.sqrt(np.pi)
+    )
     return pd.DataFrame(
         [
             {
                 "parameter": "recording_s",
-                "prior_mean": float(_inv_logit(mu)),
-                "prior_lo": float(_inv_logit(mu - z * sigma)),
-                "prior_hi": float(_inv_logit(mu + z * sigma)),
+                "prior_mean": stats["mean"] if stats else prior_mean,
+                "prior_centre": stats["centre"] if stats else float(_inv_logit(mu)),
+                "prior_lo": stats["lo"] if stats else float(_inv_logit(mu - z * sigma)),
+                "prior_hi": stats["hi"] if stats else float(_inv_logit(mu + z * sigma)),
                 "prior_sigma_logit": sigma,
                 "posterior_mean": post["mean"],
                 "posterior_lo": post["lo"],
@@ -616,6 +714,7 @@ def recording_s_by_year_table(
     years: list[int],
     recording_model: str = "constant",
     interval_prob: float = DEFAULT_INTERVAL_PROB,
+    model_config: dict | None = None,
 ) -> pd.DataFrame:
     """Prior/posterior summary for recording sensitivity by year."""
     if "recording_s_year" not in idata.posterior:
@@ -637,20 +736,63 @@ def recording_s_by_year_table(
     z = normal_interval_z(interval_prob)
 
     rows = []
+    model_config = _report_model(idata, model_config)
+    extended = (
+        model_config.get("recording_drift", "none") != "none"
+        or model_config.get("recording_panel", "none") != "none"
+    )
+    anchored = model_config.get("reduction_model") == "anchor"
+    valid_prior = (
+        not anchored
+        or getattr(idata, "attrs", {}).get("dsp_prior_sampling") == "rejection_weighted"
+    )
+    nodes, weights = np.polynomial.hermite.hermgauss(40)
+    analytic_mean = float(
+        np.dot(weights, _inv_logit(mu + np.sqrt(2) * marginal_sigma * nodes))
+        / np.sqrt(np.pi)
+    )
     for idx, year in enumerate(years):
         post = _summary(
             idata.posterior["recording_s_year"].sel(year=idx).values,
             interval_prob=interval_prob,
         )
+        prior = (
+            _draw_prior_stats(idata, "recording_s_year", idx, interval_prob)
+            if valid_prior
+            else None
+        )
+        analytic = not extended and not anchored
         rows.append(
             {
                 "year": year,
                 "parameter": "recording_s_year",
                 "recording_model": recording_model,
-                "prior_mean": float(_inv_logit(mu)),
-                "prior_lo": float(_inv_logit(mu - z * marginal_sigma)),
-                "prior_hi": float(_inv_logit(mu + z * marginal_sigma)),
-                "prior_sigma_logit": marginal_sigma,
+                "prior_mean": prior["mean"]
+                if prior
+                else analytic_mean
+                if analytic
+                else np.nan,
+                "prior_centre": prior["centre"]
+                if prior
+                else float(_inv_logit(mu))
+                if analytic
+                else np.nan,
+                "prior_lo": prior["lo"]
+                if prior
+                else float(_inv_logit(mu - z * marginal_sigma))
+                if analytic
+                else np.nan,
+                "prior_hi": prior["hi"]
+                if prior
+                else float(_inv_logit(mu + z * marginal_sigma))
+                if analytic
+                else np.nan,
+                "prior_source": "fitted_model_prior_draws"
+                if prior
+                else "analytic"
+                if analytic
+                else "unavailable",
+                "prior_sigma_logit": marginal_sigma if analytic else np.nan,
                 "prior_global_sigma_logit": global_sigma,
                 "prior_year_offset_sigma_logit": year_sigma,
                 "posterior_mean": post["mean"],
@@ -679,7 +821,7 @@ def posterior_predictive_table(
         mask = groups == idx
         if not np.any(mask):
             continue
-        draws = ppc[:, :, mask].sum(dim="cell").values
+        draws = ppc.isel(cell=np.flatnonzero(mask)).sum(dim="cell").values
         stats = _summary(draws, interval_prob=interval_prob)
         rows.append(
             {
@@ -914,7 +1056,10 @@ def _reduction_plot(df: pd.DataFrame, *, interval_prob: float = DEFAULT_INTERVAL
     ax.errorbar(x, post, yerr=yerr, fmt="o-", capsize=4, label="posterior")
     ax.set_xticks(x)
     ax.set_xticklabels(df["year"].astype(str), rotation=35, ha="right")
-    ax.set_ylim(0, max(0.65, float(df["rho_year_hi"].max()) + 0.05))
+    ax.set_ylim(
+        min(0, float(df[["rho_prior_lo", "rho_year_lo"]].min().min()) - 0.05),
+        max(0.65, float(df[["rho_prior_hi", "rho_year_hi"]].max().max()) + 0.05),
+    )
     ax.set_ylabel("combined reduction before livebirth")
     ax.set_title("Reduction prior vs posterior")
     ax.legend()
@@ -1002,7 +1147,12 @@ def _recording_s_plot(
     rng = np.random.default_rng(47)
     mu = float(priors_config.get("recording_s_logit", logit(0.5)))
     sigma = float(priors_config.get("recording_s_sigma", 1.0))
-    prior_draws = _inv_logit(rng.normal(mu, sigma, size=10_000))
+    prior = getattr(idata, "prior", None)
+    prior_draws = (
+        prior["recording_s"].values.reshape(-1)
+        if prior is not None and "recording_s" in prior
+        else _inv_logit(rng.normal(mu, sigma, size=10_000))
+    )
     posterior_draws = idata.posterior["recording_s"].values.reshape(-1)
     fig, ax = plt.subplots(figsize=(7, 4.2))
     bins = np.linspace(0, 1, 50)
@@ -1016,7 +1166,7 @@ def _recording_s_plot(
     )
     ax.set_xlabel("certificate recording sensitivity")
     ax.set_ylabel("density")
-    ax.set_title("Overall recording sensitivity")
+    ax.set_title("Reference recording sensitivity")
     ax.legend()
     fig.tight_layout()
     return fig
@@ -1046,7 +1196,7 @@ def _recording_s_by_year_plot(
     ax.errorbar(x, post, yerr=yerr, fmt="o-", capsize=4, label="posterior")
     ax.set_xticks(x)
     ax.set_xticklabels(table["year"].astype(str), rotation=35, ha="right")
-    ax.set_ylim(0, min(1.0, max(0.8, float(table["posterior_hi"].max()) + 0.05)))
+    ax.set_ylim(0, 1)
     ax.set_ylabel("certificate recording sensitivity")
     ax.set_title("Recording sensitivity by year")
     ax.legend()
@@ -1063,11 +1213,26 @@ def render_core_all(
     year_range: tuple[int, int] | None = None,
     recording_model: str = "constant",
     interval_prob: float = DEFAULT_INTERVAL_PROB,
+    model_config: dict | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Write all prespecified core-model report figures and tables."""
     out_dir = Path(out_dir)
     (out_dir / "plots").mkdir(parents=True, exist_ok=True)
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
+    model_config = _report_model(idata, model_config)
+    (out_dir / "report_metadata.json").write_text(
+        json.dumps(
+            {
+                "model": model_config,
+                "count_estimand": "expected_burden_not_realised_count",
+                "prior_sampling": getattr(idata, "attrs", {}).get(
+                    "dsp_prior_sampling", "unverified_legacy"
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     accounting = accounting_by_year_table(
         idata,
@@ -1075,6 +1240,7 @@ def render_core_all(
         priors_config,
         year_range=year_range,
         interval_prob=interval_prob,
+        model_config=model_config,
     )
     headlines = headline_table(
         idata,
@@ -1091,6 +1257,7 @@ def render_core_all(
         years=list(accounting["year"]),
         recording_model=recording_model,
         interval_prob=interval_prob,
+        model_config=model_config,
     )
     ppc_year = posterior_predictive_table(
         idata,

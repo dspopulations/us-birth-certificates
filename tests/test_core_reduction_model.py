@@ -428,14 +428,17 @@ def test_surveillance_anchor_rejects_empty_selection(tmp_path: Path) -> None:
         SurveillanceAnchor.from_csv(year_range=(2016, 2024), path=path)
 
 
-def test_surveillance_anchor_discounts_overlapping_windows(tmp_path: Path) -> None:
-    """Seventeen overlapping five-year windows are not seventeen observations."""
+def test_surveillance_anchor_labels_span_not_effective_sample_size(
+    tmp_path: Path,
+) -> None:
+    """Window coverage is not a substitute for an observation covariance."""
     mid_years = list(range(2000, 2017))
     path = _anchor_csv(tmp_path, mid_years, [12.5] * len(mid_years))
     anchor = SurveillanceAnchor.from_csv(year_range=(2000, 2016), path=path)
     # 17 mid-years span 2000-2016, plus two padding years either side = 21
     # birth-years, over a five-year window width.
-    assert anchor.to_dict()["effective_independent_windows"] == pytest.approx(21 / 5)
+    assert anchor.to_dict()["covered_span_in_window_widths"] == pytest.approx(21 / 5)
+    assert "effective_independent_windows" not in anchor.to_dict()
 
 
 def _anchor_cells(n_year: int) -> pd.DataFrame:
@@ -1351,7 +1354,7 @@ def test_panel_config_records_what_stays_prior_driven(tmp_path: Path) -> None:
     assert config["recording_panel"] == "anomaly"
     assert config["priors"]["recording_panel_enters_likelihood"] is True
     assert config["priors"]["panel_loading_estimated"] is True
-    assert config["priors"]["panel_common_prevalence_trend_is_prior_only"] is True
+    assert config["priors"]["panel_common_prevalence_trend_estimated"] is True
     # The controls' disagreement travels with every fit, not just the run log.
     assert config["anomaly_panel"]["heterogeneity"]["available"] is True
     assert config["anomaly_panel"]["conditions"] == list(panel.condition)
@@ -1368,7 +1371,7 @@ def test_panel_config_records_what_stays_prior_driven(tmp_path: Path) -> None:
         },
     ).to_dict()
     assert pinned["priors"]["panel_loading_estimated"] is False
-    assert pinned["priors"]["panel_common_prevalence_trend_is_prior_only"] is False
+    assert pinned["priors"]["panel_common_prevalence_trend_estimated"] is False
 
     unpanelled = CoreReductionModelConfig.from_priors(
         year_range=(2004, 2016),

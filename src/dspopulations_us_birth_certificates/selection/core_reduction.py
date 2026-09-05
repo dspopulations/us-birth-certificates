@@ -35,6 +35,12 @@ from dspopulations_us_birth_certificates.selection.anomaly_panel import (
     DEFAULT_PANEL_PREVALENCE_TREND_SIGMA,
     AnomalyPanel,
 )
+from dspopulations_us_birth_certificates.selection.core_components import (
+    build_age_reduction,
+    build_anchor_prevalence,
+    build_recording,
+)
+from dspopulations_us_birth_certificates.selection.core_math import window_design
 from dspopulations_us_birth_certificates.selection.core_models import (
     CORE_REDUCTION_FAMILY_ID,
     DSP001,
@@ -44,6 +50,11 @@ from dspopulations_us_birth_certificates.selection.core_models import (
     RecordingModel,
     RecordingPanel,
     ReductionModel,
+)
+from dspopulations_us_birth_certificates.selection.core_validation import (
+    integer_array,
+    probability_array,
+    validate_cells,
 )
 from dspopulations_us_birth_certificates.selection.data import (
     DEFAULT_COLUMNS,
@@ -76,64 +87,21 @@ DEFAULT_ANCHOR_TREND_SIGMA = 0.01
 # no longer the default; see DEFAULT_ANCHOR_OBS_SIGMA_FIXED.
 DEFAULT_ANCHOR_OBS_SIGMA = 0.05
 
-# The surveillance observation SD is FIXED by default, for two independent
-# reasons that point the same way.
-#
-# Reporting: an estimated SD measures only whether the overlapping windows are
-# mutually *consistent* with a smooth latent path -- it cannot measure whether the
-# surveillance prevalences are *accurate*, because the workbook supplies no
-# uncertainty at all. Estimating it produced 0.012 and an interval on the
-# 2016-2024 total of 2.87%, which asserts that surveillance prevalence is measured
-# to about one percent. Nothing supports that.
-#
-# Numerical: a free SD admits a degenerate mode. Its HalfNormal prior does not
-# stop it reaching 0.84, and at that value the observation equation contributes
-# almost nothing to the log-probability, so the anchor effectively switches off.
-# The mode is a genuine local basin about 291 log units down, not a numerical
-# artefact: decomposing the log-probability there shows it fits the recorded cell
-# counts *better*, by 84 log units, and pays for it by discarding the anchor. That
-# is the eta * s ridge the project already documents -- the cell likelihood alone
-# prefers a lower s and a higher total, and the anchor is what holds s at 0.335.
-# One chain in four reached it in a DSP009 fit at 4,000 draws. See
-# notes/20260804-dsp009-post-anchor-recording-drift.md and
-# scripts/audit_anchored_chain_health.py.
-#
-# 0.05 is about four times the internal-consistency value, so it is the
-# conservative end of that comparison rather than a tight assertion. It remains an
-# assumption: report across the sensitivity axis (0.05 / 0.10 / 0.20) and say
-# which value was chosen. Pass anchor_obs_sigma_fixed=None to estimate it instead.
-# That re-opens the basin, though it is no longer a trap: the barrier below
-# restores the escape gradient and expels chains from it. The reporting argument
-# above stands on its own regardless.
+# Fixed observation uncertainty is a sensitivity assumption, not a measured
+# accuracy. Estimating a residual SD measures fit to the annual process and can
+# weaken the external level constraint. Historical fit comparisons are in
+# notes/20260804-dsp009-post-anchor-recording-drift.md.
 DEFAULT_ANCHOR_OBS_SIGMA_FIXED = 0.05
 
-# Barrier on theta * eta exceeding one, which the Binomial cannot accept. The clip
-# that keeps it valid is flat, so cells where it binds stop contributing gradient
-# in eta; these restore one. softplus(k*x)/k is inert for x well below zero and
-# ~linear above, so the sharpness sets how abruptly the barrier engages and the
-# penalty sets how hard.
-#
-# Both are calibrated to be inert at any plausible parameter value. theta peaks at
-# about 0.038 (age 50), so theta * eta reaches one only near eta = 26 -- against a
-# posterior eta around 0.6, and against eta = 1 (rho = 0, the anchored prevalence
-# equalling the Morris expectation) which the model deliberately permits as a
-# diagnostic. At eta = 1 the largest theta * eta is 0.038 and the barrier
-# evaluates to exp(-194), which is zero in float64. It therefore cannot perturb
-# any legitimate fit, including the rho < 0 diagnostic.
+# A soft log-prior penalty discourages invalid probabilities beyond the clip.
+# It is negligible far below the boundary, not exactly zero. Prior sampling
+# includes this penalty by rejection; fit validation rejects active overshoot.
 ANCHOR_OVERSHOOT_SHARPNESS = 200.0
 ANCHOR_OVERSHOOT_PENALTY = 1.0e3
 
-# Per-year logit-scale SD of the random walk on recording sensitivity over the
-# years no surveillance window covers. Calibrated so the cumulative prior width
-# across a four-year unanchored tail spans this repository's own bracketing
-# allocation of the post-2018 flag-rate decline: the de Graaf-derived recording
-# anchor in notes/figures/recording_rates_anchor.csv has s for NH White falling
-# 17% over 2016-2024, which is about 0.12 logit units over four years, or one
-# cumulative SD at this value. It is an assumption, not evidence. The split of
-# the post-window decline between prevalence and recording is prior-determined,
-# so a drifted fit must be reported alongside both corners: 0.0 here (all
-# prevalence, identical to DSP008) and ``anchor_forecast_flat=True`` (all
-# recording).
+# Per-year logit SD for post-anchor recording drift. This is an assumption
+# about allocation, not an identified recording trend. Compare zero drift and
+# flat-prevalence forecasts; see the DSP009 note for the original rationale.
 DEFAULT_RECORDING_S_DRIFT_SIGMA = 0.06
 
 
@@ -142,9 +110,10 @@ class SurveillanceAnchor:
     """Observed surveillance prevalence for overlapping centred windows.
 
     ``mid_year_idx`` is zero-based against the model's first year.  Each window
-    constrains the mean prevalence over ``2 * half_width + 1`` consecutive years,
-    which is what makes the overlap between windows harmless: overlapping
-    windows share latent years rather than double-counting evidence.
+    constrains prevalence over ``2 * half_width + 1`` consecutive years.
+    Window weights define the mean; a separate covariance represents shared
+    observation errors. Neither the overlap covariance nor the marginal error
+    scale is measured by the source workbook.
 
     ``log_prevalence`` is the log of the surveillance prevalence per live birth
     (not per 10,000), so it composes directly with the model's probabilities.
@@ -155,8 +124,22 @@ class SurveillanceAnchor:
     half_width: int = DEFAULT_ANCHOR_WINDOW_HALF_WIDTH
     source: str = ""
     mid_years: tuple[int, ...] = ()
+    window_births: np.ndarray | None = None
 
     def __post_init__(self) -> None:
+        indices = integer_array(self.mid_year_idx, "anchor mid_year_idx")
+        if indices.ndim != 1 or np.asarray(self.log_prevalence).ndim != 1:
+            raise ValueError("anchor indices and log prevalences must be vectors")
+        object.__setattr__(self, "mid_year_idx", indices)
+        object.__setattr__(
+            self, "log_prevalence", np.asarray(self.log_prevalence, dtype=float)
+        )
+        half = integer_array([self.half_width], "anchor half_width")[0]
+        object.__setattr__(self, "half_width", int(half))
+        if self.window_births is not None:
+            object.__setattr__(
+                self, "window_births", np.asarray(self.window_births, dtype=float)
+            )
         if len(self.mid_year_idx) != len(self.log_prevalence):
             raise ValueError("anchor index and prevalence arrays must align")
         if len(self.mid_year_idx) == 0:
@@ -165,6 +148,17 @@ class SurveillanceAnchor:
             raise ValueError("anchor half_width must be non-negative")
         if not np.all(np.isfinite(self.log_prevalence)):
             raise ValueError("anchor log prevalences must be finite")
+        if np.any(np.asarray(self.log_prevalence) >= 0):
+            raise ValueError("anchor prevalences must lie in (0, 1)")
+        if len(np.unique(indices)) != len(indices) or np.any(np.diff(indices) <= 0):
+            raise ValueError("anchor mid-years must be distinct and sorted")
+        if self.mid_years:
+            years = integer_array(self.mid_years, "anchor mid_years")
+            if len(years) != len(indices) or not np.all(
+                years - indices == years[0] - indices[0]
+            ):
+                raise ValueError("anchor calendar years must align with model indices")
+        window_design(indices, self.half_width, self.window_births)
 
     @classmethod
     def from_csv(
@@ -174,6 +168,8 @@ class SurveillanceAnchor:
         path: Path | str = DEFAULT_ANCHOR_CSV,
         half_width: int = DEFAULT_ANCHOR_WINDOW_HALF_WIDTH,
         prevalence_column: str = "prevalence_per10k",
+        births_by_year: dict[int, int] | None = None,
+        non_overlapping: bool = False,
     ) -> SurveillanceAnchor:
         """Load windows whose mid-year falls inside ``year_range``.
 
@@ -198,6 +194,18 @@ class SurveillanceAnchor:
                 f"{path} has no surveillance window centred within "
                 f"{from_year}-{to_year}"
             )
+        integer_array(inside["mid_year"], "anchor mid_year")
+        if inside["mid_year"].duplicated().any():
+            raise ValueError("anchor mid-years must be distinct")
+        if non_overlapping:
+            selected = []
+            last = -np.inf
+            for row in inside.index:
+                mid = int(inside.loc[row, "mid_year"])
+                if mid - last > 2 * half_width:
+                    selected.append(row)
+                    last = mid
+            inside = inside.loc[selected]
         prevalence = inside[prevalence_column].to_numpy(dtype=float) / 1e4
         if not np.all(prevalence > 0.0):
             raise ValueError("anchor prevalences must be positive")
@@ -207,6 +215,19 @@ class SurveillanceAnchor:
             half_width=half_width,
             source=str(path),
             mid_years=tuple(int(y) for y in inside["mid_year"]),
+            window_births=(
+                np.asarray(
+                    [
+                        [
+                            births_by_year.get(int(mid) + offset, np.nan)
+                            for offset in range(-half_width, half_width + 1)
+                        ]
+                        for mid in inside["mid_year"]
+                    ]
+                )
+                if births_by_year is not None
+                else None
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -217,11 +238,14 @@ class SurveillanceAnchor:
             "n_windows": len(self.mid_year_idx),
             "log_prevalence": self.log_prevalence.tolist(),
             "prevalence_per10k": (np.exp(self.log_prevalence) * 1e4).tolist(),
-            # Overlapping windows are not independent observations. The birth-year
-            # span they jointly cover, divided by the window width, is the honest
-            # count: 17 five-year windows over 2000-2018 span 23 birth-years and
-            # so carry about 4.6 independent observations, not 17.
-            "effective_independent_windows": (
+            "window_weighting": "births"
+            if self.window_births is not None
+            else "equal_years_assumption",
+            "window_births": self.window_births.tolist()
+            if self.window_births is not None
+            else None,
+            # Describes coverage only. It is not an effective sample size.
+            "covered_span_in_window_widths": (
                 int(self.mid_year_idx.max() - self.mid_year_idx.min())
                 + 1
                 + 2 * self.half_width
@@ -443,8 +467,18 @@ class CoreReductionModelConfig:
             priors["panel_loading_estimated"] = (
                 hyperpriors.get("panel_loading_fixed") is None
             )
-            priors["panel_common_prevalence_trend_is_prior_only"] = (
-                float(hyperpriors.get("panel_prevalence_trend_sigma", 0.0)) > 0.0
+            priors["panel_common_prevalence_trend_estimated"] = (
+                float(
+                    hyperpriors.get(
+                        "panel_prevalence_trend_sigma",
+                        DEFAULT_PANEL_PREVALENCE_TREND_SIGMA,
+                    )
+                )
+                > 0.0
+            )
+            priors["panel_loading_scale"] = "log_odds_of_recording_sensitivity"
+            priors["panel_prevalence_trend_identification"] = (
+                "not identified by controls alone; joint DS likelihood may update the prior"
             )
         anchor_record: dict[str, Any] | None = None
         if anchor is not None:
@@ -674,15 +708,7 @@ def prepare_core_age_year_cells(
 
 def _check_core_cells(cells: pd.DataFrame, *, n_year: int, n_age: int) -> None:
     """Validate age-year cell bounds before model construction."""
-    for col, limit in {"year_idx": n_year, "age_idx": n_age}.items():
-        if not cells[col].between(0, limit - 1).all():
-            bad = cells.loc[~cells[col].between(0, limit - 1), col].unique()
-            raise ValueError(
-                f"{col} values out of range [0, {limit - 1}]: "
-                f"found {sorted(bad.tolist())!r}"
-            )
-    if (cells["R_cell"] > cells["N_cell"]).any():
-        raise ValueError("R_cell > N_cell in at least one core cell")
+    validate_cells(cells, n_year=n_year, n_age=n_age)
 
 
 def build_core_reduction_model(
@@ -700,6 +726,8 @@ def build_core_reduction_model(
     anchor_obs_sigma: float = DEFAULT_ANCHOR_OBS_SIGMA,
     anchor_obs_sigma_fixed: float | None = DEFAULT_ANCHOR_OBS_SIGMA_FIXED,
     anchor_forecast_flat: bool = False,
+    anchor_overlap_share: float = 1.0,
+    anchor_level_prior_prevalence: float = 0.0013,
     panel: AnomalyPanel | None = None,
     panel_prevalence_trend_sigma: float = DEFAULT_PANEL_PREVALENCE_TREND_SIGMA,
     panel_loading_sigma: float = DEFAULT_PANEL_LOADING_SIGMA,
@@ -708,60 +736,24 @@ def build_core_reduction_model(
     panel_condition_trend_sigma: float = DEFAULT_PANEL_CONDITION_TREND_SIGMA,
     panel_idiosyncratic_sigma: float = DEFAULT_PANEL_IDIOSYNCRATIC_SIGMA,
 ) -> Any:
-    """Build the PyMC core reduction-recording model.
+    """Build the DSP observation graph from validated aggregate cells.
 
-    With ``reduction_model='anchor'`` the year level is not sampled from the
-    reduction-rate CSV at all.  Instead a latent annual log Down-syndrome
-    live-birth prevalence follows a local linear trend, is observed through the
-    surveillance programmes' overlapping five-year window means, and sets
-    ``eta_year`` by the accounting identity
+    Prefer CoreFitSpecification for registered models: it keeps construction,
+    saved settings and reporting aligned. This lower-level interface remains
+    available for focused tests and explicitly declared sensitivity models.
 
-        eta_year = prevalence_year / Morris_expected_prevalence_year
+    Reduction is yearly, smoothly age-specific with a calibrated national
+    margin, or derived from surveillance-anchored annual prevalence. Recording
+    is constant, year-specific or certificate-version-specific. Post-anchor
+    drift and the anomaly panel are mutually exclusive recording extensions.
 
-    so the reduction becomes a *consequence* of an anchored prevalence rather
-    than an imported prior.  Years beyond the last observed window are forecast
-    by the same state equation, with intervals that widen as they should.
+    The anchored likelihood uses weighted window means and a declared working
+    residual covariance. Its scales, weighting, prior level and covariance are
+    assumptions. The panel shares log-odds changes in sensitivity, not exact
+    proportional changes. Neither extension establishes identification by itself.
 
-    The surveillance observation SD is **fixed** by default, at
-    ``DEFAULT_ANCHOR_OBS_SIGMA_FIXED``.  Passing ``anchor_obs_sigma_fixed=None``
-    estimates it instead, which both overstates precision and re-opens a
-    degenerate mode; see that constant's rationale before doing so.
-
-    ``recording_panel='anomaly'`` adds a *second observation channel* instead of
-    another prior.  Control conditions sharing the Down syndrome certificate item
-    but carrying no prenatal detection-and-termination channel are observed
-    through their own Binomial likelihood, and their common movement estimates how
-    the item's recording sensitivity changed.  Down syndrome is tied to it by a
-    loading, which the years covered by *both* a surveillance window and the panel
-    make estimable rather than purely prior-driven.
-
-    That is a genuine gain over ``recording_drift='post_anchor'``, whose split is
-    set by prior width alone, but it is not identification.  Two assumptions
-    survive and are represented as parameters rather than left implicit:
-
-    * ``panel_prevalence_trend_sigma`` — a true-prevalence trend *shared by every
-      control* is indistinguishable from a recording trend, because no comparison
-      inside the panel can see it.  Zero asserts the exclusion restriction
-      exactly; larger values move the model back towards ``DSP009``.
-    * ``panel_loading_sigma`` — how far Down syndrome recording is allowed to
-      depart from the item-wide factor.  Setting ``panel_loading_fixed=1.0``
-      imposes the strict shared-factor restriction, which the panel's own
-      internal disagreement argues against; it is a reportable corner, not the
-      default.
-
-    ``recording_drift='post_anchor'`` adds a random walk on ``logit s`` over
-    exactly those unanchored years.  Holding ``s`` constant there — what every
-    other anchored model does — means a falling recorded rate can only be read as
-    falling prevalence, so the allocation is decided by a modelling default
-    rather than by evidence.  The drift makes it an explicit prior instead.  It
-    does **not** identify the split: with no window to constrain the level, the
-    division between prevalence and recording is set by
-    ``priors.recording_s_drift_sigma`` against the anchor's own level and trend
-    variances.  Report the two corners with it —
-    ``recording_s_drift_sigma=0.0`` puts the whole decline on prevalence and
-    reproduces the undrifted fit exactly, and ``anchor_forecast_flat=True``
-    holds latent prevalence at its last anchored value and puts the whole
-    decline on recording.
+    The component equations live in core_components.py. See the model report
+    and notes/20260905-dsp-code-review-fixes.md for interpretation and validation.
     """
     import pymc as pm
     import pytensor.tensor as pt
@@ -776,6 +768,9 @@ def build_core_reduction_model(
     if reduction_model not in {"year", "year_age", "anchor"}:
         raise ValueError("reduction_model must be 'year', 'year_age' or 'anchor'")
     if reduction_model == "anchor":
+        probability_array(
+            [anchor_level_prior_prevalence], "anchor_level_prior_prevalence"
+        )
         if anchor is None:
             raise ValueError("reduction_model='anchor' requires a SurveillanceAnchor")
         for name, value in (
@@ -875,11 +870,22 @@ def build_core_reduction_model(
         raise ValueError("reduction_calibration_shift_logit must be finite")
     if cells.empty:
         raise ValueError("core model requires at least one age-year cell")
+    for column in ("year_idx", "age_idx", "N_cell", "R_cell"):
+        if column not in cells:
+            raise ValueError(f"core cells missing column: {column}")
+        integer_array(cells[column], column)
     if n_year is None:
-        n_year = int(cells.attrs.get("n_year", cells["year_idx"].max() + 1))
-    # An anchored fit does not consume the reduction prior, but the fit script
-    # still loads it so the report can contrast the superseded prior with the
-    # anchored posterior. Only require alignment, not presence.
+        n_year = cells.attrs.get("n_year", cells["year_idx"].max() + 1)
+    integer_array([n_year], "n_year", minimum=1)
+    n_year = int(n_year)
+    for name in ("recording_s_logit", "recording_s_sigma", "reduction_age_step_sigma"):
+        value = getattr(priors, name)
+        if not np.isfinite(value) or (name.endswith("sigma") and value <= 0):
+            raise ValueError(f"{name} must be finite and scales must be positive")
+    if not np.all(np.isfinite(priors.reduction_logit)):
+        raise ValueError("reduction_logit values must be finite")
+    # Anchored fits do not consume a reduction prior. Legacy callers may supply
+    # one as an unused external reference. Require alignment, not presence.
     require_reduction_prior = reduction_model != "anchor"
     if require_reduction_prior or len(priors.reduction_logit):
         if len(priors.reduction_logit) != n_year:
@@ -927,8 +933,8 @@ def build_core_reduction_model(
                 f"end of the {n_year}-year range; use an undrifted model instead"
             )
 
-    age_idx = cells["age_idx"].to_numpy()
-    year_idx = cells["year_idx"].to_numpy()
+    age_idx = integer_array(cells["age_idx"], "age_idx")
+    year_idx = integer_array(cells["year_idx"], "year_idx")
     n_cell = cells["N_cell"].to_numpy(dtype=float)
     r_cell = cells["R_cell"].to_numpy(dtype=int)
     revised_cell = (
@@ -952,14 +958,19 @@ def build_core_reduction_model(
             age_table["age_idx"].to_numpy(), np.arange(len(age_table))
         ):
             raise ValueError("exact-age cells must use contiguous age_idx values")
-        age_values = age_table["maternal_age"].to_numpy(dtype=int)
+        age_values = integer_array(age_table["maternal_age"], "maternal_age", minimum=1)
+        if np.any(np.diff(age_values) <= 0):
+            raise ValueError(
+                "maternal ages must be distinct and increasing with age_idx"
+            )
         theta = np.asarray(get_ds_lb_nt_probability_array(age_values), dtype=float)
     else:
-        theta = np.asarray(priors.theta_lb_age, dtype=float)
+        theta = probability_array(priors.theta_lb_age, "theta_lb_age")
         if len(theta) != N_AGE:
             raise ValueError(f"theta_lb_age must have length {N_AGE}")
         age_values = np.arange(N_AGE)
     n_age = len(theta)
+    _check_core_cells(cells, n_year=n_year, n_age=n_age)
     if reduction_model == "year_age" and n_age < 2:
         raise ValueError(
             "reduction_model='year_age' requires at least two maternal ages"
@@ -984,7 +995,9 @@ def build_core_reduction_model(
         coords["latent_year"] = np.arange(
             -anchor.half_width, n_year + anchor.half_width
         )
-        coords["anchor_window"] = np.asarray(anchor.mid_years, dtype=int)
+        coords["anchor_window"] = np.asarray(
+            anchor.mid_years or tuple(anchor.mid_year_idx), dtype=int
+        )
     if recording_panel == "anomaly":
         assert panel is not None
         coords["panel_year"] = np.asarray(panel.years, dtype=int)
@@ -1035,107 +1048,19 @@ def build_core_reduction_model(
         )
 
         if reduction_model == "anchor":
-            assert anchor is not None
-            pm.Data("natural_prevalence_year", natural_prevalence_year, dims="year")
-            half = anchor.half_width
-            width = 2 * half + 1
-
-            # Local linear trend on log prevalence, non-centred. The level
-            # innovation absorbs year-to-year variation; the slope innovation lets
-            # the trend itself drift, which is what makes the forecast interval
-            # widen rather than extrapolate one fixed gradient forever.
-            # Centred on the first observed window. 0.25 on the log scale is
-            # +-28% at one SD: weakly informative about the level, while keeping
-            # theta * eta a valid probability even in prior-predictive draws.
-            level_start = pm.Normal(
-                "anchor_log_level_start",
-                mu=float(anchor.log_prevalence[0]),
-                sigma=0.25,
+            eta_year = build_anchor_prevalence(
+                anchor,
+                n_year=n_year,
+                n_latent=n_latent,
+                natural_prevalence_year=natural_prevalence_year,
+                anchor_level_sigma=anchor_level_sigma,
+                anchor_trend_sigma=anchor_trend_sigma,
+                anchor_obs_sigma=anchor_obs_sigma,
+                anchor_obs_sigma_fixed=anchor_obs_sigma_fixed,
+                anchor_forecast_flat=anchor_forecast_flat,
+                anchor_overlap_share=anchor_overlap_share,
+                anchor_level_prior_prevalence=anchor_level_prior_prevalence,
             )
-            slope_start = pm.Normal(
-                "anchor_log_slope_start", mu=0.0, sigma=anchor_trend_sigma * 5.0
-            )
-            sigma_level = pm.HalfNormal("anchor_level_sigma", sigma=anchor_level_sigma)
-            sigma_trend = pm.HalfNormal("anchor_trend_sigma", sigma=anchor_trend_sigma)
-            level_innovation = pm.Normal(
-                "anchor_level_innovation_raw", mu=0.0, sigma=1.0, shape=n_latent - 1
-            )
-            trend_innovation = pm.Normal(
-                "anchor_trend_innovation_raw", mu=0.0, sigma=1.0, shape=n_latent - 1
-            )
-            slope = slope_start + pt.concatenate(
-                [pt.zeros((1,)), pt.cumsum(trend_innovation * sigma_trend)]
-            )
-            latent_increment = slope[:-1] + level_innovation * sigma_level
-            if anchor_forecast_flat:
-                # The corner opposite a drifting s: hold latent prevalence at its
-                # last anchored value so the whole post-window decline in the
-                # recorded rate has to be absorbed by recording. Increment j
-                # feeds latent year j + 1, so zeroing every increment from the
-                # last anchored latent index onward leaves the path flat from
-                # that year. Latent index i is model year i - half_width, hence
-                # the 2 * half offset.
-                last_anchored_latent_idx = int(anchor.mid_year_idx.max()) + 2 * half
-                latent_increment = latent_increment * pt.as_tensor_variable(
-                    (np.arange(n_latent - 1) < last_anchored_latent_idx).astype(float)
-                )
-            log_prevalence_latent = pm.Deterministic(
-                "anchor_log_prevalence_latent",
-                level_start
-                + pt.concatenate([pt.zeros((1,)), pt.cumsum(latent_increment)]),
-                dims="latent_year",
-            )
-            prevalence_latent = pt.exp(log_prevalence_latent)
-
-            # Each window constrains the mean of its five latent years. Averaging
-            # inside the observation equation is what makes overlapping windows
-            # share latent years instead of double-counting evidence.
-            window_starts = anchor.mid_year_idx  # latent index of window start
-            window_means = pt.stack(
-                [
-                    prevalence_latent[start : start + width].mean()
-                    for start in window_starts
-                ]
-            )
-            pm.Deterministic(
-                "anchor_window_prevalence", window_means, dims="anchor_window"
-            )
-            # Estimating the observation SD measures only whether the windows are
-            # mutually consistent with a smooth path -- it cannot measure whether
-            # the surveillance programmes' prevalences are *accurate*, because the
-            # workbook supplies no uncertainty. Fixing it larger is therefore the
-            # honest sensitivity axis, not a wider prior (which the data would
-            # simply overrule).
-            if anchor_obs_sigma_fixed is None:
-                sigma_obs: Any = pm.HalfNormal(
-                    "anchor_obs_sigma", sigma=anchor_obs_sigma
-                )
-            else:
-                sigma_obs = anchor_obs_sigma_fixed
-                pm.Deterministic(
-                    "anchor_obs_sigma", pt.as_tensor_variable(anchor_obs_sigma_fixed)
-                )
-            pm.Normal(
-                "anchor_obs",
-                mu=pt.log(window_means),
-                sigma=sigma_obs,
-                observed=anchor.log_prevalence,
-                dims="anchor_window",
-            )
-
-            prevalence_year = pm.Deterministic(
-                "prevalence_year",
-                prevalence_latent[half : half + n_year],
-                dims="year",
-            )
-            # The accounting identity: reduction is whatever reconciles an
-            # anchored prevalence with the Morris no-reduction expectation.
-            eta_year = pm.Deterministic(
-                "eta_year",
-                prevalence_year / natural_prevalence_year,
-                dims="year",
-            )
-            pm.Deterministic("rho_year", 1.0 - eta_year, dims="year")
             rho_year_age = None
             rho_logit = None
         else:
@@ -1174,368 +1099,27 @@ def build_core_reduction_model(
                 eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
                 rho_year_age = None
             else:
-                rho_year_anchor = pm.Deterministic(
-                    "rho_year_anchor", pm.math.invlogit(rho_logit), dims="year"
-                )
-                rho_age_step = pm.Normal(
-                    "rho_age_step",
-                    mu=0.0,
-                    sigma=priors.reduction_age_step_sigma * age_step_scale,
-                    dims="age_step",
-                )
-                rho_age_offset_uncentred = pt.concatenate(
-                    [pt.zeros((1,), dtype=rho_age_step.dtype), pt.cumsum(rho_age_step)]
-                )
-                rho_age_offset = pm.Deterministic(
-                    "rho_age_offset",
-                    rho_age_offset_uncentred - rho_age_offset_uncentred.mean(),
-                    dims="age",
+                rho_year_age, eta_year = build_age_reduction(
+                    rho_logit, natural_weight, age_step_scale, priors
                 )
 
-                # Calibrate a separate intercept for each year so the smooth age
-                # curve preserves the sampled surveillance-informed national
-                # reduction margin. The weights are expected DS births absent
-                # prenatal reduction: N(year, age) * Morris(age).
-                rho_year_intercept = rho_logit
-                for _ in range(12):
-                    rho_candidate = pm.math.invlogit(
-                        rho_year_intercept[:, None] + rho_age_offset[None, :]
-                    )
-                    margin_residual = (natural_weight * rho_candidate).sum(
-                        axis=1
-                    ) - rho_year_anchor
-                    margin_derivative = (
-                        natural_weight * rho_candidate * (1.0 - rho_candidate)
-                    ).sum(axis=1)
-                    rho_year_intercept = (
-                        rho_year_intercept
-                        - margin_residual / pt.maximum(margin_derivative, 1e-12)
-                    )
-                rho_year_intercept = pm.Deterministic(
-                    "rho_year_intercept", rho_year_intercept, dims="year"
-                )
-                rho_year_age = pm.Deterministic(
-                    "rho_year_age",
-                    pm.math.invlogit(
-                        rho_year_intercept[:, None] + rho_age_offset[None, :]
-                    ),
-                    dims=("year", "age"),
-                )
-                rho_year = pm.Deterministic(
-                    "rho_year",
-                    (natural_weight * rho_year_age).sum(axis=1),
-                    dims="year",
-                )
-                pm.Deterministic(
-                    "rho_year_margin_error",
-                    rho_year - rho_year_anchor,
-                    dims="year",
-                )
-                eta_year = pm.Deterministic("eta_year", 1.0 - rho_year, dims="year")
-                pm.Deterministic(
-                    "eta_year_age", 1.0 - rho_year_age, dims=("year", "age")
-                )
-
-        s_logit = pm.Normal(
-            "recording_s_logit",
-            mu=priors.recording_s_logit,
-            sigma=priors.recording_s_sigma,
+        recording_s_year, s_cell = build_recording(
+            priors,
+            n_year=n_year,
+            n_drift_year=n_drift_year,
+            recording_model=recording_model,
+            recording_drift=recording_drift,
+            recording_panel=recording_panel,
+            panel=panel,
+            panel_factor_sigma=panel_factor_sigma,
+            panel_prevalence_trend_sigma=panel_prevalence_trend_sigma,
+            panel_condition_trend_sigma=panel_condition_trend_sigma,
+            panel_idiosyncratic_sigma=panel_idiosyncratic_sigma,
+            panel_loading_sigma=panel_loading_sigma,
+            panel_loading_fixed=panel_loading_fixed,
+            year_idx=year_idx,
+            revised_cell=revised_cell,
         )
-        recording_s = pm.Deterministic("recording_s", pm.math.invlogit(s_logit))
-
-        # ``recording_s`` stays the anchored-era level in every model, drifted or
-        # not, so it remains directly comparable across the family. The drift is
-        # carried as a separate per-year logit offset that is exactly zero while
-        # the anchor still speaks.
-        s_drift_logit: Any = None
-        if recording_drift == "post_anchor" and priors.recording_s_drift_sigma > 0.0:
-            drift_innovation = pm.Normal(
-                "recording_s_drift_innovation_raw",
-                mu=0.0,
-                sigma=1.0,
-                shape=n_drift_year,
-            )
-            s_drift_logit = pm.Deterministic(
-                "recording_s_drift_logit",
-                pt.concatenate(
-                    [
-                        pt.zeros((n_year - n_drift_year,)),
-                        pt.cumsum(drift_innovation * priors.recording_s_drift_sigma),
-                    ]
-                ),
-                dims="year",
-            )
-        # The anomaly panel: a second observation channel on conditions that share
-        # the Down syndrome certificate item but have no reduction channel, so
-        # their common movement reads as the item's recording sensitivity.
-        s_panel_logit: Any = None
-        if recording_panel == "anomaly":
-            assert panel is not None
-            n_panel_year = panel.n_year
-            years_since_reference = panel.years_since_reference
-            reference_idx = panel.reference_year_idx
-            reference_share = panel.expected_share[reference_idx]
-
-            # Maternal-age composition, centred on the reference year, so the
-            # level parameter is a reference-year level and this offset carries
-            # only composition *change*.
-            log_composition = np.log(
-                panel.expected_share / reference_share[np.newaxis, :]
-            )
-            # Any externally known true-prevalence trend, entered as a fixed
-            # offset rather than estimated. Zero for every curated control today:
-            # pinning these against published surveillance is the open input.
-            known_log_trend = (
-                years_since_reference[:, np.newaxis]
-                * panel.true_trend_log_per_year[np.newaxis, :]
-            )
-
-            condition_level = pm.Normal(
-                "panel_condition_logit_level",
-                mu=logit(reference_share),
-                sigma=1.0,
-                dims="panel_condition",
-            )
-
-            # The common log-rate change across the controls. This is the part the
-            # panel *measures*: what every control did together, relative to the
-            # reference year. Modelled as a random walk so it interpolates smoothly
-            # rather than fitting one free effect per year.
-            #
-            # The innovation scale is FIXED, not estimated. Estimating it makes the
-            # common change carry its own adaptive shrinkage towards zero, which
-            # then competes with the shrinkage on the per-condition deviations
-            # below -- and since the two are confounded, the posterior splits the
-            # controls' common movement wherever those two priors happen to
-            # balance rather than where the data put it. Measured: an estimated
-            # scale moved the fitted common change from -10.0% to -4.6% while the
-            # total across factor and deviations stayed put. The common change is
-            # the estimand, so it must not be shrunk; only the deviations may be.
-            common_innovation = pm.Normal(
-                "panel_common_innovation_raw",
-                mu=0.0,
-                sigma=1.0,
-                shape=n_panel_year - 1,
-            )
-            common_walk = pt.concatenate(
-                [
-                    pt.zeros((1,)),
-                    pt.cumsum(common_innovation * panel_factor_sigma),
-                ]
-            )
-            common_log_change = pm.Deterministic(
-                "panel_common_log_change",
-                common_walk - common_walk[reference_idx],
-                dims="panel_year",
-            )
-
-            # The one thing the panel cannot see: a true-prevalence trend shared
-            # by every control. It is perfectly confounded with a common recording
-            # trend, so it is carried as a prior and *subtracted* rather than being
-            # allowed to compete with the walk for the same signal. Keeping the
-            # data-driven and prior-driven parts in separate parameters also keeps
-            # the geometry clean -- there is no ridge for the sampler to wander.
-            if panel_prevalence_trend_sigma > 0.0:
-                prevalence_trend: Any = pm.Normal(
-                    "panel_prevalence_trend",
-                    mu=0.0,
-                    sigma=panel_prevalence_trend_sigma,
-                )
-            else:
-                prevalence_trend = pt.zeros(())
-                pm.Deterministic("panel_prevalence_trend", prevalence_trend)
-
-            # What is left is the shared *recording* factor, which is the whole
-            # point of the panel.
-            panel_recording_log_factor = pm.Deterministic(
-                "panel_recording_log_factor",
-                common_log_change - prevalence_trend * years_since_reference,
-                dims="panel_year",
-            )
-            pm.Deterministic(
-                "panel_recording_factor_ratio",
-                pt.exp(panel_recording_log_factor[-1]),
-            )
-            pm.Deterministic("panel_common_change_ratio", pt.exp(common_log_change[-1]))
-
-            # Per-condition trend deviations: a hierarchical random effect with an
-            # *estimated* scale, deliberately NOT centred to sum to zero.
-            #
-            # Hard centring would assert that the controls' own trends average
-            # exactly to the item-wide factor -- that these four hand-picked
-            # conditions are interchangeable measurements of one thing. They are
-            # not: the load-time heterogeneity statistic puts I-squared near 90%
-            # with a between-condition SD around 0.012 log per year. Centring
-            # returns a common factor with an SD near 1.7% where a random-effects
-            # treatment of the same data gives about 4%, which is the fixed-effect
-            # fallacy and exactly the kind of unsupported precision this family has
-            # been bitten by before (see DEFAULT_ANCHOR_OBS_SIGMA_FIXED).
-            #
-            # Leaving the deviations uncentred means the common trend is confounded
-            # with their mean, and the prior resolves it: with n conditions the
-            # common trend inherits an extra uncertainty of scale / sqrt(n). That
-            # is the widening the disagreement earns.
-            condition_trend_scale = pm.HalfNormal(
-                "panel_condition_trend_scale", sigma=panel_condition_trend_sigma
-            )
-            condition_trend_raw = pm.Normal(
-                "panel_condition_trend_raw",
-                mu=0.0,
-                sigma=1.0,
-                dims="panel_condition",
-            )
-            condition_trend = pm.Deterministic(
-                "panel_condition_trend",
-                condition_trend_raw * condition_trend_scale,
-                dims="panel_condition",
-            )
-            # The quantity the common trend is confounded with. Reporting it makes
-            # the confounding legible instead of buried in the parameterisation:
-            # if it sits far from zero, the control set is lop-sided and the
-            # "common" factor is carrying a shared quirk.
-            pm.Deterministic("panel_condition_trend_mean", condition_trend.mean())
-
-            panel_idiosyncratic_scale = pm.HalfNormal(
-                "panel_idiosyncratic_scale", sigma=panel_idiosyncratic_sigma
-            )
-            idiosyncratic_raw = pm.Normal(
-                "panel_idiosyncratic_raw",
-                mu=0.0,
-                sigma=1.0,
-                dims=("panel_year", "panel_condition"),
-            )
-
-            # Rates here are of order 5e-4, so a logit-scale offset is a
-            # multiplicative change in the rate to within the rate itself.
-            panel_logit = (
-                condition_level[np.newaxis, :]
-                + log_composition
-                + known_log_trend
-                + common_log_change[:, np.newaxis]
-                + condition_trend[np.newaxis, :] * years_since_reference[:, np.newaxis]
-                + idiosyncratic_raw * panel_idiosyncratic_scale
-            )
-            panel_rate = pm.Deterministic(
-                "panel_condition_rate",
-                pm.math.invlogit(panel_logit),
-                dims=("panel_year", "panel_condition"),
-            )
-            pm.Binomial(
-                "panel_obs",
-                n=np.repeat(
-                    panel.births[:, np.newaxis].astype("int64"),
-                    panel.n_condition,
-                    axis=1,
-                ),
-                p=panel_rate,
-                observed=panel.flags.astype("int64"),
-                dims=("panel_year", "panel_condition"),
-            )
-
-            # Down syndrome's loading on the item-wide factor. A value of 1 is the
-            # strict shared-factor restriction; the years covered by both a
-            # surveillance window and the panel are what make it estimable.
-            if panel_loading_fixed is None:
-                loading: Any = pm.Normal(
-                    "panel_loading_ds", mu=1.0, sigma=panel_loading_sigma
-                )
-            else:
-                loading = pt.as_tensor_variable(float(panel_loading_fixed))
-                pm.Deterministic("panel_loading_ds", loading)
-
-            # Scatter the panel years back onto the model's year coordinate. A
-            # fixed 0/1 selection matrix rather than ``set_subtensor``: it is the
-            # same idiom as ``year_by_cell_n``, and it avoids a pytensor rewrite
-            # that fails noisily on every compile when a scalar is added to a
-            # sparse write. Years before the panel starts stay at zero, so
-            # ``recording_s`` keeps its meaning as the reference-year revised level
-            # and stays comparable across the family.
-            panel_year_selector = np.zeros((n_year, n_panel_year))
-            panel_year_selector[panel.year_idx, np.arange(n_panel_year)] = 1.0
-            s_panel_logit = pm.Deterministic(
-                "recording_s_panel_logit",
-                loading * pt.dot(panel_year_selector, panel_recording_log_factor),
-                dims="year",
-            )
-
-        s_year_logit_offset = None
-        for offset in (s_drift_logit, s_panel_logit):
-            if offset is not None:
-                s_year_logit_offset = (
-                    offset
-                    if s_year_logit_offset is None
-                    else s_year_logit_offset + offset
-                )
-        s_logit_year = (
-            s_logit if s_year_logit_offset is None else s_logit + s_year_logit_offset
-        )
-        # Keep the undrifted, unpanelled graph byte-identical to what it was before
-        # either existed, so a zero drift sigma reproduces the parent model exactly.
-        recording_s_year_value = (
-            pt.ones((n_year,)) * recording_s
-            if s_year_logit_offset is None
-            else pm.math.invlogit(s_logit_year)
-        )
-
-        if recording_model == "revision":
-            # ``recording_s`` is the revised-certificate sensitivity, so it stays
-            # directly comparable with fits confined to 2016 onward where every
-            # record is revised. The unrevised sensitivity is a logit offset from
-            # it, identified by years in which both certificate versions are in
-            # use. Sum-to-zero centring would be wrong here: the two levels are
-            # distinguishable measurement regimes, not exchangeable groups.
-            s_unrevised_offset = pm.Normal(
-                "recording_s_unrevised_offset",
-                mu=0.0,
-                sigma=priors.recording_s_sigma,
-            )
-            pm.Deterministic(
-                "recording_s_unrevised",
-                pm.math.invlogit(s_logit + s_unrevised_offset),
-            )
-            recording_s_year = pm.Deterministic(
-                "recording_s_year",
-                recording_s_year_value,
-                dims="year",
-            )
-        elif recording_model == "constant":
-            recording_s_year = pm.Deterministic(
-                "recording_s_year",
-                recording_s_year_value,
-                dims="year",
-            )
-        else:
-            s_year_offset_raw = pm.Normal(
-                "recording_s_year_offset_raw",
-                mu=0.0,
-                sigma=priors.recording_s_year_sigma,
-                dims="year",
-            )
-            s_year_offset = pm.Deterministic(
-                "recording_s_year_offset",
-                s_year_offset_raw - s_year_offset_raw.mean(),
-                dims="year",
-            )
-            recording_s_year = pm.Deterministic(
-                "recording_s_year",
-                pm.math.invlogit(s_logit + s_year_offset),
-                dims="year",
-            )
-
-        if s_drift_logit is not None:
-            # The headline the drift exists to report: how far the final modelled
-            # year's revised sensitivity has moved from its anchored-era level.
-            # A value below 1 means recording has taken part of the recorded-rate
-            # decline that an undrifted fit books entirely as falling prevalence.
-            pm.Deterministic(
-                "recording_s_drift_ratio", recording_s_year[-1] / recording_s
-            )
-        if s_panel_logit is not None:
-            # The panel's counterpart of that headline, on the same scale, so the
-            # prior-driven and panel-driven allocations can be read side by side.
-            pm.Deterministic(
-                "recording_s_panel_ratio", recording_s_year[-1] / recording_s
-            )
 
         p_ds_lb_overshoot = None
         if rho_year_age is None:
@@ -1548,33 +1132,13 @@ def build_core_reduction_model(
                 # prevalence exceeds the Morris no-reduction expectation, which is
                 # a real diagnostic.
                 #
-                # But a clip is flat, so wherever it binds those cells contribute
-                # no gradient in eta. In the DSP009 fit that exposed the anchor-off
-                # mode, it bound in 16% of cells, which removed exactly the
-                # restoring force that would have pushed eta back down. The clip
-                # did not create that mode -- it is a genuine, much worse local
-                # basin, about 291 log units down, reachable once a free
-                # observation SD lets the anchor be discarded -- but the flat
-                # region helped hold a chain there. The barrier below restores a
-                # gradient that actively expels one.
+                # The clip loses its gradient outside the valid region. The
+                # penalty below discourages that region without excluding rho<0.
                 p_ds_lb_overshoot = p_ds_lb_value - 1.0
                 p_ds_lb_value = pt.clip(p_ds_lb_value, 1e-12, 1.0 - 1e-9)
         else:
             p_ds_lb_value = theta[age_idx] * (1.0 - rho_year_age[year_idx, age_idx])
         p_ds_lb = pm.Deterministic("p_ds_lb", p_ds_lb_value, dims="cell")
-        if recording_model == "revision":
-            # The drift and the panel factor both shift the two certificate
-            # versions together: they model the certificate's recording behaviour
-            # over time, not a change in the gap between the versions. Unrevised
-            # records only exist before 2016, so in practice both terms are zero
-            # wherever ``revised_cell`` is 0 -- the drift because those years are
-            # anchored, the panel because it starts at 2016 by construction.
-            s_cell = pm.math.invlogit(
-                (s_logit if s_year_logit_offset is None else s_logit_year[year_idx])
-                + s_unrevised_offset * (1.0 - revised_cell)
-            )
-        else:
-            s_cell = recording_s_year[year_idx]
         p_recorded = pm.Deterministic(
             "p_recorded",
             p_ds_lb * s_cell + (1.0 - p_ds_lb) * priors.false_positive_rate,
@@ -1593,6 +1157,13 @@ def build_core_reduction_model(
         )
         pm.Deterministic("true_count_total", pt.dot(n_cell, p_ds_lb))
 
+        # Expected burden, not the unknown realised number of cases. Keep the
+        # old variable names as aliases for existing analysis scripts.
+        pm.Deterministic(
+            "expected_ds_count_year", model["true_count_year"], dims="year"
+        )
+        pm.Deterministic("expected_ds_count_total", model["true_count_total"])
+
         if p_ds_lb_overshoot is not None:
             # Smooth barrier replacing the clip's lost gradient. softplus(k*x)/k is
             # ~0 for x well below zero and ~x well above, so this is inert while
@@ -1606,6 +1177,7 @@ def build_core_reduction_model(
             pm.Potential(
                 "p_ds_lb_overshoot_barrier", -ANCHOR_OVERSHOOT_PENALTY * overshoot
             )
+            model.dsp_prior_log_weight = "p_ds_lb_overshoot_barrier"
 
         pm.Binomial(
             "R_obs",
