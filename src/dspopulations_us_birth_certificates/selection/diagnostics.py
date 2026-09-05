@@ -893,10 +893,17 @@ def convergence_health(
     *,
     rhat_threshold: float = 1.01,
     ess_threshold: float = 400.0,
+    constant_names: tuple[str, ...] = (),
 ) -> dict:
     """Roll up Rhat / ESS from an ``az.summary`` frame to a pass/fail dict."""
+    summary = summary.loc[
+        [str(name).split("[")[0] not in constant_names for name in summary.index]
+    ]
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     ess_cols = [c for c in ("ess_bulk", "ess_tail") if c in summary.columns]
+    columns = [rhat_col, "ess_bulk", "ess_tail"]
+    finite = bool(len(summary) and all(c in summary for c in columns))
+    finite = finite and bool(np.isfinite(summary[columns].to_numpy(dtype=float)).all())
     max_rhat = (
         float(summary[rhat_col].max()) if rhat_col in summary.columns else float("nan")
     )
@@ -910,5 +917,6 @@ def convergence_health(
         "ess_threshold": ess_threshold,
         "rhat_ok": rhat_ok,
         "ess_ok": ess_ok,
-        "all_ok": rhat_ok and ess_ok,
+        "finite_diagnostics": finite,
+        "all_ok": finite and rhat_ok and ess_ok,
     }

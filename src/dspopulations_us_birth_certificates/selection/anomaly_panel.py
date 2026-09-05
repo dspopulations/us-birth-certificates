@@ -33,6 +33,11 @@ import duckdb
 import numpy as np
 import pandas as pd
 
+from dspopulations_us_birth_certificates.selection.core_validation import (
+    integer_array,
+    probability_array,
+)
+
 DEFAULT_ANOMALY_CONDITIONS_CSV = Path("data/us-births-anomaly-panel-conditions.csv")
 
 # Every record carries the revised congenital-anomaly item only from 2016; before
@@ -54,7 +59,7 @@ DEFAULT_PANEL_FROM_YEAR = 2016
 DEFAULT_PANEL_PREVALENCE_TREND_SIGMA = 0.004
 
 # Prior SD on the Down syndrome loading, centred on 1. A loading of 1 is the
-# strict shared-factor restriction: DS recording moves exactly with the item. The
+# shared log-odds restriction: DS sensitivity odds move with the panel factor. The
 # anchored panel years inform it, so this is a starting point rather than the
 # answer, but it must be wide enough not to force the restriction -- the note's
 # CCHD counter-example shows a single item-wide factor is refuted for at least one
@@ -190,6 +195,23 @@ class AnomalyPanel:
     excluded: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
+        if np.asarray(self.flags).ndim != 2:
+            raise ValueError("flags must be a year-by-condition matrix")
+        integer_array(self.flags, "panel flags")
+        integer_array(self.births, "panel births", minimum=1)
+        indices = integer_array(self.year_idx, "panel year_idx")
+        years = integer_array(self.years, "panel years")
+        if len(years) < 2:
+            raise ValueError("the panel needs at least two years")
+        if len(set(self.condition)) != len(self.condition):
+            raise ValueError("panel condition names must be distinct")
+        if len(years) != len(indices) or not np.all(
+            years - indices == years[0] - indices[0]
+        ):
+            raise ValueError("panel calendar years must align with model indices")
+        if not np.all(np.isfinite(self.true_trend_log_per_year)):
+            raise ValueError("panel true trends must be finite")
+        probability_array(self.expected_share, "expected_share")
         n_year, n_condition = self.flags.shape
         if n_condition != len(self.condition):
             raise ValueError("flags columns must align with the condition names")
@@ -253,6 +275,10 @@ class AnomalyPanel:
             "conditions": list(self.condition),
             "labels": list(self.labels),
             "years": list(self.years),
+            "year_idx": self.year_idx.tolist(),
+            "flags": self.flags.tolist(),
+            "births": self.births.tolist(),
+            "expected_share": self.expected_share.tolist(),
             "reference_year": int(self.years[self.reference_year_idx]),
             "n_condition": self.n_condition,
             "n_year": self.n_year,
@@ -282,8 +308,9 @@ def panel_heterogeneity(
     controls agree on, and the fit's interval should be read accordingly.
 
     Poisson counting error is the only within-condition uncertainty used here.
-    That understates the true within-condition error, which makes this a
-    conservative -- lower -- estimate of the disagreement.
+    Omitting other within-condition error can inflate Q and I-squared.
+    These are descriptive checks under the counting-error assumption, not a
+    lower bound on heterogeneity or a test of the panel's causal assumptions.
     """
     n_year = panel.n_year
     span = int(min(span_years, n_year // 2))

@@ -23,6 +23,10 @@ from dspopulations_us_birth_certificates.selection.priors import AGE_LEVELS, log
 
 
 def test_prior_rho_table_reports_shifted_marginals_and_source_anchor() -> None:
+    from scipy.integrate import quad
+    from scipy.special import expit
+    from scipy.stats import norm
+
     source = np.array([0.35, 0.40])
     shift = 0.2
     table = _prior_rho_table(
@@ -37,7 +41,11 @@ def test_prior_rho_table_reports_shifted_marginals_and_source_anchor() -> None:
     )
 
     expected = 1.0 / (1.0 + np.exp(-(logit(source) + shift)))
-    assert table["rho_prior_mean"].to_numpy() == pytest.approx(expected)
+    means = [
+        quad(lambda x, mu=mu, sd=sd: expit(mu + sd * x) * norm.pdf(x), -10, 10)[0]
+        for mu, sd in zip(logit(source) + shift, [0.20, 0.45], strict=True)
+    ]
+    assert table["rho_prior_mean"].to_numpy() == pytest.approx(means)
     assert table["rho_prior_centre"].to_numpy() == pytest.approx(expected)
     assert table["rho_surveillance_anchor_mean"].to_numpy() == pytest.approx(source)
     assert (table["reduction_calibration_shift_logit"] == shift).all()
