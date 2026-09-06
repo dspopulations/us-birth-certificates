@@ -65,7 +65,7 @@ environments = [
 
 [tool.uv.sources]
 # dse-research-utils isn't published to PyPI — resolve it from the public git tag.
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.12.5" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.13.0" }
 # Local-dev override — to develop against a sibling checkout of research (note
 # the ../../ — this repo lives under dspopulations/, not dseinternational/),
 # comment the git line above and uncomment this instead:
