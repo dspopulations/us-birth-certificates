@@ -561,7 +561,11 @@ def test_selection_artefacts_are_replaced_atomically(tmp_path: Path) -> None:
         "run_config.json",
     }
     assert manifest_payload["packages"]["pymc"] is not None
-    assert len(manifest_payload["lockfile_sha256"]) == 64
+    assert all(
+        len(digest) == 64 for digest in manifest_payload["artefact_sha256"].values()
+    )
+    if Path("uv.lock").is_file():
+        assert len(manifest_payload["lockfile_sha256"]) == 64
 
 
 def test_save_summary_keeps_the_index(tmp_path: Path) -> None:
