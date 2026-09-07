@@ -3,6 +3,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from dse_research_utils.plot.io import save_styled_figure
 from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
 
@@ -21,11 +22,25 @@ def save_fig(
     arrays actually rendered on the plot. Keeping image and data at the
     same stem lets readers re-plot or validate the figure without re-running
     the upstream pipeline.
+
+    Delegates to the shared house saver, which writes the same three files at
+    the same stem with the same tight bounding box, the caller's ``dpi`` and
+    an unindexed CSV. ``close=False`` keeps this project's contract that the
+    caller still owns the figure. The shared saver additionally creates
+    ``output_dir`` if it is missing, and drops the SVG sibling with a warning
+    rather than raising if the SVG backend fails, so a failure there no
+    longer costs the PNG that was already written.
     """
-    fig.savefig(f"{output_dir}/{file_name}.png", dpi=dpi, bbox_inches="tight")
-    fig.savefig(f"{output_dir}/{file_name}.svg", bbox_inches="tight")
-    if data is not None:
-        data.to_csv(f"{output_dir}/{file_name}.csv", index=False)
+    save_styled_figure(
+        output_dir,
+        file_name,
+        fig=fig,
+        dpi=dpi,
+        bbox_inches="tight",
+        close=False,
+        svg=True,
+        data=data,
+    )
 
 
 def plot_roc_curve(

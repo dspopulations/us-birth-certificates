@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.cluster import hierarchy
+from dse_research_utils.ml.feature_groups import linkage_from_dissimilarity
 from scipy.spatial.distance import squareform
 from scipy.stats import kurtosis, shapiro, skew, spearmanr
 from sklearn.feature_selection import mutual_info_regression
@@ -355,7 +355,11 @@ def distance_corr_dissimilarity_linkage(X):
     """
     dissim, _ = distance_corr_dissimilarity(X)
     condensed = squareform(dissim)
-    linkage = hierarchy.linkage(condensed, method="average")
+    # ``linkage_from_dissimilarity`` re-condenses the square matrix itself and
+    # validates it (finite, nonnegative, exactly symmetric, zero diagonal)
+    # before running the same average-linkage clustering. ``condensed`` is
+    # still returned because callers use it directly.
+    linkage = linkage_from_dissimilarity(dissim, method="average")
     return dissim, condensed, linkage
 
 

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import importlib.metadata
 import json
 import platform
 import shutil
@@ -12,7 +10,13 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from dse_research_utils.metadata.provenance import package_versions, sha256_file
+
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.file_io import (
+    write_atomically,
+    write_text_atomically,
+)
 from dspopulations_us_birth_certificates.selection.config import FitContext
 
 DOCS_TEMPLATE_ROOT = Path("docs/models")
@@ -28,6 +32,11 @@ def save_artefacts(context: FitContext, output_dir: Path) -> None:
             cells.parquet
             config.json
             run_config.json
+
+    The JSON files are replaced atomically, so a reader picking up a run
+    directory never sees a truncated config or manifest. ``idata.nc`` and
+    ``cells.parquet`` are written by their own libraries and are unchanged;
+    the manifest is written last and hashes the files it names.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -37,61 +46,57 @@ def save_artefacts(context: FitContext, output_dir: Path) -> None:
     if context.cells is not None:
         context.cells.to_parquet(output_dir / "cells.parquet", index=False)
 
-    (output_dir / "config.json").write_text(
+    write_text_atomically(
+        output_dir / "config.json",
         json.dumps(context.config.to_dict(), indent=2),
         encoding="utf-8",
     )
-    (output_dir / "run_config.json").write_text(
+    write_text_atomically(
+        output_dir / "run_config.json",
         json.dumps(asdict(context.run_config), indent=2),
         encoding="utf-8",
     )
     manifest = fit_manifest(context, output_dir)
-    (output_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
+    write_text_atomically(
+        output_dir / "manifest.json",
+        json.dumps(manifest, indent=2),
+        encoding="utf-8",
     )
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def fit_manifest(context: FitContext, output_dir: Path) -> dict:
     """Fingerprint actual likelihood inputs and code, without publishing records."""
 
+    # ``worktree_changes`` records the raw porcelain listing, which the shared
+    # ``git_snapshot`` deliberately does not expose (it returns no local paths).
+    # Keeping this local preserves the manifest field as written.
     def git(*args):
         result = subprocess.run(
             ["git", *args], capture_output=True, text=True, check=False
         )
         return result.stdout.strip() if result.returncode == 0 else None
 
-    versions = {}
-    for package in (
-        "pymc",
-        "pytensor",
-        "nutpie",
-        "arviz",
-        "numpy",
-        "scipy",
-        "dse-research-utils",
-    ):
-        try:
-            versions[package] = importlib.metadata.version(package)
-        except importlib.metadata.PackageNotFoundError:
-            versions[package] = None
+    versions = package_versions(
+        (
+            "pymc",
+            "pytensor",
+            "nutpie",
+            "arviz",
+            "numpy",
+            "scipy",
+            "dse-research-utils",
+        )
+    )
     files = {}
     for name in ("cells.parquet", "config.json", "run_config.json"):
         path = output_dir / name
         if path.is_file():
-            files[name] = _sha256(path)
+            files[name] = sha256_file(path)
     source_files = {}
     for root in (Path("src"), Path("scripts")):
         if root.is_dir():
             source_files.update(
-                {str(path): _sha256(path) for path in sorted(root.rglob("*.py"))}
+                {str(path): sha256_file(path) for path in sorted(root.rglob("*.py"))}
             )
     config = context.config.to_dict()
     inputs = {}
@@ -101,7 +106,7 @@ def fit_manifest(context: FitContext, output_dir: Path) -> dict:
         (config.get("anomaly_panel") or {}).get("conditions_source"),
     ):
         if candidate and Path(candidate).is_file():
-            inputs[str(candidate)] = _sha256(Path(candidate))
+            inputs[str(candidate)] = sha256_file(candidate)
     attrs = getattr(context.idata, "attrs", {})
     return {
         "schema_version": 1,
@@ -117,7 +122,7 @@ def fit_manifest(context: FitContext, output_dir: Path) -> dict:
         "artefact_sha256": files,
         "source_sha256": source_files,
         "input_sha256": inputs,
-        "lockfile_sha256": _sha256(Path("uv.lock"))
+        "lockfile_sha256": sha256_file("uv.lock")
         if Path("uv.lock").is_file()
         else None,
         "validation_file": "validation.json",
@@ -126,9 +131,9 @@ def fit_manifest(context: FitContext, output_dir: Path) -> dict:
 
 
 def save_summary(summary: Any, output_dir: Path, *, name: str = "summary.csv") -> None:
-    """Write an ``az.summary`` DataFrame to CSV."""
+    """Write an ``az.summary`` DataFrame to CSV, index included, atomically."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    summary.to_csv(output_dir / name)
+    write_atomically(output_dir / name, summary.to_csv)
 
 
 def latest_fit_dir(

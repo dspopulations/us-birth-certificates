@@ -8,13 +8,14 @@ on true Down-syndrome livebirth rates.
 from __future__ import annotations
 
 import json
-from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy.cluster import hierarchy
+from dse_research_utils.ml.feature_groups import (
+    feature_groups_from_linkage as _shared_feature_groups_from_linkage,
+)
 
 DEFAULT_GROUP_DISTANCE_THRESHOLD = 0.30
 
@@ -123,30 +124,27 @@ def feature_groups_from_linkage(
 
     ``distance_threshold=0.30`` corresponds to distance-correlation greater
     than about 0.70, matching the existing feature-pruning rationale.
+
+    The cut is delegated to the shared helper, which validates the linkage
+    structure and returns SciPy's own cluster labels. This project keeps its
+    ``cluster_NN`` identifiers, which number the groups by their first
+    feature in ``feature_names`` — the ordering the grouped-importance table
+    and its ``group`` column have always used.
     """
     names = list(feature_names)
-    if not names:
-        return {}
-    if len(names) == 1:
-        return {f"{prefix}_01": names}
+    if len(names) < 2:
+        # No tree is needed for zero or one feature, and callers have never
+        # been required to supply a well-formed linkage in that case.
+        linkage_matrix = np.empty((max(len(names) - 1, 0), 4), dtype=np.float64)
 
-    labels = hierarchy.fcluster(
+    groups = _shared_feature_groups_from_linkage(
+        names,
         linkage_matrix,
-        t=distance_threshold,
-        criterion="distance",
-    )
-    by_label: dict[int, list[str]] = defaultdict(list)
-    for name, label in zip(names, labels, strict=True):
-        by_label[int(label)].append(name)
-
-    index = {name: i for i, name in enumerate(names)}
-    ordered_groups = sorted(
-        by_label.values(),
-        key=lambda cols: min(index[c] for c in cols),
+        threshold=distance_threshold,
     )
     return {
-        f"{prefix}_{i:02d}": sorted(cols, key=index.__getitem__)
-        for i, cols in enumerate(ordered_groups, start=1)
+        f"{prefix}_{i:02d}": members
+        for i, members in enumerate(groups.values(), start=1)
     }
 
 

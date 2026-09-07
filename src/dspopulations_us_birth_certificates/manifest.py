@@ -20,16 +20,17 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
-import subprocess
 import sys
 from dataclasses import asdict
 from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+from dse_research_utils.metadata.provenance import git_snapshot, package_versions
+
+from dspopulations_us_birth_certificates.file_io import write_text_atomically
 
 if TYPE_CHECKING:
     from dspopulations_us_birth_certificates.models.common import ModelFitContext
@@ -61,44 +62,32 @@ def _default_repo_root() -> Path:
 
 
 def _git_info(repo_root: Path | None = None) -> dict[str, Any]:
-    """Return git SHA and dirty flag. Silent fallback when git isn't available."""
+    """Return git SHA, branch and dirty flag. Silent fallback when unavailable.
+
+    The facts come from ``provenance.git_snapshot``, which reads them from one
+    bounded ``git status`` call. The manifest keeps its own three fields, and
+    an unavailable repository still gives all-``None`` as before. ``dirty``
+    still counts untracked files and ignores ignored ones.
+
+    One value changes: a detached HEAD used to record the literal string
+    ``"HEAD"`` from ``rev-parse --abbrev-ref``. It now records ``None``,
+    because there is no branch. ``sha`` is unaffected.
+    """
     if repo_root is None:
         repo_root = _default_repo_root()
-    cwd = str(repo_root)
-    try:
-        sha = (
-            subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=cwd, stderr=subprocess.DEVNULL
-            )
-            .decode()
-            .strip()
-        )
-        status = subprocess.check_output(
-            ["git", "status", "--porcelain"], cwd=cwd, stderr=subprocess.DEVNULL
-        ).decode()
-        branch = (
-            subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=cwd,
-                stderr=subprocess.DEVNULL,
-            )
-            .decode()
-            .strip()
-        )
-        return {"sha": sha, "branch": branch, "dirty": bool(status.strip())}
-    except subprocess.CalledProcessError, FileNotFoundError:
+    snapshot = git_snapshot(repo_root)
+    if snapshot.state == "unavailable":
         return {"sha": None, "branch": None, "dirty": None}
+    return {
+        "sha": snapshot.commit,
+        "branch": snapshot.branch,
+        "dirty": snapshot.dirty,
+    }
 
 
 def _package_versions() -> dict[str, str | None]:
     """Version for each tracked package, or None if not installed."""
-    out: dict[str, str | None] = {}
-    for pkg in _TRACKED_PACKAGES:
-        try:
-            out[pkg] = version(pkg)
-        except PackageNotFoundError:
-            out[pkg] = None
-    return out
+    return package_versions(_TRACKED_PACKAGES)
 
 
 def _environment_snapshot() -> dict[str, Any]:
@@ -151,7 +140,9 @@ def write_manifest(
 ) -> Path:
     """Serialise a run manifest to ``output_dir/manifest.json``.
 
-    Returns the path written. Existing manifests are overwritten.
+    Returns the path written. Existing manifests are overwritten, through a
+    temporary sibling and one rename, so a concurrent reader sees either the
+    old manifest or the new one and never a truncated file.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -173,6 +164,6 @@ def write_manifest(
     if extra:
         manifest["extra"] = extra
 
-    path = output_dir / "manifest.json"
-    path.write_text(json.dumps(manifest, indent=2))
-    return path
+    return write_text_atomically(
+        output_dir / "manifest.json", json.dumps(manifest, indent=2)
+    )

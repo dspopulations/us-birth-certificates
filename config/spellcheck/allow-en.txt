@@ -123,6 +123,7 @@ MCSEs
 microdata
 missingness
 multicollinearity
+nonfinite
 nonnegative
 nutpie
 overfit
@@ -150,6 +151,7 @@ terciles
 thresholded
 trendline
 trendlines
+unindexed
 unlabeled
 vars
 WAIC
