@@ -1,10 +1,20 @@
-"""Project-wide posterior interval conventions."""
+"""Project-wide posterior interval conventions.
+
+The reduction itself is delegated to
+``dse_research_utils.statistics.array_intervals.equal_tail_interval``; this
+module keeps the project's own decisions on top of it — the coverage
+restriction, the default NaN policy, the column labels and the *mean*-based
+posterior summary.
+"""
 
 from __future__ import annotations
 
 from statistics import NormalDist
 
 import numpy as np
+from dse_research_utils.statistics.array_intervals import (
+    equal_tail_interval as _shared_equal_tail_interval,
+)
 
 DEFAULT_INTERVAL_PROB = 0.89
 DEFAULT_HPDI_PROB = DEFAULT_INTERVAL_PROB
@@ -45,10 +55,34 @@ def equal_tail_interval(
     axis=None,
     nan: bool = False,
 ):
-    """Return lower/upper bounds for an equal-tail interval."""
-    lo_q, hi_q = eti_quantiles(prob)
-    quantile = np.nanquantile if nan else np.quantile
-    return quantile(draws, lo_q, axis=axis), quantile(draws, hi_q, axis=axis)
+    """Return lower/upper bounds for an equal-tail interval.
+
+    Thin wrapper over the shared axis-aware reduction. What stays local:
+
+    - the coverage restriction ``0 < prob < 1`` (the shared helper also
+      accepts ``prob=1``, which this project has never used);
+    - the NaN policy — ``nan=False`` propagates NaNs into the bounds (the
+      default), ``nan=True`` omits them, matching the previous
+      ``np.quantile``/``np.nanquantile`` pair. Infinities are retained by
+      both, as before;
+    - the scalar return for a full reduction, so ``axis=None`` still yields
+      ``np.float64`` rather than a 0-d array.
+
+    Two contracts come from the shared helper. Samples are converted to
+    float64, so a float32 input no longer returns float32 bounds; and an
+    empty (or entirely omitted) slice returns NaN bounds instead of raising.
+    """
+    # Keeps this project's coverage restriction; the shared helper allows 1.0.
+    interval_tail_probability(prob)
+    lo, hi = _shared_equal_tail_interval(
+        draws,
+        prob=prob,
+        axis=axis,
+        nonfinite="omit_nan" if nan else "propagate",
+    )
+    if lo.ndim == 0:
+        return lo[()], hi[()]
+    return lo, hi
 
 
 def posterior_mean_eti(

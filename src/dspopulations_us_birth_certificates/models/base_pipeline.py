@@ -20,8 +20,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy.cluster import hierarchy
-from scipy.spatial.distance import squareform
+from dse_research_utils.ml.feature_groups import linkage_from_dissimilarity
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     average_precision_score,
@@ -65,11 +64,10 @@ def _distance_corr_linkage(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Distance-correlation dissimilarity + its hierarchical linkage for feature grouping."""
     distance, corr = stats_utils.distance_corr_dissimilarity(X_eval)
-    if X_eval.shape[1] > 1:
-        condensed = squareform(distance, checks=True)
-        linkage = hierarchy.linkage(condensed, method="average")
-    else:
-        linkage = np.empty((0, 4))
+    # The shared helper validates the square matrix, condenses it and applies
+    # the same average linkage, and returns an empty ``(0, 4)`` matrix for a
+    # single feature — the shape this function already produced.
+    linkage = linkage_from_dissimilarity(distance, method="average")
     return distance, corr, linkage
 
 

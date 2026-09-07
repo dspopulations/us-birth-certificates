@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from dse_research_utils.ml.permutation import heldout_permutation_deltas
 from sklearn.metrics import (
     average_precision_score,
     log_loss,
@@ -338,7 +339,9 @@ def group_permutation_importance(
         Must implement predict_proba(X) -> (n,2) or predict(X) -> (n,).
         Your LGBMWrapper works.
     X : DataFrame
-        Evaluation data.
+        Evaluation data. Every row is held out and scored; the explanation
+        sample built by ``build_explain_set`` defines that population and
+        its prevalence.
     y : Series/array
         Labels (0/1).
     groups : dict
@@ -356,67 +359,44 @@ def group_permutation_importance(
     -------
     DataFrame with mean/std importance per group (higher = more important).
     Importance is measured as decrease in score when permuted: (baseline - permuted).
+
+    Notes
+    -----
+    The evaluation is delegated to
+    ``dse_research_utils.ml.permutation.heldout_permutation_deltas``. This
+    wrapper owns every project decision it needs:
+
+    - the donor plans, drawn sequentially group-by-group then repeat-by-repeat
+      from ``np.random.default_rng(random_state)``, so a seed reproduces the
+      previous permutations exactly;
+    - dropping features absent from ``X`` and skipping groups left empty,
+      before any random number is drawn for them;
+    - the positive-class probability column, the average-precision scorer and
+      the ``higher_is_better`` direction that makes a positive importance a
+      *decrease* in score;
+    - the output schema, group identifiers, descending rank and the
+      ``ddof=1`` standard deviation (0.0 for a single repeat).
+
+    The shared evaluator scores in float64 and permutes through the column's
+    own array, so categorical and nullable dtypes survive a permutation
+    instead of being flattened by ``to_numpy()``.
     """
     rng = np.random.default_rng(random_state)
 
-    # baseline score
-    if use_predict_proba:
-        p = estimator.predict_proba(X)[:, 1]
-        baseline = scorer(y, p)
-    else:
-        pred = estimator.predict(X)
-        baseline = scorer(y, pred)
-
-    results = []
-    X_work = X.copy()
-
+    column_blocks: dict[str, list[str]] = {}
+    donor_indices: dict[str, np.ndarray] = {}
     for gname, cols in groups.items():
         cols = [c for c in cols if c in X.columns]
         if len(cols) == 0:
             continue
+        column_blocks[gname] = cols
+        # One permutation per repeat, applied to every column in the group.
+        plan = np.empty((n_repeats, len(X)), dtype=np.intp)
+        for repeat in range(n_repeats):
+            plan[repeat] = rng.permutation(len(X))
+        donor_indices[gname] = plan
 
-        drops = []
-        for _ in range(n_repeats):
-            # Permute rows consistently across the whole group
-            perm = rng.permutation(len(X_work))
-
-            # Apply permutation to each column in the group
-            X_perm = X_work.copy()
-            for c in cols:
-                source = X_work[c]
-                values = source.to_numpy()[perm]
-                if isinstance(source.dtype, pd.CategoricalDtype):
-                    X_perm[c] = pd.Categorical(
-                        values,
-                        categories=source.cat.categories,
-                        ordered=source.cat.ordered,
-                    )
-                else:
-                    X_perm[c] = values
-
-            if use_predict_proba:
-                p_perm = estimator.predict_proba(X_perm)[:, 1]
-                score_perm = scorer(y, p_perm)
-            else:
-                pred_perm = estimator.predict(X_perm)
-                score_perm = scorer(y, pred_perm)
-
-            drops.append(baseline - score_perm)
-
-        results.append(
-            {
-                "group": gname,
-                "n_features": len(cols),
-                "features": cols,
-                "baseline_score": baseline,
-                "importance_mean": float(np.mean(drops)),
-                "importance_std": (
-                    float(np.std(drops, ddof=1)) if n_repeats > 1 else 0.0
-                ),
-            }
-        )
-
-    if not results:
+    if not column_blocks:
         return pd.DataFrame(
             columns=[
                 "rank",
@@ -428,6 +408,39 @@ def group_permutation_importance(
                 "importance_std",
             ]
         )
+
+    def _predict(fitted, frame: pd.DataFrame) -> np.ndarray:
+        if use_predict_proba:
+            return fitted.predict_proba(frame)[:, 1]
+        return fitted.predict(frame)
+
+    def _score(target: np.ndarray, prediction: np.ndarray) -> float:
+        return float(scorer(target, prediction))
+
+    result = heldout_permutation_deltas(
+        estimator,
+        X,
+        np.asarray(y),
+        column_blocks,
+        donor_indices=donor_indices,
+        predict=_predict,
+        score=_score,
+        score_direction="higher_is_better",
+    )
+
+    results = [
+        {
+            "group": gname,
+            "n_features": len(cols),
+            "features": cols,
+            "baseline_score": result.baseline_score,
+            "importance_mean": float(np.mean(result.deltas[gname])),
+            "importance_std": (
+                float(np.std(result.deltas[gname], ddof=1)) if n_repeats > 1 else 0.0
+            ),
+        }
+        for gname, cols in column_blocks.items()
+    ]
 
     out = pd.DataFrame(results).sort_values("importance_mean", ascending=False)
     out = out.reset_index(drop=True)

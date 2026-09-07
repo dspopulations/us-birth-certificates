@@ -12,13 +12,13 @@ display toggle.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
+from dse_research_utils.plot.io import save_styled_figure
 from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
@@ -49,9 +49,10 @@ def shap_importance(explanation: shap.Explanation, feature_names) -> pd.DataFram
 
 
 def _save_fig(fig: Figure, output_dir: str, file_stem: str) -> None:
-    os.makedirs(output_dir, exist_ok=True)
-    fig.savefig(f"{output_dir}/{file_stem}.png", dpi=300, bbox_inches="tight")
-    fig.savefig(f"{output_dir}/{file_stem}.svg", bbox_inches="tight")
+    """PNG + SVG at 300 dpi, leaving the figure open for the caller to close."""
+    save_styled_figure(
+        output_dir, file_stem, fig=fig, dpi=300, bbox_inches="tight", close=False
+    )
 
 
 def plot_bar(
