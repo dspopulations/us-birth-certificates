@@ -133,6 +133,7 @@ parameterises
 softplus
 docstrings
 pred
+preliz
 pymc
 pyproject
 pytensor

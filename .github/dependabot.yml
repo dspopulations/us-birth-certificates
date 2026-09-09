@@ -17,15 +17,15 @@ updates:
       # unsolvable widenings — as it did in
       # dseinternational/language-reading-predictors#467.
       #
-      # numpy: pytensor 3.3.0 pins numba <=0.66.0 and numba 0.66.0 still pins
-      # numpy <2.5, so 2.5 is unreachable for anything depending on pymc. Remove
-      # once a pytensor release admits numba 0.67 (which allows numpy <2.6).
+      # numpy: pytensor 3.3.1 pins numba <=0.67.0 and numba 0.67.0 pins
+      # numpy <2.6, so 2.6 is unreachable for anything depending on pymc. Remove
+      # once a pytensor release admits the numba that allows numpy 2.6.
       - dependency-name: "numpy"
-        versions: [">=2.5.0"]
+        versions: [">=2.6.0"]
       # numba: belt and braces. pytensor now owns this ceiling upstream, so the
       # rule only stops Dependabot proposing a bump the solver would reject.
       - dependency-name: "numba"
-        versions: [">0.66.0"]
+        versions: [">0.67.0"]
     assignees:
       - "frankbuckley"
 
