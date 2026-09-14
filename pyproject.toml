@@ -63,9 +63,16 @@ environments = [
   "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]
 
+# Two ceilings constrain a `uv lock --upgrade` here, and neither is stated in
+# this file: pytensor 3.3.1 pins numba <=0.67.0, and numba 0.67.0 pins
+# numpy <2.6. So numpy 2.6 and numba >0.67 are unreachable for anything
+# depending on pymc — a solve that appears to offer them is unsolvable, not an
+# opportunity. They lift when a pytensor release admits a newer numba. (This
+# note used to live in `.github/dependabot.yml`, removed with Dependabot.)
+
 [tool.uv.sources]
 # dse-research-utils isn't published to PyPI — resolve it from the public git tag.
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.15.0" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.15.1" }
 # Local-dev override — to develop against a sibling checkout of research (note
 # the ../../ — this repo lives under dspopulations/, not dseinternational/),
 # comment the git line above and uncomment this instead:

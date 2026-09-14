@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
 
@@ -64,7 +64,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libomp
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
 
