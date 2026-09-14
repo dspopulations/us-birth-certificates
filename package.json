@@ -17,7 +17,7 @@
     "node": ">=24 <25"
   },
   "devDependencies": {
-    "cspell": "10.2.2"
+    "cspell": "10.3.0"
   },
   "scripts": {
     "spellcheck": "cspell --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
