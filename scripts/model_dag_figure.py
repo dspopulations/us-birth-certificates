@@ -50,8 +50,9 @@ NODES = [
         26.0,
         12.0,
         "free",
+        # Unicode script N keeps this label in Noto Sans Math; mathcal uses upright N.
         r"$\mathrm{logit}\,\rho_y \sim"
-        r" \mathcal{N}(\mathrm{logit}\,r_y,\ \sigma_y)$",
+        r" 𝒩(\mathrm{logit}\,r_y,\ \sigma_y)$",
         "surveillance prior, 9 free",
     ),
     ("s", 76.0, 82.0, 21.0, 12.0, "free", r"$s$", "weak prior, 1 free"),

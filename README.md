@@ -1,3 +1,6 @@
+> [!NOTE]
+> AI-assisted update by Codex (GPT-6).
+
 # Characteristics of babies born with Down syndrome -- an exploratory data analysis of US birth certificate data
 
 > [!WARNING]
@@ -54,6 +57,32 @@ Two system-level prerequisites are not Python packages and are not installed by 
 #### Creating reports
 
 TODO
+
+#### Plot fonts
+
+The shared plot style uses Noto Sans for text and Noto Sans Math for mathematics.
+Install both fonts on machines that render research figures. They are system
+fonts, so `uv sync` does not install them.
+
+```bash
+# macOS
+brew install --cask font-noto-sans font-noto-sans-math
+# Debian or Ubuntu
+sudo apt install fonts-noto-core
+```
+
+On Windows, install [Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans)
+and [Noto Sans Math](https://fonts.google.com/noto/specimen/Noto+Sans+Math).
+If matplotlib was used before installation, remove `fontlist-*.json` from the
+directory printed by `uv run python -c "import matplotlib; print(matplotlib.get_cachedir())"`
+and restart running notebook kernels.
+
+The shared style uses Noto Sans Math and DejaVu Sans for symbols absent from the
+text font. Without the Noto fonts, figures use fallback fonts and can look
+different. The local `notebook.mplstyle` keeps its smaller text and narrow font
+choices, with DejaVu Sans as a symbol fallback. See the
+[0.16.0 migration notes](https://github.com/dseinternational/research/blob/v0.16.2/docs/migrating-to-0.16.md)
+and [0.16.1 symbol fix](https://github.com/dseinternational/research/blob/v0.16.2/docs/migrating-to-0.16.1.md).
 
 ## Data preparation
 
