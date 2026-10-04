@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Reporting outputs for the core reduction-recording model."""
 
 from __future__ import annotations
@@ -9,9 +12,15 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from dse_research_utils.plot.io import save_styled_figure
+from dse_research_utils.statistics.transforms import invlogit
 
 from dspopulations_us_birth_certificates.chance import (
     get_ds_lb_nt_probability_array,
+)
+from dspopulations_us_birth_certificates.file_io import (
+    write_atomically,
+    write_text_atomically,
 )
 from dspopulations_us_birth_certificates.intervals import (
     DEFAULT_ETI_PROB,
@@ -25,7 +34,7 @@ DEFAULT_INTERVAL_PROB = DEFAULT_ETI_PROB
 
 
 def _inv_logit(x: np.ndarray | float) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-np.asarray(x, dtype=float)))
+    return invlogit(np.asarray(x, dtype=float))
 
 
 def _summary(
@@ -62,17 +71,16 @@ def _plot_path(out_dir: Path, stem: str, suffix: str) -> Path:
 def _save_figure(fig, out_dir: Path, stem: str) -> None:
     import matplotlib.pyplot as plt
 
-    plots_dir = out_dir / "plots"
-    plots_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(_plot_path(out_dir, stem, "png"), dpi=150, bbox_inches="tight")
+    save_styled_figure(
+        out_dir / "plots", stem, fig=fig, dpi=150, bbox_inches="tight", svg=False, close=False
+    )
+    # SVG is required here; preserve failure propagation and close after success.
     fig.savefig(_plot_path(out_dir, stem, "svg"), bbox_inches="tight")
     plt.close(fig)
 
 
 def _write_table(df: pd.DataFrame, out_dir: Path, stem: str) -> None:
-    tables_dir = out_dir / "tables"
-    tables_dir.mkdir(parents=True, exist_ok=True)
-    df.to_csv(_table_path(out_dir, stem), index=False)
+    write_atomically(_table_path(out_dir, stem), lambda path: df.to_csv(path, index=False))
 
 
 def _interval_yerr(mean: np.ndarray, lo: np.ndarray, hi: np.ndarray) -> np.ndarray:
@@ -1220,7 +1228,8 @@ def render_core_all(
     (out_dir / "plots").mkdir(parents=True, exist_ok=True)
     (out_dir / "tables").mkdir(parents=True, exist_ok=True)
     model_config = _report_model(idata, model_config)
-    (out_dir / "report_metadata.json").write_text(
+    write_text_atomically(
+        out_dir / "report_metadata.json",
         json.dumps(
             {
                 "model": model_config,

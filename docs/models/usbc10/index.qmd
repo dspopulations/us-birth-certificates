@@ -15,27 +15,30 @@ execute:
   warning: false
 ---
 
+::: {.callout-note title="AI-assisted"}
+Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
+:::
+
 ```{python}
 #| label: load-artefacts
-import json
 from pathlib import Path
 
 import pandas as pd
+from dspopulations_us_birth_certificates.report_readers import read_csv_artefact, read_json_artefact
 
-try:
-    config = json.loads(Path("config.json").read_text())
-except FileNotFoundError:
-    config = {"model_id": "<not yet rendered from a run>"}
 
-try:
-    metrics = json.loads(Path("metrics.json").read_text())
-except FileNotFoundError:
-    metrics = {}
+def load_json(path, missing):
+    return read_json_artefact(path, missing=missing)
 
-try:
-    manifest = json.loads(Path("manifest.json").read_text())
-except FileNotFoundError:
-    manifest = {}
+
+def load_table(path):
+    return read_csv_artefact(path, missing=f"{path.name} not present.")
+
+config = load_json(Path("config.json"), {"model_id": "<not yet rendered from a run>"})
+
+metrics = load_json(Path("metrics.json"), {})
+
+manifest = load_json(Path("manifest.json"), {})
 
 run_config = manifest.get("run_config", {})
 git = manifest.get("git", {}) or {}
@@ -110,7 +113,7 @@ else:
 ```{python}
 #| label: pr-at-k
 path = Path("precision_recall_at_k.csv")
-pd.read_csv(path) if path.is_file() else "precision_recall_at_k.csv not present."
+load_table(path)
 ```
 
 ## Calibration (top tail)
@@ -118,7 +121,7 @@ pd.read_csv(path) if path.is_file() else "precision_recall_at_k.csv not present.
 ```{python}
 #| label: calibration-tail
 path = Path("calibration_tail.csv")
-pd.read_csv(path) if path.is_file() else "calibration_tail.csv not present."
+load_table(path)
 ```
 
 # Feature importance
@@ -128,7 +131,8 @@ pd.read_csv(path) if path.is_file() else "calibration_tail.csv not present."
 ```{python}
 #| label: gain-importance
 path = Path("feature_importance_gain.csv")
-pd.read_csv(path).head(25) if path.is_file() else "feature_importance_gain.csv not present."
+table = load_table(path)
+table.head(25) if isinstance(table, pd.DataFrame) else table
 ```
 
 ## Permutation importance
@@ -136,7 +140,8 @@ pd.read_csv(path).head(25) if path.is_file() else "feature_importance_gain.csv n
 ```{python}
 #| label: permutation-importance
 path = Path("permutation_importance.csv")
-pd.read_csv(path).head(25) if path.is_file() else "permutation_importance.csv not present."
+table = load_table(path)
+table.head(25) if isinstance(table, pd.DataFrame) else table
 ```
 
 ## SHAP importance
@@ -144,7 +149,8 @@ pd.read_csv(path).head(25) if path.is_file() else "permutation_importance.csv no
 ```{python}
 #| label: shap-importance
 path = Path("shap_importance.csv")
-pd.read_csv(path).head(25) if path.is_file() else "shap_importance.csv not present."
+table = load_table(path)
+table.head(25) if isinstance(table, pd.DataFrame) else table
 ```
 
 # Plots

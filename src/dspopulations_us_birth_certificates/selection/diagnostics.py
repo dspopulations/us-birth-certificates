@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Posterior diagnostics for the three-stage selection model.
 
 Each function takes a fitted ``xr.DataTree`` plus (where relevant)
@@ -43,6 +46,7 @@ import pandas as pd
 from dspopulations_us_birth_certificates.intervals import (
     DEFAULT_ETI_PROB,
     DEFAULT_HPDI_PROB,
+    equal_tail_interval,
     interval_label,
     interval_percent,
     posterior_mean_eti,
@@ -71,11 +75,6 @@ def _styles():
     import dse_research_utils.plot.styles as plot_styles
 
     return plot_styles
-
-
-def _quantile(arr: np.ndarray, q: float) -> np.ndarray:
-    """Chain+draw quantile along the leading two axes."""
-    return np.quantile(arr.reshape(-1, *arr.shape[2:]), q, axis=0)
 
 
 def _draw_summary(arr: np.ndarray) -> dict[str, float]:
@@ -195,10 +194,9 @@ def _eta_term_year_stats(
         raise ValueError(
             "InferenceData is missing 'eta_term_year' — fit with spec='full'."
         )
-    year_arr = np.asarray(post["eta_term_year"].values)  # (chain, draw, year)
+    year_arr = np.asarray(post["eta_term_year"].transpose("chain", "draw", ...).values)  # (chain, draw, year)
     mean = year_arr.mean(axis=(0, 1))
-    lo = _quantile(year_arr, (1 - hdi_prob) / 2)
-    hi = _quantile(year_arr, 1 - (1 - hdi_prob) / 2)
+    lo, hi = equal_tail_interval(year_arr, prob=hdi_prob, axis=(0, 1))
     return mean, lo, hi
 
 
@@ -224,12 +222,11 @@ def _age_curve_stats(
 
     Shared by :func:`age_curve_check` and :func:`age_curve_table`.
     """
-    theta_logit = np.asarray(idata.posterior["theta_lb_age"].values)  # (c, d, age)
+    theta_logit = np.asarray(idata.posterior["theta_lb_age"].transpose("chain", "draw", ...).values)  # (c, d, age)
     theta = inv_logit(theta_logit) * 1000.0  # per 1,000 livebirths
     n_age = theta.shape[-1]
     mean = theta.mean(axis=(0, 1))
-    lo = _quantile(theta, (1 - hdi_prob) / 2)
-    hi = _quantile(theta, 1 - (1 - hdi_prob) / 2)
+    lo, hi = equal_tail_interval(theta, prob=hdi_prob, axis=(0, 1))
     morris = MORRIS_THETA_LB_PER_1000[:n_age]
     return mean, lo, hi, morris
 
@@ -592,7 +589,7 @@ def posterior_predictive_by_stratum(
     styles = _styles()
     if stratum_col not in cells.columns:
         raise KeyError(f"{stratum_col!r} not in cells frame")
-    p_rec = np.asarray(idata.posterior["p_recorded"].values)  # (c, d, cell)
+    p_rec = np.asarray(idata.posterior["p_recorded"].transpose("chain", "draw", ...).values)  # (c, d, cell)
     N = cells["N_cell"].to_numpy(dtype=float)
     R = cells["R_cell"].to_numpy(dtype=float)
     strata = cells[stratum_col].to_numpy()
@@ -609,8 +606,7 @@ def posterior_predictive_by_stratum(
         cell_sum = pred_counts[..., mask].sum(axis=-1)
         flat = cell_sum.ravel()
         mean[i] = float(flat.mean())
-        lo[i] = float(np.quantile(flat, (1 - hdi_prob) / 2))
-        hi[i] = float(np.quantile(flat, 1 - (1 - hdi_prob) / 2))
+        lo[i], hi[i] = equal_tail_interval(flat, prob=hdi_prob)
         observed[i] = float(R[mask].sum())
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)

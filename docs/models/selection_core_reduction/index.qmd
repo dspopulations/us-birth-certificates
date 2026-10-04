@@ -10,6 +10,10 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Drafted by a LLM-based AI tool (Codex/GPT-5).
 :::
 
@@ -23,17 +27,17 @@ Numerical validation does not validate the external-data assumptions.
 
 ```{python}
 #| echo: false
-import json
 from pathlib import Path
 
 import pandas as pd
+from dspopulations_us_birth_certificates.report_readers import read_csv_artefact, read_json_artefact
 from IPython.display import Image, Markdown, display
 
-config = json.loads(Path("config.json").read_text())
-run_config = json.loads(Path("run_config.json").read_text())
+config = read_json_artefact(Path("config.json"))
+run_config = read_json_artefact(Path("run_config.json"))
 validation_path = Path("validation.json")
 validation = (
-    json.loads(validation_path.read_text())
+    read_json_artefact(validation_path)
     if validation_path.is_file()
     else {"status": "unvalidated_legacy", "failures": ["No saved validation"]}
 )
@@ -93,8 +97,8 @@ aliases. New outputs also use expected_ds_count_year and expected_ds_count_total
 
 ```{python}
 #| echo: false
-display(pd.read_csv("tables/core_headlines.csv").round(4))
-accounting = pd.read_csv("tables/core_accounting_by_year.csv")
+display(read_csv_artefact("tables/core_headlines.csv").round(4))
+accounting = read_csv_artefact("tables/core_accounting_by_year.csv")
 columns = [
     "year", "births", "recorded_ds", "natural_expected_ds", "rho_year_mean",
     "expected_ds_count_year_mean", "expected_ds_count_year_lo",
@@ -118,7 +122,7 @@ The proposal count and acceptance rate are stored in the manifest.
 
 ```{python}
 #| echo: false
-reduction = pd.read_csv("tables/core_reduction_prior_posterior.csv")
+reduction = read_csv_artefact("tables/core_reduction_prior_posterior.csv")
 columns = [
     "year", "rho_prior_mean", "rho_prior_centre", "rho_prior_lo", "rho_prior_hi",
     "rho_prior_source", "rho_year_mean", "rho_year_lo", "rho_year_hi",
@@ -178,8 +182,8 @@ panel structure.
 
 ```{python}
 #| echo: false
-display(pd.read_csv("tables/core_recording_s.csv").round(4))
-display(pd.read_csv("tables/core_recording_s_by_year.csv").round(4))
+display(read_csv_artefact("tables/core_recording_s.csv").round(4))
+display(read_csv_artefact("tables/core_recording_s_by_year.csv").round(4))
 ```
 
 ![Recording sensitivity by year](plots/core_recording_s_by_year.png)
@@ -215,7 +219,7 @@ for stem in (
     plot = Path("plots") / f"{stem}.png"
     if table.is_file():
         display(Markdown("### " + stem.replace("core_", "").replace("_", " ")))
-        display(pd.read_csv(table).round(3))
+        display(read_csv_artefact(table).round(3))
     if plot.is_file():
         display(Image(filename=str(plot)))
 ```
