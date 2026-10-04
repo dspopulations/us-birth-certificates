@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from dse_research_utils.statistics.diagnostics import bfmi_per_chain
 
 from dspopulations_us_birth_certificates.file_io import write_text_atomically
 from dspopulations_us_birth_certificates.selection.diagnostics import (
@@ -24,8 +25,6 @@ def validate_fit(idata, model, *, margin_tolerance: float = 1e-9):
     external-data assumptions. Undefined diagnostics are exempted only for
     known deterministic constants, never for free parameters.
     """
-    import arviz as az
-
     free = [variable.name for variable in model.free_RVs]
     focal = [
         name
@@ -74,8 +73,9 @@ def validate_fit(idata, model, *, margin_tolerance: float = 1e-9):
         divergences = int(stats["diverging"].sum())
         if divergences:
             failures.append("divergent transitions after warmup")
-    if stats is not None and "energy" in stats:
-        bfmi = np.atleast_1d(az.bfmi(stats["energy"])).astype(float).tolist()
+    energy_values = bfmi_per_chain(idata)
+    if energy_values:
+        bfmi = energy_values
         if not np.all(np.isfinite(bfmi)) or np.any(np.asarray(bfmi) < 0.3):
             failures.append("energy diagnostic BFMI below 0.3 or undefined")
     else:

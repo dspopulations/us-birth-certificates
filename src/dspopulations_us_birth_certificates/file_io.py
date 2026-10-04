@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Atomic artefact writes that keep this project's file permissions.
 
 ``dse_research_utils.storage.files.atomic_write`` writes through a sibling
@@ -12,26 +15,28 @@ rely on. These wrappers restore that mode before the file is moved into place.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from pathlib import Path
 
 from dse_research_utils.storage.files import atomic_write
+from dse_research_utils.storage.files import (
+    default_file_mode as _shared_default_file_mode,
+)
 
 _FILE_MODE: int | None = None
 
 
-def default_file_mode() -> int:
+def default_file_mode(directory: Path | str = ".") -> int:
     """Permission bits a plain ``write_text`` would give a newly created file.
 
-    The umask can only be read by setting it, so it is read — and immediately
-    restored — once, then cached for the life of the process.
+    The shared probe reads ordinary creation permissions in ``directory``
+    without changing the process umask. This project retains the first mode
+    for the life of the process. The no-argument compatibility call probes
+    the current directory.
     """
     global _FILE_MODE
     if _FILE_MODE is None:
-        mask = os.umask(0o022)
-        os.umask(mask)
-        _FILE_MODE = 0o666 & ~mask
+        _FILE_MODE = _shared_default_file_mode(directory)
     return _FILE_MODE
 
 
@@ -41,7 +46,7 @@ def write_atomically(path: Path | str, writer: Callable[[Path], object]) -> Path
 
     def _write(temporary: Path) -> None:
         writer(temporary)
-        temporary.chmod(default_file_mode())
+        temporary.chmod(default_file_mode(temporary.parent))
 
     atomic_write(destination, _write)
     return destination

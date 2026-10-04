@@ -42,6 +42,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from dse_research_utils.statistics.diagnostics import diagnostic_extrema
 
 from dspopulations_us_birth_certificates.intervals import (
     DEFAULT_ETI_PROB,
@@ -896,14 +897,12 @@ def convergence_health(
         [str(name).split("[")[0] not in constant_names for name in summary.index]
     ]
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
-    ess_cols = [c for c in ("ess_bulk", "ess_tail") if c in summary.columns]
-    columns = [rhat_col, "ess_bulk", "ess_tail"]
-    finite = bool(len(summary) and all(c in summary for c in columns))
-    finite = finite and bool(np.isfinite(summary[columns].to_numpy(dtype=float)).all())
-    max_rhat = (
-        float(summary[rhat_col].max()) if rhat_col in summary.columns else float("nan")
-    )
-    min_ess = float(summary[ess_cols].min().min()) if ess_cols else float("nan")
+    if len(summary):
+        canonical = summary.rename(columns={"rhat": "r_hat"}) if rhat_col == "rhat" else summary
+        max_rhat, min_ess, unavailable = diagnostic_extrema(canonical)
+        finite = not unavailable
+    else:
+        max_rhat, min_ess, finite = float("nan"), float("nan"), False
     rhat_ok = max_rhat < rhat_threshold if max_rhat == max_rhat else False
     ess_ok = min_ess >= ess_threshold if min_ess == min_ess else False
     return {
