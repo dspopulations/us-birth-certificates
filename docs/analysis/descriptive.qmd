@@ -16,6 +16,10 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 :::
 
@@ -33,17 +37,17 @@ are in the companion spec `docs/analysis/descriptive.md`.
 
 ```{python}
 # | echo: false
-import json
 from pathlib import Path
 
 import pandas as pd
+from dspopulations_us_birth_certificates.report_readers import read_csv_artefact, read_json_artefact
 from IPython.display import Markdown
 
-config = json.loads(Path("config.json").read_text())
+config = read_json_artefact(Path("config.json"))
 
 
 def _table(csv: str) -> pd.DataFrame:
-    return pd.read_csv(csv)
+    return read_csv_artefact(csv)
 
 
 def _pct(frac: float) -> str:

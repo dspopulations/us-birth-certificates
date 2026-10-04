@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Published-literature priors for the three-stage selection model.
 
 Stage 1 — baseline DS livebirth rate ``theta_lb(age)`` from Morris/de Graaf.
@@ -30,6 +33,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
+from dse_research_utils.statistics.transforms import invlogit
+from dse_research_utils.statistics.transforms import logit as shared_logit
 
 from dspopulations_us_birth_certificates.selection.recording_anchor import (
     S_RACE_YEAR_LOGIT,
@@ -38,14 +43,13 @@ from dspopulations_us_birth_certificates.selection.recording_anchor import (
 
 
 def logit(p):
-    """Logit transform, safe for arrays."""
-    p = np.asarray(p, dtype=float)
-    return np.log(p / (1.0 - p))
+    """Logit transform, retaining list-to-array conversion."""
+    return shared_logit(np.asarray(p, dtype=float))
 
 
 def inv_logit(x):
-    """Inverse logit (sigmoid)."""
-    return 1.0 / (1.0 + np.exp(-np.asarray(x, dtype=float)))
+    """Inverse logit with stable values for large positive or negative inputs."""
+    return invlogit(np.asarray(x, dtype=float))
 
 
 # --------------------------------------------------------------------------- #

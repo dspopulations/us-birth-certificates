@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Persisted numerical validation for DSP fits, separate from fit completion."""
 
 from __future__ import annotations
@@ -7,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from dspopulations_us_birth_certificates.file_io import write_text_atomically
 from dspopulations_us_birth_certificates.selection.diagnostics import (
     convergence_health,
     summary_table,
@@ -121,6 +125,7 @@ def write_validation(directory: Path, result: dict) -> None:
         return value
 
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "validation.json").write_text(
+    write_text_atomically(
+        directory / "validation.json",
         json.dumps(clean(result), indent=2, allow_nan=False), encoding="utf-8"
     )

@@ -15,6 +15,10 @@ format:
       - repo
 ---
 
+::: {.callout-note title="AI-assisted"}
+Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
+:::
+
 ::: {.callout-warning title="Preliminary model output"}
 
 This output is preliminary and will change as the model evolves and as
@@ -56,14 +60,14 @@ anchors; subcomponent estimates should be interpreted in that light.
 
 ```{python}
 # | echo: false
-import json
 from pathlib import Path
 
 import pandas as pd
+from dspopulations_us_birth_certificates.report_readers import read_csv_artefact, read_json_artefact
 from IPython.display import Image, Markdown
 
-config = json.loads(Path("config.json").read_text())
-run_config = json.loads(Path("run_config.json").read_text())
+config = read_json_artefact(Path("config.json"))
+run_config = read_json_artefact(Path("run_config.json"))
 ```
 
 ```{python}
@@ -128,7 +132,7 @@ pd.DataFrame(
 summary_path = Path("summary.csv")
 convergence_path = Path("convergence_summary.csv")
 if summary_path.exists():
-    summary = pd.read_csv(summary_path, index_col=0)
+    summary = read_csv_artefact(summary_path, index_col=0)
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     max_rhat = summary[rhat_col].max() if rhat_col in summary.columns else float("nan")
     ess_cols = [c for c in ("ess_bulk", "ess_tail") if c in summary.columns]
@@ -160,7 +164,7 @@ if age_plot.exists():
     display(Image(str(age_plot)))
 age_table = Path("tables/age_curve.csv")
 if age_table.exists():
-    display(pd.read_csv(age_table).round(3))
+    display(read_csv_artefact(age_table).round(3))
 ```
 
 ## Ridge correlation: η_term vs s race effects
@@ -179,7 +183,7 @@ if id_plot.exists():
     display(Image(str(id_plot)))
 id_table = Path("tables/identifiability.csv")
 if id_table.exists():
-    id_df = pd.read_csv(id_table)
+    id_df = read_csv_artefact(id_table)
     display(id_df.assign(correlation=id_df["correlation"].round(3),
                          abs_correlation=id_df["abs_correlation"].round(3)))
 ```
@@ -201,7 +205,7 @@ if s_shrinkage_plot.exists():
     display(Image(str(s_shrinkage_plot)))
 s_shrinkage_table = Path("tables/s_anchor_shrinkage.csv")
 if s_shrinkage_table.exists():
-    shrink = pd.read_csv(s_shrinkage_table)
+    shrink = read_csv_artefact(s_shrinkage_table)
     display(
         shrink[
             [
@@ -232,7 +236,7 @@ if eta_year_plot.exists():
     display(Image(str(eta_year_plot)))
 eta_year_table = Path("tables/eta_term_year_trajectory.csv")
 if eta_year_table.exists():
-    display(pd.read_csv(eta_year_table).round(3))
+    display(read_csv_artefact(eta_year_table).round(3))
 ```
 
 ## CCHD structural stress check
@@ -252,7 +256,7 @@ if cchd_plot.exists():
     display(Image(str(cchd_plot)))
 cchd_table = Path("tables/cchd_consistency.csv")
 if cchd_table.exists():
-    display(pd.read_csv(cchd_table).round(4))
+    display(read_csv_artefact(cchd_table).round(4))
 ```
 
 ## Decomposition by race
@@ -271,7 +275,7 @@ if decomposition_plot.exists():
     display(Image(str(decomposition_plot)))
 decomposition_table = Path("tables/decomposition_by_race.csv")
 if decomposition_table.exists():
-    display(pd.read_csv(decomposition_table).round(1))
+    display(read_csv_artefact(decomposition_table).round(1))
 ```
 
 ## Posterior predictive checks

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Shared rendering loop for selection-model diagnostics.
 
 Both :mod:`scripts.render_selection_diagnostics` (post-hoc rendering
@@ -29,8 +32,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from dse_research_utils.plot.io import save_plot_data, save_styled_figure
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.file_io import write_atomically
 from dspopulations_us_birth_certificates.intervals import DEFAULT_ETI_PROB
 from dspopulations_us_birth_certificates.selection import diagnostics
 
@@ -61,25 +66,27 @@ def _save_figure(
     data: pd.DataFrame | None = None,
     dpi: float | None = None,
 ) -> None:
-    """Write PNG + SVG; co-save a CSV companion where one is supplied."""
+    """Use shared PNG/CSV saving while retaining required SVG failure semantics."""
     import dse_research_utils.plot.styles as plot_styles
     import matplotlib.pyplot as plt
 
-    plots_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(
-        plots_dir / f"{stem}.png",
+    save_styled_figure(
+        plots_dir,
+        stem,
+        fig=fig,
         dpi=dpi if dpi is not None else plot_styles.DPI_FILE,
         bbox_inches="tight",
+        svg=False,
+        close=False,
     )
     fig.savefig(plots_dir / f"{stem}.svg", bbox_inches="tight")
     if data is not None:
-        data.to_csv(plots_dir / f"{stem}.csv", index=False)
+        save_plot_data(plots_dir, stem, data)
     plt.close(fig)
 
 
 def _save_table(df: pd.DataFrame, tables_dir: Path, name: str) -> None:
-    tables_dir.mkdir(parents=True, exist_ok=True)
-    df.to_csv(tables_dir / name, index=False)
+    write_atomically(tables_dir / name, lambda path: df.to_csv(path, index=False))
 
 
 def _guarded(

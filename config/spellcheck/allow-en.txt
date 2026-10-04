@@ -109,6 +109,7 @@ Hyperband
 hyperparameters
 iqr
 isclose
+isinstance
 kfold
 lightgbm
 liveborn

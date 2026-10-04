@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Compare a saved multi-run core-model assumption-sensitivity grid.
 
 The comparison is deliberately table-driven.  Runs of the same core model use
@@ -29,6 +32,7 @@ import dse_research_utils.plot.styles as plot_styles
 import numpy as np
 import pandas as pd
 import xarray as xr
+from dse_research_utils.plot.io import save_styled_figure
 
 from dspopulations_us_birth_certificates import cli_output
 from dspopulations_us_birth_certificates.selection import diagnostics
@@ -1744,9 +1748,19 @@ def _factorial_grid_metadata(runs: list[CoreSensitivityRun]) -> dict[str, Any]:
 def _save_figure(fig: Any, output_dir: Path, stem: str) -> tuple[Path, Path]:
     import matplotlib.pyplot as plt
 
-    png = output_dir / "plots" / f"{stem}.png"
-    svg = output_dir / "plots" / f"{stem}.svg"
-    fig.savefig(png, dpi=plot_styles.DPI_FILE, bbox_inches="tight")
+    plots_dir = output_dir / "plots"
+    png = Path(
+        save_styled_figure(
+            plots_dir,
+            stem,
+            fig=fig,
+            dpi=plot_styles.DPI_FILE,
+            bbox_inches="tight",
+            svg=False,
+            close=False,
+        )
+    )
+    svg = plots_dir / f"{stem}.svg"
     fig.savefig(svg, bbox_inches="tight")
     plt.close(fig)
     return png, svg

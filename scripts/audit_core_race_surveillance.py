@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Down Syndrome Education International and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Audit DSP004 race composition against centred surveillance prevalence.
 
 This command is deliberately read-only. It reconstructs the fitted DSP004
@@ -19,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.metadata as importlib_metadata
 import json
 import platform
 import re
@@ -38,6 +40,8 @@ import duckdb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from dse_research_utils.metadata.provenance import package_versions, sha256_file
+from dse_research_utils.plot.io import save_styled_figure
 from scipy.stats import chi2
 
 from dspopulations_us_birth_certificates.intervals import (
@@ -133,11 +137,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with _require_file(path).open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    return sha256_file(_require_file(path))
 
 
 def _git_provenance() -> dict[str, Any]:
@@ -172,14 +172,15 @@ def _package_versions() -> dict[str, str]:
         "pandas",
         "scipy",
     )
+    facts = package_versions(distributions)
     versions: dict[str, str] = {}
     for distribution in distributions:
-        try:
-            versions[distribution] = importlib_metadata.version(distribution)
-        except importlib_metadata.PackageNotFoundError as exc:
+        value = facts[distribution]
+        if value is None:
             raise RuntimeError(
                 f"required distribution metadata is unavailable: {distribution}"
-            ) from exc
+            )
+        versions[distribution] = value
     return versions
 
 
@@ -1476,11 +1477,21 @@ def centered_audit_decision(
 
 
 def _save_figure(fig: Any, output_dir: Path, stem: str) -> tuple[Path, Path]:
+    import matplotlib.pyplot as plt
+
     plots_dir = output_dir / "plots"
-    plots_dir.mkdir(parents=True, exist_ok=True)
-    png = plots_dir / f"{stem}.png"
+    png = Path(
+        save_styled_figure(
+            plots_dir,
+            stem,
+            fig=fig,
+            dpi=plot_styles.DPI_FILE,
+            bbox_inches="tight",
+            svg=False,
+            close=False,
+        )
+    )
     svg = plots_dir / f"{stem}.svg"
-    fig.savefig(png, dpi=plot_styles.DPI_FILE, bbox_inches="tight")
     fig.savefig(svg, bbox_inches="tight")
     plt.close(fig)
     return png, svg
