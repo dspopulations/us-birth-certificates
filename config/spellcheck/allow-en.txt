@@ -87,6 +87,7 @@ backtested
 beeswarm
 sociodemographic
 codings
+cooccurring
 crosswalk
 crosswalks
 dataclass
@@ -187,6 +188,7 @@ rprime
 
 # Literature / authors
 Alberman
+Ammar
 Boulet
 DerSimonian
 Eiben
