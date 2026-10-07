@@ -652,9 +652,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         variable="sex",
         title="Sex of baby",
         legend_title="sex",
-        group_sql=(
-            "CASE WHEN sex = 'F' THEN 0 WHEN sex = 'M' THEN 1 END"
-        ),
+        group_sql=("CASE WHEN sex = 'F' THEN 0 WHEN sex = 'M' THEN 1 END"),
         labels=SEX_LABELS,
         not_null_filter="sex IS NOT NULL",
     ),
@@ -664,6 +662,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
 # ---------------------------------------------------------------------------
 # Population columns (one per stacked bar)
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class PopulationColumn:
@@ -691,6 +690,7 @@ POPULATION_COLUMNS: tuple[PopulationColumn, ...] = (
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
+
 
 def load_category_counts(
     grouping: CategoryGrouping,
@@ -767,6 +767,7 @@ def load_category_counts(
 # ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
+
 
 def _stack_bottoms_and_tops(
     proportions: np.ndarray,
@@ -956,6 +957,7 @@ def _tidy_plot_data(
 # Summary table
 # ---------------------------------------------------------------------------
 
+
 def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
     """Wide summary table: counts + proportions side-by-side per population.
 
@@ -990,6 +992,7 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
 # Artefact persistence + template handling
 # ---------------------------------------------------------------------------
 
+
 def save_config(output_dir: Path, config: dict) -> None:
     """Write ``config.json`` to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1006,9 +1009,7 @@ def save_category_summary(
 ) -> None:
     """Write ``<variable>_summary.csv`` to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    category_summary(counts).to_csv(
-        output_dir / f"{variable}_summary.csv", index=False
-    )
+    category_summary(counts).to_csv(output_dir / f"{variable}_summary.csv", index=False)
 
 
 def copy_analysis_template(
@@ -1061,6 +1062,7 @@ def render_report(qmd_path: Path | None, *, do_render: bool) -> None:
 # ---------------------------------------------------------------------------
 # Cross-run comparison (usbc10 vs usbc11 etc.)
 # ---------------------------------------------------------------------------
+
 
 def stage_compare_artefacts(
     *,

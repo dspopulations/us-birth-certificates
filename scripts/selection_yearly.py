@@ -77,13 +77,35 @@ def main() -> int:
     )
     for v in ("A", "B", "C"):
         df = data[v]["df"]
-        ax1.plot(years, df["true_ds"], "-o", ms=3, color=VARIANT_COLOURS[v], label=f"True DS, variant {v}")
-        ax2.plot(years, df["reduction"], "-o", ms=3, color=VARIANT_COLOURS[v], label=f"Variant {v}")
-    ax1.plot(years, data["C"]["df"]["recorded"], "-s", ms=3, color=RECORDED_COLOUR,
-             label="Recorded on certificate")
+        ax1.plot(
+            years,
+            df["true_ds"],
+            "-o",
+            ms=3,
+            color=VARIANT_COLOURS[v],
+            label=f"True DS, variant {v}",
+        )
+        ax2.plot(
+            years,
+            df["reduction"],
+            "-o",
+            ms=3,
+            color=VARIANT_COLOURS[v],
+            label=f"Variant {v}",
+        )
+    ax1.plot(
+        years,
+        data["C"]["df"]["recorded"],
+        "-s",
+        ms=3,
+        color=RECORDED_COLOUR,
+        label="Recorded on certificate",
+    )
     ax1.set_ylabel("DS livebirths")
     ax1.set_ylim(0, None)
-    ax1.set_title("DS livebirths and termination by year, 2016–2024 (selection model A/B/C)")
+    ax1.set_title(
+        "DS livebirths and termination by year, 2016–2024 (selection model A/B/C)"
+    )
     ax1.legend(fontsize=7, ncol=2, loc="lower left")
     ax2.set_ylabel("Termination reduction")
     ax2.set_ylim(0, None)
