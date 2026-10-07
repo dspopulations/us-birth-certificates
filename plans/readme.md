@@ -1,22 +1,31 @@
-# Plans
+> [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
+
+# Study aims and limits
 
 > [!WARNING]
-> This is work in progress. All data and models are preliminary.
+> This exploratory study is in progress. Estimates remain conditional on the data sources and model assumptions.
 
-This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing those births and how they may be changing over time.
+The study has five aims:
 
-Recorded births of babies with Down syndrome in US birth certificate data are systematically **under-reported**, and the under-reporting is **not missing at random** — it varies with clinical severity, socioeconomic status, and race/ethnicity (Boulet 2011; Salemi 2017). This has a direct methodological consequence that shapes the whole study: because recording depends on the same characteristics we want to measure, a classifier trained on the recorded flag learns the *recording process*, not Down syndrome status, and **cannot identify which individual unrecorded births were missed cases without inheriting that bias** — clinically subtle cases are, by construction, indistinguishable from ordinary births in the certificate data. This is a positive–unlabelled learning problem under a biased (Selected-At-Random) labelling mechanism (Bekker and Davis, 2020).
+1. Describe the numbers and characteristics of births recorded with Down syndrome from 1989 to 2024. Compare recorded counts with surveillance-based estimates.
+2. Model the recorded Down syndrome checkbox for 2016–2024. Compare feature sets and label definitions, and describe associations with recorded status.
+3. Estimate expected Down syndrome livebirth counts and expected missed counts for 2016–2024 with Bayesian population models. Report uncertainty and sensitivity to external calibration, false positives and recording assumptions.
+4. Describe co-occurring conditions among recorded cases. Explore population estimates only where assumptions about recording within each condition stratum can be stated and tested through sensitivity analyses.
+5. Explore age, year and demographic patterns in recorded births and modelled expected counts. Report associations and distinguish them from causal claims.
 
-We therefore estimate what *is* recoverable — the **number** of missed cases and its distribution across characteristics (an aggregate, or "class prior") — rather than attempting to label individual missed cases. The correction is made at the population level by a structural Bayesian **selection model** that anchors the recording rate to external validation and surveillance data. The machine-learning strand is retained for what it can legitimately do: characterising the recording process itself, recovering the narrow subset of clerical/communications omissions, and serving as an independent cross-check on the total.
+## What the data can establish
 
-More specifically, we aim to:
+A classifier trained on the recorded checkbox estimates `P(recorded DS | characteristics)`. It does not directly estimate either `P(true DS | characteristics)` or recording sensitivity, `P(recorded DS | true DS, characteristics)`. The recorded probability reflects true prevalence, sensitivity and false positives.
 
-1. **Document** the numbers and characteristics of babies with Down syndrome **recorded** in birth certificate data from 1989 to 2024, and compare against surveillance-based estimates.
+The unrecorded population contains both non-cases and missed cases. Treating every unrecorded birth as a negative cannot resolve that mixture. The quota-based `ds_pred_missing*` flags select high-scoring births; their counts are set by a multiplier, not by validation against diagnoses. A chromosomal-disorder checkbox without a Down syndrome checkbox does not establish a missed Down syndrome diagnosis.
 
-2. **Characterise the recording process.** Identify the factors that predict whether a Down syndrome livebirth is *recorded* on the birth certificate (2016–2024) — i.e. model the recording propensity `P(recorded | characteristics)` — by training, pruning, and evaluating a classifier and examining its predictors. This is explicitly a model of *recording*, not of true Down syndrome status.
+Aggregate estimation also needs assumptions. Birth-certificate counts alone cannot separate true prevalence, prenatal reduction, recording sensitivity and false positives. The Bayesian models use external information to constrain that separation. A posterior interval describes uncertainty conditional on the chosen model; it does not include every possible source bias.
 
-3. **Estimate the total (recorded + missed) at the population level.** Estimate the total number of Down syndrome livebirths and the *number* of missed cases for 2016–2024 using a structural Bayesian selection model that corrects for under-ascertainment by anchoring the recording rate to external evidence. Individual missed cases are **not** identified — under the biased recording mechanism this is not achievable without bias — so the target is the missed *count* and its distribution, reported with explicit dependence on the recording assumption.
+The microdata used here has no state identifier. Demographic associations may therefore reflect geographic differences in access or recording. State-level aggregate comparisons can inform checks but cannot add a state effect to individual birth records.
 
-4. **Characterise the full population, including co-occurring conditions.** Document the numbers and characteristics of the full (recorded + missed) Down syndrome population for 2016–2024, estimating co-occurring-condition rates by **stratified class-prior estimation** (weighting each stratum by its recording rate) rather than by summing individually-predicted cases. Compare against surveillance and against previous co-occurrence estimates, and document how a naïve "predicted-missing" cohort *inverts* those rates.
+## Current work
 
-5. **Model factors over time.** Develop a statistical model to explore and estimate factors influencing live births of babies with Down syndrome and how they may be evolving over time.
+Use the [model inventory](../docs/models/README.md) for model roles and the [workflow](../docs/modelling-workflow.md) for commands. The [September code-review note](../notes/20260905-dsp-code-review-fixes.md) records changes that require refitting older DSP analyses. Review their surveillance weighting, observation-error assumptions, validation and provenance before reporting new estimates.
+
+The [research-note index](../notes/readme.md) identifies the supporting source checks and historical fits. Earlier proposed aims and completed implementation tasks are not the current work plan.

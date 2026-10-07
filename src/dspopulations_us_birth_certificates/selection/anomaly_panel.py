@@ -1,26 +1,17 @@
-"""Control-condition panel from the shared congenital-anomaly certificate item.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-The 2003 birth-certificate revision records Down syndrome as one checkbox in a
-single congenital-anomaly item.  Several other checkboxes on that same item
-describe conditions with no prenatal detection-and-termination channel worth
-speaking of, so their recorded rate is close to a direct reading of the item's
-recording sensitivity rather than a mixture of prevalence and recording.
+Control-condition panel from the shared congenital-anomaly certificate item.
 
-That is an *exclusion restriction*, and it is the only route identified so far
-that could divide the post-2020 decline in the recorded Down syndrome rate rather
-than parameterise the division as ``DSP009`` does.  It works in exactly the years
-the surveillance anchor does not reach.
+Recorded control trends can inform a shared recording factor only under
+restrictions on their true prevalence, prenatal reduction and coding. Fixed
+true_trend_log_per_year offsets supply one set of restrictions. A prior on the
+remaining common prevalence trend supplies another. The current fixed offsets
+do not propagate their source or transport uncertainty.
 
-Two things limit it, and both are represented explicitly here rather than assumed
-away:
-
-* The controls' own birth prevalence must be stable, or its trend must be known.
-  ``true_trend_log_per_year`` in the curation table carries a known trend as a
-  fixed offset; the *common* component of an unknown one is carried in the model
-  as a prior, because no internal comparison can detect it.
-* The controls must actually agree with one another.  They do not.
-  :func:`panel_heterogeneity` measures the disagreement at load time so a fit
-  cannot quietly present a shared factor the panel itself refutes.
+The controls differ in their recorded trends. panel_heterogeneity describes that
+disagreement; it does not independently validate or refute a causal recording
+interpretation. The DS loading is estimated under the panel and anchor assumptions.
+See notes/20260804-dsp010-anomaly-panel-recording-factor.md.
 """
 
 from __future__ import annotations

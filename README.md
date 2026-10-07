@@ -1,68 +1,52 @@
 > [!NOTE]
 > AI-assisted update by Codex (GPT-6).
 
-# Characteristics of babies born with Down syndrome -- an exploratory data analysis of US birth certificate data
+# Down syndrome births in US birth certificate data
+
+This repository studies the numbers and characteristics of babies recorded with Down syndrome in US birth certificates from 1989 to 2024. It also estimates expected population counts under explicit assumptions about prenatal reduction and certificate recording.
 
 > [!WARNING]
-> This is work in progress. All data and models are preliminary.
+> This study is in progress. Models and estimates are preliminary.
 
-**This repository hosts an exploratory study of factors associated with recorded births of babies with Down syndrome in US birth certificate data.**
+Birth certificates miss some Down syndrome diagnoses. Recording also varies across groups and clinical circumstances. A model trained on the recorded checkbox predicts that checkbox, which reflects both true prevalence and recording. Its high-scoring unrecorded births are not verified missed cases.
 
-Accurate assessments of the numbers and characteristics of babies born with Down syndrome is important for planning healthcare, education and social support services. They are also important for ascertaining the consequences of changing medical technologies and practices, social policies and attitudes, and individual behaviour over time, and for projecting future trends.
+The Bayesian models estimate aggregate counts with external age-risk, surveillance and recording information. Their estimates depend on those sources and on model assumptions. They do not identify individual missed cases. See the [study aims](plans/readme.md) and [model inventory](docs/models/README.md).
 
-This study aims to provide updated estimates of the numbers of babies born with Down syndrome in the U.S. and to explore factors influencing births and how they may be changing over time.
+## Documentation
 
-Recorded Down syndrome births in these data are systematically under-reported, and not at random. Because recording depends on the same characteristics we want to measure, we do not attempt to identify *which* individual births were missed; instead we estimate the *number* of missed cases and its distribution at the population level, using a structural Bayesian selection model, and use the machine-learning strand to characterise the recording process rather than to recover individuals. See [current plans](./plans/readme.md) for the detailed aims and the methodological rationale.
+- [Data preparation](docs/data-preparation.md) describes inputs, commands, derived variables and limits.
+- [Modelling workflow](docs/modelling-workflow.md) describes fitting, diagnostics and reports.
+- [Model inventory](docs/models/README.md) explains the DSP001–DSP010 accounting models.
+- [Selection package](src/dspopulations_us_birth_certificates/selection/README.md) describes the separate three-stage model.
+- [Research notes](notes/readme.md) separates historical fits, source checks and proposals from current guidance.
+- [Shared utilities](docs/shared-utilities.md) records the dependency and local adapter contracts.
+- [Assistant instructions](AGENTS.md) sets contribution rules.
 
-## Analyses
+## Setup
 
-A Bayesian selection model sits alongside the LightGBM classifier:
-
-- **`dspopulations_us_birth_certificates.selection`** — three-stage
-  selection model decomposing observed recording into baseline
-  livebirth rate × screening/termination pass-through × birth-
-  certificate sensitivity. Driver: `scripts/fit_selection_model.py`.
-  Template: `docs/models/selection/index.qmd`. Design notes:
-  [`notes/20260622-predictors-bayesian-model.md`](./notes/20260622-predictors-bayesian-model.md)
-  (with supporting design notes under `notes/`).
-  Variant-comparison aggregator: `scripts/compare_selection_variants.py`.
-
-## Getting started
-
-### Clone repository
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
 
 ```bash
 git clone https://github.com/dspopulations/us-birth-certificates.git
+cd us-birth-certificates
+uv sync --locked
 ```
 
-### Prerequisites
+uv installs Python 3.14 from `.python-version` and the packages in `uv.lock`. It installs this project in editable mode. Run Python commands through `uv run` from the repository root.
 
-#### Fitting models
+The configured platforms are Linux x86-64 and arm64, Apple Silicon macOS, and Windows AMD64. Intel macOS is excluded from the lockfile's platform set.
 
-Dependencies are managed with [uv](https://docs.astral.sh/uv/). Install it ([instructions](https://docs.astral.sh/uv/getting-started/installation/)), then create the environment from the repository root:
+On macOS, install the OpenMP runtime for LightGBM and XGBoost:
 
 ```bash
-uv sync
+brew install libomp
 ```
 
-uv provisions the Python interpreter itself from `.python-version` (**3.14**), resolves from the committed `uv.lock`, and installs this package editable. Prefix commands with `uv run` — for example `uv run pytest` or `uv run python scripts/fit_model.py`.
+Graph plots also require the Graphviz `dot` program. HTML reports require the [Quarto CLI](https://quarto.org/docs/get-started/). Neither program is installed by `uv sync`.
 
-Supported platforms are Linux (x86-64 and arm64), Apple Silicon macOS, and native Windows. Intel macOS is not supported: numba publishes no macOS x86-64 wheels.
+### Plot fonts
 
-Two system-level prerequisites are not Python packages and are not installed by `uv sync`:
-
-- **macOS only** — LLVM's OpenMP runtime, which the `lightgbm` and `xgboost` wheels link against: `brew install libomp`.
-- **Graph plotting only** — the Graphviz `dot` binary, alongside the Python bindings: `brew install graphviz`, `apt install graphviz`, or `winget install Graphviz.Graphviz`.
-
-#### Creating reports
-
-TODO
-
-#### Plot fonts
-
-The shared plot style uses Noto Sans for text and Noto Sans Math for mathematics.
-Install both fonts on machines that render research figures. They are system
-fonts, so `uv sync` does not install them.
+The shared style uses Noto Sans and Noto Sans Math. Install both on machines that render figures. Without them, matplotlib uses fallback fonts and the layout may differ.
 
 ```bash
 # macOS
@@ -71,31 +55,29 @@ brew install --cask font-noto-sans font-noto-sans-math
 sudo apt install fonts-noto-core
 ```
 
-On Windows, install [Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans)
-and [Noto Sans Math](https://fonts.google.com/noto/specimen/Noto+Sans+Math).
-If matplotlib was used before installation, remove `fontlist-*.json` from the
-directory printed by `uv run python -c "import matplotlib; print(matplotlib.get_cachedir())"`
-and restart running notebook kernels.
+On Windows, install [Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans) and [Noto Sans Math](https://fonts.google.com/noto/specimen/Noto+Sans+Math). Restart notebook kernels after installing fonts. If matplotlib retains its old font list, remove `fontlist-*.json` from the directory returned by:
 
-The shared style uses Noto Sans Math and DejaVu Sans for symbols absent from the
-text font. Without the Noto fonts, figures use fallback fonts and can look
-different. The local `notebook.mplstyle` keeps its smaller text and narrow font
-choices, with DejaVu Sans as a symbol fallback. See the
-[0.16.0 migration notes](https://github.com/dseinternational/research/blob/v0.16.2/docs/migrating-to-0.16.md)
-and [0.16.1 symbol fix](https://github.com/dseinternational/research/blob/v0.16.2/docs/migrating-to-0.16.1.md).
+```bash
+uv run python -c "import matplotlib; print(matplotlib.get_cachedir())"
+```
 
-## Data preparation
+The local `notebook.mplstyle` uses smaller text and narrower fonts than the shared script style.
 
-The pipeline that turns the raw NCHS/NVSS natality SAS microdata (1989–2024) into the analysis-ready `data/us_births.db` DuckDB database (and matching `data/us_births.parquet`) is documented in [docs/data-preparation.md](./docs/data-preparation.md). Source data is fetched with `scripts/download_data.py` and is subject to the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm). Raw records, NCHS user-guide PDFs, Parquet files, and DuckDB files are gitignored and must never be committed; small aggregate/reference CSVs under `data/` may be tracked when they are non-record-level inputs to the analysis.
+## Checks
 
-## License
+Install the spellchecker with Node.js 24 and `npm ci`. Before opening a PR, run:
 
-All source code in this repository is licensed under the GNU Affero General Public License v3.0 **(AGPL-3.0-only)**. See `LICENSE`.
+```bash
+uv run ruff check src tests scripts
+npm run spellcheck
+```
 
-Some other artifacts are licensed under other licenses:
+Run `uv run pytest` for code changes. The default suite excludes slow model fits; use `uv run pytest -m slow` when the change requires those checks.
 
-- **Code**: GNU Affero General Public License v3.0 (AGPL-3.0) — see `LICENSE`.
-- **Documentation, reports and papers**: Creative Commons Attribution 4.0 International (CC BY 4.0) — see `docs/LICENSE`.
-- **Data**: subject to the original data source terms, including the NCHS Data Use Agreement for natality microdata. Data are not covered by the repository's code or documentation licences.
+## Data and licences
 
-AGPL-3.0 requires that if you modify and run this software to provide a network service, you must offer the corresponding source code to users of that service.
+Raw natality records are subject to the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm). Do not commit or publish raw records or derived record-level data. Small aggregate and reference CSVs may be tracked. See [data preparation](docs/data-preparation.md) for the pipeline.
+
+- Code uses AGPL-3.0-or-later, as declared in `pyproject.toml` and `package.json`. The licence text is in [LICENSE](LICENSE).
+- Documentation, reports and papers use [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/).
+- Data retains its source terms. The code and documentation licences do not cover natality microdata.

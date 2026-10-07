@@ -1,4 +1,7 @@
 > [!NOTE]
+> Documentation review by Codex (GPT-6), 7 October 2026.
+
+> [!NOTE]
 > Drafted by a LLM-based AI tool (Codex/GPT-5).
 
 # DSP statistical-code review fixes

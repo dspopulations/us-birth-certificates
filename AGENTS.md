@@ -3,100 +3,84 @@
 
 # Repository assistant instructions
 
-This file provides guidance to agentic coding tools (Codex, Cursor, Aider, and similar) when working with code in this repository.
+Keep `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md` identical when changing these instructions.
 
-> **Keep in sync:** `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` share the same body content. When you change one, update the other two so every assistant sees the same guidance.
+## Purpose and scope
 
-## Project purpose
+This repository studies births recorded with Down syndrome in US birth certificate data. Read `plans/readme.md` for the aims, `docs/modelling-workflow.md` for commands and `notes/readme.md` for the status of research notes.
 
-This repository hosts an exploratory study of factors associated with recorded births of babies with Down syndrome in US birth certificate data.
+Distinguish recorded diagnoses, classifier-selected births and modelled expected counts. Do not describe `ds_pred_missing*` as verified missed cases. Estimates of prevalence, recording and prenatal reduction depend on external evidence and assumptions. Numerical validation does not establish those assumptions.
 
-Read plans/readme.md to learn about project plans.
+## Writing
 
-## Disclosing AI-assisted contributions
+Use plain language, short words, active voice and one idea per sentence. Explain technical terms and check claims against code or cited evidence. Avoid emotive judgements, filler, em dashes and unsupported claims. Use sentence-case headings and straight quotes. Keep dated evidence separate from current instructions. Remove completed task lists and superseded advice when their useful findings are recorded elsewhere.
 
-Any content drafted with the help of an LLM-based AI tool **must be clearly labelled as AI-assisted**. This applies to **document drafts, pull requests, issues, and comments on pull requests or issues**. Prefix the content with a GitHub-style note callout naming the tool and model used, for example:
+## AI disclosure
 
+Label AI-assisted document drafts, PRs, issues and their comments at the top. Name the actual tool and model. Keep existing disclosures when editing.
+
+For Markdown, use:
+
+```markdown
 > [!NOTE]
-> Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
+> AI-assisted revision by Codex (GPT-6).
+```
 
-Substitute the actual tool and model you are using (for example `Codex`, `Cursor`, `Aider`, or `GitHub Copilot`). Keep the label at the very top of the draft, PR/issue body, or comment. Do not remove an existing disclosure label when editing AI-assisted content.
-
-The `> [!NOTE]` alert syntax above is GitHub-flavoured Markdown and is the right form for PRs, issues, and their comments. **It does not render in Quarto.** For Quarto documents (`docs/**/*.qmd`), use a Quarto callout div instead, matching the existing callouts in those docs:
+For Quarto, place a callout after the YAML front matter:
 
 ```markdown
 ::: {.callout-note title="AI-assisted"}
-Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
+AI-assisted revision by Codex (GPT-6).
 :::
 ```
 
-## Environment and commands
+## Environment and checks
 
-Python **3.14** via [uv](https://docs.astral.sh/uv/). There is no conda layer: PyMC 6 compiles with the Numba backend by default, so no C toolchain or BLAS is needed and every package in the scientific stack ships a CPython 3.14 wheel.
+Use Python 3.14 through uv from the repository root:
 
 ```bash
-uv sync          # create/refresh .venv from uv.lock (uv provisions Python from .python-version)
-uv run pytest    # run anything inside that environment
+uv sync --locked
+uv run ruff check src tests scripts
+npm ci
+npm run spellcheck
+uv run pytest
 ```
 
-Supported platforms are linux-x86_64, linux-aarch64, macOS-arm64 and win-amd64 (see `[tool.uv] environments` in `pyproject.toml`). **Windows contributors no longer need WSL.** Intel macOS is not supported — numba publishes no macOS x86-64 wheels. GPU acceleration remains an opt-in `jax[cuda]` overlay.
+Run both lint and spellcheck before creating a PR and resolve findings. Spellcheck uses en-GB and `config/spellcheck/allow-en.txt`. Add legitimate unknown terms to that dictionary. Do not rewrite accurate prose to evade false positives.
 
-Two system-level prerequisites are not Python packages: the LLVM OpenMP runtime on macOS (`brew install libomp`), which the `lightgbm`/`xgboost` wheels link against, and the Graphviz `dot` binary for the notebook graph-plotting paths.
+The default pytest run excludes `slow` tests. Run `uv run pytest -m slow` when changes require posterior-quality or parameter-recovery checks. Format changed Python files with `uv run ruff format`.
 
-`uv sync` installs this package editable. Dependency layout: the scientific stack is inherited from `dse-research-utils` extras rather than restated (see the comment above `[project.dependencies]`), repo-only runtime needs go in `[project.dependencies]`, and tooling goes in the `dev` `[dependency-groups]` entry — do not reintroduce `[project.optional-dependencies]` or split test/modelling/data-preparation dependencies across several extras. `pyproject.toml` uses hatchling; version lives in `src/dspopulations_us_birth_certificates/__init__.py`. Import name is `dspopulations_us_birth_certificates` (distribution name `dspopulations-us-birth-certificates`).
+The configured platforms are Linux x86-64 and arm64, macOS arm64 and Windows AMD64. macOS needs `brew install libomp` for boosting libraries. Graph plots need Graphviz `dot`; report rendering needs Quarto. These are separate system dependencies.
 
-`uv.lock` is committed. Regenerate it with `uv lock` whenever you change dependencies, and commit the result — CI runs `uv sync --locked`, which fails on a stale lockfile.
+Keep `uv.lock` committed. After changing dependencies, run `uv lock` and `uv sync --locked`. CI rejects a stale lockfile. Put repository runtime needs in `[project.dependencies]` and tooling in the `dev` dependency group. The scientific stack comes from `dse-research-utils` extras; add shared needs upstream rather than duplicating them here. Do not restore separate optional-dependency groups for testing, modelling or preparation.
 
-## Shared utilities (`dse_research_utils`)
+The package uses hatchling. Its version is in `src/dspopulations_us_birth_certificates/__init__.py`. The import name is `dspopulations_us_birth_certificates`.
 
-Notebooks and scripts reference a shared external package (`dse_research_utils`) from the sibling [`research`](https://github.com/dseinternational/research) repository for environment setup, plot styling, and metadata reporting. Import paths start with `dse_research_utils.*`.
+## Shared utilities and artefacts
 
-- `pyproject.toml` resolves it from the public git tag `v0.17.0` via `[tool.uv.sources]`, with the extras `[boosting,columnar,dependence,graphs,io,jax,notebook,tuning]`. Those extras are where the scientific stack comes from — add a package to the right extra upstream rather than re-declaring it here. A commented local-dev override in the same block points at a sibling checkout instead — `../../dseinternational/research/src/python` (note the `../../` — this repo lives under `dspopulations/`, not `dseinternational/`), which must be cloned alongside this one.
-- Scripts call `dse_research_utils.environment.setup.init_script()` at the top of `main()` to apply the default matplotlib style.
-- Notebooks call `dse_research_utils.environment.setup.init_workbook()` (style + environment summary) followed by `dse_research_utils.metadata.packages.report_package_versions(PACKAGE_LIST)` for reproducibility.
-- Plotting code imports `dse_research_utils.plot.styles` and uses its `FIGSIZE_*`, `COLOUR_*`, `DPI_*` constants instead of hardcoded literals.
-- The project-wide `PACKAGE_LIST` (used for version reporting) is re-exported from `dspopulations_us_birth_certificates`.
-- `src/.../repl_utils.py` is a thin compatibility shim that delegates to the shared library — new code should import from `dse_research_utils` directly.
-- Several local helpers are now thin adapters that keep this project's decisions on top of a shared implementation: `intervals.equal_tail_interval` (coverage restriction, NaN policy, mean-based summary), `feature_groups.feature_groups_from_linkage` and `stats_utils`/`base_pipeline` linkage construction (`cluster_NN` identifiers, average linkage), `ml_utils.group_permutation_importance` (donor plans, probability column, score direction, table schema), `manifest`/`selection.io` provenance and hashes, and `plot_utils.save_fig`. Change behaviour in the adapter, not by re-implementing the shared function. See `docs/shared-utilities-0.14.md`.
-- `src/.../file_io.py` wraps `dse_research_utils.storage.files.atomic_write` so JSON and CSV artefacts are replaced in one rename while keeping the umask-derived permissions a plain `write_text` would have given them. Use it for artefacts a report or another process reads.
+`pyproject.toml` selects `dse-research-utils` from public tag `v0.17.0`. Its source block has a commented local override at `../../dseinternational/research/src/python`. See `docs/shared-utilities.md` for adapter contracts.
 
-- Lint: `uv run ruff check`
-- Format: `uv run ruff format`
-- Tests: `uv run pytest` (config in `pyproject.toml`: `testpaths = ["tests"]`, default `-q -m 'not slow'`). Tests marked `@pytest.mark.slow` fit real Bayesian models with enough draws to support posterior-quality assertions — invoke with `uv run pytest -m slow` when you need to run them (locally, not in CI).
-- Spellcheck (markdown and `docs/**/*.qmd`): `npm run spellcheck`. Dictionary at `config/spellcheck/allow-en.txt`; language is **en-GB**.
+- Scripts call `dse_research_utils.environment.setup.init_script()` in `main()`.
+- Notebooks use `init_workbook()` and report versions from the project `PACKAGE_LIST`.
+- Plotting uses the shared `FIGSIZE_*`, `COLOUR_*` and `DPI_*` constants.
+- New code imports shared functions directly rather than through `repl_utils.py`.
+- Keep project-specific decisions in local adapters. Do not duplicate shared implementations.
+- Use `file_io.py` for JSON and CSV artefacts read by reports or other processes. It replaces files atomically and preserves the intended permissions.
 
-**Before creating a PR, always run both `uv run ruff check src tests scripts` and `npm run spellcheck` and resolve any findings.** Fix real lint errors; for false-positive unknown-word flags from cspell, add the term to `config/spellcheck/allow-en.txt` rather than rewording the prose.
+## Data and variable rules
 
-## Notebooks
+Read `docs/data-preparation.md`, `previous/us-birth-certificates/data-preparation.md` and `variables.py` before changing derivations. Variable names and codes change across years. Check source user guides and tests at those boundaries.
 
-Jupytext pairing is configured: `formats = "ipynb,py:percent"`. `.ipynb` files are **gitignored** — only the paired `.py` percent-format files are committed. When creating or editing notebooks, keep the `.py` counterpart in sync.
+Run preparation scripts from the repository root. Raw SAS files, user-guide PDFs, Parquet files and DuckDB databases are gitignored and must not be committed. Small aggregate and reference CSVs may be tracked. Do not publish raw or derived record-level natality data; the NCHS Data Use Agreement applies.
 
-Matplotlib style for notebooks: `notebook.mplstyle` at repo root.
+## Notebooks and reports
 
-## Repository layout
+Jupytext pairs notebooks as `ipynb,py:percent`. Only the `.py` files are committed; `.ipynb` files are gitignored. Keep local pairs in sync when editing notebooks. `notebook.mplstyle` defines the local notebook style.
 
-- `src/dspopulations_us_birth_certificates/` — the installable package
-- `scripts/` — standalone data-pipeline scripts (run from the repo root)
-- `notebooks/` — jupytext-paired exploratory notebooks (both `.py:percent` and `.ipynb`; only the `.py` is committed)
-- `previous/us-birth-certificates/` — historical artefacts kept as a reference
-- `data/` — mostly gitignored. Raw `.sas7bdat` files, NCHS user-guide PDFs, derived `.parquet` files, and DuckDB files must never be committed. Small derived/reference CSVs may be tracked when they are aggregate, non-record-level inputs to the analysis.
+Quarto files in `docs/` are templates. Fit and analysis scripts copy them into run directories containing the required artefacts. Render the copied file. `docs/report/` is a report scaffold, not a completed study report.
 
-## Data access and handling
+## Licences
 
-- Raw natality microdata is governed by the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm). Do not publish raw records.
-- Download script pattern lives at `scripts/download_data.py`
-- The pipeline converts SAS → parquet (per-year) → DuckDB / combined parquet.
-
-## Harmonising variables across years
-
-NVSS codings change across years — this is the main source of non-obvious complexity in the pipeline. Before adding or modifying any variable-derivation code, consult `previous/us-birth-certificates/data-preparation.md` and `src/dspopulations_us_birth_certificates/variables.py`:
-
-- **Race** (`MRACE` 1989–2013 → `MRACEREC` → `MBRACE` → `MRACE15`/`MRACE6` → combined `mrace_c`).
-- **Hispanic origin** (`ORRACEM` 1989–2002 → `UMHISP`/`MRACEHISP` → `MHISP_R` → `MHISPX` → combined `mhisp_c`).
-
-## Licensing
-
-Dual-license repo — be aware when adding files:
-- **Code** → AGPL-3.0-or-later (`LICENSE`). AGPL's network-service clause applies to any hosted deployment.
-- **Docs / reports / papers** → CC BY 4.0 (expected at `docs/LICENSE`).
-- **Data** → subject to NCHS DUA, *not* CC BY despite what `README.md` currently says for the `data/` directory.
+- Code uses AGPL-3.0-or-later; see `LICENSE` and the package metadata.
+- Documentation, reports and papers use CC BY 4.0, as declared in `README.md`.
+- Data uses its source terms, including the NCHS Data Use Agreement. It is not covered by CC BY 4.0.

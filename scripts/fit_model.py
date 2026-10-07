@@ -1,4 +1,6 @@
-"""Fit a LightGBM model for Down syndrome live-birth prediction.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Fit a LightGBM model for Down syndrome live-birth prediction.
 
 Thin CLI over ``LGBMClassifierPipeline`` in the package. The pipeline
 owns data loading, splitting, training, metrics, permutation, SHAP,
@@ -17,13 +19,13 @@ Pick a profile with ``--profile {dev,test,reporting}``. Presets are
 sourced from ``RunConfig.from_name()`` in the package so the CLI and
 the library agree on what each name means.
 
-- ``dev``: fast inner loop — 2-year slice, 10 Optuna trials, 500 boost
+- ``dev``: fast inner loop, 2-year slice, 10 Optuna trials, 500 boost
   rounds, SHAP off. Use while developing feature sets.
-- ``test``: moderate fidelity — 5-year slice, 50 Optuna trials, 10 000
+- ``test``: moderate fidelity, 5-year slice, 50 Optuna trials, 10 000
   boost rounds, SHAP on a 5 000-row subsample. Use for pre-PR
   validation.
-- ``reporting``: full run — 2016–2024, 200 Optuna trials, 50 000 boost
-  rounds, full permutation + SHAP. Use for publication-quality numbers.
+- ``reporting``: full run, 2016–2024, 200 Optuna trials, 50 000 boost
+  rounds, full permutation + SHAP. Check validation limits before reporting results.
 
 Individual flags always override profile defaults.
 
@@ -32,7 +34,7 @@ Examples
     python scripts/fit_model.py --profile dev
     python scripts/fit_model.py --profile reporting
 
-    # Smoke test — seconds rather than minutes
+    # Small smoke-test configuration
     python scripts/fit_model.py --profile dev --no-optimize \\
         --num-boost-round 200 --no-permutation --no-shap
 """

@@ -1,4 +1,7 @@
-"""Declarative registry for the core reduction-recording model family."""
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Declarative registry for the core reduction-recording model family.
+"""
 
 from __future__ import annotations
 
@@ -186,16 +189,11 @@ DSP010 = CoreModelDefinition(
     description=(
         "Extends DSP008 with a second observation channel: the recorded rates of "
         "congenital-anomaly checkboxes that share the Down syndrome certificate "
-        "item but have no prenatal detection-and-termination channel. Their "
-        "common movement measures the item's recording sensitivity directly, in "
-        "exactly the years no surveillance window reaches. Where DSP009 divides "
-        "the post-window decline by prior width alone, DSP010 estimates the "
-        "recording component from data and ties Down syndrome to it through a "
-        "loading the anchored panel years inform. Two assumptions remain "
-        "explicit rather than implicit: a prevalence trend shared by every "
-        "control would be read as recording, carried as "
-        "panel_prevalence_trend_sigma, and the controls disagree with each other "
-        "enough that the loading is only weakly identified."
+        "item. Their common movement informs recording under restrictions on "
+        "control prevalence, prenatal reduction and shared coding. A loading "
+        "maps the panel factor onto Down syndrome recording. Control-specific "
+        "trends, panel_prevalence_trend_sigma and the loading prior constrain "
+        "this allocation; the panel does not identify it independently."
     ),
     recording_model="revision",
     reduction_model="anchor",

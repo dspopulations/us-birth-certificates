@@ -1,5 +1,5 @@
 ---
-title: "Recorded Down syndrome live births, 1989–2024: a descriptive review"
+title: "Recorded Down syndrome live births, 1989–2024"
 
 date: last-modified
 date-format: "YYYY-MM-DD HH:mm:ss Z"
@@ -16,6 +16,10 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6) on 7 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
 :::
 
@@ -26,12 +30,11 @@ Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 ::: {.callout-warning title="Preliminary output"}
 
 This report is preliminary; all data and estimates in this study are provisional.
-It documents the **recorded** Down syndrome (DS) population only — births with
-`down_ind = 1` (`ca_down_c ∈ {C confirmed, P pending}`). The predicted-missing
-extension and its demographic caveats are in
-[`predicted.qmd`](predicted.qmd); the formal missed-case estimation is the
-selection model. The full methods, query sketches, and benchmark-coverage caveats
-are in the companion spec `docs/analysis/descriptive.md`.
+It documents the **recorded** Down syndrome (DS) population only, births with
+`down_ind = 1` (`ca_down_c ∈ {C confirmed, P pending}`). Classifier-cohort reports describe a separate selected population. Bayesian
+models estimate expected population counts under external-data assumptions.
+Methods and benchmark limits are in the repository
+[descriptive guide](https://github.com/dspopulations/us-birth-certificates/blob/main/docs/analysis/descriptive.md).
 
 :::
 
@@ -60,28 +63,28 @@ Markdown(
     f"This report covers **{config['total_births']:,}** US live births "
     f"({config['year_min']}–{config['year_max']}), of which "
     f"**{config['total_recorded']:,}** were recorded with Down syndrome. "
-    f"Against surveillance-expected counts the overall recording rate is "
-    f"**{_pct(config['overall_recording_rate'])}** — i.e. roughly three in five "
-    f"expected DS live births are absent from the birth certificate. "
+    f"The recorded-to-surveillance-expected ratio is "
+    f"**{_pct(config['overall_recording_rate'])}**. This benchmark ratio depends "
+    f"on the external expected-count series. "
     f"Generated {config['generated_at']}."
 )
 ```
 
 # Recorded numbers and trends
 
-Recorded DS births run roughly flat-to-slightly-rising (~1.6k–2.2k per year)
-against a *falling* total-birth denominator, so the rate per 10,000 rises faster
-than the count. **"Pending" (`P`) exists only from 2004**, so the confirmed-only
-line is the era-robust series; the confirmed + pending total has a step at the 2003
-certificate change.
+The plots show annual counts and rates from the current run. "Pending" (`P`)
+begins in 2004. The confirmed-only line avoids that added category but remains
+subject to changes in ascertainment. Revised-certificate coverage was complete
+in 2016; the shaded 2003–2013 band marks the earlier transition years.
 
-![Recorded DS live births by confirmation status, with the confirmed-only (era-robust) line and the 2003–2013 transition band.](recorded_confirmed_pending.png){#fig-confirmed-pending .lightbox fig-align="center"}
+![Recorded DS live births by confirmation status, with the confirmed-only line and the 2003–2013 transition band.](recorded_confirmed_pending.png){#fig-confirmed-pending .lightbox fig-align="center"}
 
-![Recorded DS per 10,000 live births. The level reflects recording completeness, not true prevalence (the surveillance benchmark is ≈ 13–14 per 10,000).](recorded_rate_per_10k.png){#fig-rate .lightbox fig-align="center"}
+![Recorded DS per 10,000 live births. The rate reflects both true prevalence and recording.](recorded_rate_per_10k.png){#fig-rate .lightbox fig-align="center"}
 
-The "unknown" (`U`) and "not on certificate" (NULL) series are a data-quality
-signal, not epidemiology — both spike around the 2003 cert changeover. The project
-treats `U` and NULL as *not recorded*.
+The "unknown" (`U`) and absent-item (NULL) series show status availability.
+The report includes these births in its all-birth denominator but not its
+recorded numerator. The database retains NULL in `down_ind`; Bayesian cohorts
+can exclude those births.
 
 ![DS item recorded as Unknown or absent from the certificate.](ds_status_unknown.png){#fig-unknown .lightbox fig-align="center"}
 
@@ -106,29 +109,30 @@ _disp
 
 # Recorded vs surveillance-expected
 
-The gap between recorded bars and the expected lines is the under-reporting; the
-ratio is the recording rate (≈ 40%). Expected counts come from the per-year
-surveillance prevalence (`p_ds_lb_wt`) and the maternal-age Morris risk after
-applying the year's termination/reduction rate (`p_ds_lb_nt_reduc`). The
-surveillance tail (2018→2024) is carried forward and the reduction series is
-extrapolated 2020–2024 — see the spec.
+The plots compare recorded counts with external expected-count benchmarks. Their
+gap depends on the benchmark, its population and its assumptions. It does not
+independently measure missed cases or recording sensitivity.
 
-![Recorded vs surveillance-expected DS live births. Recorded bars sit well below every expected curve.](recorded_vs_expected.png){#fig-recorded-expected .lightbox fig-align="center"}
+`p_ds_lb_wt` holds the 2018 surveillance prevalence through 2024.
+`p_ds_lb_nt_reduc` applies the annual reduction series to the Morris age-risk
+curve. That series has an extrapolated tail. See the
+[methods guide](https://github.com/dspopulations/us-birth-certificates/blob/main/docs/analysis/descriptive.md).
 
-![Recording rate (recorded / expected) over time, against a ~36–43% reference band.](recording_rate_by_year.png){#fig-recording-rate .lightbox fig-align="center"}
+![Recorded vs surveillance-expected DS live births. The benchmarks use different assumptions.](recorded_vs_expected.png){#fig-recorded-expected .lightbox fig-align="center"}
 
-Recording completeness is **not** uniform across groups. Using each group's
-age-structure-adjusted expected count, recording rates differ markedly — a
-differential-ascertainment signal (the de Graaf ethnicity benchmark, 2000–2018, is
-an alternative external denominator described in the spec).
+![Recorded-to-expected benchmark ratio over time. The shaded band is a reference assumption.](recording_rate_by_year.png){#fig-recording-rate .lightbox fig-align="center"}
 
-![Recording rate by maternal race / Hispanic origin over time (3-year rolling mean; age-risk expected denominator). The small AIAN group remains the most volatile.](recording_rate_by_race.png){#fig-recording-race .lightbox fig-align="center"}
+The group plot uses each group's age-risk expected count as a denominator.
+Differences can reflect prenatal reduction, recording, false positives or
+benchmark mismatch. The ratio is not a separate estimate of group sensitivity.
+
+![Recorded-to-expected ratio by maternal race / Hispanic origin (3-year rolling mean; age-risk expected denominator).](recording_rate_by_race.png){#fig-recording-race .lightbox fig-align="center"}
 
 # Maternal characteristics
 
-Maternal age is the dominant DS risk axis: recorded DS prevalence rises steeply
-with age, and recorded DS mothers are several years older on average than the
-overall birth cohort — a gap that drifts as the whole cohort ages.
+The plots compare recorded prevalence by maternal age and the mean and median
+age of mothers in recorded DS births with those in all births. These summaries
+describe the current run's birth cohort.
 
 ![Recorded DS rate by single-year maternal age.](recorded_ds_by_mage.png){#fig-mage .lightbox fig-align="center"}
 
@@ -139,7 +143,7 @@ overall birth cohort — a gap that drifts as the whole cohort ages.
 Maternal education cannot be pooled across the 2003 certificate change (years of
 schooling pre-2003 vs attainment level 2003+), so it is shown as two panels.
 
-![Maternal education of recorded DS births over time — two non-poolable schemes (years of schooling, 1989–2002; attainment level, 2014–2024), each collapsed to four bands.](recorded_ds_by_education.png){#fig-education .lightbox fig-align="center"}
+![Maternal education of recorded DS births over time, two non-poolable schemes (years of schooling, 1989–2002; attainment level, 2014–2024), each collapsed to four bands.](recorded_ds_by_education.png){#fig-education .lightbox fig-align="center"}
 
 ![Marital status of recorded DS mothers: share married (`dmar`/`mar` coalesced).](recorded_ds_by_marital.png){#fig-marital .lightbox fig-align="center"}
 
@@ -147,15 +151,15 @@ schooling pre-2003 vs attainment level 2003+), so it is shown as two panels.
 
 # Pregnancy and infant characteristics
 
-DS births skew towards lower birth weight and earlier gestation than the overall
-cohort. Birth weight, gestation, and infant sex are 2003-certificate items
+The plots compare birth weight, gestation and infant sex in recorded DS births
+and all births. These are 2003-certificate items
 (`DBIRWT`/`GESTAT10`/`CSEX` pre-2003 are not loaded), so these begin in 2003.
 
 ![Birth weight: recorded DS vs all births (2003–2024).](recorded_ds_birthweight.png){#fig-birthweight .lightbox fig-align="center"}
 
 ![Gestational age: recorded DS vs all births (2003–2024).](recorded_ds_gestation.png){#fig-gestation .lightbox fig-align="center"}
 
-![Infant sex: recorded DS births vs all births (typically developing), share male (2003–2024).](recorded_ds_sex.png){#fig-sex .lightbox fig-align="center"}
+![Infant sex: recorded DS births vs all births, share male (2003–2024).](recorded_ds_sex.png){#fig-sex .lightbox fig-align="center"}
 
 ```{python}
 # | echo: false
@@ -168,20 +172,18 @@ _plurality = _plurality.rename(columns={
     "plurality": "Plurality",
     "ds_n": "Recorded DS (n)",
     "ds_share": "Recorded DS (%)",
-    "all_share": "All births / TD (%)",
+    "all_share": "All births (%)",
 })
-_plurality[["Plurality", "Recorded DS (n)", "Recorded DS (%)", "All births / TD (%)"]].set_index("Plurality")
+_plurality[["Plurality", "Recorded DS (n)", "Recorded DS (%)", "All births (%)"]].set_index("Plurality")
 ```
 
 # Co-occurring conditions and newborn morbidity
 
-Among recorded DS cases (2014–2024, `Y`/`N` base), co-occurring conditions are
-noted far less often than clinical series report — birth-certificate checkbox
-reporting under-ascertains, so each percentage is a **lower bound**. Cyanotic
-congenital heart disease appears on a single-digit percentage of certificates,
-against published congenital-heart-defect-in-DS estimates of ~40–50%; the
-comparison is about the direction and magnitude of under-ascertainment, not exact
-agreement.
+The percentages use recorded DS cases with known `Y`/`N` condition status.
+They describe checkbox co-recording in that selected group. They are not
+necessarily lower bounds for all DS births. The cyanotic-heart-disease checkbox
+is narrower than all congenital heart defects, so an all-defect clinical estimate
+is not a like-for-like benchmark.
 
 ![Co-occurring conditions among recorded DS births (2014–2024, % of the Y/N base).](recorded_ds_co_occurring.png){#fig-co-occurring .lightbox fig-align="center"}
 
@@ -199,13 +201,12 @@ _co[["condition", "pct"]].rename(
 
 # Limitations
 
-The public-use file carries **no geography** (no state/county); it is **live
-births only** (no terminations, so no antenatal prevalence); it has **no record
-linkage** (no infant-death or longitudinal follow-up) and **no DS subtype**. Most
-clinical detail (birth weight, gestation, sex, APGAR, and every 2003-cert
-checkbox) is absent or non-comparable before 2003. Recorded cases are ≈ 40% of
-expected and are likely severity-selected, so the characteristic distributions of
-recorded cases need not match those of all DS births. See
-`docs/analysis/descriptive.md` for the full limitations and the per-figure query
-provenance, and [`predicted.qmd`](predicted.qmd) for the predicted-missing
-extension.
+The extract covers live births. It has no state identifier, linked later outcomes
+or Down syndrome subtype. Several earlier source fields are not imported, and
+revised items have partial coverage during the certificate phase-in. Recorded-case
+characteristics can differ from those of all DS births.
+
+Expected-count benchmarks use carry-forward and extrapolation assumptions. A
+recorded-to-expected ratio does not independently establish sensitivity. See the
+[methods guide](https://github.com/dspopulations/us-birth-certificates/blob/main/docs/analysis/descriptive.md)
+and [data preparation](https://github.com/dspopulations/us-birth-certificates/blob/main/docs/data-preparation.md).

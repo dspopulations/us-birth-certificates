@@ -1,12 +1,14 @@
-"""Dataclasses shared across model definitions and pipelines.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Dataclasses shared across model definitions and pipelines.
 
 Public API:
-    - RunConfig — speed / fidelity preset (``dev`` / ``test`` / ``reporting``).
-    - SelectionStep — provenance of one feature-selection decision.
-    - ShapScatterSpec — declarative spec for a SHAP scatter plot.
-    - ModelConfig — serialisable snapshot of a ``ModelDefinition``.
-    - ModelFitContext — mutable state threaded through pipeline steps.
-    - prune_features — drop a set of names from a feature tuple, order preserved.
+    - RunConfig, speed / fidelity preset (``dev`` / ``test`` / ``reporting``).
+    - SelectionStep, provenance of one feature-selection decision.
+    - ShapScatterSpec, declarative spec for a SHAP scatter plot.
+    - ModelConfig, serialisable snapshot of a ``ModelDefinition``.
+    - ModelFitContext, mutable state threaded through pipeline steps.
+    - prune_features, drop a set of names from a feature tuple, order preserved.
 """
 
 from __future__ import annotations
@@ -33,10 +35,9 @@ def prune_features(
     return tuple(f for f in source if f not in removed)
 
 
-# Preset values for each named run configuration. See docs/refactor-plan.md
-# for the rationale behind the specific numbers. Adjustments to these presets
-# are a deliberate commit by the author — they are load-bearing for
-# reproducibility of tuned hyperparameters.
+# Profile defaults shared by the CLI and library. Saved run configurations
+# record the values actually used. See docs/modelling-workflow.md; profiles
+# set effort rather than guaranteeing model quality or validation performance.
 _PRESETS: dict[str, dict[str, Any]] = {
     "dev": {
         "n_trials": 10,

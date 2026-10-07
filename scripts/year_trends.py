@@ -1,29 +1,19 @@
-"""How prenatal screening and termination of DS pregnancies vary over 2016-2024.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Reads the converged reporting fits (C primary; B for the recording bound) and
-reports, by calendar year, the population (DS-pregnancy-weighted) values of:
+Summarise modelled screening, termination and combined reduction by year.
 
-  - eta_detect : prenatal screening detection reach,
-  - eta_term   : termination given detection,
-  - reduction  = eta_detect * eta_term = 1 - eta : DS pregnancies not born alive,
-    with a per-year 89% ETI (variant C),
+Reads saved reporting fits C and B and reports birth-weighted stage probabilities,
+recorded and expected DS rates, year offsets and recorded-rate age contrasts.
+The combined reduction is relative to counterfactual live-birth prevalence, not
+survival from conception. Detection and termination summaries depend on their
+separate priors and the fitted recording surface, which now varies by race and year.
 
-plus the recorded vs model true DS livebirth rate per 10,000, the raw
-eta_detect_year / eta_term_year log-odds offsets, and a raw recorded-DS-rate-by-age
-trend used to probe whether screening expanded fastest in older mothers.
-
-Identifiability / structure notes (printed):
-  - recording s has NO year term, so the year TREND in the combined reduction is
-    data-identified; the detection-vs-termination split of it is prior-driven
-    (eta_detect_year pinned to the NIPT-adoption curve, eta_term_year free residual).
-  - eta_detect includes a year-by-age interaction. This lets the model express
-    age-specific screening expansion, while the detection-vs-termination split still
-    depends strongly on the structural priors.
-
-Figures (-> notes/figures/): year_detection_termination, recorded_rate_by_age_change.
+The script does not test convergence or identify the mechanisms of a time trend.
+Check saved diagnostics and compare restrictions before interpreting the curves.
+Figures are written to notes/figures/.
 
 Usage:
-    python scripts/year_trends.py
+    uv run python scripts/year_trends.py
 """
 
 from __future__ import annotations  # noqa: I001
@@ -286,11 +276,9 @@ def main() -> int:
         f"\nwrote year_detection_termination, recorded_rate_by_age_change to {OUTPUT_DIR}/"
     )
     print(
-        "\nNote: the combined-reduction TREND is data-identified (s has no year term);\n"
-        "the detection-vs-termination split is prior-driven (detection pinned to NIPT).\n"
-        "eta_detect includes a year-by-age interaction, so age-specific screening expansion\n"
-        "can appear in the model; the raw recorded-rate-by-age trend remains a useful\n"
-        "empirical check on that structure."
+        "\nNote: the reduction trend is conditional on the natural-rate and recording "
+        "restrictions.\nThe detection/termination split depends on separate priors. "
+        "The recording surface now varies by race and year."
     )
     return 0
 

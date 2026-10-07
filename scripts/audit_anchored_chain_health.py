@@ -1,29 +1,18 @@
-"""Audit surveillance-anchored fits per chain for the anchor-off degenerate mode.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-The anchored likelihood (``reduction_model='anchor'``, so ``DSP007`` onward)
-admits a second mode that pooled convergence statistics hide.  When
-``anchor_obs_sigma`` is estimated rather than fixed, nothing stops it inflating
-far past its ``HalfNormal`` prior scale; at a large enough value the surveillance
-observation equation contributes almost nothing to the log-probability and the
-anchor effectively switches off.  Latent prevalence is then unconstrained and
-runs up until ``theta * eta`` exceeds one for every maternal age, where
-``build_core_reduction_model`` clips ``p_ds_lb``.  A clip is a flat region with no
-gradient, so there is nothing to push a chain back out, and recording sensitivity
-collapses towards zero to keep the product near the observed recorded rate.
+Audit surveillance-anchored fits separately by chain.
 
-This was found in a ``DSP009`` fit where one chain in four escaped.  Fixing the
-observation SD closes the escape route and is now the default, so new fits are
-safe unless ``--anchor-obs-sigma-estimated`` is passed deliberately.  This audit
-exists for the fits that predate that default, and for any run that opts back out.
+An August DSP009 fit put one chain in a high-prevalence, low-recording region
+with inflated surveillance observation uncertainty. Later fits added a feasibility
+barrier and fixed the observation scale by default. Those changes do not guarantee
+adequate sampling in every configuration.
 
-Pooled summaries are the wrong instrument.  Three healthy chains out of four
-still produced a max R-hat of ``1.0111``, which reads as "needs a slightly longer
-run" rather than "one chain is in a different mode".  Per-chain means make it
-obvious in one line, so this audit works per chain and reports the worst chain
-rather than the average.
+This audit checks chain-level prevalence, recording, anchor scales and boundary
+behaviour. It complements the fit-time validation added in September. A pass
+describes numerical checks under the model; it does not establish source accuracy.
 
-Read-only.  Writes ``anchored_chain_health.csv`` and, unless every run is clean,
-``anchored_chain_detail.csv`` with one row per chain.
+Reads saved fits and writes anchored_chain_health.csv and, for flagged runs,
+anchored_chain_detail.csv. It does not change the fitted posterior files.
 """
 
 from __future__ import annotations

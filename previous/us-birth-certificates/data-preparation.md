@@ -1,8 +1,17 @@
-# Data preparation notes
+> [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
+
+# Historical race and Hispanic-origin codes
+
+This reference preserves source-code lists used during harmonisation. It is not
+the current pipeline guide. Field availability and code meanings vary by year and
+certificate revision; consult `variables.py` and the relevant NCHS user guide.
+
+## Race source fields
 
 Race variables include:
 
-#### `MRACE`(1989-2013, though declining from 2003)
+### `MRACE` (1989–2013, with declining revised-area use from 2003)
 
 ```
 01 White
@@ -10,7 +19,7 @@ Race variables include:
 03 American Indian / Alaskan Native
 04 Chinese
 05 Japanese
-06 Hawaiian(includes part Hawaiian)
+06 Hawaiian (includes part Hawaiian)
 07 Filipino
 18 Asian Indian
 28 Korean
@@ -21,7 +30,7 @@ Race variables include:
 78 Combined other Asian / Pacific Islander includes 18-68 for areas that do not report them separately
 ```
 
-#### `MRACEREC`(from 2003-2013)
+### `MRACEREC` (2003–2013)
 
 ```
 1 White
@@ -30,7 +39,7 @@ Race variables include:
 4 Asian / Pacific Islander
 ```
 
-#### `MBRACE`(2003-2019)
+### `MBRACE` (2003–2019; list below is the later one-digit scheme)
 
 ```
 1 White
@@ -40,76 +49,65 @@ Race variables include:
 (Puerto Rico excludes 3 and 4)
 ```
 
-#### `MRACE15`(from 2014)
+### `MRACE15` (from 2014)
 
 ```
-01 White(only)
-02 Black(only)
-03 American Indian / Alaskan Native(only)
-04 Asian Indian(only)
-05 Chinese(only)
-06 Filipino(only)
-07 Japanese(only)
-08 Korean(only)
-09 Vietnamese(only)
-10 Other Asian(only)
-11 Hawaiian(only)
-12 Guamanian(only)
-13 Samoan(only)
-14 Other Pacific Islander(only)
+01 White (only)
+02 Black (only)
+03 American Indian / Alaskan Native (only)
+04 Asian Indian (only)
+05 Chinese (only)
+06 Filipino (only)
+07 Japanese (only)
+08 Korean (only)
+09 Vietnamese (only)
+10 Other Asian (only)
+11 Hawaiian (only)
+12 Guamanian (only)
+13 Samoan (only)
+14 Other Pacific Islander (only)
 15 More than one race
 ```
 
-#### `MRACE6`(from 2018) - can be derived from `MRACE15`
+### `MRACE6` (from 2018; derivable from `MRACE15`)
 
 ```
-1 White(only)
-2 Black(only)
-3 American Indian / Alaskan Native(only)
-4 Asian(only)
-5 Native Hawaiian or Other Pacific Islander(only)
+1 White (only)
+2 Black (only)
+3 American Indian / Alaskan Native (only)
+4 Asian (only)
+5 Native Hawaiian or Other Pacific Islander (only)
 6 More than one race
 ```
 
-We combine as follows to get back to 1989:
+## Current harmonisation
+
+The combined race variable now has five categories, including more than one race.
+Use [the current preparation guide](../../docs/data-preparation.md) for source
+precedence, mappings and missing values. A present but invalid source value resolves
+to NULL; it does not necessarily fall through to the next source.
+
+Multi-race is explicit in `MRACE15` and some bridged `MBRACE` codes. Earlier
+single-race fields cannot recover that detail. Do not apply `MRACE15` mappings to
+`MRACE6`; the latter has only six categories.
+
+## Hispanic-origin source fields
+
+
+### `MRACEHISP` (later scheme shown)
 
 ```
-MRACE_C(combined)
-1 White
-2 Black
-3 American Indian or Alaskan Native
-4 Asian or Pacific Islander
-```
-
-For 2014 on, we have MRACE15, which is summarised in MRACE6 and where more than one race are broken out in MRACE31.
-
-We set `mrace_c` as follows (target: 1 White, 2 Black, 3 AIAN, 4 Asian or Pacific Islander, 5 More than one race):
-
-- if `mrace15` is available, use **`mrace15`**, 1:1, 2:2, 3:3, 4-14:4, **15 (More than one race) → 5**, otherwise,
-- if `mracerec` is available, use `mracerec`, 1:1, 2:2, 3:3, 4:4 (other → missing), otherwise,
-- if `mbrace` is available, use `mbrace` — the 1-digit 2014-2019 recode 1:1, 2:2, 3:3, 4:4, and the 2-digit 2003-2013 codes 01-03→1/2/3, 04-14→4, **bridged-multiple 21-24 → 5**; Puerto Rico 0 "Other" → missing, otherwise,
-- if `mrace` is available, use `mrace`, 1:1, 2:2, 3:3, 4-78:4, otherwise,
-- missing.
-
-> Earlier drafts said "use `mrace6`, 4-14:4"; that was wrong (MRACE6 has only codes 1-6). The code keys off **MRACE15** directly. "More than one race" maps to category **5** where identifiable (MRACE15 = 15, MBRACE bridged-multiple 21-24). MRACEREC and the 1989-cert MRACE carry no multi-race code, so 1989-2013 multi-race is folded into single races; unknown/out-of-range codes resolve to missing (NULL).
-
-
-For Hispanic, we have:
-
-MRACEHISP(from 2003)
-
-```
-1 Non-Hispanic White(only)
-2 Non-Hispanic Black(only)
-3 Non-Hispanic AIAN(only)
-4 Non-Hispanic Asian(only)
-5 Non-Hispanic NHOPI(only)
+1 Non-Hispanic White (only)
+2 Non-Hispanic Black (only)
+3 Non-Hispanic AIAN (only)
+4 Non-Hispanic Asian (only)
+5 Non-Hispanic NHOPI (only)
 6 Non-Hispanic more than one race
 7 Hispanic
 8 Origin unknown or not stated
 ```
 
-UMHISP(2003-2013) - slightly better counts than MRACEHISP
+### `UMHISP` (2003–2013)
 
 ```
 0 Non-Hispanic
@@ -121,7 +119,7 @@ UMHISP(2003-2013) - slightly better counts than MRACEHISP
 9 Origin unknown or not stated
 ```
 
-ORRACEM(from 1989-2002)
+### `ORRACEM` (1989–2002)
 
 ```
 1 Mexican
@@ -135,7 +133,7 @@ ORRACEM(from 1989-2002)
 9 Origin unknown or not stated
 ```
 
-MHISP_R(from 2014)
+### `MHISP_R` (from 2014)
 
 ```
 0 Non-Hispanic
@@ -147,7 +145,7 @@ MHISP_R(from 2014)
 9 Hispanic origin not stated
 ```
 
-MHISPX(from 2018)
+### `MHISPX` (from 2018)
 
 ```
 0 Non-Hispanic
@@ -160,23 +158,13 @@ MHISPX(from 2018)
 9 Origin unknown or not stated
 ```
 
-We merge to:
+## Combined origin variable
 
-MHISP_C
+`mhisp_c` keeps Mexican, Puerto Rican and Cuban origin separately, combines other
+Hispanic origins, and distinguishes non-Hispanic from unknown origin. The current
+SQL uses `MHISP_R`, then `MHISPX`, `UMHISP` and `ORRACEM` when earlier sources are
+absent. See the [current mappings](../../docs/data-preparation.md).
 
-```
-0 Non-Hispanic
-1 Mexican
-2 Puerto Rican
-3 Cuban
-4 Other and Unknown Hispanic
-5 Origin unknown or not stated
-```
-
-Rules:
-
-- if `mhisp_r` is available, then 0:0, 1:1, 2:2, 3:3, 4-5:4, 9:5, otherwise
-- if `mhispx` is available, then 0:0, 1:1, 2:2, 3:3, 4-6:4, 9:5, otherwise
-- if `umhisp` is available, then 0:0, 1:1, 2:2, 3:3, 4-5:4, 9:5, otherwise
-- if `orracem` is available, then 6-8:0, 1:1, 2:2, 3:3, 4-5:4, 9:5, otherwise
-- missing
+The combined race/origin variable is reconstructed from harmonised inputs. Raw
+`MRACEHISP` codes have different meanings across years; the list above describes
+the later scheme only. Check the source guide for each year's exact categories.

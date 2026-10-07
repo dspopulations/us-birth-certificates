@@ -1,4 +1,6 @@
-"""Composition-standardised screening / termination / reduction by year.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Composition-standardised screening / termination / reduction by year.
 
 The by-year curves in ``year_trends.py`` are population-weighted: each year's average
 mixes the fitted year effect with that year's demographic composition (shifting age,
@@ -9,8 +11,8 @@ termination), so the resulting trend is the year effect *net of who is giving bi
 
 For variant C it reports and plots both the standardised trend (solid) and the
 as-observed population-weighted trend (dashed); the gap between them is the
-compositional contribution. The screening-vs-termination split is still prior-driven
-(only the combined reduction on eta is data-identified). Figure ->
+compositional contribution. The screening, termination and recording decomposition remains conditional
+on the model and external priors. Standardisation does not identify that split. Figure ->
 notes/figures/year_standardised (png/svg/csv).
 
 Usage:
@@ -50,7 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     with open(fit / "config.json") as fh:
         y0 = int(json.load(fh)["year_range"][0])
     n = cells["N_cell"].to_numpy(float)
-    idx = {k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")}
+    idx = {
+        k: cells[f"{k}_idx"].to_numpy() for k in ("year", "age", "race", "edu", "payer")
+    }
 
     with xr.open_dataset(fit / "idata.nc", group="posterior") as post:
         n_year = post.sizes["year"]
@@ -64,13 +68,21 @@ def main(argv: list[str] | None = None) -> int:
         theta = inv_logit(
             post["theta_lb_age"].values.reshape(-1, post.sizes["age"]).mean(0)
         )
-        edi, edy, eda = cs("eta_detect_int"), cm("eta_detect_year"), cm("eta_detect_age")
+        edi, edy, eda = (
+            cs("eta_detect_int"),
+            cm("eta_detect_year"),
+            cm("eta_detect_age"),
+        )
         edya = (
             post["eta_detect_year_age"]
             .values.reshape(-1, n_year, post.sizes["age"])
             .mean(0)
         )
-        edr, ede, edp = cm("eta_detect_race"), cm("eta_detect_edu"), cm("eta_detect_payer")
+        edr, ede, edp = (
+            cm("eta_detect_race"),
+            cm("eta_detect_edu"),
+            cm("eta_detect_payer"),
+        )
         eti, ety, eta_age = cs("eta_term_int"), cm("eta_term_year"), cm("eta_term_age")
         etr, ete = cm("eta_term_race"), cm("eta_term_edu")
 
@@ -97,13 +109,17 @@ def main(argv: list[str] | None = None) -> int:
         det_s = inv_logit(base_d + edy[y] + edya[y, a])
         term_s = inv_logit(base_t + ety[y])
         m = yc == y
-        rows.append({
-            "year": y0 + y,
-            "screen_std": avg(det_s), "screen_obs": avg(det_obs, m),
-            "term_std": avg(term_s), "term_obs": avg(term_obs, m),
-            "reduc_std": avg(det_s * term_s),
-            "reduc_obs": avg(reduc_obs, m),
-        })
+        rows.append(
+            {
+                "year": y0 + y,
+                "screen_std": avg(det_s),
+                "screen_obs": avg(det_obs, m),
+                "term_std": avg(term_s),
+                "term_obs": avg(term_obs, m),
+                "reduc_std": avg(det_s * term_s),
+                "reduc_obs": avg(reduc_obs, m),
+            }
+        )
     df = pd.DataFrame(rows)
     yr = df["year"].to_numpy()
 
@@ -114,12 +130,23 @@ def main(argv: list[str] | None = None) -> int:
         ("reduc", "Reduction (not born alive)", styles.COLOUR_RED),
     ]
     for key, label, col in series:
-        ax.plot(yr, df[f"{key}_std"], "-o", ms=3, color=col, label=f"{label} — standardised")
-        ax.plot(yr, df[f"{key}_obs"], "--", color=col, alpha=0.55, label=f"{label} — as observed")
+        ax.plot(
+            yr, df[f"{key}_std"], "-o", ms=3, color=col, label=f"{label} — standardised"
+        )
+        ax.plot(
+            yr,
+            df[f"{key}_obs"],
+            "--",
+            color=col,
+            alpha=0.55,
+            label=f"{label} — as observed",
+        )
     ax.set_xlabel("Year")
     ax.set_ylabel("Probability")
     ax.set_ylim(0, 1)
-    ax.set_title(f"Screening & termination by year, composition-standardised (variant {ns.variant})")
+    ax.set_title(
+        f"Screening & termination by year, composition-standardised (variant {ns.variant})"
+    )
     ax.legend(fontsize=6, ncol=2, loc="center left")
     save_fig(fig, OUTPUT_DIR, "year_standardised", data=df)
     plt.close(fig)

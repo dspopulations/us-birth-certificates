@@ -1,449 +1,106 @@
 > [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
+
+> [!NOTE]
 > Drafted by a LLM-based AI tool (Codex/GPT-5).
 
-# Bayesian Model Inventory
+# Bayesian accounting model inventory
 
-The aggregate Down syndrome birth-certificate accounting models use stable
-`DSPnnn` identifiers. The numbers index the historical order in which models
-entered the reproducible fitting workflow; they are not a hierarchy and they do
-not imply that the highest-numbered model is preferred.
+DSP identifiers record the order of model development. A larger number does not mean a preferred model. These aggregate models are separate from the [three-stage selection model](../../src/dspopulations_us_birth_certificates/selection/README.md).
 
-| Model | Status | Age resolution | Recording structure | Combined reduction | Purpose |
-| --- | --- | --- | --- | --- | --- |
-| `DSP001` | Discretisation sensitivity | Seven bands | Constant `s` | One value per year | Original core accounting model; retained to measure the effect of evaluating the Morris curve in broad bands. |
-| `DSP002` | Band-resolution sensitivity | Seven bands | Partially pooled `s_year` | One value per year | Tests year-varying recording under the original broad-band age approximation. |
-| `DSP003` | Age-structure diagnostic | NCHS single-age codes | Constant `s` | Smooth age pattern within year | Tests how much residual age structure can be absorbed by combined reduction while preserving each year's natural-DS-weighted surveillance margin. |
-| `DSP004` | Preferred structure; conditional reference | NCHS single-age codes | Constant `s` | One value per year | Removes the broad-band Morris approximation while retaining the simplest transparent reduction-recording structure; totals remain conditional on calibration scenarios. |
-| `DSP005` | Year-recording sensitivity | NCHS single-age codes | Partially pooled `s_year` | One value per year | Tests whether year-specific recording materially changes the preferred exact-age baseline. |
-| `DSP006` | Measurement-era control | NCHS single-age codes | Separate revised / unrevised `s` | One value per year | Splits recording sensitivity by 2003-certificate revision so a window spanning the 2004-2015 phase-in can identify that measurement shift instead of absorbing it into a time trend. Needs a year range crossing the phase-in. |
-| `DSP007` | Level identification | NCHS single-age codes | Constant `s` | Consequence of an anchored prevalence | Replaces the reduction-rate prior with a latent annual prevalence observed through the surveillance programmes' overlapping five-year window means, so the level is set by data rather than imported. |
-| `DSP008` | Level identification with era control | NCHS single-age codes | Separate revised / unrevised `s` | Consequence of an anchored prevalence | Combines the `DSP007` anchor with the `DSP006` revision split. Both fixes matter independently, so this is the specification that carries them together. |
-| `DSP009` | Post-window allocation candour | NCHS single-age codes | Revised / unrevised `s`, drifting past the last window | Consequence of an anchored prevalence | Adds a random walk on `logit s` over the years no surveillance window covers. `DSP008` holds `s` constant there, so a falling recorded rate can only be read as falling prevalence; `DSP009` makes that allocation an explicit prior. It does not identify the split — see below. |
-| `DSP010` | Post-window allocation evidence | NCHS single-age codes | Revised / unrevised `s`, moving with an anomaly-panel factor | Consequence of an anchored prevalence | Adds a *second observation channel*: congenital-anomaly checkboxes sharing the Down syndrome certificate item that have no prenatal reduction channel, so their common movement measures the item's recording sensitivity where no surveillance window reaches. Replaces `DSP009`'s prior-only split with a weakly identified one, and does not eliminate the assumptions — see below. |
+For true Down syndrome probability `q`, recording sensitivity `s` and false-positive probability `f`, the recorded probability is `q*s + (1-q)*f`. Certificate counts constrain this recorded probability. External information and structural assumptions constrain its components.
 
-All models use the same Quarto template at
-`docs/models/selection_core_reduction/index.qmd`. The fit CLI copies that
-template into each run directory and records the selected model in `config.json`.
+> [!IMPORTANT]
+> September 2026 changes revised the DSP003 calibration solver, the surveillance observation model, prior sampling and validation. August fits record the earlier implementation. Refit them before presenting estimates from the current model. See the [code-review fixes](../../notes/20260905-dsp-code-review-fixes.md).
 
-“NCHS single-age codes” is not exact at both endpoints: code 12 represents ages
-10-12 and code 50 represents ages 50 and over. The Morris curve is evaluated at
-representative ages 12 and 50 for those pooled cells.
+## Model roles
 
-Typical commands:
+| Model | Age resolution | Recording | Prevalence or reduction | Role |
+| --- | --- | --- | --- | --- |
+| DSP001 | Seven bands | Constant | Annual reduction priors | Original baseline and age-discretisation sensitivity |
+| DSP002 | Seven bands | Centred year offsets | Annual reduction priors | Year-recording sensitivity at band resolution |
+| DSP003 | NCHS single-age codes | Constant | Smooth age reduction calibrated to annual margins | Age-allocation diagnostic |
+| DSP004 | NCHS single-age codes | Constant | Annual reduction priors | Simple exact-age reference structure |
+| DSP005 | NCHS single-age codes | Centred year offsets | Annual reduction priors | Year-recording sensitivity to DSP004 |
+| DSP006 | NCHS single-age codes | Revised and unrevised levels | Annual reduction priors | Certificate-revision control |
+| DSP007 | NCHS single-age codes | Constant | Surveillance-anchored annual prevalence | Direct prevalence anchor |
+| DSP008 | NCHS single-age codes | Revised and unrevised levels | Surveillance-anchored annual prevalence | Anchor with revision control |
+| DSP009 | NCHS single-age codes | Revision levels and post-anchor drift | Surveillance-anchored annual prevalence | Sensitivity to post-window allocation |
+| DSP010 | NCHS single-age codes | Revision levels and anomaly-panel factor | Surveillance-anchored annual prevalence | Additional recording evidence under control-condition assumptions |
 
-```bash
-python scripts/fit_core_reduction_model.py DSP001 --profile reporting --render
-python scripts/fit_core_reduction_model.py DSP002 --profile reporting --render
-python scripts/fit_core_reduction_model.py DSP003 --profile reporting --render
-python scripts/fit_core_reduction_model.py DSP004 --profile reporting --render
-python scripts/fit_core_reduction_model.py DSP005 --profile reporting --render
-python scripts/fit_core_reduction_model.py DSP006 --profile reporting --years 2004-2024
-python scripts/fit_core_reduction_model.py DSP008 --profile reporting --years 2004-2024
-python scripts/fit_core_reduction_model.py DSP009 --profile reporting --years 2004-2024
-python scripts/compare_core_reduction_models.py \
-  output/selection_core_reduction/DSP001/<timestamp> \
-  output/selection_core_reduction/DSP004/<timestamp>
-python scripts/compare_core_reduction_models.py \
-  output/selection_core_reduction/DSP004/<timestamp> \
-  output/selection_core_reduction/DSP005/<timestamp>
-python scripts/compare_core_reduction_sensitivities.py \
-  output/selection_core_reduction/DSP004/<reference-run> \
-  output/selection_core_reduction/DSP004/<sensitivity-run> [...] \
-  --output-dir output/selection_core_reduction/comparisons/<comparison-name>
-```
+"Exact age" is shorthand. Code 12 pools ages 10–12 and code 50 pools ages 50 and over. The Morris curve uses representative ages 12 and 50 at those endpoints.
 
-## DSP004 coherent surveillance-calibration controls
+DSP004 replaces the broad-band approximation with a simpler exact-age reference. It is not a claim of adequate age fit or identified prenatal reduction. The historical fits still missed broad-age margins. DSP003 can absorb that pattern into reduction while holding recording constant; a better fit does not establish that allocation as the mechanism.
 
-`DSP004` also exposes two sensitivity controls without assigning a new model
-identifier:
-
-- `--reduction-error-correlation`, stored in `config.json` as
-  `reduction_error_correlation`, sets the common correlation $\lambda$ among
-  yearly logit-scale reduction-prior errors while preserving every year's
-  marginal prior variance; and
-- `--reduction-calibration-shift-logit`, stored as
-  `reduction_calibration_shift_logit`, applies a fixed common logit shift
-  $\delta$ to the complete reduction trajectory.
-
-The default `lambda=0`, `delta=0` configuration reproduces the independent,
-unshifted prior. The pre-specified primary grid has seven unique scenarios:
-
-| Role | $\lambda$ | $\delta$ |
-| --- | ---: | ---: |
-| Baseline | `0` | `0` |
-| Correlation sensitivity | `0.5` | `0` |
-| Correlation sensitivity | `0.9` | `0` |
-| Common-level stress | `0` | `-0.4` |
-| Common-level stress | `0` | `-0.2` |
-| Common-level stress | `0` | `+0.2` |
-| Common-level stress | `0` | `+0.4` |
-
-All seven scenarios hold `f=7.8e-5` and the observed/extrapolated reduction-
-prior logit SDs at `0.20 / 0.45`. The shift values are stress values, not
-validated bounds. Aggregate materiality is pre-specified as either an absolute
-change of at least 5% in the total posterior mean or an increase of at least
-25% in the 89% ETI width. The decomposition checks are an absolute change of at
-least `0.05` in mean $s$ and at least 10% in the posterior mean of draw-by-draw
-model-implied missed true cases, $T(1-s)$ for constant-$s$ `DSP004`.
-
-If an aggregate rule triggers, the protocol adds joint corners
-`(lambda, delta)=(0.9, -0.4)` and `(0.9, +0.4)` and checks them against the
-separate-axis scenario envelope. That envelope is descriptive, not a posterior
-interval; the scenario draws are not pooled or model-averaged. These controls
-test common error correlation and a common level shift. They do not test the
-extrapolated-tail slope or establish trend robustness, and all missed-case
-quantities remain population aggregates rather than individual classifications.
-
-The completed primary grid triggers the aggregate rule. Its posterior means
-span 37,610-50,190, with outer 89% ETI endpoints of 35,023-52,177. The required
-`(lambda, delta)=(0.9, +0.4)` corner gives 34,806 (32,727-36,924), outside that
-separate-axis total envelope. Primary decomposition means span `0.300-0.401`
-for $s$ and `22,572-35,151` missed true cases. The original negative-corner fit
-shared seed 47 with the baseline, so its borderline MCSE classification was not
-retained. An independent-seed refined run gives 46,336.589
-(44,331.066-48,337.931), a `+4.704%` mean change. Its distance from the 5%
-threshold is 131.025 births, exceeding its two-combined-MCSE band of 89.274
-births, so the aggregate mean change is classified as immaterial. Its refined
-`s=0.325` and missed-count mean of 31,298 (29,276-33,312), `+7.123%` from
-baseline, are inside both primary decomposition envelopes and trigger neither
-decomposition rule. The positive-shift corner remains outside both primary
-decomposition envelopes at `s=0.433` and 19,769 missed cases, so its interaction
-conclusion is unaffected. `DSP004` is therefore retained as the preferred
-accounting structure and its independent, unshifted fit as a conditional
-reference, not as a posterior that incorporates shared surveillance-source
-uncertainty. Results must be reported by scenario; their envelope is not a
-credible interval.
-
-Broad-age posterior-predictive coverage remains `1/7`: coherent surveillance
-calibration does not resolve the residual maternal-age allocation. The next
-model-adequacy gate is the mirrored age-on-recording diagnostic; neither age
-allocation should be treated as identified from certificates alone.
-
-## Anchored models: the surveillance observation SD is fixed
-
-Anchored models (`DSP007` onward) hold the surveillance observation SD **fixed**,
-at `0.05` by default, rather than estimating it. Two independent reasons point the
-same way.
-
-**Reporting.** An estimated SD measures only whether the overlapping windows are
-mutually *consistent* with a smooth latent path. It cannot measure whether the
-surveillance prevalences are *accurate*, because the source workbook supplies no
-uncertainty at all. Estimating it returns about `0.012` and an interval on the
-2016-2024 total of `2.87%`, which amounts to asserting that surveillance
-prevalence is measured to about one percent. Nothing supports that, and the
-[workbook note](../../notes/20260803-degraaf-surveillance-workbook-extraction.md)
-says plainly not to report it.
-
-**Numerical.** A free SD admits a degenerate mode. Its half-normal prior does not
-prevent it reaching `0.84`, and at that value the observation equation contributes
-almost nothing to the log-probability, so the anchor effectively switches off.
-Latent prevalence then runs up and recording sensitivity collapses towards zero to
-keep the product near the observed recorded rate. This is a genuine local basin
-about `291` log units down rather than a numerical artefact: it fits the recorded
-cell counts *better*, by `84` log units, and pays for that by discarding the
-anchor. It is the $\eta s$ ridge, and the anchor is what holds `s` at `0.335`. One
-chain in four reached it in a `DSP009` fit at 4,000 draws per chain, and pooled
-convergence statistics did not make it obvious: three healthy chains still gave a
-max R-hat of `1.0111`.
-
-The fixed value is an **assumption about surveillance accuracy, not an estimate**.
-Report across the sensitivity axis and say which value was chosen:
+## Fitting and reporting
 
 ```bash
-python scripts/fit_core_reduction_model.py DSP008 --years 2004-2024 --anchor-obs-sigma-fixed 0.10
+uv run python scripts/fit_core_reduction_model.py DSP004 --profile reporting --render
+uv run python scripts/fit_core_reduction_model.py DSP008 --years 2004-2024 --profile reporting --render
+uv run python scripts/fit_core_reduction_model.py --help
 ```
 
-`--anchor-obs-sigma-estimated` opts back out. It is not recommended, the fit warns
-when it is used, and any such run should be checked per chain:
+Use a range that crosses the 2004–2015 certificate phase-in to study revision-specific recording. All DSP models use `docs/models/selection_core_reduction/index.qmd`. The CLI copies it into `output/selection_core_reduction/<model_id>/<timestamp>/`. See the [workflow](../modelling-workflow.md) for inputs and checks.
+
+Each posterior draw of the expected total is `sum(N_cell*q_cell)`. Its interval describes uncertainty in expected burden. It does not include the additional uncertainty in the unknown realised count. Older `true_count_*` names are compatibility aliases.
+
+## Reduction-prior sensitivities
+
+DSP001–DSP006 use the reduction-rate CSV. Its source derivation is incomplete, and its extrapolated tail remains an assumption. The working logit standard deviations are 0.20 before 2020 and 0.45 from 2020. The [family review](../../notes/20260803-dsp-core-model-family-review.md) questions whether 2019 should also receive the wider prior.
+
+DSP004 exposes:
+
+- `--reduction-error-correlation`, which correlates annual logit errors while preserving their marginal variances;
+- `--reduction-calibration-shift-logit`, which shifts all annual prior centres;
+- the false-positive and reduction-width controls shared by the fitting CLI.
+
+The defaults are independent errors and zero shift. These values are working assumptions. The [calibration analysis](../../notes/20260803-dsp004-coherent-surveillance-calibration.md) found material changes in total and recording under alternative scenarios. Report scenarios separately. Their outer range is not a credible interval and their draws must not be pooled without justified probabilities.
+
+## Surveillance-anchored models
+
+DSP007–DSP010 model annual log prevalence. The CLI weights each surveillance window by annual birth counts, including years outside the fitted range. Missing weights stop the run. The observation model uses a joint Normal likelihood on log prevalence.
+
+The default error correlation is derived from overlapping window weights. It represents shared annual errors of equal variance; it is not a measured surveillance covariance and does not account for every common bias. Check independent errors, partial overlap and non-overlapping windows as sensitivities.
+
+The starting prevalence prior has median 0.0013 and log-scale standard deviation 0.25. The observation standard deviation is fixed at 0.05 by default. Neither scale is a measured source uncertainty. Vary them before reporting estimates. Estimating the observation scale can weaken the anchor and permit a high-prevalence, low-recording solution.
 
 ```bash
-python scripts/audit_anchored_chain_health.py --strict
+uv run python scripts/fit_core_reduction_model.py DSP008 --years 2004-2024 --anchor-obs-sigma-fixed 0.10
+uv run python scripts/audit_anchored_chain_health.py --strict
 ```
 
-That audit walks every anchored fit under `output/`, flags a chain by the share of
-its draws with $\eta > 1.5$ and by between-chain dispersion in `recording_s`, and
-exits non-zero when a run is not clean. All anchored fits predating this default
-have been audited and none is contaminated.
+Inspect `validation.json` as well as the per-chain audit. A numerical pass does not establish source accuracy or separate prevalence from recording.
 
-Separately, the clip that keeps $\theta\eta$ a valid Binomial probability now
-carries a smooth barrier alongside it, because a clip is flat and cells where it
-binds stop contributing gradient in $\eta$ — which is what let a chain *stay* in the
-anchor-off mode once tuning had put it there. The barrier is
-$-w\sum\mathrm{softplus}\!\left(k(\theta\eta-1)\right)/k$ with $k=200$ and
-$w=1000$, inert while $\theta\eta$ is a valid probability and growing with a
-non-zero gradient once it is not.
+## DSP009 post-window drift
 
-The calibration leaves enormous headroom: $\theta$ peaks at `0.038`, so $\theta\eta$
-reaches one only near $\eta=26$, against a posterior $\eta$ of about `0.6`. At
-$\eta=1$ — the $\rho<0$ diagnostic the model deliberately permits — the barrier
-evaluates to $e^{-194}$, zero in double precision. It cannot perturb a reportable
-fit, and does not: at matched seeds the 2016-2024 total moves by about two Monte
-Carlo standard errors and `recording_s` agrees to four decimal places. Fixing the
-observation SD and repairing the clip are **independently sufficient** to close the
-mode, and both are in place.
+A surveillance point centred on 2018 covers 2016–2020. It supplies no direct prevalence observation for 2021–2024. DSP008 holds recording constant in those years. DSP009 allows recording to drift, so its split between prevalence and recording depends on prior scales.
 
-## DSP009 post-window allocation controls
-
-Surveillance windows are centred, so with mid-years running to 2018 the anchored
-span ends at 2020 and the years after it carry no external observation of
-prevalence at all. Every anchored model except `DSP009` holds `s` constant
-across those years, which means a falling recorded rate has only one place to go:
-the fit reports falling prevalence. That is a consequence of the constant-`s`
-default rather than a finding, and a specification letting `s` drift instead fits
-the same data equally well.
-
-`DSP009` makes the choice explicit. Two controls set where the post-window
-decline is booked, and **neither is identified by the data** — nothing after the
-last window distinguishes falling prevalence from falling recording, so the split
-is decided by the prior. Report the corners with any drifted fit.
-
-| Configuration | Post-window decline attributed to | Command |
-| --- | --- | --- |
-| All prevalence | Prevalence | `DSP009 --recording-s-drift-sigma 0` (identical to `DSP008`) |
-| Divided by prior | Both, in the ratio of the drift SD to the anchor's state variances | `DSP009` (drift SD `0.06`) |
-| All recording | Recording | `DSP009 --anchor-forecast-flat --recording-s-drift-sigma 0.20` |
-
-The default drift SD of `0.06` per year is calibrated so its cumulative width
-over a four-year unanchored tail spans this repository's own bracketing
-allocation: the de Graaf-derived recording anchor in
-`notes/figures/recording_rates_anchor.csv` has `s` for Non-Hispanic White falling
-17% over 2016-2024, about `0.12` logit units across four years, or one cumulative
-SD at that value. It is a stated assumption, not evidence.
-
-`recording_s` remains the anchored-era revised sensitivity in a drifted fit, so
-it stays directly comparable with `DSP006` and `DSP008`. The drift is carried
-separately as `recording_s_drift_logit`, exactly zero for every year a window
-still reaches, with `recording_s_drift_ratio` reporting the final modelled year's
-sensitivity relative to its anchored-era level. `--anchor-forecast-flat` holds
-latent prevalence at its last anchored value instead of forecasting it, and
-applies to `DSP007` and `DSP008` as well.
-
-Two properties are worth stating because they bound what the model can be asked
-to do. The drift shifts revised and unrevised certificates together: it models
-recording behaviour over time, not a change in the gap between certificate
-versions. And a drifted fit should be expected to **widen** the interval on the
-2016-2024 total rather than narrow it, because it stops asserting an allocation
-the data cannot supply.
-
-`DSP009` needs more tuning than `DSP008` does. The drift deliberately opens a
-ridge — prevalence and recording trade off exactly along it after the last window
-— and short chains wander along that ridge instead of exploring it. At 150 tune
-plus 150 draws `DSP008` converges to max R-hat `1.024` while `DSP009` reaches
-`2.3` with an effective sample size near `3` and posterior means far outside any
-plausible range. Both profiles are healthy; do not shorten them for `DSP009`, and
-read the R-hat on `recording_s_drift_innovation_raw` rather than only on the
-cumulated `recording_s_drift_logit`.
-
-## DSP010 anomaly-panel recording factor
-
-`DSP009` states the post-window allocation as a prior. `DSP010` brings evidence to
-it. The 2003 certificate revision records Down syndrome as one checkbox in a
-single congenital-anomaly item, and several other checkboxes on that same item
-describe conditions with no prenatal detection-and-termination channel worth
-speaking of. Their recorded rate is therefore close to a direct reading of the
-item's recording sensitivity, and it is available in exactly the years the
-surveillance anchor does not reach.
-
-That is an **exclusion restriction**, and it is the only route identified so far
-that could *divide* the post-window decline rather than parameterise the division.
-
-### The control set is curated, with reasons
-
-`data/us-births-anomaly-panel-conditions.csv` names every checkbox on the item
-with a role and the reason for it. Four are controls:
-
-| Control | Why it qualifies |
+| Setting | Assumption |
 | --- | --- |
-| Hypospadias | Male-only and not prenatally diagnosable, so there is no detection-and-termination channel at all. The strongest available control. |
-| Cleft palate alone | Poorly detectable on routine ultrasound; termination essentially unrecorded in the US. |
-| Cleft lip ± palate | Detectable from the second trimester, but isolated cleft lip is essentially never terminated in the US. |
-| Limb reduction defect | Detectable; termination rare and confined to severe multi-limb cases. |
+| `--recording-s-drift-sigma 0` | No post-window recording drift; reproduces DSP008's recording structure |
+| Default drift scale 0.06 | Both prevalence and recording can change |
+| `--anchor-forecast-flat --recording-s-drift-sigma 0.20` | Prevalence stays at its last anchored level; recording can change |
 
-Two exclusions carry more information than the inclusions, and are named in the
-table rather than dropped silently:
+Report these allocation checks with a drifted fit. `recording_s` is the reference revised-certificate sensitivity. `recording_s_drift_ratio` compares the final year with that anchored-era level. See the [drift note](../../notes/20260804-dsp009-post-anchor-recording-drift.md).
 
-- **Gastroschisis** has no material reduction channel and would otherwise
-  qualify. Its composition-adjusted recorded rate falls `25.9%` over 2016-2018 to
-  2022-2024, which is a genuine decline in US birth prevalence after a long rise.
-  Reading that as recording would be wrong, and it is the clearest demonstration
-  that "no reduction channel" is not sufficient — the control's own prevalence
-  must also be stable.
-- **Cyanotic congenital heart disease** *rose* `14.6%` over the same window while
-  every control fell, because universal newborn pulse-oximetry screening was
-  phased in across the states over 2011-2018. A single item-wide recording factor
-  is therefore refuted for at least one checkbox on the item, which is why the
-  Down syndrome loading is estimated rather than assumed.
+## DSP010 anomaly panel
 
-### The controls disagree, and the model says so
+DSP010 uses recorded congenital-anomaly rates from 2016 onward as an additional observation channel. Its control conditions are hypospadias, cleft palate alone, cleft lip with or without cleft palate, and limb reduction. Their changes can inform recording only under assumptions about their own prevalence, prenatal reduction and shared recording behaviour.
 
-The four controls do not agree about the common recording change. On the current
-set, composition-adjusted, 2016-2018 against 2022-2024:
+The controls disagree. The model allows condition-specific trends and an uncertain Down syndrome loading. The descriptive heterogeneity calculation omits some within-condition uncertainty, so its Q and I-squared values should not be treated as exact evidence about a shared factor.
 
-| Control | Change | Poisson SE |
-| --- | ---: | ---: |
-| Hypospadias | `-15.5%` | `1.8%` |
-| Limb reduction | `-12.9%` | `3.8%` |
-| Cleft palate alone | `-7.7%` | `2.8%` |
-| Cleft lip ± palate | `-2.2%` | `1.9%` |
+The pinned condition table supplies Texas surveillance trends for three controls. It supplies no hypospadias trend. These fixed offsets do not propagate source uncertainty or establish national transport. Setting `--panel-prevalence-trend-sigma 0` imposes zero remaining shared prevalence trend; it is still an assumption.
 
-That is `I² = 91%` — `Q = 33.4` on 3 degrees of freedom, between-condition SD
-`7.4%`. A fixed-effect mean of these is `-9.3% ± 1.1%`; the honest random-effects
-mean is `-9.6% ± 4.0%`. `panel_heterogeneity` computes this at load time, it
-travels in every `config.json`, and the fit warns when `I²` exceeds `50%`, so a
-run cannot quietly present a shared factor the panel itself contradicts.
-
-Two specification consequences follow, both settled by measurement rather than
-taste:
-
-- **Per-condition trend deviations are not centred to sum to zero.** Centring
-  asserts that the controls' trends average exactly to the item-wide factor — that
-  these four hand-picked conditions are interchangeable measurements of one thing.
-  Given the disagreement above that is the fixed-effect fallacy, and it returns a
-  common-change SD of `1.7%` where a random-effects treatment of the same data
-  gives `4.0%`. Uncentred with an estimated scale reproduces the honest width.
-- **The common walk's innovation scale is fixed, not estimated.** An estimated
-  scale shrinks the common change, which is the quantity being measured, and that
-  shrinkage then competes with the deviations' shrinkage for the same confounded
-  signal. Measured: it moved the fitted common change from `-10.0%` to `-4.6%`
-  while the total across factor and deviations stayed put.
-
-### What stays prior-driven
-
-`DSP010` narrows the allocation; it does not identify it. Two assumptions survive
-as parameters rather than as silence:
-
-| Control | Meaning | Corner |
-| --- | --- | --- |
-| `--panel-conditions-csv` | Which curation table supplies each control's own true-prevalence trend, as a fixed offset. | The pinned table measures three of four from active surveillance; the default table assumes all four are flat. |
-| `--panel-prevalence-trend-sigma` | Prior SD on a true-prevalence trend shared by *every* control, log per year. Perfectly confounded with a recording trend; no comparison inside the panel can see it. | `0` asserts the exclusion restriction exactly; raising it moves back towards `DSP009`. |
-| `--panel-loading-fixed` | Pins how far Down syndrome recording departs from the item factor. | `1.0` is the strict shared-factor restriction, which the panel's own disagreement argues against. |
-
-**The headline fit takes the first two out of prior territory and leaves the third
-where it is.** `data/us-births-anomaly-panel-conditions-pinned.csv` carries measured
-trends for cleft palate alone, cleft lip ± palate and limb reduction; their mean
-implies a shared trend of `-0.00262` log per year, comfortably inside the `0 ± 0.004`
-prior the earlier specification asserted. With that external support the headline
-sets `--panel-prevalence-trend-sigma 0`, which costs `+13` births (`0.8` Monte Carlo
-standard errors — nothing) and removes `2.5` percentage points of factor width that
-was pure prior. Hypospadias is refused a pin, so γ = 0 still asserts slightly more
-than the measurement delivers, and the γ-free fit stays in the envelope for that
-reason. See
-[the trend-pin note](../../notes/20260804-dsp010-control-prevalence-trend-pins.md).
-
-Had the trends stayed unpinned, the default prevalence-trend SD of `0.004` log per
-year would put one prior SD at about `3.3%` over the eight-year panel span against a
-common recorded decline near `10%` — admitting that up to roughly a third of the
-decline might be real prevalence, as a stated judgement rather than a measurement.
-
-The loading is untouched by any of this. It is identified only by the anchor/panel
-overlap, and its posterior SD is `0.456` against a prior of `0.500`.
-
-### Geometry and scope
-
-The panel starts in **2016**, when revised-certificate coverage reaches 100%.
-Earlier years would read a changing, non-random set of revising states as
-recording behaviour, and `prepare_anomaly_panel` refuses them. With windows
-centred to 2018 the anchored span ends at 2020, so 2016-2020 are the five years in
-which *both* channels speak — the only place the loading is testable — and
-2021-2024 are where the panel does work the anchor cannot.
-
-`recording_s` remains the reference-year revised sensitivity, so it stays directly
-comparable with `DSP006`, `DSP008` and `DSP009`. The factor is carried separately
-as `recording_s_panel_logit`, exactly zero before 2016 and at the reference year
-itself, with `recording_s_panel_ratio` reporting the final year's sensitivity
-relative to that level.
-
-**`recording_s_panel_ratio` and `recording_s_drift_ratio` are not on the same
-scale, despite the parallel names.** Each divides by its own model's reference
-level, and those references are different years: `DSP009`'s drift is zero until the
-last window closes, so its ratio spans 2020-2024, while `DSP010`'s factor starts at
-the 2016 panel reference and spans 2016-2024. Comparing the two ratios directly
-inverts the annual rates — `0.9623` over four years is `-0.94%` a year against
-`0.9593` over eight years at `-0.52%`. Compare the totals, or divide by the span
-first; do not read the two ratios side by side.
-
-The panel's denominators are checked against the certificate cells' per-year
-births, so the two channels cannot silently describe different populations.
-Hypospadias is male-only and so its denominator is nominally wrong; the male share
-of US births is stable to within `0.08%` across 2016-2024 against double-digit
-changes in the rates, so the mis-scaling is absorbed by the condition's own level
-and contributes no trend.
-
-The headline specification, and the two corners either side of it. The first needs
-`--tune 6000 --target-accept 0.995`: with γ removed the geometry tightens around
-`panel_condition_trend_scale`, and at the default settings this configuration can
-lose a chain to that funnel with **zero divergences** to warn you. Read the fit's
-R-hat verdict, and run `scripts/audit_anchored_chain_health.py --strict`.
+A loading of one means equal changes in **log odds**, not equal proportional changes in sensitivity. `recording_s_panel_ratio` compares the final year with the panel reference year. It spans a different period from DSP009's drift ratio; compare annualised changes or counts on the same period.
 
 ```bash
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv --panel-prevalence-trend-sigma 0 --tune 6000 --target-accept 0.995
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024
-python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv --panel-prevalence-trend-sigma 0 --panel-loading-fixed 1.0 --tune 6000 --target-accept 0.995
+uv run python scripts/fit_core_reduction_model.py DSP010 --years 2004-2024 --panel-conditions-csv data/us-births-anomaly-panel-conditions-pinned.csv --panel-prevalence-trend-sigma 0 --tune 6000 --target-accept 0.995
 ```
 
-## DSP004 race-surveillance audit
+This reproduces the historical specification's settings with the current code, not its historical results. Compare the default table, a non-zero shared prevalence trend and alternative loadings. More tuning may be needed even with no divergences. See the [panel design](../../notes/20260804-dsp010-anomaly-panel-recording-factor.md) and [trend-source check](../../notes/20260804-dsp010-control-prevalence-trend-pins.md).
 
-A no-refit audit reconstructs the independent, unshifted reporting `DSP004`
-fit by exact maternal age, year, and the current seven race/Hispanic-origin
-groups. The project lead confirmed on 2026-08-03 that the de Graaf source points
-are centred five-year estimates based on maternal race and that prevalence is
-the ratio of numerator and denominator counts pooled across each window. The
-label 2016 therefore represents 2014-2018, of which the frozen fit supports only
-2016-2018; it is excluded from the aligned comparison. The label 2018
-represents 2016-2020 and is fully supported.
+## Race calibration remains unresolved
 
-The earlier annual-label 2016/2018 comparison and cross-year transport result
-are superseded and provide no evidence of repeatability. For the sole complete
-window, the pooled count ratio is the sole source-aligned estimand. Its existing
-comparison gives a material 2018 composition discrepancy (`TV` about 0.0803;
-`WRMS` about 0.2184), including Asian/Pacific Islander and Hispanic
-relative-rate contrasts. The earlier equal-year-rate calculation was
-numerically close but is now a superseded sensitivity, not decision evidence.
-Summing the native source birth denominators implies 25,128 named-group true
-births, compared with a model posterior mean of 24,865; the source denominator
-contains about 1.50% more named-group births than the model cohort. Applying
-the same source rates to model births gives 24,781. The pooled data therefore
-contain some absolute-scale information, but it remains inseparable from the
-unresolved denominator mapping and cannot yet serve as a second national-scale
-anchor.
+The [race-surveillance audit](../../notes/20260803-dsp004-race-surveillance-audit.md) has one complete aligned window, centred on 2018. The estimate centred on 2016 needs years outside its frozen fit. The source pools numerator and denominator counts across each window; an equal-year mean of rates is not the same quantity.
 
-The incomplete 2016 window means there is no temporal replication.
-Hispanic-origin precedence, multi-race bridging, material source/model
-denominator differences, source covariance, and overlap with the national
-reduction evidence remain unresolved. The mirrored age-on-recording gate also
-remains outstanding. The audit therefore records `calibration_eligible=false`
-and authorises no race layer. Its local output must also be regenerated in a
-release-conformant environment before it can be sealed. Resolve those source
-and denominator definitions, obtain a second complete window, establish source
-covariance and evidence dependence, and complete the mirrored age-on-recording
-gate before reconsidering a time-invariant, composition-preserving race
-extension.
-
-The comparisons are descriptive and in-sample. `DSP004` is preferred over
-`DSP001` because it removes an avoidable age-discretisation approximation, not
-because it resolves the remaining age misfit. `DSP005` checks sensitivity to
-year-varying recording. `DSP003` assigns the residual maternal-age pattern to
-combined reduction while holding recording constant by age; its better
-in-sample fit is therefore not evidence for that mechanism. None of the models
-shows that birth-certificate counts alone identify recording separately from
-pre-livebirth reduction. The headline estimates remain conditional on external
-Morris and surveillance information and on the false-positive scenario. The
-working false-positive range has little effect on the `DSP004` total under the
-current reduction-prior widths, but it materially changes recording sensitivity;
-widening the independent annual reduction priors approximately doubles the
-headline interval width.
-
-The [exact-age ablation note](../../notes/20260802-dsp004-dsp005-exact-age-ablations.md)
-records the matched results and decision. The
-[DSP003 note](../../notes/20260802-dsp003-age-reduction-extension.md) records the
-age-structure and measurement sensitivities. The
-[DSP004 measurement sensitivity note](../../notes/20260802-dsp004-false-positive-surveillance-sensitivity.md)
-records the false-positive and reduction-prior-width grid and its conditional
-interpretation. The
-[coherent surveillance-calibration analysis](../../notes/20260803-dsp004-coherent-surveillance-calibration.md)
-records the pre-specified correlated-error and common-shift protocol, fitted
-results and conditional reporting decision. The
-[race-surveillance audit](../../notes/20260803-dsp004-race-surveillance-audit.md)
-records the no-refit protocol, reconstruction checks, descriptive findings and
-fail-closed model decision.
+Category mapping, denominator differences, source covariance and overlap with national evidence remain unresolved. The audit records `calibration_eligible=false`. Its comparisons do not establish temporal replication or authorise a race-specific calibration.

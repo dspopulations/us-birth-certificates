@@ -1,7 +1,8 @@
-"""Quarto reporting helpers.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Generic enough to migrate upstream into ``dse_research_utils`` once stable.
-See ``docs/refactor-plan.md`` step 10 for the upstreaming plan.
+Copy and render Quarto templates in model run directories.
+
+See ``docs/modelling-workflow.md`` for report inputs and rendering commands.
 """
 
 from __future__ import annotations
@@ -26,10 +27,8 @@ def copy_template(
     """Copy a Quarto template into the run's output dir.
 
     Returns the path to the copied ``index.qmd``. The template is copied
-    verbatim — the Quarto document itself is responsible for loading
-    artefacts from the run directory at render time, so copying leaves
-    a fully self-contained report bundle even if the original template
-    later changes.
+    verbatim. The document loads artefacts from the run directory at render
+    time. Rendering also requires the Python environment and Quarto CLI.
     """
     src = Path(template_path)
     if not src.is_file():

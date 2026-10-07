@@ -1,26 +1,19 @@
-"""Surface the demographic coefficients of a converged selection fit.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-For each stage (detection / termination / recording) and demographic dimension
-(maternal race, education, insurance payer) prints the prior mean, the posterior
-mean and 89% ETI (log-odds offset), and flags whether the data moved the
-coefficient off its prior (prior mean outside the 89% ETI).
+Report demographic coefficients from a saved selection fit.
 
-How to read it (also printed):
-  - eta_detect_* (race, education, PAYER) are PINNED at sigma 0.20 and are NOT
-    adjusted by variant: they encode the screening-access assumption. Inputs, not
-    findings. Payer (insurance) enters the model ONLY here.
-  - eta_term_* (race, education) are the data-identified residual on eta -- loosest
-    in variant A, tightest in B.
-  - s_* (race, education) are PINNED (sigma 0.05) in variants A and C; only variant
-    B (sigma 0.10) lets the data move recording by subgroup.
-The detection-vs-termination split inside eta is NOT identified; only the combined
-effect on eta is. A "moved" flag on a pinned (eta_detect_* / s_* in A,C) coefficient
-means the strong likelihood overrode even a tight prior -- a real data signal; on a
-loose coefficient it just means the data were informative.
+For each available detection, termination and recording coefficient, prints its
+prior centre, posterior mean and 89% equal-tail interval. A moved flag means the
+prior centre is outside that interval. It does not by itself establish a causal
+effect, identification or which evidence source caused the shift.
+
+Detection and termination act through a product. Current recording uses an
+externally derived race-by-year surface, with an education residual. Inspect the
+saved prior configuration and diagnostic tables before interpreting a coefficient.
 
 Usage:
-    python scripts/selection_coefficients.py [FIT_DIR]
-    python scripts/selection_coefficients.py --variant B
+    uv run python scripts/selection_coefficients.py [FIT_DIR]
+    uv run python scripts/selection_coefficients.py --variant B
 """
 
 from __future__ import annotations
@@ -43,7 +36,7 @@ from dspopulations_us_birth_certificates.selection import (
 # (heading, [(posterior var name, level labels)])
 STAGES = [
     (
-        "DETECTION  eta_detect_*  (screening reach; PINNED sigma~0.20 assumption)",
+        "DETECTION  eta_detect_*  (screening reach under supplied priors)",
         [
             ("eta_detect_race", RACE_LEVELS),
             ("eta_detect_edu", EDU_LEVELS),
@@ -51,14 +44,14 @@ STAGES = [
         ],
     ),
     (
-        "TERMINATION  eta_term_*  (data-identified residual on eta)",
+        "TERMINATION  eta_term_*  (conditional termination offsets)",
         [
             ("eta_term_race", RACE_LEVELS),
             ("eta_term_edu", EDU_LEVELS),
         ],
     ),
     (
-        "RECORDING  s_*  (PINNED sigma~0.05 in A/C; free sigma~0.10 in B)",
+        "RECORDING  s_*  (education offsets; race uses an anchor surface)",
         [
             ("s_race", RACE_LEVELS),
             ("s_edu", EDU_LEVELS),
@@ -106,13 +99,10 @@ def main(argv: list[str] | None = None) -> int:
             print()
 
     print(
-        "moved = prior mean lies outside the 89% ETI (data overrode the prior).\n"
-        "Positive offset => higher probability at that stage for that level.\n"
-        "Detection offsets are pinned screening-access inputs; payer is detection-"
-        "only. Termination\noffsets carry the data-identified residual on eta. "
-        "Recording offsets are pinned in A/C and\nonly move in B -- the "
-        "detection-vs-termination and recording-vs-termination splits are not\n"
-        "identified from birth-certificate data alone."
+        "moved = prior centre lies outside the 89% equal-tail interval.\n"
+        "Positive offsets increase that stage's probability relative to its reference.\n"
+        "The screening/termination and recording/prevalence splits depend on priors "
+        "and external evidence; these coefficient tables do not establish identification."
     )
     return 0
 

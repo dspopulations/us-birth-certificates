@@ -13,7 +13,12 @@
 # ---
 
 # %% [markdown]
-# # Notes - Unbiased 1 - based on model 9
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
+#
+# # Classifier without demographic predictors, based on model 9
+#
+# Feature removal changes the ranking target. It does not establish unbiased case selection.
 
 # %%
 import duckdb

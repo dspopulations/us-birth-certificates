@@ -1,14 +1,13 @@
-"""Triangulate the 2016-2024 true DS livebirth total across estimates.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Compares the structural selection model (variants A/B/C), the GB-calibrated variant D
-(recording off, fit to the C-only demographically-blind probability-summed total), the
-project's earlier prevalence model, the recorded count, and external surveillance.
-Each fit's total is computed as sum(theta*eta*N) over its cells; the prevalence total
-from the prevalence_year table; surveillance is an external published figure. Writes
-notes/figures/totals_triangulation (png/svg/csv).
+Historical comparison of selection-model totals and fixed June benchmarks.
 
-Usage:
-    python scripts/totals_triangulation.py
+Reads the latest A/B/C/D fits but uses hard-coded recorded and surveillance counts
+and recording-rate labels from an earlier analysis. Those constants are not current
+estimates or independently validated anchors. Do not use this script as the current
+total-estimation workflow. See docs/modelling-workflow.md and the saved fit manifests.
+
+Outputs are notes/figures/totals_triangulation (PNG, SVG and CSV).
 """
 
 from __future__ import annotations  # noqa: I001
@@ -54,7 +53,10 @@ def main() -> int:
     con.close()
 
     blue, orange, green, grey = (
-        styles.COLOUR_BLUE, styles.COLOUR_ORANGE, styles.COLOUR_GREEN, styles.TEXT_COLOUR
+        styles.COLOUR_BLUE,
+        styles.COLOUR_ORANGE,
+        styles.COLOUR_GREEN,
+        styles.TEXT_COLOUR,
     )
     tot = {v: total_true(v) for v in ("A", "B", "C", "D")}
     rows = [
@@ -78,16 +80,30 @@ def main() -> int:
     ax.set_yticks(y)
     ax.set_yticklabels(labels, fontsize=8)
     for yi, (v, nt) in enumerate(zip(vals, notes, strict=True)):
-        ax.text(v + 600, yi, f"{v:,.0f}" + (f"  ({nt})" if nt else ""), va="center", fontsize=7)
+        ax.text(
+            v + 600,
+            yi,
+            f"{v:,.0f}" + (f"  ({nt})" if nt else ""),
+            va="center",
+            fontsize=7,
+        )
     ax.axvspan(min(tot["A"], tot["C"]), tot["B"], color=blue, alpha=0.06)
     ax.set_xlabel("Estimated true DS livebirths, 2016–2024")
     ax.set_title("Triangulating the DS livebirth total across methods")
     ax.set_xlim(0, max(vals) * 1.18)
-    save_fig(fig, OUTPUT_DIR, "totals_triangulation",
-              data=pd.DataFrame({"estimate": labels, "total": vals, "note": notes}))
+    save_fig(
+        fig,
+        OUTPUT_DIR,
+        "totals_triangulation",
+        data=pd.DataFrame({"estimate": labels, "total": vals, "note": notes}),
+    )
     plt.close(fig)
 
-    print(pd.DataFrame({"estimate": labels, "total": [round(v) for v in vals]}).to_string(index=False))
+    print(
+        pd.DataFrame({"estimate": labels, "total": [round(v) for v in vals]}).to_string(
+            index=False
+        )
+    )
     print(f"wrote totals_triangulation to {OUTPUT_DIR}/")
     return 0
 

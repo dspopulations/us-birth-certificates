@@ -1,37 +1,41 @@
 # Copyright (c) 2026 Down Syndrome Education International and contributors
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Posterior diagnostics for the three-stage selection model.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Posterior diagnostics for the three-stage selection model.
 
 Each function takes a fitted ``xr.DataTree`` plus (where relevant)
 the aggregated ``cells`` frame that produced it, and returns a
 :class:`matplotlib.figure.Figure`. Callers wanting paired CSVs /
-publication-quality artefacts should use
+report artefacts should use
 :mod:`dspopulations_us_birth_certificates.selection.render`,
 which wraps these with a ``_save`` helper that writes figures alongside
 their tidy-DataFrame companions.
 
 Functions
 ---------
-- :func:`identifiability_pairplot` — posterior pair-plot of race effects
+- :func:`identifiability_pairplot`, posterior pair-plot of race effects
   on ``eta_term`` vs ``s``. The correlation is now a ridge-correlation
   warning, not a stand-alone identification test, because ``s`` is
   externally anchored.
-- :func:`s_anchor_shrinkage_plot` — prior-to-posterior readout for
+- :func:`s_anchor_shrinkage_plot`, prior-to-posterior readout for
   ``s_race_year`` showing whether the recording surface was estimated
   from the birth-certificate likelihood or mostly carried in by the
   anchor.
-- :func:`eta_term_year_trajectory_plot` — posterior trajectory of
+- :func:`eta_term_year_trajectory_plot`, posterior trajectory of
   ``eta_term_year`` by year. Drift across the window is a residual
   year-over-year effect on termination rates.
-- :func:`cchd_consistency_check` — posterior CCHD co-occurrence among
-  true DS livebirths vs the EUROCAT published prevalence (~22.5%),
-  interpreted as a structural stress check rather than calibration.
-- :func:`posterior_predictive_by_stratum` — recorded-count PPC plot
+- :func:`cchd_consistency_check`, posterior CCHD co-occurrence among
+  the model's weighted clinical cells and a supplied reference. The model
+  omits clinical true-prevalence effects, and the reference definition must match.
+- :func:`posterior_predictive_by_stratum`, recorded-count PPC plot
   aggregated by a chosen stratum (year / race / age).
-- :func:`decomposition_by_race` — posterior stacked estimate of true
-  DS livebirths, recorded, prenatally terminated, and missed, by race.
-- :func:`age_curve_check` — posterior ``theta_LB`` by age band vs the
+- :func:`decomposition_by_race`, posterior stacked estimate of true
+  DS livebirths, recorded flags and a residual by race. The residual called
+  missed does not correctly account for false positives. The prenatal difference
+  is counterfactual live births removed, not all terminated pregnancies.
+- :func:`age_curve_check`, posterior ``theta_LB`` by age band vs the
   pinned Morris/de Graaf prior means.
 """
 
@@ -195,7 +199,9 @@ def _eta_term_year_stats(
         raise ValueError(
             "InferenceData is missing 'eta_term_year' — fit with spec='full'."
         )
-    year_arr = np.asarray(post["eta_term_year"].transpose("chain", "draw", ...).values)  # (chain, draw, year)
+    year_arr = np.asarray(
+        post["eta_term_year"].transpose("chain", "draw", ...).values
+    )  # (chain, draw, year)
     mean = year_arr.mean(axis=(0, 1))
     lo, hi = equal_tail_interval(year_arr, prob=hdi_prob, axis=(0, 1))
     return mean, lo, hi
@@ -223,7 +229,9 @@ def _age_curve_stats(
 
     Shared by :func:`age_curve_check` and :func:`age_curve_table`.
     """
-    theta_logit = np.asarray(idata.posterior["theta_lb_age"].transpose("chain", "draw", ...).values)  # (c, d, age)
+    theta_logit = np.asarray(
+        idata.posterior["theta_lb_age"].transpose("chain", "draw", ...).values
+    )  # (c, d, age)
     theta = inv_logit(theta_logit) * 1000.0  # per 1,000 livebirths
     n_age = theta.shape[-1]
     mean = theta.mean(axis=(0, 1))
@@ -507,7 +515,9 @@ def cchd_consistency_check(
     counts as weights. Because CCHD is not a model stage or recording
     covariate, this check should not be interpreted as calibration of
     ``s``; it shows the consequence of the current structural
-    independence assumption for clinical co-occurrence.
+    independence assumption for clinical co-occurrence. These weights do not
+    reconstruct true clinical subgroup prevalence. The default reference also
+    needs a case-definition check before comparison with the CCHD checkbox.
     """
     import matplotlib.pyplot as plt
 
@@ -590,7 +600,9 @@ def posterior_predictive_by_stratum(
     styles = _styles()
     if stratum_col not in cells.columns:
         raise KeyError(f"{stratum_col!r} not in cells frame")
-    p_rec = np.asarray(idata.posterior["p_recorded"].transpose("chain", "draw", ...).values)  # (c, d, cell)
+    p_rec = np.asarray(
+        idata.posterior["p_recorded"].transpose("chain", "draw", ...).values
+    )  # (c, d, cell)
     N = cells["N_cell"].to_numpy(dtype=float)
     R = cells["R_cell"].to_numpy(dtype=float)
     strata = cells[stratum_col].to_numpy()
@@ -650,10 +662,14 @@ def decomposition_by_race(
     idata: xr.DataTree,
     cells: pd.DataFrame,
 ) -> Figure:
-    """Stacked bar of true DS livebirths by race: recorded / missed.
+    """Legacy race accounting plot with known interpretation limits.
 
-    Also reports the implied number of prenatally terminated
-    pregnancies per race via the identity
+    The plotted residual subtracts all expected recorded flags from expected true
+    cases. With false positives, it is not expected missed true cases. The current
+    report template omits this plot pending an accounting correction.
+
+    The prenatal difference is counterfactual live births removed under the model,
+    not a count of all terminated pregnancies. It uses the identity
 
         theta_LB * eta_detect * eta_term = theta_LB - (theta_LB * eta)
                                          = theta_LB - p_ds_lb
@@ -898,7 +914,9 @@ def convergence_health(
     ]
     rhat_col = "r_hat" if "r_hat" in summary.columns else "rhat"
     if len(summary):
-        canonical = summary.rename(columns={"rhat": "r_hat"}) if rhat_col == "rhat" else summary
+        canonical = (
+            summary.rename(columns={"rhat": "r_hat"}) if rhat_col == "rhat" else summary
+        )
         max_rhat, min_ess, unavailable = diagnostic_extrema(canonical)
         finite = not unavailable
     else:

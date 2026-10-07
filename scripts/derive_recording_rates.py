@@ -1,35 +1,26 @@
-"""Derive the birth-certificate recording-rate anchor s(race, year) for 2016-2024 by
-working back from de Graaf surveillance prevalence.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Chain (per race x year):
+Derive a recording-prior surface from surveillance and recorded counts.
 
-    true(race, year) = prevalence(race, year) / 1e4 * births(race, year)
-    s(race, year)    = recorded_DS(race, year) / true(race, year)
+For each race and year, reconstructs true counts from a surveillance prevalence
+input and forms s = recorded / reconstructed_true. Missing years are filled using
+a retained-fraction ratio relative to Morris age-expected prevalence. A pre-2015
+holdout compares extrapolation rules. It does not validate later extrapolation.
 
-Prevalence is observed (de Graaf) only for 2000-2014, 2016, 2018. The within-window
-gaps (2017; and 2019-2024 entirely) are imputed by *indirect standardisation*:
+The generated surface reuses the recorded counts later fitted by the model. It
+is not an independent recording measurement and does not subtract false flags.
+The source rows also represent overlapping surveillance windows, rather than
+independent annual observations. See the workbook and recording-anchor notes.
 
-    prevalence = exp_prev(age structure, KNOWN every year) * surv_ratio(net survival)
-    exp_prev   = sum_age share(age | race, year) * Morris theta_LB(age)
-    surv_ratio = de Graaf prevalence / exp_prev          (smooth; observed years only)
+Supplied prior scales cover selected interpolation and extrapolation uncertainty;
+they do not measure all source or transport error. Unknown and multi-race have
+weak fallback priors because no matching surveillance categories are available.
 
-We characterise surv_ratio's per-race trajectory on the observed history, validate the
-extrapolation rule with a hold-out backtest (fit <=2010, predict 2011-2014), extrapolate
-the 2019-2024 tail, interpolate 2017, reconstruct prevalence with the KNOWN age structure,
-and divide the REAL recorded counts (available every year) by the reconstructed true count.
-
-Because recorded counts are real for every study year, tail uncertainty in s comes only
-from the imputed prevalence (the survival-ratio extrapolation) -- modelled as a logit-scale
-prior sigma that widens with the extrapolation horizon. AIAN is unreliable (tiny counts;
-survival ratio exceeds 1 historically) so it is held flat at a robust recent level with a
-deliberately wide sigma and no trend.
-
-Outputs (DUA-safe aggregates):
-    data/reference/recording_rates_by_race_year.csv   -- the s surface + prior sigma
-    notes/figures/recording_rates_anchor.(png/svg/csv) -- survival-ratio fan + s surface
+Writes recording_anchor.py, a surface CSV and diagnostic figures. Check saved
+source definitions and hashes before regenerating inputs used by existing fits.
 
 Usage:
-    python scripts/derive_recording_rates.py
+    uv run python scripts/derive_recording_rates.py
 """
 
 from __future__ import annotations  # noqa: I001
@@ -135,11 +126,17 @@ def _exp_prev(age: pd.DataFrame) -> pd.DataFrame:
     """Age-structure-only expected prevalence per 10k, every race x year."""
     piv = (
         age[age["race_idx"].isin(NAMED)]
-        .pivot_table(index=["year", "race_idx"], columns="age_idx", values="n", fill_value=0)
+        .pivot_table(
+            index=["year", "race_idx"], columns="age_idx", values="n", fill_value=0
+        )
         .reindex(columns=range(7), fill_value=0)
     )
     shares = piv.div(piv.sum(axis=1), axis=0)
-    out = pd.Series((shares.to_numpy() * MORRIS_PER_10K).sum(axis=1), index=piv.index, name="exp_prev")
+    out = pd.Series(
+        (shares.to_numpy() * MORRIS_PER_10K).sum(axis=1),
+        index=piv.index,
+        name="exp_prev",
+    )
     return out.reset_index()
 
 
@@ -163,11 +160,15 @@ def _backtest(sr: pd.DataFrame) -> tuple[str, pd.DataFrame]:
         const = train["surv_ratio"].iloc[-1]  # last fitted value (2010)
         b, a = np.polyfit(train["year"], train["surv_ratio"], 1)
         lin = a + b * test["year"].to_numpy()
-        rows.append({
-            "race": RACE_LEVELS[r],
-            "rmse_const": float(np.sqrt(np.mean((test["surv_ratio"] - const) ** 2))),
-            "rmse_linear": float(np.sqrt(np.mean((test["surv_ratio"] - lin) ** 2))),
-        })
+        rows.append(
+            {
+                "race": RACE_LEVELS[r],
+                "rmse_const": float(
+                    np.sqrt(np.mean((test["surv_ratio"] - const) ** 2))
+                ),
+                "rmse_linear": float(np.sqrt(np.mean((test["surv_ratio"] - lin) ** 2))),
+            }
+        )
     bt = pd.DataFrame(rows)
     rule = "const" if bt["rmse_const"].mean() <= bt["rmse_linear"].mean() else "linear"
     return rule, bt
@@ -197,7 +198,9 @@ def _extrapolate(sr: pd.DataFrame, rule: str) -> pd.DataFrame:
                 val, src = 0.5 * (obs[2016] + obs[2018]), "interpolated"
             else:  # 2019-2024
                 val, src = float(predict(y)), "extrapolated"
-            out.append({"year": y, "race_idx": r, "surv_ratio_used": val, "source": src})
+            out.append(
+                {"year": y, "race_idx": r, "surv_ratio_used": val, "source": src}
+            )
     return pd.DataFrame(out)
 
 
@@ -293,22 +296,34 @@ def _write_anchor_module(surf: pd.DataFrame, years: list[int]) -> None:
 
 
 def _figure(sr: pd.DataFrame, surf: pd.DataFrame) -> plt.Figure:
-    colours = [styles.COLOUR_BLUE, styles.COLOUR_ORANGE, styles.COLOUR_GREEN,
-               styles.COLOUR_RED, styles.COLOUR_PURPLE]
-    fig, (axl, axr) = plt.subplots(1, 2, figsize=(styles.FIGSIZE_LG[0] * 1.5, styles.FIGSIZE_LG[1]))
+    colours = [
+        styles.COLOUR_BLUE,
+        styles.COLOUR_ORANGE,
+        styles.COLOUR_GREEN,
+        styles.COLOUR_RED,
+        styles.COLOUR_PURPLE,
+    ]
+    fig, (axl, axr) = plt.subplots(
+        1, 2, figsize=(styles.FIGSIZE_LG[0] * 1.5, styles.FIGSIZE_LG[1])
+    )
 
     # Left: survival-ratio history + imputed study-year trajectory.
     for r in NAMED:
         c = colours[r]
         hist = sr[(sr["race_idx"] == r) & sr["surv_ratio"].notna()].sort_values("year")
-        axl.plot(hist["year"], hist["surv_ratio"], "o", ms=4, color=c, label=RACE_LEVELS[r])
+        axl.plot(
+            hist["year"], hist["surv_ratio"], "o", ms=4, color=c, label=RACE_LEVELS[r]
+        )
         used = surf[surf["race_idx"] == r].sort_values("year")
         axl.plot(used["year"], used["surv_ratio_used"], "-", color=c, lw=1.5)
         ext = used[used["source"] == "extrapolated"]
         axl.plot(ext["year"], ext["surv_ratio_used"], "x", ms=5, color=c)
     axl.axvspan(2018.5, 2024.5, color=styles.TEXT_COLOUR, alpha=0.08)
-    axl.set(xlabel="year", ylabel="survival ratio = de Graaf prevalence / age-expected",
-            title="Net survival by ethnicity: history + imputed tail")
+    axl.set(
+        xlabel="year",
+        ylabel="survival ratio = de Graaf prevalence / age-expected",
+        title="Net survival by ethnicity: history + imputed tail",
+    )
     axl.legend(fontsize=7)
     axl.grid(alpha=0.3)
 
@@ -322,12 +337,19 @@ def _figure(sr: pd.DataFrame, surf: pd.DataFrame) -> plt.Figure:
         axr.fill_between(d["year"], lo, hi, color=c, alpha=0.12)
         obs = d[d["source"] == "observed"]
         axr.plot(obs["year"], obs["s"], "o", ms=6, color=c)
-    axr.axhline(0.40, ls=":", color=styles.TEXT_COLOUR, lw=1, label="current pin (0.40)")
-    axr.set(xlabel="year", ylabel="recording rate s = recorded / true",
-            title="Recording-rate anchor s(race, year) +/- prior sigma")
+    axr.axhline(
+        0.40, ls=":", color=styles.TEXT_COLOUR, lw=1, label="current pin (0.40)"
+    )
+    axr.set(
+        xlabel="year",
+        ylabel="recording rate s = recorded / true",
+        title="Recording-rate anchor s(race, year) +/- prior sigma",
+    )
     axr.legend(fontsize=7)
     axr.grid(alpha=0.3)
-    fig.suptitle("Birth-certificate recording rate from de Graaf surveillance (s-anchor)")
+    fig.suptitle(
+        "Birth-certificate recording rate from de Graaf surveillance (s-anchor)"
+    )
     fig.tight_layout()
     return fig
 
@@ -351,7 +373,9 @@ def main() -> int:
     sr["surv_ratio"] = sr["prevalence"] / sr["exp_prev"]
 
     rule, bt = _backtest(sr)
-    print("=== Extrapolation backtest (fit <=2010, predict 2011-2014; stable races) ===")
+    print(
+        "=== Extrapolation backtest (fit <=2010, predict 2011-2014; stable races) ==="
+    )
     print(bt.round(4).to_string(index=False))
     print(f"chosen rule: {rule}  (lower mean hold-out RMSE)\n")
 
@@ -366,18 +390,39 @@ def main() -> int:
     surf["s_logit_sigma"] = [
         _sigma_logit(s, R, src, y, r)
         for s, R, src, y, r in zip(
-            surf["s"], surf["R"], surf["source"], surf["year"], surf["race_idx"], strict=True
+            surf["s"],
+            surf["R"],
+            surf["source"],
+            surf["year"],
+            surf["race_idx"],
+            strict=True,
         )
     ]
     # de Graaf true-prevalence margin sigma (per 10k), for the full-margin anchor.
     surf["prev_sigma"] = [
         _rel_prev(src, y) * pv
-        for src, y, pv in zip(surf["source"], surf["year"], surf["prev_used"], strict=True)
+        for src, y, pv in zip(
+            surf["source"], surf["year"], surf["prev_used"], strict=True
+        )
     ]
     surf["race"] = surf["race_idx"].map(dict(enumerate(RACE_LEVELS)))
 
-    cols = ["year", "race_idx", "race", "source", "N", "R", "exp_prev",
-            "surv_ratio_used", "prev_used", "prev_sigma", "true", "s", "s_logit", "s_logit_sigma"]
+    cols = [
+        "year",
+        "race_idx",
+        "race",
+        "source",
+        "N",
+        "R",
+        "exp_prev",
+        "surv_ratio_used",
+        "prev_used",
+        "prev_sigma",
+        "true",
+        "s",
+        "s_logit",
+        "s_logit_sigma",
+    ]
     surf = surf[cols].sort_values(["race_idx", "year"]).reset_index(drop=True)
     surf.to_csv(OUT_CSV, index=False)
     _write_anchor_module(surf, STUDY_YEARS)
@@ -388,15 +433,23 @@ def main() -> int:
     show["s_logit_sigma"] = show["s_logit_sigma"].round(3)
     show["surv_ratio_used"] = show["surv_ratio_used"].round(3)
     show["true"] = show["true"].round(0)
-    print(show[["year", "race", "source", "R", "true", "s", "s_logit_sigma"]].to_string(index=False))
+    print(
+        show[["year", "race", "source", "R", "true", "s", "s_logit_sigma"]].to_string(
+            index=False
+        )
+    )
 
     tot_true = surf["true"].sum()
     tot_R = surf["R"].sum()
-    print(f"\nNamed-race totals 2016-2024:  recorded R = {tot_R:,.0f}   "
-          f"de-Graaf-anchored true = {tot_true:,.0f}   overall s = {tot_R / tot_true:.3f}")
+    print(
+        f"\nNamed-race totals 2016-2024:  recorded R = {tot_R:,.0f}   "
+        f"de-Graaf-anchored true = {tot_true:,.0f}   overall s = {tot_R / tot_true:.3f}"
+    )
     pooled = surf.groupby("race", sort=False).apply(
-        lambda d: pd.Series({"s_pooled": d["R"].sum() / d["true"].sum(),
-                             "true": d["true"].sum()}), include_groups=False
+        lambda d: pd.Series(
+            {"s_pooled": d["R"].sum() / d["true"].sum(), "true": d["true"].sum()}
+        ),
+        include_groups=False,
     )
     print("\nPooled s by ethnicity (2016-2024, anchored):")
     print(pooled.round({"s_pooled": 3, "true": 0}).to_string())

@@ -1,26 +1,14 @@
-# De Graaf corrected surveillance prevalence & recording fractions by ethnicity (2000–2024)
+> [!NOTE]
+> AI-assisted revision by Codex (GPT-6), 7 October 2026.
 
 > [!NOTE]
 > Drafted by a LLM-based AI tool (Claude Code/Opus 4.8).
 
-> [!WARNING]
-> Work in progress. All data and models are preliminary.
+# Correcting the de Graaf prevalence extraction
 
-**Date:** 2026-06-28
+**Original date:** 28 June 2026. Historical research note, revised for clarity in October 2026.
 
-## Source
-
-Gert de Graaf supplied a corrected workbook of surveillance-based Down syndrome
-prevalence and birth-certificate recording, by ethnic group, 2000–2024:
-
-`data/new/cor verwissel jaren overzicht prevalencties races usa birth cert vanaf 2000 ALT3.xlsx`
-
-His key fix in this version: **the 2002 and 2003 birth-certificate figures, previously
-swapped, are now correct.** The swap was in the birth-certificate columns only.
-
-### Decoding the workbook (one sheet, per ethnic group × year)
-
-Five groups — nhw, nhb, his, as/pi, ai/an (`mracehisp_c` 1, 2, 5, 4, 3). Per Gert's note:
+The corrected extraction distinguished observed surveillance prevalence from a workbook prediction and its correction factors. Earlier anchor estimates used the wrong series. This note preserves the source-column mapping and the numerical comparison.
 
 | Sheet col | Meaning | Coverage |
 | --- | --- | --- |
@@ -28,15 +16,9 @@ Five groups — nhw, nhb, his, as/pi, ai/an (`mracehisp_c` 1, 2, 5, 4, 3). Per G
 | **E** | birth-certificate DS prevalence /10k (`= C/D × 10⁴`) | 2000–2024 |
 | Q | column E as a 5-year running average | 2000–2024 |
 | **R** (= L) | **surveillance-programme** prevalence /10k, 5-year running | **2000–2014, 2016, 2018 only** |
-| Q/R (col U) | "percentage reported" — birth-cert ÷ surveillance (the recording fraction) | observed years |
+| Q/R (col U) | "percentage reported", birth-cert ÷ surveillance (the recording fraction) | observed years |
 | **G** | recording fraction with gaps filled by a per-race **linear regression** | 2000–2024 |
 | H, **I** | estimated **true** count, true prevalence /10k (`= C/G`, then `/D × 10⁴`) | 2000–2024 |
-
-The 2002/2003 correction flows from C/D/E into Q, U, G, H and I. The surveillance input
-R/L is independent of the birth-certificate data and is **unchanged** by the fix.
-
-Per-race recording-fraction regression lines (`G = intercept + slope · yr_idx`, `yr_idx`
-= year − 2000), read from the workbook's chart formulas:
 
 | group | intercept (2000) | slope / yr |
 | --- | --- | --- |
@@ -45,32 +27,6 @@ Per-race recording-fraction regression lines (`G = intercept + slope · yr_idx`,
 | his | 0.316339 | 0.001981 |
 | as/pi | 0.320411 | 0.001837 |
 | ai/an | 0.335634 | 0.009190 |
-
-## Reconciliation with our existing CSVs — no correction required
-
-`data/us-births-estimated-prevalence-ethnicity-2000-2018.csv` (`year, mracehisp_c,
-prevalence`) holds the **surveillance** prevalence (workbook column R/L). Cell-by-cell diff
-against the corrected workbook: **exact match for all 85 overlapping cells (max abs diff
-5 × 10⁻⁹)**, including 2002 and 2003; 2015/2017 blank in both. Because the swap did not
-touch the surveillance column, our values were already correct and remain so.
-
-The other lookup CSVs are not in this workbook and cannot be updated from it:
-
-- `us-births-surveillance-prevalence-1989-2024.csv` (overall `p_ds_lb_wt`) is a separate
-  national series spanning 1989+; it is **not** a births-weighted aggregate of the
-  by-ethnicity surveillance values (differs ~2–4 %).
-- `us-births-reduction-rates-1989-2024.csv` is overall elective-termination reduction.
-- `us-births-estimated-prevalence-maternal-age-1989-2018.csv` is the Morris age model.
-
-The recording-rate pipeline (`scripts/derive_recording_rates.py`, on the eta-reanchor
-branch) consumes **only** surveillance prevalence and re-derives recording rates from our
-own microdata with its own backtested imputation. It is therefore unaffected by the fix,
-and it deliberately does **not** use Gert's regression-filled estimates (columns G / I).
-
-## What we captured — `data/us-births-degraaf-prevalence-recording-2000-2024.csv`
-
-A faithful, full-precision extraction of the corrected workbook (125 rows = 25 years ×
-5 groups), so Gert's corrected work is captured and reproducible without the xlsx. Columns:
 
 | column | source col | notes |
 | --- | --- | --- |
@@ -81,36 +37,6 @@ A faithful, full-precision extraction of the corrected workbook (125 rows = 25 y
 | `est_true_count`, `est_true_prev_per10k` | H, I | Gert's estimated **true** count / prevalence /10k (all years) |
 | `surveillance_prev_per10k` | R/L | surveillance prevalence /10k; **blank** for 2015, 2017, 2019–2024 |
 
-This is **reference data, not a Stage-5 pipeline input** — it is not read by
-`scripts/duckdb_prepare.py`. The duplicated `surveillance_prev_per10k` is the same series
-already committed (and verified above) in `us-births-estimated-prevalence-ethnicity-2000-2018.csv`.
-
-### Licensing / DUA
-
-This is de Graaf's **published** surveillance plus highly-aggregated counts (5 groups ×
-year), not NCHS restricted microdata, so it is not DUA-restricted — the same provenance and
-reasoning as the existing committed `us-births-estimated-prevalence-ethnicity-2000-2018.csv`
-and the [recording-anchor note](20260623-degraaf-recording-anchor.md). Confirm with Frank
-before any external publication.
-
-## Sensitivity scenario (implemented)
-
-Decision: **keep our backtested imputation as the production model anchor**, and run
-Gert's column I as a **sensitivity scenario for 2020–24** (his fill diverges from ours
-mainly in that tail — see the head-to-head below).
-
-- `src/.../selection/degraaf_tail.py` — `DEGRAAF_TAIL_PREV` (col I, named races, 2020–24)
-  and `apply_degraaf_tail()`, which splices that tail onto `recording_anchor.PREV_RACE_YEAR`
-  (2016–2019 and all sigmas unchanged). Unit-tested in `tests/test_degraaf_tail.py`.
-- `scripts/fit_selection_model.py --degraaf-tail` (implies `--anchor-margin`) runs the
-  full-margin fit against the spliced target. Validated end-to-end with `--prior-only`.
-
-### Why the methods diverge (true DS prevalence /10k)
-
-Ours holds net survival flat (prevalence drifts **up** with maternal age); Gert extends the
-recording fraction linearly (prevalence falls **down** as recorded counts drop post-2020).
-By 2024 ours runs ~10–40% above his for most groups:
-
 | group | 2024 ours | 2024 Gert (col I) |
 | --- | --- | --- |
 | NH White | 14.13 | 11.67 |
@@ -118,29 +44,13 @@ By 2024 ours runs ~10–40% above his for most groups:
 | NH Asian/PI | 10.38 | 7.39 |
 | Hispanic | 17.44 | 15.74 |
 
-Gert's own 5-race estimated-true total 2016–2024 (col H) is ~43,200 (overall recording
-0.40), between our full-margin posterior (~40.7k) and our prevalence target (45,928).
-
-### Result (indicative, dev preset)
-
-Both fits, variant C / spec full / dev preset (2 chains, 1000+1000; max R-hat ≈ 1.014):
-
 | anchor | total true DS 2016–2024 | 95% CI |
 | --- | --- | --- |
 | production (`--anchor-margin`) | 40,637 | 39,138–42,205 |
 | Gert col-I tail (`--degraaf-tail`) | 40,041 | 38,437–41,607 |
 
-**Effect: −595 (−1.5%).** The headline total is **robust** to the 2020–24 tail-prevalence
-assumption despite the per-year targets differing 10–40%: the full-margin term is a *soft*
-potential (tail σ ≈ 10–40% of prevalence) that the recorded Binomial and η priors outweigh,
-so lowering the tail target only nudges the posterior. Re-run at the reporting preset before
-citing. (Both 4 GB `idata.nc` artefacts live in the session scratch dir, not the repo.)
+The file's year labels are not sufficient to define an annual observation. The [August workbook audit](20260803-degraaf-surveillance-workbook-extraction.md) established that the surveillance values represent centred five-year windows. That later audit supersedes annual interpretations of these rows.
 
-## Still open
+Keep source prevalence, projected prevalence and correction factors separate in any extraction. Check reconstruction against the workbook before fitting. A matched projection does not make the source an independent annual estimate.
 
-- **Adopting Gert's fill as the default anchor** (not just a sensitivity) remains the
-  "how hard to push de Graaf" decision in the
-  [recording-anchor note](20260623-degraaf-recording-anchor.md).
-- **Extending raw surveillance past 2018.** Surveillance still stops at 2018 (2015/2017
-  absent); only the regression-filled estimate covers 2019–2024.
-- **2015** is in Gert's series but outside our 2016–2024 model window.
+The original before/after model totals describe development fits. They are not a validation of national prevalence or a reason to prefer one degree of prior tightness.

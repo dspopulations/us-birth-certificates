@@ -16,6 +16,10 @@ execute:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6) on 7 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
 :::
 
@@ -59,9 +63,9 @@ shap_mode=`{python} run_config.get("shap_mode", "?")`)
 
 **Git:** `{python} (git.get("sha") or "<no-git>")[:12]`
 `{python} "(dirty tree)" if git.get("dirty") else ""`
-— branch `{python} git.get("branch") or "<no-git>"`
+Branch `{python} git.get("branch") or "<no-git>"`
 
-{{< fa circle-info >}} `{python} config.get("notes", "")`
+ `{python} config.get("notes", "")`
 
 ## Configuration
 
@@ -98,7 +102,13 @@ for step in history:
 pd.DataFrame(rows) if rows else "No selection history recorded."
 ```
 
-# Validation metrics
+# Recorded-label metrics
+
+These metrics evaluate the training label. They do not validate true Down
+syndrome status among unrecorded births. When tuning and reporting use the same
+validation split, the scores are tuning diagnostics rather than an untouched
+test-set evaluation.
+
 
 ```{python}
 #| label: metrics-table
@@ -108,7 +118,7 @@ else:
     "No metrics recorded."
 ```
 
-## Precision @ K
+## Precision among the top K scores
 
 ```{python}
 #| label: pr-at-k
@@ -116,7 +126,7 @@ path = Path("precision_recall_at_k.csv")
 load_table(path)
 ```
 
-## Calibration (top tail)
+## Calibration among high scores
 
 ```{python}
 #| label: calibration-tail

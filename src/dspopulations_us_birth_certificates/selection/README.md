@@ -1,123 +1,68 @@
-# `dspopulations_us_birth_certificates.selection`
+> [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
 
-Three-stage Bayesian selection model decomposing observed DS recording on
-U.S. birth certificates (2016–2024) into:
+# Three-stage Bayesian selection model
 
+This model decomposes the recorded Down syndrome probability into baseline livebirth risk, screening/termination pass-through and certificate recording:
+
+```text
+P(R=1 | X) = theta_LB(age)*eta(X)*s(X) + (1-theta_LB*eta)*f
+eta(X) = 1-eta_detect(X)*eta_term(X)
 ```
-P(R=1 | X) = θ_LB(age) · η(X) · s(X) + (1 − θ_LB·η) · f
-```
 
-- `θ_LB` — baseline DS livebirth rate in absence of screening (Morris
-  2002 / de Graaf 2015). Stage 1.
-- `η = 1 − η_detect · η_term` — screening/termination pass-through
-  (Kuppermann / Natoli). Stage 2.
-- `s` — birth-certificate sensitivity given a DS livebirth (Boulet 2011
-  / Salemi 2017). Stage 3.
-- `f` — false-positive rate, fixed at 7.8e-5 (Ohio/NY validation).
+- `theta_LB` is the baseline livebirth probability without elective terminations, based on the Morris/de Graaf age curve. It is not a conception probability.
+- `eta` is the modelled fraction remaining after the screening/termination pathway. The detection and termination components depend on separate prior assumptions.
+- `s` is recording sensitivity given a true Down syndrome livebirth.
+- `f` is the false-positive probability per non-Down-syndrome birth. Its default, `7.8e-5`, is a working assumption, not the false-coded share among recorded flags.
 
-The design and current results are documented in
-`notes/20260622-predictors-bayesian-model.md`, with supporting design
-notes (η re-anchoring, the de Graaf recording anchor) under `notes/`.
+The likelihood does not identify these components separately. The model's age and recording anchors constrain the decomposition. A low posterior correlation between components does not prove identification when a tight prior already constrains one component.
 
-## Public API
+The simpler DSP001–DSP010 accounting models share this package but use a different builder and CLI. See the [DSP inventory](../../../docs/models/README.md).
+
+## API and commands
 
 ```python
 from dspopulations_us_birth_certificates.selection import (
-    # Priors + variants
-    ModelPriors, VARIANTS,
-    variant_A_tight_s, variant_B_tight_eta_term,
-    variant_C_default,
-    # Model
-    build_model, SPECS,
-    # Data
-    prepare_cells, summarise_cells,
-    DEFAULT_DB_PATH, DEFAULT_YEAR_RANGE,
-    # Simulation (for parameter-recovery validation)
-    TrueParams, simulate_cells,
-    # Config + run profile
-    SelectionModelConfig, selection_run_config, preset_names,
-    # Diagnostics module (figures + tidy-DataFrame companions)
-    diagnostics,
+    ModelPriors, VARIANTS, SPECS, build_model,
+    prepare_cells, summarise_cells, sample,
+    SelectionModelConfig, selection_run_config,
+    TrueParams, simulate_cells, diagnostics,
 )
 ```
 
-## Typical flow
+Run from the repository root:
 
-```
-scripts/fit_selection_model.py \
-    --variant C --spec full --profile reporting --render
-        │
-        ├── selection.prepare_cells(con)          # DuckDB → cell frame
-        ├── selection.build_model(cells, priors)  # PyMC full spec
-        ├── selection.sample(...)                 # NUTS + posterior predictive
-        ├── selection.save_artefacts(...)         # idata.nc, cells.parquet, ...
-        ├── selection.copy_docs_template(...)     # docs/models/selection/index.qmd → run dir
-        ├── selection.render.render_all(...)      # six diagnostic plots + tables
-        └── selection.render_quarto(...)          # index.qmd → index.html
+```bash
+uv run python scripts/fit_selection_model.py --variant C --spec full --profile reporting --render
+uv run python scripts/fit_selection_model.py --help
+uv run python scripts/compare_selection_variants.py --help
 ```
 
-Output layout:
+The staged specifications are `theta_only`, `theta_s`, `single_eta` and `full`. Variants A and B vary prior strength on recording and termination; C uses the default priors. Variant D pins recording near one and uses a classifier-derived target as a diagnostic. It does not validate that target as true disease status.
 
-```
-output/selection/<variant>/<spec>/<timestamp>/
-├── idata.nc            # posterior InferenceData
-├── cells.parquet       # exact input frame
-├── config.json         # SelectionModelConfig snapshot
-├── run_config.json     # RunConfig (profile + overrides)
-├── summary.csv         # az.summary on posterior
-├── index.qmd           # copied Quarto template
-├── index.html          # rendered (if --render)
-├── plots/              # identifiability, eta_term_year_trajectory,
-│                       # cchd_consistency, age_curve,
-│                       # decomposition_by_race, ppc_{year,race,age}_idx
-└── tables/             # CSV companions for the non-PPC plots
-```
+## Inputs and outputs
 
-## Run profiles
+`prepare_cells` aggregates births from `data/us_births.db`, normally over 2016–2024. Required status and age must be known. Cells include age, year, race/Hispanic origin, education, payer and clinical indicators. There is no state or region dimension.
 
-- **`dev`** — 1000 tune + 1000 draws × 2 chains, target_accept=0.9,
-  nutpie. Enough posterior mass to clear ESS gates on the named RVs
-  even for the full spec.
-- **`reporting`** — 1500 tune + 1500 draws × 4 chains, target_accept=0.95,
-  nutpie. Publication-quality posteriors; ≥ 1 h wall-clock per variant
-  at full spec.
+Race indices are NH White 0, NH Black 1, NH AIAN 2, NH Asian/Pacific Islander 3, Hispanic 4, Unknown 5 and NH more than one race 6. Unknown and multi-race have no de Graaf surveillance anchor. They use weak fallback recording priors.
 
-## Posterior intervals
+Runs normally write to `output/selection/<variant>/<spec>/<timestamp>/`. They save posterior draws, input cells, model and run configurations, a summary, a manifest, diagnostic plots and tables, and a copied Quarto template. `--render` also creates the HTML report. Check the saved configuration and sampling diagnostics before using results.
 
-Use 89% intervals throughout current reporting:
+## Run profiles and intervals
 
-- ArviZ summaries use 89% highest posterior density intervals (`ci_prob=0.89`,
-  `ci_kind="hdi"`).
-- Direct posterior quantiles use 89% equal-tail intervals, i.e. 5.5% to 94.5%.
-- The shared constants and helpers live in
-  `dspopulations_us_birth_certificates.intervals`.
+| Profile | Tune | Draws per chain | Chains | Target acceptance | Default sampler |
+| --- | ---: | ---: | ---: | ---: | --- |
+| dev | 1000 | 1000 | 2 | 0.90 | nutpie |
+| reporting | 1500 | 1500 | 4 | 0.95 | nutpie |
 
-## Variants
+Profiles set sampling defaults. They do not guarantee effective sample size or convergence. Current reports use 89% intervals. ArviZ summaries use highest-density intervals; direct quantile summaries use equal-tail bounds at 5.5% and 94.5%. Helpers are in `intervals.py`.
 
-- **A (tight s)** — tight priors on `s` race/edu effects, loose on
-  `eta_term`. If race/edu decomposition loads onto `s` under A but onto
-  `eta_term` under B, the data alone cannot separate them.
-- **B (tight eta_term)** — the mirror image.
-- **C (default)** — both informative. The main specification.
+## Current modelling constraints
 
-## Important invariants
+The Morris age prior has logit standard deviation 0.001. The recording prior is a **race-by-year surface** generated by `scripts/derive_recording_rates.py`; it replaced the old global `s≈0.40` pin. That surface uses recorded counts and surveillance prevalence, with imputed values outside observed years. It is not independent of the certificate counts later fitted by this model.
 
-These invariants are load-bearing; their rationale is documented across the
-`notes/` corpus, chiefly `notes/20260622-predictors-bayesian-model.md`:
+Maternal age enters both baseline risk and the screening/termination pathway. Clinical indicators remain cell dimensions for checks, but they are excluded from recording effects. Their association with true disease status makes them unsuitable as simple recording-only predictors. Co-occurring-condition estimates require further assumptions about sensitivity within those strata.
 
-1. Morris θ_LB and `s` are **pinned hard** (σ=0.001 on logit, not 0.10) — at 33.5M
-   rows a σ=0.10 prior is overwhelmed and θ_LB/`s` escape along the η·s ridge
-   (2026-06-21; see `notes/20260621-theta-lb-escape-age-gradient.md`).
-2. Maternal age enters θ_LB (conception, pinned) **and** η — informative age
-   gradients on `eta_detect` (screening access) and `eta_term` (termination).
-   Clinical features (CCHD/NICU/Aven/Preterm) are **dropped from `s`** (they
-   correlate with true DS, so they're the Aim-4 co-occurrence readout via
-   `diagnostics.cchd_consistency_*`, not a recording covariate).
-3. False-positive rate is fixed, not estimated.
-4. Reference levels: Race = NH White, Education = Some college, Payer = Private.
-5. Year coding is `year − year_start` (0-based).
-6. Stage 1 is θ_LB (baseline livebirth rate), not θ (conception rate).
-7. Region is intentionally absent (no state-level column in the DB).
+The reference categories are NH White, some college and private payer. Year indices start at zero. The false-positive rate is fixed in these variants. Change these decisions deliberately and assess the identification consequences.
 
-Changes to any of these should be discussed before implementation —
-they have specific identifiability consequences.
+The [recording-anchor review](../../../notes/20260707-s-anchor-and-identifiability-diagnostic.md) explains the source dependence. The [historical design note](../../../notes/20260622-predictors-bayesian-model.md) records the earlier specification and fits; its old global pin is not current guidance.

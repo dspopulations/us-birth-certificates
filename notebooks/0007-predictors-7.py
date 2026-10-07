@@ -13,9 +13,12 @@
 # ---
 
 # %% [markdown]
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
+#
 # # Notes 2 - Predictors of recorded DS live births
 #
-# - Drop calibration (makes no difference)
+# This experiment omits the calibration step. It does not establish that calibration is unnecessary.
 #
 
 # %% [markdown]

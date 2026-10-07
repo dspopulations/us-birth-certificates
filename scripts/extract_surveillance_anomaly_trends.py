@@ -1,64 +1,21 @@
-"""Extract true-prevalence trends for the DSP010 anomaly-panel control conditions.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-The DSP010 panel reads the *common* movement of congenital-anomaly checkboxes that
-share the Down syndrome certificate item as the item's recording sensitivity.  That
-reading is only valid to the extent the control conditions' own birth prevalence held
-still: any real prevalence trend shared by the controls is perfectly confounded with a
-recording trend and no comparison inside the panel can see it.  Until now every
-``true_trend_log_per_year`` in ``data/us-births-anomaly-panel-conditions.csv`` was
-``0.0`` -- "believed stable, not verified".
+Fit Texas surveillance trends for the DSP010 control-condition table.
 
-This script replaces that assumption with an external measurement.
+Extracts annual counts and rates from Texas Birth Defects Registry Table 2A and
+fits quasi-Poisson log-linear trends. Breakpoint and dispersion diagnostics decide
+which point estimates enter true_trend_log_per_year. Refused trends remain zero.
+That zero is a default scenario, not a measured flat national trend.
 
-The source is the **Texas Birth Defects Registry** annual report, Table 2A, which
-gives case counts and prevalence per 10,000 live births for each monitored defect by
-single delivery year.  TBDR qualifies on the one criterion that matters here: it does
-not ascertain cases from the birth-certificate anomaly item, so its series cannot
-re-import the recording decline the panel is trying to measure.  From the report's own
-methods:
+The source uses medical-record surveillance. It includes pregnancy outcomes and
+diagnoses that differ from certificate ascertainment. Its trend estimates have
+sampling uncertainty and uncertainty in transfer to the national population; the
+current panel uses them as fixed offsets without propagating either.
 
-    "The Texas Birth Defects Registry uses active surveillance.  This means it does
-    not require reporting by hospitals or medical professionals.  Instead, trained
-    program staff members regularly visit medical facilities where they have the
-    authority to review logs, hospital discharge lists, and other records."
-
-    "Regardless of the source of demographic information for this report, all
-    diagnostic information was abstracted from medical records."
-
-Birth and fetal-death certificates enter only to supply demographics for cases already
-found, never to find or diagnose them.  The registry covered the whole state for every
-year in the series, so there is no programme-roster composition artefact of the kind
-that contaminates pooled multi-state trends.
-
-Trends are fitted as quasi-Poisson log-linear regressions of counts on delivery year
-with a log live-births offset.  The dispersion scaling matters: annual counts vary far
-more than Poisson because ascertainment itself moves, and an unscaled standard error
-would claim precision the series does not have.
-
-**Validation gates the pin.**  A prevalence trend is only usable if the series is
-smooth: a level shift inside the window means the fitted slope is an averaged
-discontinuity rather than a trend, and pinning it would inject a registry artefact into
-the model as though it were biology.  Every condition is therefore scanned for a
-breakpoint, and any condition carrying a significant level shift is **refused a pin**
-and left at zero with the reason recorded.  Discrepancies are reported, never silently
-corrected; ``--strict`` turns a refusal into a non-zero exit status.
-
-Outputs (written to ``--output-root``, with the two model-facing files also written to
-``data/`` unless ``--no-install`` is passed):
-
-``us-births-anomaly-surveillance-trends.csv``
-    One row per condition per fitting window: fitted slope in log per year, both the
-    Poisson and dispersion-scaled standard errors, the dispersion, the breakpoint scan
-    result, and whether the condition earned a pin.
-``us-births-anomaly-panel-conditions-pinned.csv``
-    The curation table with ``true_trend_log_per_year`` filled in from the primary
-    window.  Feed it to the model with ``--panel-conditions-csv``.
-``surveillance_series.csv``
-    The parsed per-year counts, denominators and rates, so the fit can be checked
-    without re-reading the workbook.
-``national_cross_check.csv``
-    The NBDPN pooled-cohort national estimates against the same spans computed from
-    Texas, as an external check that one state tracks the national series.
+Writes audit artefacts under --output-root. Unless --no-install is set, also
+writes the model-facing trend and pinned-condition CSVs to data/. --strict returns
+a nonzero status if a condition fails the chosen pinning criteria. See the Texas
+trend research note for the window choices and limitations.
 """
 
 from __future__ import annotations
