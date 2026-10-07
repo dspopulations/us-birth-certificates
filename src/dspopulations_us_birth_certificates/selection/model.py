@@ -1,15 +1,18 @@
-"""PyMC implementation of the three-stage selection model.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+PyMC implementation of the three-stage selection model.
 
 The model factors observed birth-certificate DS recording as::
 
     P(R = 1 | X) = theta_LB(age) . eta(X) . s(X) + (1 - theta_LB . eta) . f
 
-where ``theta_LB`` is the baseline DS livebirth rate in the absence of
-screening (Morris 2002), ``eta = 1 - eta_detect . eta_term`` is the
+where ``theta_LB`` is the baseline DS livebirth rate without selective
+termination (Morris 2002), ``eta = 1 - eta_detect . eta_term`` is the
 screening/termination pass-through (Kuppermann/Natoli), ``s`` is
-birth-certificate sensitivity given a DS livebirth (Boulet 2011 /
-Salemi 2017), and ``f`` is the small false-positive rate pinned from
-Ohio/NY validation.
+birth-certificate sensitivity given a DS livebirth, and ``f`` is a fixed
+false-positive probability per non-DS birth. Current ``s`` priors are derived
+from recorded counts and surveillance prevalence; ``f`` is a working assumption.
+See the selection README for source dependence and parameter definitions.
 
 Cell schema
 -----------
@@ -27,10 +30,10 @@ Staged builds
 -------------
 ``build_model`` accepts a ``spec`` flag selecting which stages are active:
 
-    ``"theta_only"`` — Stage 1 only (eta=1, s=1)
-    ``"theta_s"``    — Stage 1 + Stage 3 (eta=1)
-    ``"single_eta"`` — Stage 1 + single combined eta + Stage 3
-    ``"full"``       — Stage 1 + eta_detect × eta_term + Stage 3 (default)
+    ``"theta_only"``, Stage 1 only (eta=1, s=1)
+    ``"theta_s"``   , Stage 1 + Stage 3 (eta=1)
+    ``"single_eta"``, Stage 1 + single combined eta + Stage 3
+    ``"full"``      , Stage 1 + eta_detect × eta_term + Stage 3 (default)
 """
 
 from __future__ import annotations

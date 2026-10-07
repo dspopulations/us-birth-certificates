@@ -13,6 +13,9 @@
 # ---
 
 # %% [markdown]
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
+#
 # # Notes - DS births recorded
 
 # %%
@@ -37,7 +40,8 @@ con = duckdb.connect("../data/us_births.db", read_only=True)
 # %% [markdown]
 # ## Total records
 #
-# There are 143 million records, including 68,515 live births with Down syndrome recorded. The status of Down syndrome is unknown in 23.6 million records (16.5%).
+# An earlier database snapshot had about 143 million records, 68,515 recorded DS births
+# and 23.6 million births with unknown DS status. Run the queries below for current counts.
 
 # %%
 df = con.execute(
@@ -57,7 +61,9 @@ df
 #
 # Many unknowns are seen in 2003 and for some years thereafter.
 #
-# We treat 'Unknown' as 'Not recorded' in our analyses.
+# Unknown status remains NULL in the prepared database. These exploratory summaries
+# keep it separate where shown. Current descriptive reports include it in all-birth
+# denominators; Bayesian cell builders exclude unknown status.
 
 # %%
 df = con.execute(

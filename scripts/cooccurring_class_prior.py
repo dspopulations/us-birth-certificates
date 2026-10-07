@@ -1,39 +1,21 @@
-"""Stratified class-prior estimate of co-occurring-condition rates in the FULL
-(recorded + missed) true-DS population -- without identifying individual missed cases.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-For a clinical condition, the rate among all true DS is estimated by stratifying on the
-condition and applying a recording rate to each stratum (a class-prior / inverse-
-propensity estimate):
+Sensitivity analysis for co-occurring conditions among true DS cases.
 
-    P(cond | true DS) = (rec_present / s_present) / (rec_present/s_present + rec_absent/s_absent)
-                      = rec_present / (rec_present + R * rec_absent),     R = s_present / s_absent
+Uses recorded cases with known condition status and a supplied relative recording
+rate R = s_present / s_absent. Under accurate condition labels and no DS false
+positives, q_true = rec_present / (rec_present + R * rec_absent).
 
-where rec_present / rec_absent are recorded-DS counts with / without the condition and
-R is the recording-rate ratio (how much more likely a DS birth WITH the condition is to
-be recorded than one without). The absolute recording level cancels -- only R matters.
+R=1 assumes equal DS recording with and without the condition. The cited validation
+studies do not establish that equality. The script varies R from 1 to 3 and also
+plots a classifier-cohort proportion. That cohort is not a verified missed-case
+population, and the two curves cannot validate each other.
 
-  * R = 1  -> neutral baseline: the full-population rate equals the recorded rate (the
-             unrecorded cases mirror the recorded ones). This is the LITERATURE-SUPPORTED
-             default. Birth-certificate DS recording is driven by demographics (already
-             adjusted in the structural model) and by whether DS is confirmed within the
-             24-48h certificate window -- NOT by clinical severity. A suspected-DS cohort
-             that was 83.5% congenital heart disease still had only ~25% birth-certificate
-             recording (Tennessee Medicaid, doi:10.3390/children11101271), and preterm
-             birth LOWERS defect reporting rather than raising it (Atlanta MACDP,
-             doi:10.1177/003335491112600209). So there is no empirical basis for R > 1.
-  * R != 1 -> sensitivity analysis spanning the two competing mechanisms (extra workup for
-             severe cases pushes R > 1; certificate-timing / transfer of sick infants
-             pushes R < 1). The estimate stays far below the GB estimate either way.
-
-Contrasted with the GB individual-prediction estimate, which combines the recorded
-cohort with the GB-predicted-missing cohort. Because the GB flags the clinically-florid
-tail (see the variant-D / over-medicalisation discussion), it INVERTS the picture --
-making missed DS look MORE affected than recorded DS, which is unsupported.
-
-Figure -> notes/figures/cooccurring_class_prior (png/svg/csv).
+Outputs are notes/figures/cooccurring_class_prior (PNG, SVG and CSV). See
+notes/20260622-predictors-bayesian-model.md for assumptions and limitations.
 
 Usage:
-    python scripts/cooccurring_class_prior.py
+    uv run python scripts/cooccurring_class_prior.py
 """
 
 from __future__ import annotations  # noqa: I001
@@ -53,8 +35,8 @@ from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E40
 
 OUTPUT_DIR = "notes/figures"
 DB = "data/us_births.db"
-PRED_MISSING = "ds_pred_missing_14"  # C-only, demographically-blind flag (variant-D source)
-SENS_R = (1.5, 2.0)  # sensitivity values reported alongside the R=1 literature-supported default
+PRED_MISSING = "ds_pred_missing_14"  # C-only classifier excluding demographic predictors (variant-D source)
+SENS_R = (1.5, 2.0)  # scenarios reported alongside the equal-recording assumption R=1
 CONDITIONS = [
     ("ca_cchd", "Cyanotic CHD"),
     ("ab_nicu", "NICU admission"),
@@ -84,7 +66,9 @@ def main() -> int:
     con = duckdb.connect(DB, read_only=True)
 
     r_grid = np.linspace(1.0, 3.0, 60)
-    fig, axes = plt.subplots(1, len(CONDITIONS), figsize=(styles.FIGSIZE_LG[0] * 1.3, styles.FIGSIZE_LG[1]))
+    fig, axes = plt.subplots(
+        1, len(CONDITIONS), figsize=(styles.FIGSIZE_LG[0] * 1.3, styles.FIGSIZE_LG[1])
+    )
     rows = []
     for ax, (col, label) in zip(axes, CONDITIONS, strict=True):
         c = _counts(con, col)
@@ -93,40 +77,68 @@ def main() -> int:
         recorded = c["rec_present"] / rec_n
         gb_full = (c["rec_present"] + c["pm_present"]) / (rec_n + pm_n)
         cp = _class_prior(c["rec_present"], c["rec_absent"], r_grid)
-        cp_sens = {r: float(_class_prior(c["rec_present"], c["rec_absent"], np.array([r]))[0]) for r in SENS_R}
+        cp_sens = {
+            r: float(_class_prior(c["rec_present"], c["rec_absent"], np.array([r]))[0])
+            for r in SENS_R
+        }
 
-        ax.plot(r_grid, cp * 100, "-", color=styles.COLOUR_BLUE, lw=2,
-                label="Class-prior estimate (full true-DS population)")
-        ax.axhline(gb_full * 100, ls="--", color=styles.COLOUR_RED,
-                   label=f"GB individual-prediction estimate ({gb_full * 100:.0f}%)")
-        ax.axvspan(1.0, 1.5, color=styles.TEXT_COLOUR, alpha=0.06)  # plausible range near R=1
-        ax.plot([1.0], [recorded * 100], "o", color=styles.COLOUR_GREEN, ms=8,
-                label=f"R≈1, literature-supported = recorded ({recorded * 100:.1f}%)")
+        ax.plot(
+            r_grid,
+            cp * 100,
+            "-",
+            color=styles.COLOUR_BLUE,
+            lw=2,
+            label="Conditional co-occurrence estimate",
+        )
+        ax.axhline(
+            gb_full * 100,
+            ls="--",
+            color=styles.COLOUR_RED,
+            label=f"Classifier-cohort share ({gb_full * 100:.0f}%)",
+        )
+        ax.axvspan(
+            1.0, 1.5, color=styles.TEXT_COLOUR, alpha=0.06
+        )  # illustrated ratio range near R=1
+        ax.plot(
+            [1.0],
+            [recorded * 100],
+            "o",
+            color=styles.COLOUR_GREEN,
+            ms=8,
+            label=f"R=1, equal recording assumed ({recorded * 100:.1f}%)",
+        )
         ax.set_title(f"{label}")
         ax.set_xlabel("Recording-rate ratio R = s(with) / s(without)")
-        ax.set_ylabel(f"% of true DS with {label.lower()}")
+        ax.set_ylabel(f"Conditional % of true DS with {label.lower()}")
         ax.set_ylim(0, max(gb_full, recorded) * 130)
         ax.legend(fontsize=6, loc="upper right")
-        rows.append({
-            "condition": label, "recorded_R1_pct": round(recorded * 100, 1),
-            "gb_full_pct": round(gb_full * 100, 1),
-            "classprior_R1.5_pct": round(cp_sens[1.5] * 100, 1),
-            "classprior_R2_pct": round(cp_sens[2.0] * 100, 1),
-            "rec_present": c["rec_present"], "rec_absent": c["rec_absent"],
-            "pm_present": c["pm_present"], "pm_absent": c["pm_absent"],
-        })
+        rows.append(
+            {
+                "condition": label,
+                "recorded_R1_pct": round(recorded * 100, 1),
+                "gb_full_pct": round(gb_full * 100, 1),
+                "classprior_R1.5_pct": round(cp_sens[1.5] * 100, 1),
+                "classprior_R2_pct": round(cp_sens[2.0] * 100, 1),
+                "rec_present": c["rec_present"],
+                "rec_absent": c["rec_absent"],
+                "pm_present": c["pm_present"],
+                "pm_absent": c["pm_absent"],
+            }
+        )
     con.close()
 
-    fig.suptitle("Co-occurring conditions in the full true-DS population: class prior vs GB prediction")
+    fig.suptitle(
+        "Co-occurring conditions in the full true-DS population: class prior vs GB prediction"
+    )
     df = pd.DataFrame(rows)
     save_fig(fig, OUTPUT_DIR, "cooccurring_class_prior", data=df)
     plt.close(fig)
 
     pd.set_option("display.width", 180)
     print(df.to_string(index=False))
-    print("\nR=1 (full population == recorded rate) is the literature-supported default: birth-certificate")
-    print("DS recording is timing- and demographically-driven, not severity-driven, so there is no basis")
-    print("for R>1. R=1.5/2.0 are shown only as a sensitivity range.")
+    print("\nR=1 assumes equal DS recording with and without the condition.")
+    print("The source studies do not estimate that within-DS ratio directly.")
+    print("The curves also assume accurate condition labels and no DS false positives.")
     print(f"wrote cooccurring_class_prior to {OUTPUT_DIR}/")
     return 0
 

@@ -10,6 +10,10 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6) on 7 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
 :::
 

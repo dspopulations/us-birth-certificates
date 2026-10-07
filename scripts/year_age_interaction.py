@@ -1,22 +1,17 @@
-"""Quantify the eta_detect year-by-age interaction: did screening reach older
-mothers first?
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Reads a selection fit that includes ``eta_detect_year_age`` (the zero-sum
-year-by-age interaction on the screening stage) and reports, per maternal-age band,
-the *extra* change in screening detection between the early (first 3 years) and late
-(last 3 years) periods attributable to the interaction — i.e. the rise beyond the
-shared, age-averaged rollout. A positive gradient with age means screening expanded
-faster in older mothers.
+Summarise the fitted screening-stage year-by-age interaction.
 
-Outputs: a printed table (extra log-odds rise + 89% ETI per age band, and the
-age-gradient slope with ETI), and a figure (year_age_interaction) to notes/figures/.
+Reports the change in eta_detect_year_age between the first and last three fitted
+years, with equal-tail intervals by age band and a linear age-gradient summary.
+This is a contrast within the model. It does not establish that actual screening
+expanded differently by age: recording, reduction and their priors also affect
+the fit. The current recording surface has race and year dimensions.
 
-The interaction is data-identified: recording ``s`` has no year term, so year-to-year
-movement in recorded rates maps onto screening/termination, and only one channel
-(eta_detect) carries a year-by-age interaction term.
+Writes a table and figure to notes/figures/year_age_interaction.
 
 Usage:
-    python scripts/year_age_interaction.py [FIT_DIR]
+    uv run python scripts/year_age_interaction.py [FIT_DIR]
 """
 
 from __future__ import annotations  # noqa: I001

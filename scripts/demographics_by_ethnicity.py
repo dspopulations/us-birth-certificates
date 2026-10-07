@@ -1,31 +1,19 @@
-"""By-ethnicity descriptive + age-standardised readout from a converged fit.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Population-level, no new sampling. Reads one converged selection fit (default:
-the latest reporting variant C) plus its cell frame and reports, per ethnicity:
+Describe model-based ethnicity contrasts from a saved selection fit.
 
-  - share of births, mean maternal age,
-  - recorded vs model-estimated true DS livebirth rate (per 10k),
-  - CRUDE termination reduction (reflects each group's own age mix),
-  - AGE-STANDARDISED termination reduction (every group re-weighted to the
-    national maternal-age distribution), which isolates the race effect on
-    termination *net of age composition*,
-  - implied recording sensitivity s.
+Reports crude and maternal-age-standardised rates, reduction and recording
+summaries. Standardisation uses a common national age distribution within the
+fitted model. It does not identify a causal race effect or separate recording
+from prenatal reduction.
 
-Also prints the maternal-age distribution by ethnicity and the model's race
-coefficients (eta_term_race, s_race) with 89% ETIs.
-
-CAVEATS (also printed):
-  - reduction = termination share is the data-identified end-quantity, but the
-    detection-vs-termination split inside it is prior-driven.
-  - recording sensitivity s is PINNED (sigma~0.001 baseline, sigma~0.05 race) in
-    variants A and C, so "missed %" by ethnicity is largely an ASSUMPTION, not
-    estimated. Only variant B lets the data move recording by race.
-  - the recording-vs-termination attribution of each group's gap is bounded by
-    the A/B/C spread, not identified from birth-certificate data alone.
+The default input is the latest reporting variant C. A reporting profile does not
+establish convergence. Check the fit's diagnostics and priors before using results.
+Current recording priors are race-by-year surfaces, not the old global pin.
 
 Usage:
-    python scripts/demographics_by_ethnicity.py [FIT_DIR]
-    python scripts/demographics_by_ethnicity.py --variant A   # latest reporting A
+    uv run python scripts/demographics_by_ethnicity.py [FIT_DIR]
+    uv run python scripts/demographics_by_ethnicity.py --variant A
 """
 
 from __future__ import annotations
@@ -164,16 +152,14 @@ def main(argv: list[str] | None = None) -> int:
 
     print("\n=== eta_term_race (termination log-odds offset; +=more termination) ===")
     print(eta_term_race.to_string(index=False, float_format=fmt))
-    print("\n=== s_race (recording log-odds offset; pinned in A/C, free in B) ===")
+    print("\n=== s_race (year-averaged recording logit; externally anchored) ===")
     print(s_race.to_string(index=False, float_format=fmt))
 
     print(
-        "\nNOTE: reduction is the data-identified termination share, but its "
-        "detection-vs-termination\nsplit is prior-driven. recording_s / s_race are "
-        "PINNED in variants A and C, so 'missed by\nethnicity' is an assumption "
-        "there; only variant B lets the data move recording by race. The\n"
-        "recording-vs-termination attribution is bounded by the A/B/C spread, not "
-        "identified from\nbirth-certificate data alone."
+        "\nNOTE: reduction and recording remain conditional on the fitted priors. "
+        "The recording surface uses surveillance and recorded counts. "
+        "A/B/C comparisons test selected prior restrictions; their range is not "
+        "an identified bound on subgroup effects."
     )
     return 0
 

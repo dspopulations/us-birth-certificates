@@ -13,10 +13,14 @@
 # ---
 
 # %% [markdown]
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
+#
 # # Predictors 11 - Predictors of recorded DS live births
 #
 # Runs experiment `exp_0011` via the shared training/evaluation pipeline.
-# See `experiments/exp_0011.py` for the full configuration.
+# The referenced `experiments/exp_0011.py` configuration is no longer in the repository.
+# This notebook is historical; use `scripts/fit_model.py` for current fits.
 
 # %%
 from experiment_runner import run_experiment

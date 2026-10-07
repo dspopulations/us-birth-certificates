@@ -1,18 +1,16 @@
 ---
-title: "Overview"
+title: "Study report scaffold"
 ---
 
-# Overview
-
-Composite report for the US birth certificates Down syndrome study.
-
-::: {.callout-note}
-This Quarto book is a placeholder. Individual model chapters are wired in
-during refactor step 7 (see `docs/refactor-plan.md`).
+::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6).
 :::
 
-## Model variants
+This Quarto book contains an overview scaffold. It does not yet assemble the
+study's analyses or model-run reports.
 
-Model artefacts live under `output/models/<model_id>-<run_config>/` and
-are produced by `scripts/fit_model.py`. Per-model technical reports are
-rendered from `docs/models/<model_id>/index.qmd`.
+Generate individual reports with the fit and analysis scripts. Each script copies
+a template from `docs/` into the output directory beside the run's artefacts.
+The recorded-status classifiers, three-stage selection model and DSP accounting
+models have separate templates and output layouts. See the repository's
+[modelling workflow](https://github.com/dspopulations/us-birth-certificates/blob/main/docs/modelling-workflow.md).

@@ -1,4 +1,6 @@
-"""Fit the three-stage Bayesian selection model.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Fit the three-stage Bayesian selection model.
 
 Thin CLI over ``dspopulations_us_birth_certificates.selection``. Given a
 variant (A/B/C/D), spec (theta_only / theta_s / single_eta / full), and
@@ -16,12 +18,10 @@ run profile, this script:
 
 Profiles
 --------
-- ``dev``      — 1000 tune + 1000 draws × 2 chains, target_accept=0.9,
-                 nutpie. Enough posterior mass to clear ESS gates on
-                 the named RVs at full spec; a few minutes for
-                 theta_only, ~30 min for full.
-- ``reporting``— 1500 tune + 1500 draws × 4 chains, target_accept=0.95,
-                 nutpie. The publication-quality preset.
+- ``dev``     , 1000 tune + 1000 draws × 2 chains, target_accept=0.9,
+                 nutpie. Development settings; inspect sampling diagnostics.
+- ``reporting``,  1500 tune + 1500 draws × 4 chains, target_accept=0.95,
+                 nutpie. More sampling effort; diagnostics still need review.
 
 Examples
 --------

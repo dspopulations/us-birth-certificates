@@ -1,5 +1,5 @@
 ---
-title: "Compare predicted-missing pools across models"
+title: "Compare classifier-selected cohorts"
 
 date: last-modified
 date-format: "YYYY-MM-DD HH:mm:ss Z"
@@ -15,30 +15,19 @@ format:
       - repo
 ---
 
-::: {.callout-warning title="Preliminary output"}
-
-This comparison is a diagnostic. It reads two previously-rendered
-`analyse_predicted` runs — one per model variant — and shows how the
-demographic / clinical distribution of the predicted-missing cohort
-shifts when the underlying classifier changes. Interpretations should
-be read alongside `docs/analysis/predicted.qmd`'s "Literature context"
-and "Interpretation summary" sections.
-
+::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6) on 7 October 2026.
 :::
 
-The two input runs are typically:
+::: {.callout-warning title="Preliminary diagnostic output"}
+This comparison describes how two classifiers select births. It does not validate
+those births as missed Down syndrome cases.
+:::
 
-- **Left** — the usbc10 family (full feature set, including
-  sociodemographic features).
-- **Right** — the usbc11 family (clinical + maternal age only;
-  sociodemographic features removed to probe selection bias on the
-  `down_ind` training target).
-
-Shifts that move *into* the literature-predicted direction — e.g.
-Boulet's NH Black / NH Asian / low-education under-reporting — are
-evidence that the left-hand model was leaning on demographic features
-for reasons other than DS biology, and that the right-hand model
-recovers the hidden signal.
+The input runs can differ in features, training labels or both. Read their
+metadata before attributing a change to feature removal. Compare the same years
+and variable-specific denominators. A change in a group's share shows selection
+sensitivity; agreement with a published pattern does not prove bias correction.
 
 ```{python}
 # | echo: false
@@ -66,7 +55,7 @@ def _side_meta() -> str:
         pred = cfg.get("predictions_column", "?")
         src = config.get(f"{side}_source", "?")
         lines.append(
-            f"- **{label}** — flag `{flag}`, predictions `{pred}` "
+            f"- **{label}**, flag `{flag}`, predictions `{pred}` "
             f"(`{src}`)"
         )
     return "\n".join(lines)
@@ -83,7 +72,7 @@ def _render_compare_table(variable: str) -> pd.DataFrame:
         f"{left_label} (%)": merged["predicted_pct_l"].astype(float),
         f"{right_label} (n)": merged["predicted_n_r"].astype(int),
         f"{right_label} (%)": merged["predicted_pct_r"].astype(float),
-        "Δ (%)": (
+        "Δ (percentage points)": (
             merged["predicted_pct_r"].astype(float)
             - merged["predicted_pct_l"].astype(float)
         ).round(2),
@@ -94,8 +83,8 @@ def _render_compare_table(variable: str) -> pd.DataFrame:
     for c in display_df.columns:
         if c.endswith("(n)"):
             display_df[c] = display_df[c].map(lambda v: f"{int(v):,}")
-        elif c.endswith("(%)") or c == "Δ (%)":
-            display_df[c] = display_df[c].map(lambda v: f"{float(v):+.2f}" if c == "Δ (%)" else f"{float(v):.2f}")
+        elif c.endswith("(%)") or c == "Δ (percentage points)":
+            display_df[c] = display_df[c].map(lambda v: f"{float(v):+.2f}" if c == "Δ (percentage points)" else f"{float(v):.2f}")
 
     return display_df.set_index("Category")
 ```
@@ -110,14 +99,11 @@ Markdown(_side_meta())
 ```{python}
 # | echo: false
 Markdown(
-    "Both runs share the same recorded-cases set and exposure "
-    "denominator (they differ only in which predicted-missing pool "
-    "is compared against the same recorded cases). The `Δ (%)` "
-    "column is the **right-minus-left** share change per category "
-    "— positive values mean the right-hand model over-represents "
-    "that category in its predicted-missing pool compared with the "
-    "left. `Recorded (%)` is the corresponding share in recorded "
-    "DS births, shown as a reference anchor."
+    "The `Δ (%)` column gives the **right-minus-left** change in share, "
+    "in percentage points. A positive value means the right-hand "
+    "classifier selects a larger share from that category. "
+    "`Recorded (%)` gives the left run's recorded-case share as a reference. "
+    "Check that the runs use the same years and denominator before comparing."
 )
 ```
 
@@ -129,20 +115,6 @@ _render_compare_table("mage_c")
 ```
 
 ## Maternal race / Hispanic origin (`mracehisp`)
-
-::: {.callout-warning title="Headline comparison"}
-
-Boulet et al. (2011) predict that infants of non-Hispanic Black
-mothers are under-recorded ~5× more than infants of non-Hispanic White
-mothers; Hispanic and "other non-Hispanic" groups show a similar but
-weaker gradient. A predicted-missing pool that correctly identifies
-the demographic under-ascertainment should therefore show **higher**
-shares for those groups. A rightward shift (positive Δ) for NH Black,
-NH Asian, and Hispanic under the clinical-only model is evidence that
-the full-feature model was leaning on demographic features in ways
-that suppressed recovery of those groups.
-
-:::
 
 ```{python}
 # | echo: false

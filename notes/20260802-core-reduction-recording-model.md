@@ -1,274 +1,29 @@
 > [!NOTE]
+> AI-assisted revision by Codex (GPT-6), 7 October 2026.
+
+> [!NOTE]
 > Drafted by a LLM-based AI tool (Codex/GPT-5).
 
-# Core reduction-recording model
+# The initial core reduction and recording model
 
-**Date:** 2026-08-02
-**Status:** Accepted modelling proposal; implemented as a simpler baseline before
-returning to the full detection/termination decomposition.
+**Original date:** 2 August 2026. Historical research note, revised for clarity in October 2026.
 
-## Motivation
+Fit results below predate the [September model fixes](20260905-dsp-code-review-fixes.md). They have not been regenerated for this review. Use them to trace decisions, and refit before citing estimates or intervals.
 
-The current selection model has the right conceptual components, but it tries to
-estimate too much at once: maternal-age expected Down syndrome livebirths,
-prenatal detection, termination conditional on detection, incomplete
-birth-certificate recording, and demographic modifiers on several of those
-processes.
-
-That richer structure makes the prior configuration hard to reason about. The
-birth-certificate data observe recorded livebirths, not prenatal screens,
-diagnoses, terminations, or unrecorded individual DS status. The first model in
-the paper should therefore make the central accounting identity clear before
-layering on explanatory factors.
-
-## Simpler DAG
-
-```mermaid
-flowchart TD
-  N["Births by year and maternal age"] --> E["Expected DS livebirths from maternal age"]
-  Theta["Maternal-age DS livebirth rate absent prenatal selection"] --> E
-  E --> Rho["Combined reduction before livebirth"]
-  Rho --> T["True DS livebirths"]
-  T --> Rec["Recorded DS births"]
-  S["Certificate recording sensitivity"] --> Rec
-```
-
-The key simplification is to model the combined reduction before livebirth:
+`DSP001` reduced the selection model to counterfactual live-birth prevalence, combined prenatal reduction and certificate recording. It omitted demographic, clinical and separate screening/termination terms.
 
 ```text
-rho_year = probability that maternal-age-expected DS livebirths are removed before birth
-eta_year = 1 - rho_year
-```
-
-Detection and termination can later be decomposed as:
-
-```text
-rho = detection * termination_given_detection
-```
-
-but that split should not be the first model the reader or sampler has to carry.
-
-## Core model
-
-For year `y` and maternal-age group `a`:
-
-```text
-theta_age = external maternal-age DS livebirth probability absent prenatal selection
-rho_year  = combined reduction before livebirth
-eta_year  = 1 - rho_year
-s         = certificate recording sensitivity
-f         = small false-positive recording probability
-
-p_ds_lb[y,a]   = theta_age[a] * eta_year[y]
-p_recorded[y,a] = p_ds_lb[y,a] * s + (1 - p_ds_lb[y,a]) * f
-
+p_true[y,a] = theta_lb[a] * (1 - rho[y])
+p_recorded[y,a] = p_true[y,a] * s + (1 - p_true[y,a]) * f
 R[y,a] ~ Binomial(N[y,a], p_recorded[y,a])
 ```
 
-Start with one overall `s`. Add `s_year`, `s_race_year`, education, payer, and
-then detection/termination decomposition only after this core accounting model
-fits recorded totals and yields plausible posterior recording rates.
+`rho` is the reduction relative to the Morris counterfactual live-birth rate. It is not the probability of fetal loss from conception. `s` is sensitivity among true live-born cases. `f` is a probability among births without Down syndrome.
 
-## Reduction prior from surveillance
+The priors constrain the Morris rate and the annual reduction. The recorded counts mainly constrain their product with recording. Thus the model estimates a total conditional on the external reduction inputs, rather than learning that total from certificates alone.
 
-The tracked reduction series provides a natural prior scale:
+The original seven age bands average risk within bands. Later exact-age models test that approximation. `DSP002` tests annual recording; `DSP003` adds an age-reduction term. The [current inventory](../docs/models/README.md) describes all ten models and their validation requirements.
 
-```text
-rho_year ~ LogitNormal(logit(reduction_csv_year), sigma_year)
-```
+The model reports expected true and missed counts for each parameter draw. Those intervals do not add realised-count variation for unobserved individual cases. Keep that distinction when describing a total.
 
-The important caveat is that surveillance data lag. The repository notes already
-flag that 2020-2024 reduction values are linearly extrapolated, so those years
-should have wider prior uncertainty than surveillance-grounded years. In the
-implemented baseline:
-
-```text
-sigma_year = observed_reduction_sigma      for years before the extrapolated tail
-sigma_year = extrapolated_reduction_sigma  for the extrapolated tail
-```
-
-This treats recent years as nowcasts conditional on the historical surveillance
-trend, not as fully observed surveillance estimates.
-
-## Identifiability
-
-After expressing the likelihood as an additive false-positive floor plus an
-excess true-DS component, the data still mainly see the product:
-
-```text
-p_recorded = f + theta_age * eta_year * (s - f)
-```
-
-The simpler model does not make that problem disappear. Instead, it makes the
-separation explicit:
-
-- `theta_age` is external and fixed to the Morris/de Graaf maternal-age curve.
-- `rho_year` is informed by surveillance-derived reduction rates, with wider
-  uncertainty where surveillance is extrapolated.
-- `s` is estimated from the recorded certificate counts under a weak prior.
-
-This is more defensible than simultaneously asking the birth-certificate data to
-separate recording, detection, and termination without first proving the basic
-accounting model.
-
-## Layering path
-
-1. Fit the core `rho_year + constant s` model.
-2. Allow `s_year` if the posterior predictive check shows clear year drift in
-   recording.
-3. Add maternal-age modifiers to `rho` only if age-specific recorded rates remain
-   systematically misfit.
-4. Add race/ethnicity-specific recording sensitivity once the aggregate model is
-   stable.
-5. Add education and payer effects as secondary national associations, not as
-   separable causal mechanisms.
-6. Split `rho` into detection and termination only as an assumption-dependent
-   extension.
-
-## Publication framing
-
-This baseline supports a clear paper spine that keeps the false-positive branch
-visible:
-
-```text
-Recorded DS-coded births
-= (maternal-age-expected DS births
-   x survival after prenatal selection
-   x true-positive certificate recording sensitivity)
-  + (non-DS births x false-positive recording probability).
-```
-
-Recent-year totals should be reported as nowcasts conditional on reduction-trend
-and recording assumptions, not as directly observed surveillance totals.
-
-## Initial fit findings
-
-The first reporting fit of this baseline was run on 2026-08-02 using:
-
-```bash
-PYTENSOR_FLAGS=base_compiledir=/private/tmp/pytensor-codex \
-MPLCONFIGDIR=/private/tmp/mpl-codex \
-conda run -n dspop-us-birth-certificates \
-python scripts/fit_core_reduction_model.py \
-  --profile reporting \
-  --draws 3000 \
-  --tune 3000 \
-  --chains 4 \
-  --target-accept 0.95 \
-  --prior-predictive-samples 1000 \
-  --nuts-sampler pymc
-```
-
-Artefacts were written locally to:
-
-```text
-output/selection_core_reduction/20260802-135419
-```
-
-A later run with the same reporting sampler settings and the Quarto report
-enabled was written locally to:
-
-```text
-output/selection_core_reduction/20260802-143559
-```
-
-Input scale:
-
-- 63 age-year cells covering 2016-2024.
-- 33,527,704 livebirths.
-- 17,809 recorded DS births.
-- Recorded DS rate: `5.31e-04`.
-
-Sampling diagnostics passed on the saved summary:
-
-- Maximum Rhat: `1.0000`.
-- Minimum effective sample size: `1519`.
-
-Headline posterior, conditional on the current Morris/de Graaf age curve, the
-surveillance-derived reduction prior, and the weak overall recording prior:
-
-- True DS livebirths, 2016-2024: mean `43,828`, 89% ETI
-  `41,444-46,130`.
-- Overall certificate recording sensitivity: mean `0.344`, 89% ETI
-  `0.326-0.363`.
-- Combined reduction before livebirth: about `0.326` in 2016 and `0.452` in
-  2024.
-
-The fit supports the usefulness of the simpler accounting model. It reproduces
-recorded totals with a plausible overall recording sensitivity and a clear
-posterior for true DS livebirth totals. It should not yet be treated as a final
-publication model because the main `rho * s` identifiability issue remains. The
-model makes that dependence visible rather than resolving it internally.
-
-Immediate next checks:
-
-1. Add posterior predictive plots for recorded counts by year and maternal-age
-   band.
-2. Compare this baseline against a version with `s_year`.
-3. Stress-test reduction-prior width, especially for 2020-2024.
-4. Only then add race/ethnicity recording or split `rho` into detection and
-   termination.
-
-## Follow-up
-
-The follow-up sequence produced `DSP002`, the exact-age `DSP004` and `DSP005`
-ablations, and the age-specific-reduction `DSP003` diagnostic. Resolving the
-Morris curve at NCHS single-age codes materially improves the fair common-grid
-PPC while moving the posterior mean total by only +452 births from `DSP001` to
-`DSP004` and +524 from `DSP002` to `DSP005`. The remaining broad-age misfit is
-not removed: both exact-age simple models still cover only one of seven broad
-age margins at their 89% posterior-predictive intervals.
-
-`DSP004` therefore supersedes `DSP001` as the preferred **simple-resolution
-baseline**. `DSP001` remains the discretisation sensitivity, `DSP005` the
-year-varying-recording sensitivity, and `DSP003` the age-structure diagnostic.
-This is not a mechanism claim. `DSP003` fits the age pattern better in-sample,
-but assigns that pattern to combined reduction by construction and remains
-sensitive to the fixed false-positive and smoothing assumptions.
-
-See [the DSP004/DSP005 exact-age ablation note](20260802-dsp004-dsp005-exact-age-ablations.md)
-for the matched comparisons, endpoint convention, and model decision, and
-[the DSP003 extension note](20260802-dsp003-age-reduction-extension.md) for its
-measurement audit and sensitivity fits.
-
-A subsequent
-[DSP004 false-positive and surveillance-precision grid](20260802-dsp004-false-positive-surveillance-sensitivity.md)
-shows that the working false-positive scenarios primarily change inferred
-recording sensitivity, not the true-total estimate, when the current reduction
-priors are retained. Doubling the independent annual reduction-prior widths
-raises the posterior mean total by approximately 3% and roughly doubles its
-89% interval width. The simple model remains useful as a conditional accounting
-baseline, but the base interval should not be presented as including coherent
-surveillance calibration uncertainty.
-
-The subsequent
-[no-refit race-surveillance audit](20260803-dsp004-race-surveillance-audit.md)
-was revised after the project lead confirmed on 2026-08-03 that the de Graaf
-estimates are centred five-year values based on maternal race and that
-prevalence is a ratio of numerator and denominator counts pooled across each
-window. The earlier annual-label 2016/2018 comparison and transport result are
-superseded. A label of 2016 requires 2014-2018, but the frozen `DSP004`
-reference supports only 2016-2018; only the 2018-centred 2016-2020 window is
-complete. The pooled count ratio is therefore the sole source-aligned estimand,
-and the audit makes no repeatability or transport claim. The earlier
-equal-year-rate calculation was numerically close but is now a superseded
-sensitivity rather than decision evidence.
-
-The pooled comparison shows a material 2018 relative-composition discrepancy,
-including Asian/Pacific Islander and Hispanic contrasts, while the
-native source birth denominators imply 25,128 named-group true births versus a
-model posterior mean of 24,865. Because the source contains about 1.50% more
-named-group births than the model cohort, that absolute difference remains
-inseparable from denominator mapping. Applying the source rates to model births
-gives 24,781. This is a single-complete-window pooled descriptive signal, not
-yet an independent national-scale anchor.
-
-The Hispanic-origin and multi-race category crosswalk remains unresolved,
-source/model denominators differ materially, no source covariance is available,
-and overlap with the national reduction evidence has not been established.
-The incomplete 2016 window provides no replication, and the mirrored
-age-on-recording gate remains outstanding. Calibration remains blocked, and the
-local audit must be rerun in a release-conformant environment before it can
-become a sealed artefact. The immediate use of these figures is to motivate
-source reconciliation and a second complete window, not to calibrate
-race-specific reduction or recording effects.
+The initial plan and command list have been replaced by the [workflow guide](../docs/modelling-workflow.md). This note preserves the model's motivation, rather than prescribing the preferred current model.

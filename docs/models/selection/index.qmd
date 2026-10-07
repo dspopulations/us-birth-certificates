@@ -1,5 +1,5 @@
 ---
-title: "Selection model: Bayesian decomposition of recorded DS livebirths"
+title: "Selection model for recorded DS livebirths"
 
 date: last-modified
 date-format: "YYYY-MM-DD HH:mm:ss Z"
@@ -16,15 +16,18 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6) on 7 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 Revised by a LLM-based AI tool (Codex/GPT-6) on 4 October 2026.
 :::
 
 ::: {.callout-warning title="Preliminary model output"}
 
 This output is preliminary and will change as the model evolves and as
-further data are incorporated. If the fit used the `dev` profile rather
-than `reporting`, convergence diagnostics and posterior uncertainty
-bands are more approximate than a full run would give.
+further data are incorporated. Profiles set sampling defaults. Inspect convergence and effective sample
+sizes for this fit; a profile name does not establish posterior quality.
 
 :::
 
@@ -43,20 +46,21 @@ P(R = 1 \mid X) = \theta_\text{LB}(\text{age}) \cdot \eta(X) \cdot s(X)
 $$
 
 where $\theta_\text{LB}$ is the baseline DS livebirth rate in the
-absence of screening (Morris 2002 / de Graaf 2015), $\eta = 1 -
+absence of selective termination (Morris 2002 / de Graaf 2015), $\eta = 1 -
 \eta_\text{detect} \cdot \eta_\text{term}$ is the screening/termination
 pass-through (Kuppermann / Natoli), $s$ is birth-certificate
-sensitivity given a DS livebirth (Boulet 2011 / Salemi 2017), and $f$
-is a fixed false-positive rate (Ohio/NY validation). See
-`src/dspopulations_us_birth_certificates/selection/README.md` for the
-implementation design.
+sensitivity given a DS livebirth, and $f$
+is a fixed false-positive probability per non-DS birth. See the
+[selection guide](https://github.com/dspopulations/us-birth-certificates/blob/main/src/dspopulations_us_birth_certificates/selection/README.md)
+for the implementation and current prior structure.
 
 This decomposition is a prior-informed structural model. Birth
 certificate counts alone do not separately identify baseline DS
 livebirth prevalence, screening/termination, recording sensitivity, and
 false positives. The Morris/de Graaf livebirth curve, the recording
-anchors, and the fixed false-positive rate therefore act as external
-anchors; subcomponent estimates should be interpreted in that light.
+surface, and the fixed false-positive rate constrain the split. The recording
+surface reuses the recorded counts fitted by the likelihood, so it is not fully
+independent evidence. Interpret the subcomponents conditional on these choices.
 
 ```{python}
 # | echo: false
@@ -80,7 +84,7 @@ sampler = run_config["nuts_sampler"]
 
 Markdown(
     f"- **variant**: `{variant}` "
-    f"({'tight s' if variant == 'A' else 'tight η_term' if variant == 'B' else 'default'})\n"
+    f"({'tight s' if variant == 'A' else 'tight η_term' if variant == 'B' else 'classifier target, recording near one' if variant == 'D' else 'default'})\n"
     f"- **spec**: `{spec}`\n"
     f"- **year range**: {year_range[0]}–{year_range[1]}\n"
     f"- **sampling profile**: `{profile}` "
@@ -144,15 +148,15 @@ if summary_path.exists():
 elif convergence_path.exists():
     Markdown("*(see `convergence_summary.csv`)*")
 else:
-    Markdown("*(prior-only run — no posterior convergence summary available)*")
+    Markdown("*(prior-only run, no posterior convergence summary available)*")
 ```
 
-## Age curve — pinned Stage 1 anchor
+## Age curve, pinned Stage 1 anchor
 
 Posterior baseline DS livebirth rate $\theta_\text{LB}$ per 1,000
 livebirths, by maternal age band, against the Morris / de Graaf prior
 means. The Morris prior is tightly pinned ($\sigma = 0.001$ on logit) so
-posterior means should track the anchors closely — large deviations
+posterior means should track the anchors closely, large deviations
 indicate the age coding or cell aggregation has drifted. This is an
 anchor-propagation check, not evidence that the birth-certificate data
 estimated the biological age curve.
@@ -167,14 +171,15 @@ if age_table.exists():
     display(read_csv_artefact(age_table).round(3))
 ```
 
-## Ridge correlation: η_term vs s race effects
+## Correlation between termination and recording race effects
 
 Per-race posterior scatter of the $\eta_\text{term}$ race effect
 against the $s$ race effect. A high posterior correlation $|r| > 0.7$
 is evidence of a remaining eta/s trade-off. A low correlation is not, by
 itself, evidence that the data identified the split: under the current
 anchored model, $s$ can be nearly fixed by the de Graaf prior surface,
-which mechanically suppresses covariance with $\eta_\text{term}$.
+so this diagnostic cannot show which source constrained the split. Small
+variance alone does not determine correlation.
 
 ```{python}
 # | echo: false
@@ -225,9 +230,9 @@ if s_shrinkage_table.exists():
 
 ## Termination year trajectory
 
-Posterior $\eta_\text{term,year}$ trajectory across the window —
-year-over-year residual effects on termination under a single
-homoscedastic sigma.
+The plot shows the model's residual termination-stage year offsets.
+Their interpretation depends on the other stage priors and recording surface.
+The prior assigns the same standard deviation to each year's offset.
 
 ```{python}
 # | echo: false
@@ -239,44 +244,21 @@ if eta_year_table.exists():
     display(read_csv_artefact(eta_year_table).round(3))
 ```
 
-## CCHD structural stress check
+## Clinical and count-accounting limits
 
-Posterior CCHD prevalence implied by the model's true-DS cell weights,
-shown against an external reference. The current selection model does
-not include CCHD in $\theta_\text{LB}$, $\eta$, or $s$, so this is not a
-calibration test for recording sensitivity. It is a stress check of the
-model's structural independence assumption for clinical co-occurrence.
-The separate class-prior co-occurrence analysis is the appropriate route
-for estimating full-population condition rates.
+The model's clinical cells do not include clinical predictors in true prevalence.
+Their true-case weights therefore do not supply a validated estimate of co-occurring
+conditions among missed DS births. An external all-heart-defect prevalence also
+does not match the narrower cyanotic-heart-disease checkbox.
 
-```{python}
-# | echo: false
-cchd_plot = Path("plots/cchd_consistency.png")
-if cchd_plot.exists():
-    display(Image(str(cchd_plot)))
-cchd_table = Path("tables/cchd_consistency.csv")
-if cchd_table.exists():
-    display(read_csv_artefact(cchd_table).round(4))
-```
+The older race-decomposition output subtracts expected recorded flags from expected
+true cases. With false-positive flags, that is not the expected number of missed
+true cases, which is `sum(N * p_true * (1 - s))`. The old plot and subgroup shares
+are omitted here until their accounting and clinical interpretation are corrected.
 
-## Decomposition by race
-
-Posterior estimate of true DS livebirths per race (stacked into
-recorded vs missed), with intervals for the true-livebirth total and the
-implied number of prenatal terminations. This is a single-variant
-decomposition, so race-level interpretation should be checked against
-the A/B sensitivity spread and the recording-anchor shrinkage table
-before being treated as a substantive demographic finding.
-
-```{python}
-# | echo: false
-decomposition_plot = Path("plots/decomposition_by_race.png")
-if decomposition_plot.exists():
-    display(Image(str(decomposition_plot)))
-decomposition_table = Path("tables/decomposition_by_race.csv")
-if decomposition_table.exists():
-    display(read_csv_artefact(decomposition_table).round(1))
-```
+The [co-occurrence note](https://github.com/dspopulations/us-birth-certificates/blob/main/notes/20260622-predictors-bayesian-model.md)
+describes a sensitivity formula that needs a supplied within-DS recording ratio.
+It does not provide an independently validated population rate.
 
 ## Posterior predictive checks
 
@@ -292,13 +274,11 @@ for stratum in ("year_idx", "race_idx", "age_idx"):
         display(Image(str(p)))
 ```
 
-## Comparison with the LightGBM classifier
+## Expected true total
 
-Side-by-side headline numbers for this fit vs the LightGBM classifier's
-``recorded_plus_predicted`` dataset (see ``docs/analysis/predicted.qmd``).
-The classifier uses a fixed year×month quota of
-``ceil(1.5 × recorded)`` top non-recorded births by ``p_ds_lb_pred_01``;
-the Bayesian posterior places probabilistic intervals on the same quantities.
+For each posterior parameter draw, the expected true total is
+`sum(N_cell * p_ds_lb)`. Its interval describes uncertainty in that expectation
+under the model. It does not add uncertainty in realised individual case status.
 
 ```{python}
 # | echo: false
@@ -308,109 +288,31 @@ from dspopulations_us_birth_certificates.intervals import equal_tail_interval
 
 idata = az.from_netcdf("idata.nc")
 cells_full = pd.read_parquet("cells.parquet")
-
 N = cells_full["N_cell"].to_numpy(dtype=float)
-R = cells_full["R_cell"].to_numpy(dtype=float)
-
-# Posterior total true DS livebirths across cells (θ_LB · η · N).
-# p_ds_lb = θ_LB · η is always on the InferenceData regardless of spec.
-p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)  # (chain, draw, cell)
+p_ds_lb = np.asarray(idata.posterior["p_ds_lb"].values)
 true_counts_draws = (p_ds_lb * N[None, None, :]).sum(axis=-1)
-total_recorded = int(R.sum())
-total_true_mean = float(true_counts_draws.mean())
 total_true_lo, total_true_hi = equal_tail_interval(true_counts_draws)
-
-# Missed = true − recorded, per cell, sampled from the posterior.
-missed_draws = p_ds_lb * N[None, None, :] - R[None, None, :]
-# Posterior NH Black share of missed (race_idx == 1).
-races = cells_full["race_idx"].to_numpy()
-nhb_mask = races == 1
-nhb_share_draws = (
-    missed_draws[..., nhb_mask].sum(axis=-1)
-    / np.clip(missed_draws.sum(axis=-1), 1.0, None)
-)
-nhb_share_mean = float(nhb_share_draws.mean())
-nhb_share_lo, nhb_share_hi = equal_tail_interval(nhb_share_draws)
-
-# Posterior CCHD co-occurrence among missed DS.
-cchd = cells_full["cchd"].to_numpy(dtype=float)
-cchd_missed_share_draws = (
-    (missed_draws * cchd[None, None, :]).sum(axis=-1)
-    / np.clip(missed_draws.sum(axis=-1), 1.0, None)
-)
-cchd_missed_mean = float(cchd_missed_share_draws.mean())
-cchd_missed_lo, cchd_missed_hi = equal_tail_interval(cchd_missed_share_draws)
+pd.DataFrame({
+    "quantity": ["Expected true DS livebirth total"],
+    "mean": [float(true_counts_draws.mean())],
+    "lo89": [float(total_true_lo)],
+    "hi89": [float(total_true_hi)],
+}).set_index("quantity")
 ```
 
-```{python}
-# | echo: false
-def _ci(mean, lo, hi, fmt="{:.1%}"):
-    return f"{fmt.format(mean)} [{fmt.format(lo)}, {fmt.format(hi)}]"
+## Classifier comparison and remaining limits
 
+A classifier quota sets the number of selected unrecorded births. It does not
+estimate the same target as the Bayesian expected true total. Do not compare
+their counts or clinical shares as independent validations of missed cases.
 
-def _ci_count(mean, lo, hi):
-    return f"{mean:,.0f} [{lo:,.0f}, {hi:,.0f}]"
+Variant D fits a classifier-derived target with recording near one. That target
+is not verified true status. The cell-count label `R` in a D run therefore has a
+different meaning from observed recorded counts in the other variants.
 
-
-comparison = pd.DataFrame(
-    {
-        "Classifier (1.5× quota)": [
-            f"{total_recorded:,} recorded; classifier adds ~1.5× more",
-            "See predicted.qmd — classifier NH Black share is ~flat",
-            "≈ 25.6% (from predicted.qmd)",
-        ],
-        "Bayesian posterior (this fit; 89% ETI)": [
-            _ci_count(total_true_mean, total_true_lo, total_true_hi),
-            _ci(nhb_share_mean, nhb_share_lo, nhb_share_hi),
-            _ci(cchd_missed_mean, cchd_missed_lo, cchd_missed_hi),
-        ],
-        "Note": [
-            "Bayesian is total true livebirths (recorded + implied missed).",
-            "Classifier inherits BC demographic bias; Bayesian decomposes η_term vs s.",
-            "Model does not condition on CCHD; see structural stress check above.",
-        ],
-    },
-    index=[
-        "Total DS livebirths 2016–2024",
-        "NH Black share of missed",
-        "CCHD co-occurrence in missed",
-    ],
-)
-comparison
-```
-
-Interpretation notes:
-
-- Disagreement on **NH Black share of missed** is diagnostic. The
-  classifier picks missed cases almost entirely from clinical-severity
-  signals, so its NH Black share tracks the recorded distribution
-  rather than the epidemiological under-reporting gradient. The
-  Bayesian posterior separates η_term (termination rate variation,
-  which differs by race per Kuppermann) from s (birth-certificate
-  sensitivity, which differs by race per Boulet), but that split depends
-  on external anchors and should be read with the shrinkage and variant
-  sensitivity diagnostics.
-- Disagreement on **CCHD co-occurrence in missed** is expected by
-  construction. The classifier up-weights CCHD-positive non-recorded
-  births (hence ≈ 25.6%), which is higher than the EUROCAT-published
-  22.5% prevalence among true DS livebirths. The Bayesian selection
-  model does not condition on CCHD, so this row is a structural
-  implication of the true-DS weights, not a calibrated co-occurrence
-  estimate.
-- The total estimate is where the methods agree or disagree most
-  transparently. The Bayesian total is an aggregate reconstruction
-  conditional on the recording-rate anchor; the classifier total is a
-  feature-ranked quota and should not be read as an unbiased population
-  total.
-
-## Caveats
-
-- The project DuckDB has no state-level column. `eta_term_year` is a
-  national year effect absorbing residual year-over-year drift in
-  termination rates. State-level granularity would be needed to separate
-  access-to-care variation from national demographic associations.
-- The `dev` profile is for iteration, not reporting. Publication-
-  quality posteriors require `--profile reporting`.
-- The false-positive rate $f$ is fixed at 7.8e-5 (Ohio/NY) and not
-  estimated. Sensitivity to $f$ requires re-fitting at a different
-  constant; see `notes/20260622-predictors-bayesian-model.md`.
+The recording surface depends on surveillance extraction and extrapolation as
+well as the recorded counts. Subgroup estimates and recent trends remain conditional
+on it. No state identifier is available to check geographic recording effects.
+The fixed false-positive probability is a working assumption with a different
+denominator from a false-coded share among flags. Sampling profiles do not validate
+these assumptions or guarantee convergence.

@@ -13,13 +13,12 @@
 # ---
 
 # %% [markdown]
-# # Notes - Unbiased 1 - based on model 9
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
 #
-# Next:
+# # Classifier feature-set comparison, based on model 9
 #
-# - Review data to see if we can go back further - check race
-# - Hyperparameter tuning
-# - Consider bagging vs GOSS
+# Historical feature-set comparison. Removing predictors does not establish unbiased selection.
 
 # %%
 import duckdb

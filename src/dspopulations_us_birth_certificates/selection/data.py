@@ -1,4 +1,6 @@
-"""Aggregate NCHS natality (DuckDB) rows into selection-model cells.
+"""AI-assisted documentation revision by Codex (GPT-6).
+
+Aggregate NCHS natality (DuckDB) rows into selection-model cells.
 
 ``prepare_cells`` pulls per-birth rows from the project's ``us_births``
 table and aggregates them into one row per distinct covariate cell,
@@ -8,8 +10,8 @@ returning a frame with the integer index columns expected by
 
 Schema assumptions
 ------------------
-The current ``data/us_births.db`` has these relevant columns (DuckDB
-``DESCRIBE`` confirmed 2026-04):
+The preparation SQL defines these relevant columns. Check the actual database
+schema and source coverage when using a different build:
 
     ``year`` (USMALLINT), ``mage_c`` (UTINYINT), ``mracehisp_c`` (UTINYINT:
     1 NH White, 2 NH Black, 3 NH AIAN, 4 NH Asian/PI/Other, 5 Hispanic,
@@ -21,8 +23,8 @@ The current ``data/us_births.db`` has these relevant columns (DuckDB
     ``down_ind`` (UTINYINT 0/1/NULL).
 
 The DB does not carry a state/region column, so the model has no
-region dimension — the termination effect is modelled with demographic
-covariates plus a homoscedastic year term.
+region dimension. The termination stage uses demographic terms and year offsets
+with a common prior standard deviation. Recording also varies by race and year.
 """
 
 from __future__ import annotations

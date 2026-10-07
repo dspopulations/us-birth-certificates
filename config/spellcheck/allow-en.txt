@@ -127,6 +127,8 @@ missingness
 multicollinearity
 nonfinite
 nonnegative
+nonlinear
+nonzero
 nutpie
 overfit
 overfitting
@@ -143,6 +145,8 @@ reframing
 recomputation
 reparameterise
 reparameterisation
+reindexing
+rescalings
 rhat
 RMSE
 sigmas
@@ -155,6 +159,7 @@ thresholded
 trendline
 trendlines
 unindexed
+unrecoded
 unlabeled
 vars
 WAIC
@@ -163,6 +168,7 @@ wallclock
 # Tooling
 asis
 bdat
+cachedir
 duckdb
 elif
 getsize
@@ -170,6 +176,7 @@ Graphviz
 hatchling
 iloc
 jupytext
+libomp
 Jupytext
 Matplotlib
 numba

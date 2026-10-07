@@ -1,36 +1,22 @@
-"""Test whether the two birth-certificate validation studies were conducted in
-representative reporting areas, and transport their sensitivities to national level.
+"""AI-assisted documentation revision by Codex (GPT-6).
 
-Boulet et al. (2011) and Salemi et al. (2017) are the only external evidence on
-`P(recorded | DS livebirth)` -- the one direction the DSPnnn models cannot identify
-from the certificate data alone. Both measured a single locality: metropolitan
-Atlanta (1995-2005) and Florida (2007-2011). Recorded Down syndrome prevalence
-varies about ninefold across US states, so a locally-measured sensitivity is only
-usable nationally after correcting for how that locality records.
+Compare local recording-validation studies with national recorded prevalence.
 
-State is absent from the natality extract (NCHS withdrew geographic detail from
-the public-use files with the 2005 data year, and this project never ingested it
-for 1989-2004), so the correction is made on the margin that *is* available:
+Rescales Boulet and Salemi local sensitivities by a national-to-local recorded-rate
+ratio. This is a conditional calculation, not a measured national sensitivity.
+Equal true prevalence and negligible false positives would justify the simple ratio;
+source and case-definition differences can invalidate it. Registry-level comparisons
+are consistency checks, not proof of those restrictions.
 
-    factor    = national recorded DS prevalence / study-area recorded prevalence
-    s_national = s_study * factor
+The script also describes saved state aggregates and confirmation-share patterns.
+A nonsignificant association does not establish independence. Confirmed-only
+transport needs its own definition and channel assumptions.
 
-The transport is only legitimate if the study area is ordinary in *true* DS
-prevalence and unusual only in *recording*. That is checked directly, by
-comparing each study's verified-registry prevalence against this project's
-surveillance prevalence for the same years.
-
-Transporting a *confirmed-only* sensitivity needs one further premise, since
-`s_C = s_CP * q`: that the confirmed share `q = P(confirmed | flagged)` does not
-covary with recording completeness. `confirmation_independence` tests that with a
-permutation null, and `confirmation_gradients` asks what `q` measures -- whether
-its long drift is reporting behaviour or a real rise in karyotype confirmation.
-
-Outputs (DUA-safe aggregates):
-    notes/figures/study-area-recording-transport.csv  -- state-level recorded prevalence
+Writes notes/figures/study-area-recording-transport.csv. See the dated transport note
+for source extraction, the supplied Florida denominator and population limits.
 
 Usage:
-    python scripts/compare_study_area_recording.py
+    uv run python scripts/compare_study_area_recording.py
 """
 
 from __future__ import annotations  # noqa: I001
@@ -394,7 +380,7 @@ def main() -> None:
         print(f"  {lo}-{hi}{tag}: {recorded:,} / {births:,} = {prev:.2f}")
 
     surveillance = pd.read_csv(SURVEILLANCE_CSV)
-    print("\nTransport of the study-measured sensitivities")
+    print("\nConditional rescaling of the study-measured sensitivities")
     for study in (BOULET, SALEMI):
         result = transport(study, national)
         lo, hi = result["years"]
@@ -426,7 +412,7 @@ def main() -> None:
             f" sensitivity {result['sensitivity_national']:.3f}"
         )
 
-    print("\nDid the 2003 revision improve recording?")
+    print("\nRecorded prevalence by certificate version")
     for years in ((2004, 2015), (2006, 2010)):
         result = revision_contrast(national, years)
         lo, hi = result["years"]
@@ -497,7 +483,9 @@ def main() -> None:
         "  pooled q by recording tercile: "
         + ", ".join(f"{k} {v:.4f}" for k, v in ind["terciles"].items())
     )
-    print("  => no detectable association. The transport's premise holds.")
+    print(
+        "  => no detectable association; this does not establish the transport premise."
+    )
 
     grad = gradients
     print("\nWhat q measures")

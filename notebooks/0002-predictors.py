@@ -14,14 +14,12 @@
 # ---
 
 # %% [markdown]
+# > [!NOTE]
+# > AI-assisted documentation revision by Codex (GPT-6).
+#
 # # Notes 2 - Predictors of recorded DS live births
 #
-# Next:
-#
-# - Review data to see if we can go back further - check race
-# - Hyperparameter tuning
-# - Consider bagging vs GOSS
-#
+# Historical classifier experiment. Use the script workflow for current fits.
 
 # %% [markdown]
 # ## Preparation
