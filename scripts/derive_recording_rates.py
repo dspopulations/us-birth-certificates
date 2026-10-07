@@ -36,6 +36,7 @@ import pandas as pd  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import RACE_COLOURS  # noqa: E402
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection.data import (  # noqa: E402
     RACE_MAP,
@@ -296,20 +297,13 @@ def _write_anchor_module(surf: pd.DataFrame, years: list[int]) -> None:
 
 
 def _figure(sr: pd.DataFrame, surf: pd.DataFrame) -> plt.Figure:
-    colours = [
-        styles.COLOUR_BLUE,
-        styles.COLOUR_ORANGE,
-        styles.COLOUR_GREEN,
-        styles.COLOUR_RED,
-        styles.COLOUR_PURPLE,
-    ]
     fig, (axl, axr) = plt.subplots(
         1, 2, figsize=(styles.FIGSIZE_LG[0] * 1.5, styles.FIGSIZE_LG[1])
     )
 
     # Left: survival-ratio history + imputed study-year trajectory.
     for r in NAMED:
-        c = colours[r]
+        c = RACE_COLOURS[r]
         hist = sr[(sr["race_idx"] == r) & sr["surv_ratio"].notna()].sort_values("year")
         axl.plot(
             hist["year"], hist["surv_ratio"], "o", ms=4, color=c, label=RACE_LEVELS[r]
@@ -329,7 +323,7 @@ def _figure(sr: pd.DataFrame, surf: pd.DataFrame) -> plt.Figure:
 
     # Right: recording-rate anchor s(race, year), with prior-sigma band.
     for r in NAMED:
-        c = colours[r]
+        c = RACE_COLOURS[r]
         d = surf[surf["race_idx"] == r].sort_values("year")
         axr.plot(d["year"], d["s"], "-", color=c, lw=1.5, label=RACE_LEVELS[r])
         lo = inv_logit(logit(d["s"]) - d["s_logit_sigma"])

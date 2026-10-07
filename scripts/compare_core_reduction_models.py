@@ -833,6 +833,7 @@ def _recording_comparison_plot(df: pd.DataFrame):
 
 def _age_reduction_comparison_plot(df: pd.DataFrame):
     import matplotlib.pyplot as plt
+    from dse_research_utils.plot.styles import DIVERGING_CMAP
 
     years = list(df["year"].drop_duplicates())
     ages = list(df.sort_values("age_idx")["age"].drop_duplicates())
@@ -852,7 +853,7 @@ def _age_reduction_comparison_plot(df: pd.DataFrame):
         aspect="auto",
         origin="lower",
         interpolation="nearest",
-        cmap="RdBu_r",
+        cmap=DIVERGING_CMAP,
         vmin=-limit,
         vmax=limit,
     )
@@ -873,6 +874,7 @@ def _age_reduction_comparison_plot(df: pd.DataFrame):
 
 def _common_grid_ppc_comparison_plot(df: pd.DataFrame):
     import matplotlib.pyplot as plt
+    from dse_research_utils.plot.styles import DIVERGING_CMAP
 
     years = list(df["year"].drop_duplicates())
     ages = list(df.sort_values("age_idx")["age"].drop_duplicates())
@@ -892,7 +894,7 @@ def _common_grid_ppc_comparison_plot(df: pd.DataFrame):
         aspect="auto",
         origin="lower",
         interpolation="nearest",
-        cmap="RdBu_r",
+        cmap=DIVERGING_CMAP,
         vmin=-limit,
         vmax=limit,
     )

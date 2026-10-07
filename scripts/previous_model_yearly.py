@@ -23,6 +23,11 @@ import matplotlib.pyplot as plt  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    ESTIMATED_COLOUR,
+    RECORDED_COLOUR,
+    REDUCTION_COLOUR,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
@@ -55,32 +60,65 @@ def main() -> int:
     fig, (ax1, ax2) = plt.subplots(
         2, 1, figsize=(styles.FIGSIZE_LG[0], styles.FIGSIZE_LG[1] * 1.5), sharex=True
     )
-    ax1.plot(yr, df["est_ds_livebirths"], "-o", ms=3, color=styles.COLOUR_BLUE,
-             label="Estimated true (prevalence model)")
-    ax1.plot(yr, df["recorded"], "-s", ms=3, color=styles.COLOUR_RED, label="Recorded on certificate")
+    ax1.plot(
+        yr,
+        df["est_ds_livebirths"],
+        "-o",
+        ms=3,
+        color=ESTIMATED_COLOUR,
+        label="Estimated true (prevalence model)",
+    )
+    ax1.plot(
+        yr,
+        df["recorded"],
+        "-s",
+        ms=3,
+        color=RECORDED_COLOUR,
+        label="Recorded on certificate",
+    )
     ax1.set_ylabel("DS livebirths")
     ax1.set_ylim(0, None)
-    ax1.set_title("DS livebirths and termination by year, 1989–2024 (previous prevalence model)")
+    ax1.set_title(
+        "DS livebirths and termination by year, 1989–2024 (previous prevalence model)"
+    )
     ax1.legend(fontsize=8, loc="lower right")
 
-    ax2.plot(yr, df["reduction"], "-^", ms=3, color=styles.COLOUR_GREEN,
-             label="Termination reduction (share not born alive)")
+    ax2.plot(
+        yr,
+        df["reduction"],
+        "-^",
+        ms=3,
+        color=REDUCTION_COLOUR,
+        label="Termination reduction (share not born alive)",
+    )
     ax2.set_ylabel("Termination reduction")
     ax2.set_ylim(0, None)
     ax2.set_xlabel("Year")
     ax2.legend(fontsize=8, loc="lower right")
 
     for ax in (ax1, ax2):
-        ax.axvspan(EXTRAP_FROM + 0.5, yr.max() + 0.5, color=styles.TEXT_COLOUR, alpha=0.08)
-    ax1.text(EXTRAP_FROM + 1.2, ax1.get_ylim()[1] * 0.08,
-             "extrapolated\n(prevalence flat,\nreduction linear)",
-             fontsize=7, color=styles.TEXT_COLOUR)
+        ax.axvspan(
+            EXTRAP_FROM + 0.5, yr.max() + 0.5, color=styles.TEXT_COLOUR, alpha=0.08
+        )
+    ax1.text(
+        EXTRAP_FROM + 1.2,
+        ax1.get_ylim()[1] * 0.08,
+        "extrapolated\n(prevalence flat,\nreduction linear)",
+        fontsize=7,
+        color=styles.TEXT_COLOUR,
+    )
     save_fig(fig, OUTPUT_DIR, "previous_model_ds_by_year", data=df)
     plt.close(fig)
 
     peak = df.loc[df["est_ds_livebirths"].idxmax()]
-    print(df[["year", "recorded", "est_ds_livebirths", "reduction"]].to_string(index=False))
-    print(f"\nestimated-true peak: {peak['est_ds_livebirths']:,.0f} in {int(peak['year'])}")
+    print(
+        df[["year", "recorded", "est_ds_livebirths", "reduction"]].to_string(
+            index=False
+        )
+    )
+    print(
+        f"\nestimated-true peak: {peak['est_ds_livebirths']:,.0f} in {int(peak['year'])}"
+    )
     sel = df[(df.year >= 2016) & (df.year <= 2024)]
     print(f"2016-2024 estimated-true total: {sel['est_ds_livebirths'].sum():,.0f}")
     print(f"wrote previous_model_ds_by_year to {OUTPUT_DIR}/")

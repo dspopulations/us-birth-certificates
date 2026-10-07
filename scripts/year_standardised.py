@@ -34,6 +34,11 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    DETECTION_COLOUR,
+    REDUCTION_COLOUR,
+    TERMINATION_COLOUR,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import inv_logit, latest_fit_dir  # noqa: E402
 
@@ -125,9 +130,9 @@ def main(argv: list[str] | None = None) -> int:
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     series = [
-        ("screen", "Screening detection", styles.COLOUR_BLUE),
-        ("term", "Termination if detected", styles.COLOUR_GREEN),
-        ("reduc", "Reduction (not born alive)", styles.COLOUR_RED),
+        ("screen", "Screening detection", DETECTION_COLOUR),
+        ("term", "Termination if detected", TERMINATION_COLOUR),
+        ("reduc", "Reduction (not born alive)", REDUCTION_COLOUR),
     ]
     for key, label, col in series:
         ax.plot(

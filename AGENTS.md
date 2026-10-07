@@ -1,4 +1,7 @@
 > [!NOTE]
+> AI-assisted update by Claude Code (Opus 5.5).
+
+> [!NOTE]
 > AI-assisted update by Codex (GPT-6).
 
 # Repository assistant instructions
@@ -58,11 +61,13 @@ The package uses hatchling. Its version is in `src/dspopulations_us_birth_certif
 
 ## Shared utilities and artefacts
 
-`pyproject.toml` selects `dse-research-utils` from public tag `v0.17.0`. Its source block has a commented local override at `../../dseinternational/research/src/python`. See `docs/shared-utilities.md` for adapter contracts.
+`pyproject.toml` selects `dse-research-utils` from public tag `v0.18.0`. Its source block has a commented local override at `../../dseinternational/research/src/python`. See `docs/shared-utilities.md` for adapter contracts.
 
 - Scripts call `dse_research_utils.environment.setup.init_script()` in `main()`.
 - Notebooks use `init_workbook()` and report versions from the project `PACKAGE_LIST`.
-- Plotting uses the shared `FIGSIZE_*`, `COLOUR_*` and `DPI_*` constants.
+- Plotting uses the shared `FIGSIZE_*` and `DPI_*` constants and the design-token colours.
+- Use `CHART_COLOURS` for at most six series and sequential or diverging steps for ordered values. Draw text and reference lines in `TEXT_COLOUR` or `MUTED_TEXT_COLOUR`.
+- Take a quantity's colour from `plot_colours.py`, so that it matches across figures.
 - New code imports shared functions directly rather than through `repl_utils.py`.
 - Keep project-specific decisions in local adapters. Do not duplicate shared implementations.
 - Use `file_io.py` for JSON and CSV artefacts read by reports or other processes. It replaces files atomically and preserves the intended permissions.

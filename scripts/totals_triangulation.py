@@ -24,11 +24,20 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    RECORDED_COLOUR,
+    VARIANT_COLOURS,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import latest_fit_dir  # noqa: E402
 
 OUTPUT_DIR = "notes/figures"
 SURVEILLANCE = 48000  # de Graaf et al., external published estimate (approximate)
+
+# Bars are coloured by method: the structural variants A, B and C share one
+# colour; variant D and recorded births keep their colours from other figures.
+STRUCTURAL_COLOUR = styles.CHART_COLOURS[0]
+BENCHMARK_COLOUR = styles.CHART_COLOURS[1]  # previous model and surveillance
 
 
 def total_true(variant: str) -> float:
@@ -52,21 +61,15 @@ def main() -> int:
     ).fetchone()[0]
     con.close()
 
-    blue, orange, green, grey = (
-        styles.COLOUR_BLUE,
-        styles.COLOUR_ORANGE,
-        styles.COLOUR_GREEN,
-        styles.TEXT_COLOUR,
-    )
     tot = {v: total_true(v) for v in ("A", "B", "C", "D")}
     rows = [
-        ("Recorded (certificate)", 17776, grey, "s=1.00"),
-        ("Variant D — GB-calibrated", tot["D"], orange, "s≈0.69"),
-        ("Structural C (pin recording)", tot["C"], blue, "s≈0.40"),
-        ("Structural A (pin recording)", tot["A"], blue, "s≈0.40"),
-        ("Previous prevalence model", float(prev), green, ""),
-        ("Structural B (free recording)", tot["B"], blue, "s≈0.32"),
-        ("Surveillance (de Graaf, ~)", SURVEILLANCE, green, ""),
+        ("Recorded (certificate)", 17776, RECORDED_COLOUR, "s=1.00"),
+        ("Variant D — GB-calibrated", tot["D"], VARIANT_COLOURS["D"], "s≈0.69"),
+        ("Structural C (pin recording)", tot["C"], STRUCTURAL_COLOUR, "s≈0.40"),
+        ("Structural A (pin recording)", tot["A"], STRUCTURAL_COLOUR, "s≈0.40"),
+        ("Previous prevalence model", float(prev), BENCHMARK_COLOUR, ""),
+        ("Structural B (free recording)", tot["B"], STRUCTURAL_COLOUR, "s≈0.32"),
+        ("Surveillance (de Graaf, ~)", SURVEILLANCE, BENCHMARK_COLOUR, ""),
     ]
     rows.sort(key=lambda x: x[1])
     labels = [r[0] for r in rows]
@@ -87,7 +90,7 @@ def main() -> int:
             va="center",
             fontsize=7,
         )
-    ax.axvspan(min(tot["A"], tot["C"]), tot["B"], color=blue, alpha=0.06)
+    ax.axvspan(min(tot["A"], tot["C"]), tot["B"], color=STRUCTURAL_COLOUR, alpha=0.06)
     ax.set_xlabel("Estimated true DS livebirths, 2016–2024")
     ax.set_title("Triangulating the DS livebirth total across methods")
     ax.set_xlim(0, max(vals) * 1.18)

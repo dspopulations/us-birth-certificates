@@ -1766,16 +1766,14 @@ def _save_figure(fig: Any, output_dir: Path, stem: str) -> tuple[Path, Path]:
     return png, svg
 
 
+# Scenario colours repeat after five; each scenario is also labelled on its row.
+# They keep the earlier blue, orange, green and purple order, then teal.
+SCENARIO_COLOURS = tuple(plot_styles.CHART_COLOURS[i] for i in (0, 2, 1, 3, 4))
+
+
 def _scenario_colours(scenario_ids: list[str]) -> dict[str, str]:
-    palette = (
-        plot_styles.COLOUR_BLUE,
-        plot_styles.COLOUR_ORANGE,
-        plot_styles.COLOUR_GREEN,
-        plot_styles.COLOUR_PURPLE,
-        plot_styles.COLOUR_RED,
-    )
     return {
-        scenario_id: palette[idx % len(palette)]
+        scenario_id: SCENARIO_COLOURS[idx % len(SCENARIO_COLOURS)]
         for idx, scenario_id in enumerate(scenario_ids)
     }
 
@@ -2124,7 +2122,7 @@ def _age_band_residual_plot(age_band: pd.DataFrame):
     image = ax.imshow(
         matrix,
         aspect="auto",
-        cmap="RdBu_r",
+        cmap=plot_styles.DIVERGING_CMAP,
         vmin=-limit,
         vmax=limit,
         interpolation="nearest",

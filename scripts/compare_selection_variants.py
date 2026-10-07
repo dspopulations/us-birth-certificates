@@ -392,13 +392,9 @@ def render_forest(comparison: pd.DataFrame, output_path: Path) -> None:
     import dse_research_utils.plot.styles as plot_styles
     import matplotlib.pyplot as plt
 
+    from dspopulations_us_birth_certificates.plot_colours import VARIANT_COLOURS
+
     variants = sorted(comparison["variant"].unique())
-    colours = [
-        plot_styles.COLOUR_BLUE,
-        plot_styles.COLOUR_ORANGE,
-        plot_styles.COLOUR_GREEN,
-        plot_styles.COLOUR_PURPLE,
-    ]
     fig, axes = plt.subplots(1, 2, figsize=plot_styles.FIGSIZE_XL, sharey=True)
     for ax, metric, title in zip(
         axes,
@@ -420,7 +416,7 @@ def render_forest(comparison: pd.DataFrame, output_path: Path) -> None:
                     (ssub["hi"] - ssub["mean"]).values,
                 ],
                 fmt="o",
-                color=colours[i % len(colours)],
+                color=VARIANT_COLOURS[v],
                 ecolor=plot_styles.TEXT_COLOUR,
                 capsize=2,
                 label=f"Variant {v}",

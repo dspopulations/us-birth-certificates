@@ -82,6 +82,13 @@ def _styles():
     return plot_styles
 
 
+def _colours():
+    """Return the project's role colours (lazy import for test speed)."""
+    from dspopulations_us_birth_certificates import plot_colours
+
+    return plot_colours
+
+
 def _draw_summary(arr: np.ndarray) -> dict[str, float]:
     """Posterior mean + equal-tail interval for a flattened draw array."""
     return posterior_mean_eti(arr, nan=True)
@@ -258,6 +265,7 @@ def identifiability_pairplot(
     import matplotlib.pyplot as plt
 
     styles = _styles()
+    colours = _colours()
     eta, s, labels, corr = _identifiability_correlations(idata)
     n_race = eta.shape[-1]
 
@@ -277,7 +285,7 @@ def identifiability_pairplot(
         ax = axes.flat[idx]
         x = eta[..., idx].ravel()
         y = s[..., idx].ravel()
-        ax.scatter(x, y, s=2, alpha=0.2, color=styles.COLOUR_BLUE)
+        ax.scatter(x, y, s=2, alpha=0.2, color=colours.POSTERIOR_COLOUR)
         r = corr[idx]
         label = "ridge warning" if abs(r) > 0.7 else "low covariance"
         ax.set_title(f"{labels[idx]}\n|r|={abs(r):.2f} ({label})")
@@ -407,14 +415,19 @@ def s_anchor_shrinkage_plot(
     table = s_anchor_shrinkage_table(
         idata, priors_config=priors_config, year_range=year_range
     )
+    race_colours = _colours().RACE_COLOURS
     fig, axes = plt.subplots(1, 2, figsize=styles.FIGSIZE_XL, sharex=True)
-    for race, sub in table.groupby("race", sort=False):
-        axes[0].plot(sub["year"], sub["sd_ratio"], marker="o", ms=3, label=race)
+    for (race_idx, race), sub in table.groupby(["race_idx", "race"], sort=False):
+        colour = race_colours[race_idx] if race_idx < len(race_colours) else None
+        axes[0].plot(
+            sub["year"], sub["sd_ratio"], marker="o", ms=3, color=colour, label=race
+        )
         axes[1].plot(
             sub["year"],
             sub["shift_in_prior_sd"],
             marker="o",
             ms=3,
+            color=colour,
             label=race,
         )
     axes[0].axhline(1.0, color=styles.TEXT_COLOUR, lw=0.8, ls="--")
@@ -454,6 +467,7 @@ def eta_term_year_trajectory_plot(
     import matplotlib.pyplot as plt
 
     styles = _styles()
+    colours = _colours()
     mean, lo, hi = _eta_term_year_stats(idata, hdi_prob=hdi_prob)
     n_year = mean.shape[-1]
 
@@ -464,7 +478,7 @@ def eta_term_year_trajectory_plot(
         mean,
         yerr=[mean - lo, hi - mean],
         fmt="o",
-        color=styles.COLOUR_BLUE,
+        color=colours.POSTERIOR_COLOUR,
         ecolor=styles.TEXT_COLOUR,
         capsize=3,
     )
@@ -528,11 +542,12 @@ def cchd_consistency_check(
     lo = stats["lo"]
     hi = stats["hi"]
 
+    colours = _colours()
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
-    ax.hist(flat, bins=40, color=styles.COLOUR_BLUE, alpha=0.75)
+    ax.hist(flat, bins=40, color=colours.POSTERIOR_COLOUR, alpha=0.75)
     ax.axvline(
         published_cchd_prevalence,
-        color=styles.COLOUR_RED,
+        color=colours.REFERENCE_COLOUR,
         lw=1.5,
         label=f"External reference ~{published_cchd_prevalence:.0%}",
     )
@@ -598,6 +613,7 @@ def posterior_predictive_by_stratum(
     import matplotlib.pyplot as plt
 
     styles = _styles()
+    colours = _colours()
     if stratum_col not in cells.columns:
         raise KeyError(f"{stratum_col!r} not in cells frame")
     p_rec = np.asarray(
@@ -628,7 +644,7 @@ def posterior_predictive_by_stratum(
         x,
         mean,
         yerr=[mean - lo, hi - mean],
-        color=styles.COLOUR_BLUE,
+        color=colours.POSTERIOR_COLOUR,
         alpha=0.7,
         capsize=3,
         label="Posterior mean",
@@ -637,7 +653,7 @@ def posterior_predictive_by_stratum(
         x,
         observed,
         "o",
-        color=styles.COLOUR_ORANGE,
+        color=colours.RECORDED_COLOUR,
         label="Observed",
         markersize=5,
     )
@@ -751,12 +767,13 @@ def decomposition_by_race(
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     x = np.arange(len(unique))
-    ax.bar(x, summary["recorded"], color=styles.COLOUR_BLUE, label="Recorded")
+    colours = _colours()
+    ax.bar(x, summary["recorded"], color=colours.RECORDED_COLOUR, label="Recorded")
     ax.bar(
         x,
         summary["missed"],
         bottom=summary["recorded"],
-        color=styles.COLOUR_ORANGE,
+        color=colours.ESTIMATED_COLOUR,  # a model estimate above recorded births
         label="Missed (posterior)",
     )
     ax.errorbar(
@@ -780,8 +797,8 @@ def decomposition_by_race(
                 summary["prenatally_terminated_hi"] - summary["prenatally_terminated"],
             ],
             fmt="v",
-            color=styles.COLOUR_RED,
-            ecolor=styles.COLOUR_RED,
+            color=colours.REDUCTION_COLOUR,
+            ecolor=colours.REDUCTION_COLOUR,
             capsize=3,
             markersize=8,
             label="Prenatally terminated (implied)",
@@ -821,6 +838,7 @@ def age_curve_check(
     import matplotlib.pyplot as plt
 
     styles = _styles()
+    colours = _colours()
     if "theta_lb_age" not in idata.posterior.data_vars:
         raise ValueError("theta_lb_age missing from posterior")
     mean, lo, hi, morris = _age_curve_stats(idata, hdi_prob=hdi_prob)
@@ -834,11 +852,11 @@ def age_curve_check(
         mean,
         yerr=[mean - lo, hi - mean],
         fmt="o",
-        color=styles.COLOUR_BLUE,
+        color=colours.POSTERIOR_COLOUR,
         capsize=3,
         label="Posterior",
     )
-    ax.plot(x, morris, "s", color=styles.COLOUR_ORANGE, label="Morris / de Graaf")
+    ax.plot(x, morris, "s", color=colours.REFERENCE_COLOUR, label="Morris / de Graaf")
     ax.set_yscale("log")
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=30, ha="right")

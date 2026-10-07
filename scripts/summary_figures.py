@@ -30,6 +30,13 @@ from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
 from dspopulations_us_birth_certificates.intervals import equal_tail_interval  # noqa: E402
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    ESTIMATED_COLOUR,
+    NATURAL_COLOUR,
+    POSTERIOR_COLOUR,
+    RECORDED_COLOUR,
+    VARIANT_COLOURS,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
@@ -122,19 +129,19 @@ def fig_funnel(c: dict, b: dict) -> None:
     ]
     y = [2, 1, 0]
     natural = c["natural"]
-    ax.barh(y[0], natural, color=styles.COLOUR_BLUE, height=0.6)
+    ax.barh(y[0], natural, color=NATURAL_COLOUR, height=0.6)
     # Born: solid to C (lower), hatched extension to B (upper bound).
-    ax.barh(y[1], c["total_true"], color=styles.COLOUR_ORANGE, height=0.6)
+    ax.barh(y[1], c["total_true"], color=ESTIMATED_COLOUR, height=0.6)
     ax.barh(
         y[1],
         b["total_true"] - c["total_true"],
         left=c["total_true"],
-        color=styles.COLOUR_ORANGE,
+        color=ESTIMATED_COLOUR,
         alpha=0.35,
         hatch="//",
         height=0.6,
     )
-    ax.barh(y[2], c["recorded_corrected"], color=styles.COLOUR_RED, height=0.6)
+    ax.barh(y[2], c["recorded_corrected"], color=RECORDED_COLOUR, height=0.6)
     ax.set_yticks(y)
     ax.set_yticklabels(stages)
     ax.set_xlabel("DS livebirths, 2016-2024")
@@ -197,14 +204,14 @@ def fig_age_reduction(c: dict, b: dict) -> None:
         x,
         c["age_reduction"],
         "-o",
-        color=styles.COLOUR_BLUE,
+        color=VARIANT_COLOURS["C"],
         label="Variant C (pin recording)",
     )
     ax.plot(
         x,
         b["age_reduction"],
         "--s",
-        color=styles.COLOUR_ORANGE,
+        color=VARIANT_COLOURS["B"],
         label="Variant B (free recording)",
     )
     ax.set_xticks(x)
@@ -238,13 +245,11 @@ def fig_ethnicity(c: dict, b: dict) -> None:
         hi - lo,
         bottom=lo,
         width=0.5,
-        color=styles.COLOUR_ORANGE,
+        color=ESTIMATED_COLOUR,
         alpha=0.55,
         label="True (model, C..B)",
     )
-    ax.plot(
-        x, c["rec10k"], "o", color=styles.COLOUR_RED, label="Recorded (certificate)"
-    )
+    ax.plot(x, c["rec10k"], "o", color=RECORDED_COLOUR, label="Recorded (certificate)")
     ax.set_xticks(x)
     ax.set_xticklabels(RACE_SHORT, rotation=30, ha="right")
     ax.set_ylabel("DS livebirths per 10,000")
@@ -271,7 +276,7 @@ def fig_education(c: dict) -> None:
         c["ete_mean"],
         yerr=err,
         fmt="o",
-        color=styles.COLOUR_BLUE,
+        color=POSTERIOR_COLOUR,
         capsize=3,
         label="Posterior (data)",
     )

@@ -1,9 +1,12 @@
 > [!NOTE]
+> AI-assisted revision by Claude Code (Opus 5.5).
+
+> [!NOTE]
 > AI-assisted revision by Codex (GPT-6).
 
 # Shared utility contracts
 
-`pyproject.toml` resolves `dse-research-utils` from public tag `v0.17.0` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
+`pyproject.toml` resolves `dse-research-utils` from public tag `v0.18.0` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
 
 This package supplies the scientific stack through its core dependencies and the `boosting`, `columnar`, `dependence`, `graphs`, `io`, `jax`, `notebook` and `tuning` extras. Keep repository-only dependencies and development tools in this repository's metadata. The commented local source override points to `../../dseinternational/research/src/python`.
 
@@ -32,6 +35,8 @@ The v0.15 upgrade changed Optuna's default search behaviour. An old tuned parame
 
 The v0.17 adoption uses public diagnostic helpers and the shared file-mode probe. Validation thresholds remain local. Preserve historical manifests and environments; do not rewrite them to look current.
 
+The v0.18 upgrade moves figures to the DSE design-token colours. Series take `CHART_COLOURS`, which is also the default property cycle. Images take the sequential scale, or the diverging scale for signed values. `plot_colours.py` names colours by role, so recorded births, estimated births, reduction and the selection variants keep one colour across figures. `categorical_palette()` now raises for more than six categories. The predicted-analysis groupings with seven to eleven categories therefore name their earlier `tab10` or `viridis` colormaps until they are redesigned. Saved figures change only when their scripts run again.
+
 ## Upgrade evidence
 
 The superseded release-specific guides are available in Git history. Their checks were run at the time of each upgrade, not as part of the current documentation review.
@@ -42,5 +47,6 @@ The superseded release-specific guides are available in Git history. Their check
 | v0.14.0 | Local adapter adoption and differential-output checks; [issue 113](https://github.com/dspopulations/us-birth-certificates/issues/113) |
 | v0.15.0 | Numerical-stack upgrade and fast/slow tests; [issue 115](https://github.com/dspopulations/us-birth-certificates/issues/115) |
 | v0.17.0 | Public diagnostic and permission helpers; [PR 130](https://github.com/dspopulations/us-birth-certificates/pull/130) |
+| v0.18.0 | Design-token plot colours and role colours; [PR 133](https://github.com/dspopulations/us-birth-certificates/pull/133) |
 
 For future upgrades, read the tagged upstream migration guide, check actual consumers and run checks appropriate to the changed paths. Dependency compatibility alone does not validate saved research fits or establish that new outputs match old ones.

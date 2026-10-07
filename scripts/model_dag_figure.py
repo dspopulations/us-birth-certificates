@@ -30,14 +30,16 @@ FILE_NAME = "dsp004_dag_extensions"
 
 # Node roles. Fixed external inputs and observed data are not estimated. DSP004
 # samples two parameter blocks: nine yearly reduction logits and one recording logit.
+# Role outlines take the chart colour that matches each pale fill.
 ROLE_STYLE = {
     "data": {"fc": "#e8e8e8", "ec": "#5a5a5a"},
-    "fixed": {"fc": "#fdece0", "ec": styles.COLOUR_DARK_ORANGE},
-    "free": {"fc": "#e3edf8", "ec": styles.COLOUR_DARK_BLUE},
+    "fixed": {"fc": "#fdece0", "ec": styles.CHART_COLOURS[2]},
+    "free": {"fc": "#e3edf8", "ec": styles.CHART_COLOURS[0]},
     "derived": {"fc": "#ffffff", "ec": "#8a8a8a"},
-    "estimand": {"fc": "#e6f2e8", "ec": styles.COLOUR_DARK_GREEN},
+    "estimand": {"fc": "#e6f2e8", "ec": styles.CHART_COLOURS[1]},
 }
-BADGE_COLOUR = styles.COLOUR_DARK_PURPLE
+# Numbered badges carry white text, so they take the text colour for contrast.
+BADGE_COLOUR = styles.TEXT_COLOUR
 
 # (key, x, y, width, height, role, title, detail)
 NODES = [

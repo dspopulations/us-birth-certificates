@@ -30,6 +30,14 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    DECREASE_COLOUR,
+    DETECTION_COLOUR,
+    INCREASE_COLOUR,
+    REDUCTION_COLOUR,
+    TERMINATION_COLOUR,
+    VARIANT_COLOURS,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.intervals import (  # noqa: E402
     equal_tail_interval,
@@ -161,28 +169,28 @@ def fig_year(c: dict, b: dict) -> None:
         yr,
         c["df"]["eta_detect"],
         "-o",
-        color=styles.COLOUR_BLUE,
+        color=DETECTION_COLOUR,
         label="Screening detection",
     )
     ax.plot(
         yr,
         c["df"]["eta_term"],
         "-^",
-        color=styles.COLOUR_GREEN,
+        color=TERMINATION_COLOUR,
         label="Termination if detected",
     )
     ax.plot(
         yr,
         c["df"]["reduction"],
         "-s",
-        color=styles.COLOUR_RED,
+        color=REDUCTION_COLOUR,
         label="Reduction = not born alive (variant C)",
     )
     ax.fill_between(
         yr,
         c["red_lo"],
         c["red_hi"],
-        color=styles.COLOUR_RED,
+        color=REDUCTION_COLOUR,
         alpha=0.2,
         label=f"Reduction {interval_label()} ETI (C)",
     )
@@ -190,7 +198,7 @@ def fig_year(c: dict, b: dict) -> None:
         yr,
         b["df"]["reduction"],
         "--s",
-        color=styles.COLOUR_ORANGE,
+        color=VARIANT_COLOURS["B"],
         alpha=0.8,
         label="Reduction (variant B)",
     )
@@ -218,7 +226,7 @@ def fig_age_split(c: dict) -> None:
     ax.bar(
         x,
         pct,
-        color=[styles.COLOUR_RED if v < 0 else styles.COLOUR_BLUE for v in pct],
+        color=[DECREASE_COLOUR if v < 0 else INCREASE_COLOUR for v in pct],
         alpha=0.85,
     )
     ax.axhline(0, color=styles.TEXT_COLOUR, lw=0.6)

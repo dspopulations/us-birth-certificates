@@ -3,7 +3,9 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from dse_research_utils.plot import styles
 from dse_research_utils.plot.io import save_styled_figure
+from matplotlib.colors import to_rgb
 from matplotlib.figure import Figure
 from scipy.cluster import hierarchy
 
@@ -212,6 +214,18 @@ def plot_dendrogram(
     return fig, dendro
 
 
+def _annotation_colour(cell_colour) -> str:
+    """Text colour with the higher contrast on a heatmap cell."""
+    # Relative luminance as in WCAG 2. Below 0.2, white text has the higher
+    # contrast; above it, TEXT_COLOUR does.
+    channels = [
+        c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+        for c in to_rgb(cell_colour)
+    ]
+    luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+    return styles.BACKGROUND_COLOUR if luminance < 0.2 else styles.TEXT_COLOUR
+
+
 def plot_correlation_heatmap(
     corr,
     dendro,
@@ -232,7 +246,8 @@ def plot_correlation_heatmap(
         {"ytick.labelsize": 12, "xtick.labelsize": 12, "axes.titlesize": 12}
     ):
         fig, ax = plt.subplots(figsize=(xsize, ysize))
-        im = ax.imshow(C, cmap="viridis")
+        # Distance correlation runs from 0 to 1, so it takes the sequential scale.
+        im = ax.imshow(C, cmap=styles.SEQUENTIAL_CMAP)
 
         ax.set_title(f"Model {model_idx}: Correlation heatmap of predictors")
         ax.set_xticks(dendro_idx)
@@ -255,7 +270,7 @@ def plot_correlation_heatmap(
                     ha="center",
                     va="center",
                     fontsize=8,
-                    color="white" if abs(C[i, j]) < 0.6 else "black",
+                    color=_annotation_colour(im.cmap(im.norm(C[i, j]))),
                 )
 
         fig.colorbar(im, ax=ax, fraction=0.03, pad=0.025)

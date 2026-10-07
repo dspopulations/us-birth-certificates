@@ -72,7 +72,13 @@ def _save_figure(fig, out_dir: Path, stem: str) -> None:
     import matplotlib.pyplot as plt
 
     save_styled_figure(
-        out_dir / "plots", stem, fig=fig, dpi=150, bbox_inches="tight", svg=False, close=False
+        out_dir / "plots",
+        stem,
+        fig=fig,
+        dpi=150,
+        bbox_inches="tight",
+        svg=False,
+        close=False,
     )
     # SVG is required here; preserve failure propagation and close after success.
     fig.savefig(_plot_path(out_dir, stem, "svg"), bbox_inches="tight")
@@ -80,7 +86,9 @@ def _save_figure(fig, out_dir: Path, stem: str) -> None:
 
 
 def _write_table(df: pd.DataFrame, out_dir: Path, stem: str) -> None:
-    write_atomically(_table_path(out_dir, stem), lambda path: df.to_csv(path, index=False))
+    write_atomically(
+        _table_path(out_dir, stem), lambda path: df.to_csv(path, index=False)
+    )
 
 
 def _interval_yerr(mean: np.ndarray, lo: np.ndarray, hi: np.ndarray) -> np.ndarray:
@@ -950,6 +958,7 @@ def _errorbar_plot(
 def _age_year_ppc_residual_plot(df: pd.DataFrame):
     """Heatmap of age-year posterior-predictive standardized residuals."""
     import matplotlib.pyplot as plt
+    from dse_research_utils.plot.styles import DIVERGING_CMAP
 
     years = list(df["year"].drop_duplicates())
     ages = list(df.sort_values("age_idx")["age"].drop_duplicates())
@@ -966,7 +975,7 @@ def _age_year_ppc_residual_plot(df: pd.DataFrame):
         aspect="auto",
         origin="lower",
         interpolation="nearest",
-        cmap="RdBu_r",
+        cmap=DIVERGING_CMAP,
         vmin=-limit,
         vmax=limit,
     )

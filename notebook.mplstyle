@@ -7,9 +7,8 @@ font.family: sans-serif, DejaVu Sans
 font.sans-serif: "Aptos Narrow", "Noto Sans Condensed", Aptos, "Helvetica Neue", Arial, Helvetica, DejaVu Sans
 font.size: 9
 
-text.color: "#333333"
+text.color: "#202020"
 
-image.cmap: tab10
 pcolormesh.snap: True
 
 figure.titlesize: 9
@@ -19,23 +18,23 @@ axes.labelsize: 9
 axes.titlesize: 9
 axes.titleweight: bold
 axes.labelweight: bold
-axes.labelcolor: "#333333"
+axes.labelcolor: "#202020"
 axes.axisbelow: True
 axes.grid: True
 axes.grid.which: major
 axes.facecolor: white
-axes.edgecolor: "#c0c0c0"
+axes.edgecolor: "#d2d8df"
 axes.linewidth: 0
 
 grid.linestyle: -
-grid.color: "#c0c0c0"
+grid.color: "#d2d8df"
 grid.linewidth: 0.25
 grid.alpha: 1
 
 xtick.labelsize: 9
 ytick.labelsize: 9
-xtick.color:  "#333333"
-ytick.color:  "#333333"
+xtick.color:  "#202020"
+ytick.color:  "#202020"
 xtick.direction: out
 ytick.direction: out
 xtick.major.size: 0

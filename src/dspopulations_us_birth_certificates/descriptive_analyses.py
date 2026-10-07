@@ -93,6 +93,7 @@ def _save(fig: plt.Figure, out: Path, name: str, data: pd.DataFrame) -> None:
 # Section A — recorded numbers and trends
 # ---------------------------------------------------------------------------
 
+
 def section_a_counts(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     df = _q(
         con,
@@ -116,8 +117,16 @@ def section_a_counts(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     _transition_band(ax)
     ax.bar(df["year"], df["confirmed"], alpha=0.5, label="Confirmed (C)")
-    ax.bar(df["year"], df["pending"], bottom=df["confirmed"], alpha=0.5, label="Pending (P, 2004+)")
-    ax.plot(df["year"], df["confirmed"], linewidth=1.2, label="Confirmed only (era-robust)")
+    ax.bar(
+        df["year"],
+        df["pending"],
+        bottom=df["confirmed"],
+        alpha=0.5,
+        label="Pending (P, 2004+)",
+    )
+    ax.plot(
+        df["year"], df["confirmed"], linewidth=1.2, label="Confirmed only (era-robust)"
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("Recorded DS live births")
     ax.set_title("Recorded Down syndrome live births by confirmation status, 1989–2024")
@@ -129,13 +138,17 @@ def section_a_counts(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.plot(df["year"], df["recorded_per_10k"], marker="o")
     ax.set_xlabel("Year")
     ax.set_ylabel("Recorded DS per 10,000 live births")
-    ax.set_title("Recorded DS rate per 10,000 live births (recording completeness, not prevalence)")
+    ax.set_title(
+        "Recorded DS rate per 10,000 live births (recording completeness, not prevalence)"
+    )
     _save(fig, out, "recorded_rate_per_10k", df[["year", "recorded_per_10k"]])
 
     # A4 — unknown / not-on-certificate trend (no band).
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     ax.plot(df["year"], df["unknown"], marker="o", label="Unknown (U)")
-    ax.plot(df["year"], df["not_on_cert"], marker="s", label="Not on certificate (NULL)")
+    ax.plot(
+        df["year"], df["not_on_cert"], marker="s", label="Not on certificate (NULL)"
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("Number of births")
     ax.set_title("DS item recorded as Unknown or absent from the certificate")
@@ -153,6 +166,7 @@ def section_a_counts(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Section B — recorded vs surveillance-expected / recording rate
 # ---------------------------------------------------------------------------
+
 
 def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     df = _q(
@@ -175,19 +189,35 @@ def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     _transition_band(ax)
     ax.bar(df["year"], df["recorded"], alpha=0.5, label="Recorded", zorder=3)
-    ax.plot(df["year"], df["expected_surveillance"], linewidth=1.5,
-            label="Expected (surveillance prevalence)")
-    ax.plot(df["year"], df["expected_after_term"], linewidth=1.5, linestyle="--",
-            label="Expected (age-risk, after terminations)")
-    ax.plot(df["year"], df["expected_no_term"], linewidth=1.2, linestyle=":",
-            label="Expected (age-risk, no terminations)")
+    ax.plot(
+        df["year"],
+        df["expected_surveillance"],
+        linewidth=1.5,
+        label="Expected (surveillance prevalence)",
+    )
+    ax.plot(
+        df["year"],
+        df["expected_after_term"],
+        linewidth=1.5,
+        linestyle="--",
+        label="Expected (age-risk, after terminations)",
+    )
+    ax.plot(
+        df["year"],
+        df["expected_no_term"],
+        linewidth=1.2,
+        linestyle=":",
+        label="Expected (age-risk, no terminations)",
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("DS live births")
     ax.set_ylim(bottom=0)
     ax.set_title("Recorded vs surveillance-expected Down syndrome live births")
     ax.legend(frameon=False, loc="upper right", fontsize=8)
     _save(
-        fig, out, "recorded_vs_expected",
+        fig,
+        out,
+        "recorded_vs_expected",
         df[["year", "recorded", "expected_after_term", "expected_surveillance"]],
     )
 
@@ -196,17 +226,34 @@ def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.axhspan(0.36, 0.43, color="#d8f0ff", alpha=0.5, label="~36–43% band")
     # The two expected denominators nearly coincide (a useful cross-check); small
     # markers keep both legible where they diverge (chiefly the carried-forward tail).
-    ax.plot(df["year"], df["rate_after_term"], marker="s", markersize=4, linewidth=1.5,
-            label="vs age-risk (after terminations)")
-    ax.plot(df["year"], df["rate_surveillance"], marker="o", markersize=4, linewidth=1.5,
-            label="vs surveillance prevalence")
+    ax.plot(
+        df["year"],
+        df["rate_after_term"],
+        marker="s",
+        markersize=4,
+        linewidth=1.5,
+        label="vs age-risk (after terminations)",
+    )
+    ax.plot(
+        df["year"],
+        df["rate_surveillance"],
+        marker="o",
+        markersize=4,
+        linewidth=1.5,
+        label="vs surveillance prevalence",
+    )
     _pct_axis(ax)
     ax.set_ylim(0, 1)
     ax.set_xlabel("Year")
     ax.set_ylabel("Recording rate (recorded / expected)")
     ax.set_title("Down syndrome recording rate, 1989–2024")
     ax.legend(frameon=False, loc="upper right")
-    _save(fig, out, "recording_rate_by_year", df[["year", "rate_surveillance", "rate_after_term"]])
+    _save(
+        fig,
+        out,
+        "recording_rate_by_year",
+        df[["year", "rate_surveillance", "rate_after_term"]],
+    )
 
     # B4 — recording rate by race / Hispanic origin over time (age-risk expected).
     race = _q(
@@ -236,7 +283,9 @@ def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.set_ylim(0, 1)
     ax.set_xlabel("Year")
     ax.set_ylabel("Recording rate (recorded / age-risk expected)")
-    ax.set_title("Recording rate by maternal race / Hispanic origin (3-year rolling mean)")
+    ax.set_title(
+        "Recording rate by maternal race / Hispanic origin (3-year rolling mean)"
+    )
     ax.legend(frameon=False, ncol=2, fontsize=8)
     _save(fig, out, "recording_rate_by_race", rwide.reset_index())
 
@@ -247,6 +296,7 @@ def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Section C — maternal characteristics
 # ---------------------------------------------------------------------------
+
 
 def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     # C1a — recorded DS prevalence by single-year maternal age.
@@ -267,7 +317,12 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.set_xlabel("Maternal age (single years)")
     ax.set_ylabel("Recorded DS per 10,000 births")
     ax.set_title("Recorded Down syndrome rate by maternal age, 1989–2024")
-    _save(fig, out, "recorded_ds_by_mage", age[["age", "recorded", "births", "recorded_per_10k"]])
+    _save(
+        fig,
+        out,
+        "recorded_ds_by_mage",
+        age[["age", "recorded", "births", "recorded_per_10k"]],
+    )
 
     # C1b — mean AND median maternal age, recorded DS vs all births, by year (no band).
     mean_age = _q(
@@ -284,13 +339,30 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     )
     cds, call = _cycle_colours(2)
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
-    ax.plot(mean_age["year"], mean_age["mean_recorded_ds"], marker="o", color=cds,
-            label="Recorded DS — mean")
-    ax.plot(mean_age["year"], mean_age["median_recorded_ds"], linestyle="--", color=cds,
-            label="Recorded DS — median")
-    ax.plot(mean_age["year"], mean_age["mean_all"], color=call, label="All births — mean")
-    ax.plot(mean_age["year"], mean_age["median_all"], linestyle="--", color=call,
-            label="All births — median")
+    ax.plot(
+        mean_age["year"],
+        mean_age["mean_recorded_ds"],
+        marker="o",
+        color=cds,
+        label="Recorded DS — mean",
+    )
+    ax.plot(
+        mean_age["year"],
+        mean_age["median_recorded_ds"],
+        linestyle="--",
+        color=cds,
+        label="Recorded DS — median",
+    )
+    ax.plot(
+        mean_age["year"], mean_age["mean_all"], color=call, label="All births — mean"
+    )
+    ax.plot(
+        mean_age["year"],
+        mean_age["median_all"],
+        linestyle="--",
+        color=call,
+        label="All births — median",
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("Maternal age (years)")
     ax.set_title("Mean and median maternal age: recorded DS births vs all births")
@@ -356,7 +428,12 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
         """,
     )
     years_lbl = {1: "< 12 years", 2: "12 years", 3: "13–15 years", 4: "16+ years"}
-    attain_lbl = {1: "< High school", 2: "HS / GED", 3: "Some college", 4: "Bachelor's+"}
+    attain_lbl = {
+        1: "< High school",
+        2: "HS / GED",
+        3: "Some college",
+        4: "Bachelor's+",
+    }
 
     def _edu_shares(frame: pd.DataFrame, keys: dict) -> pd.DataFrame:
         wide = (
@@ -387,7 +464,9 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
         ax.set_title(title)
         ax.legend(frameon=False, fontsize=7, loc="lower left", ncol=2)
     axes[0].set_ylabel("Share of recorded DS births")
-    fig.suptitle("Maternal education of recorded DS births over time (two non-poolable schemes)")
+    fig.suptitle(
+        "Maternal education of recorded DS births over time (two non-poolable schemes)"
+    )
     education_plot_data = pd.concat(
         [
             s1.rename(columns=years_lbl)
@@ -415,7 +494,9 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
         FROM m GROUP BY year ORDER BY year
         """,
     )
-    marital["pct_married"] = marital["married"] / (marital["married"] + marital["unmarried"])
+    marital["pct_married"] = marital["married"] / (
+        marital["married"] + marital["unmarried"]
+    )
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     ax.plot(marital["year"], marital["pct_married"], marker="o")
     _pct_axis(ax)
@@ -461,6 +542,7 @@ def section_c_maternal(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 # Section D — pregnancy and infant characteristics
 # ---------------------------------------------------------------------------
 
+
 def _grouped_dist(
     con: duckdb.DuckDBPyConnection, band_sql: str, where: str, order_labels: list[str]
 ) -> pd.DataFrame:
@@ -484,7 +566,14 @@ def _grouped_dist(
 
 def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     # D2a — birthweight distribution, recorded DS vs all (2003+).
-    bw_labels = ["<1500 g", "1500–2499", "2500–2999", "3000–3499", "3500–3999", "4000+ g"]
+    bw_labels = [
+        "<1500 g",
+        "1500–2499",
+        "2500–2999",
+        "3000–3499",
+        "3500–3999",
+        "4000+ g",
+    ]
     bw = _grouped_dist(
         con,
         (
@@ -505,12 +594,25 @@ def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.set_ylabel("Share of births")
     ax.set_title("Birth weight: recorded DS vs all births (2003–2024)")
     ax.legend(frameon=False)
-    _save(fig, out, "recorded_ds_birthweight", bw[["band", "label", "ds", "all_n", "ds_share", "all_share"]])
+    _save(
+        fig,
+        out,
+        "recorded_ds_birthweight",
+        bw[["band", "label", "ds", "all_n", "ds_share", "all_share"]],
+    )
 
     # D2b — gestational age (gestrec10), recorded DS vs all (2003+).
     gest_labels = [
-        "<20 wk", "20–27", "28–31", "32–33", "34–36",
-        "37–38", "39", "40", "41", "42+ wk",
+        "<20 wk",
+        "20–27",
+        "28–31",
+        "32–33",
+        "34–36",
+        "37–38",
+        "39",
+        "40",
+        "41",
+        "42+ wk",
     ]
     gest = _grouped_dist(
         con,
@@ -528,7 +630,12 @@ def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     ax.set_ylabel("Share of births")
     ax.set_title("Gestational age: recorded DS vs all births (2003–2024)")
     ax.legend(frameon=False)
-    _save(fig, out, "recorded_ds_gestation", gest[["band", "label", "ds", "all_n", "ds_share", "all_share"]])
+    _save(
+        fig,
+        out,
+        "recorded_ds_gestation",
+        gest[["band", "label", "ds", "all_n", "ds_share", "all_share"]],
+    )
 
     # D1a — plurality, recorded DS vs all births (typically-developing comparison).
     plur = _q(
@@ -561,7 +668,9 @@ def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     sex["ds_pct_male"] = sex["ds_male"] / sex["ds_total"]
     sex["all_pct_male"] = sex["all_male"] / sex["all_total"]
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
-    ax.axhline(0.5, color=styles.LINE_COLOUR, linewidth=0.8, linestyle="--", label="50%")
+    ax.axhline(
+        0.5, color=styles.MUTED_TEXT_COLOUR, linewidth=0.8, linestyle="--", label="50%"
+    )
     ax.plot(sex["year"], sex["ds_pct_male"], marker="o", label="Recorded DS")
     ax.plot(sex["year"], sex["all_pct_male"], marker="s", label="All births (TD)")
     _pct_axis(ax)
@@ -578,6 +687,7 @@ def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Section E — co-occurring conditions and newborn morbidity (2014+)
 # ---------------------------------------------------------------------------
+
 
 def section_e_cooccurring(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     # E1 — co-occurring anomalies among recorded DS, % Yes over Y/N base.
@@ -628,7 +738,12 @@ def section_e_cooccurring(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     )
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     ax.plot(morb["year"], morb["nicu"], marker="o", label="NICU admission")
-    ax.plot(morb["year"], morb["assisted_ventilation"], marker="s", label="Assisted ventilation")
+    ax.plot(
+        morb["year"],
+        morb["assisted_ventilation"],
+        marker="s",
+        label="Assisted ventilation",
+    )
     ax.plot(morb["year"], morb["low_apgar5"], marker="^", label="5-min APGAR < 7")
     ax.set_xlabel("Year")
     ax.set_ylabel("% of recorded DS newborns")
@@ -643,6 +758,7 @@ def section_e_cooccurring(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
+
 
 def build_all(db_path: str | Path, out: Path) -> dict:
     """Run every section against ``db_path``, writing artefacts to ``out``.

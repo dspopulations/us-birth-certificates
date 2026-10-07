@@ -34,6 +34,7 @@ from dse_research_utils.plot import styles
 from matplotlib.figure import Figure
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.plot_colours import ordered_palette
 from dspopulations_us_birth_certificates.plot_utils import save_fig
 
 DOCS_TEMPLATE_ROOT = Path("docs/analysis")
@@ -56,6 +57,15 @@ def _check_ident(name: str, kind: str) -> None:
 # ---------------------------------------------------------------------------
 # Category groupings
 # ---------------------------------------------------------------------------
+
+ORDERED_COLORMAP = styles.SEQUENTIAL_CMAP.name
+"""``CategoryGrouping.colormap`` for ordered categories: sequential steps."""
+
+# Groupings with more than six categories exceed the design language's six
+# categorical series. Until they are redesigned (grouped, split or labelled
+# directly), they keep the colours they had before dse-research-utils 0.18.0.
+LEGACY_UNORDERED_COLORMAP = "tab10"
+LEGACY_ORDERED_COLORMAP = "viridis"
 
 # 2014+ NCHS coding for the raw `mracehisp` column. The same integer
 # codes follow a different ORRACEM-style scheme pre-2014, so this label
@@ -264,13 +274,15 @@ class CategoryGrouping:
     and also fixes the row order used everywhere downstream.
     ``legend_title`` is what the plot legend shows; ``not_null_filter``
     is an optional SQL predicate applied before grouping.
-    ``colormap`` is an optional matplotlib colormap name for the
-    stacked segments, passed through to
-    :func:`dse_research_utils.plot.styles.categorical_palette`. Leave it
-    ``None`` to take that function's qualitative default (``tab10``,
-    widening to ``tab20`` above 10 categories); name a continuous map
-    (e.g. ``viridis``) for ordinal variables, which is then sampled
-    evenly across its range rather than cycled.
+    ``colormap`` sets the stacked-segment colours (see
+    :func:`category_colours`). Leave it ``None`` for at most six
+    unordered categories, which take the design-token chart colours.
+    Use :data:`ORDERED_COLORMAP` for at most six ordered categories,
+    which take sequential steps. Groupings with more than six
+    categories exceed the design language's six series, so they name
+    the matplotlib colormap they used before dse-research-utils 0.18.0:
+    :data:`LEGACY_UNORDERED_COLORMAP` (``tab10``) or
+    :data:`LEGACY_ORDERED_COLORMAP` (``viridis``).
     """
 
     variable: str
@@ -301,6 +313,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=MAGE_C_LABELS,
         not_null_filter="mage_c IS NOT NULL",
+        colormap=LEGACY_UNORDERED_COLORMAP,  # 8 categories
     ),
     "mracehisp": CategoryGrouping(
         variable="mracehisp",
@@ -309,6 +322,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         group_sql="mracehisp",
         labels=MRACEHISP_LABELS,
         not_null_filter="mracehisp IS NOT NULL",
+        colormap=LEGACY_UNORDERED_COLORMAP,  # 8 categories
     ),
     "meduc": CategoryGrouping(
         variable="meduc",
@@ -317,6 +331,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         group_sql="meduc",
         labels=MEDUC_LABELS,
         not_null_filter="meduc IS NOT NULL",
+        colormap=LEGACY_UNORDERED_COLORMAP,  # 9 categories
     ),
     "pay_rec": CategoryGrouping(
         variable="pay_rec",
@@ -355,7 +370,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=DBWT_LABELS,
         not_null_filter="dbwt IS NOT NULL",
-        colormap="viridis",
+        colormap=LEGACY_ORDERED_COLORMAP,  # 7 categories
     ),
     "gestrec10": CategoryGrouping(
         variable="gestrec10",
@@ -364,7 +379,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         group_sql="gestrec10",
         labels=GESTREC10_LABELS,
         not_null_filter="gestrec10 IS NOT NULL",
-        colormap="viridis",
+        colormap=LEGACY_ORDERED_COLORMAP,  # 11 categories
     ),
     "ab_aven1": CategoryGrouping(
         variable="ab_aven1",
@@ -394,7 +409,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=WTGAIN_LABELS,
         not_null_filter="wtgain IS NOT NULL",
-        colormap="viridis",
+        colormap=ORDERED_COLORMAP,
     ),
     "ca_cchd": CategoryGrouping(
         variable="ca_cchd",
@@ -431,7 +446,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=PRECARE_LABELS,
         not_null_filter="precare IS NOT NULL",
-        colormap="viridis",
+        colormap=ORDERED_COLORMAP,
     ),
     "ca_disor": CategoryGrouping(
         variable="ca_disor",
@@ -487,7 +502,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=BMI_LABELS,
         not_null_filter="bmi IS NOT NULL",
-        colormap="viridis",
+        colormap=LEGACY_ORDERED_COLORMAP,  # 7 categories
     ),
     "fracehisp": CategoryGrouping(
         variable="fracehisp",
@@ -496,6 +511,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         group_sql="fracehisp",
         labels=FRACEHISP_LABELS,
         not_null_filter="fracehisp IS NOT NULL",
+        colormap=LEGACY_UNORDERED_COLORMAP,  # 9 categories
     ),
     "me_pres": CategoryGrouping(
         variable="me_pres",
@@ -512,6 +528,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         group_sql="feduc",
         labels=FEDUC_LABELS,
         not_null_filter="feduc IS NOT NULL",
+        colormap=LEGACY_UNORDERED_COLORMAP,  # 9 categories
     ),
     "ab_anti": CategoryGrouping(
         variable="ab_anti",
@@ -544,7 +561,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=FAGECOMB_LABELS,
         not_null_filter="fagecomb IS NOT NULL",
-        colormap="viridis",
+        colormap=LEGACY_ORDERED_COLORMAP,  # 9 categories
     ),
     "bfacil3": CategoryGrouping(
         variable="bfacil3",
@@ -617,7 +634,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         ),
         labels=APGAR5_LABELS,
         not_null_filter="apgar5 IS NOT NULL",
-        colormap="viridis",
+        colormap=ORDERED_COLORMAP,
     ),
     "ld_indl": CategoryGrouping(
         variable="ld_indl",
@@ -635,9 +652,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
         variable="sex",
         title="Sex of baby",
         legend_title="sex",
-        group_sql=(
-            "CASE WHEN sex = 'F' THEN 0 WHEN sex = 'M' THEN 1 END"
-        ),
+        group_sql=("CASE WHEN sex = 'F' THEN 0 WHEN sex = 'M' THEN 1 END"),
         labels=SEX_LABELS,
         not_null_filter="sex IS NOT NULL",
     ),
@@ -647,6 +662,7 @@ CATEGORY_GROUPINGS: dict[str, CategoryGrouping] = {
 # ---------------------------------------------------------------------------
 # Population columns (one per stacked bar)
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class PopulationColumn:
@@ -674,6 +690,7 @@ POPULATION_COLUMNS: tuple[PopulationColumn, ...] = (
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
+
 
 def load_category_counts(
     grouping: CategoryGrouping,
@@ -751,11 +768,26 @@ def load_category_counts(
 # Plotting
 # ---------------------------------------------------------------------------
 
+
 def _stack_bottoms_and_tops(
     proportions: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     cum = np.concatenate([[0.0], np.cumsum(proportions)])
     return cum[:-1], cum[1:]
+
+
+def category_colours(n: int, colormap: str | None = None) -> list:
+    """Return ``n`` segment colours for a :class:`CategoryGrouping`.
+
+    :data:`ORDERED_COLORMAP` gives sequential steps that each reach 3:1 on
+    white (:func:`plot_colours.ordered_palette`). Any other ``colormap``, or
+    ``None`` for the chart colours, goes to
+    :func:`dse_research_utils.plot.styles.categorical_palette`, which
+    raises ``ValueError`` for more than six chart colours.
+    """
+    if colormap == ORDERED_COLORMAP:
+        return ordered_palette(n)
+    return styles.categorical_palette(n, colormap)
 
 
 def plot_stacked_proportions(
@@ -801,7 +833,7 @@ def plot_stacked_proportions(
     x_positions = np.arange(len(columns), dtype=float)
     bar_width = 0.45
 
-    colours = styles.categorical_palette(n_cats, colormap)
+    colours = category_colours(n_cats, colormap)
 
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_XL)
 
@@ -925,6 +957,7 @@ def _tidy_plot_data(
 # Summary table
 # ---------------------------------------------------------------------------
 
+
 def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
     """Wide summary table: counts + proportions side-by-side per population.
 
@@ -959,6 +992,7 @@ def category_summary(counts: pd.DataFrame) -> pd.DataFrame:
 # Artefact persistence + template handling
 # ---------------------------------------------------------------------------
 
+
 def save_config(output_dir: Path, config: dict) -> None:
     """Write ``config.json`` to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -975,9 +1009,7 @@ def save_category_summary(
 ) -> None:
     """Write ``<variable>_summary.csv`` to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    category_summary(counts).to_csv(
-        output_dir / f"{variable}_summary.csv", index=False
-    )
+    category_summary(counts).to_csv(output_dir / f"{variable}_summary.csv", index=False)
 
 
 def copy_analysis_template(
@@ -1030,6 +1062,7 @@ def render_report(qmd_path: Path | None, *, do_render: bool) -> None:
 # ---------------------------------------------------------------------------
 # Cross-run comparison (usbc10 vs usbc11 etc.)
 # ---------------------------------------------------------------------------
+
 
 def stage_compare_artefacts(
     *,

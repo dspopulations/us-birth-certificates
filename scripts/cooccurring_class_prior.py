@@ -42,6 +42,11 @@ CONDITIONS = [
     ("ab_nicu", "NICU admission"),
 ]
 
+# Series colours by role.
+ESTIMATE_COLOUR = styles.CHART_COLOURS[0]  # conditional co-occurrence estimate
+EQUAL_RECORDING_COLOUR = styles.CHART_COLOURS[1]  # R=1 point
+CLASSIFIER_COLOUR = styles.CHART_COLOURS[2]  # classifier-cohort share
+
 
 def _counts(con: duckdb.DuckDBPyConnection, col: str) -> dict:
     q = f"""
@@ -86,14 +91,14 @@ def main() -> int:
             r_grid,
             cp * 100,
             "-",
-            color=styles.COLOUR_BLUE,
+            color=ESTIMATE_COLOUR,
             lw=2,
             label="Conditional co-occurrence estimate",
         )
         ax.axhline(
             gb_full * 100,
             ls="--",
-            color=styles.COLOUR_RED,
+            color=CLASSIFIER_COLOUR,
             label=f"Classifier-cohort share ({gb_full * 100:.0f}%)",
         )
         ax.axvspan(
@@ -103,7 +108,7 @@ def main() -> int:
             [1.0],
             [recorded * 100],
             "o",
-            color=styles.COLOUR_GREEN,
+            color=EQUAL_RECORDING_COLOUR,
             ms=8,
             label=f"R=1, equal recording assumed ({recorded * 100:.1f}%)",
         )
