@@ -47,5 +47,6 @@ The superseded release-specific guides are available in Git history. Their check
 | v0.14.0 | Local adapter adoption and differential-output checks; [issue 113](https://github.com/dspopulations/us-birth-certificates/issues/113) |
 | v0.15.0 | Numerical-stack upgrade and fast/slow tests; [issue 115](https://github.com/dspopulations/us-birth-certificates/issues/115) |
 | v0.17.0 | Public diagnostic and permission helpers; [PR 130](https://github.com/dspopulations/us-birth-certificates/pull/130) |
+| v0.18.0 | Design-token plot colours and role colours; [PR 133](https://github.com/dspopulations/us-birth-certificates/pull/133) |
 
 For future upgrades, read the tagged upstream migration guide, check actual consumers and run checks appropriate to the changed paths. Dependency compatibility alone does not validate saved research fits or establish that new outputs match old ones.
