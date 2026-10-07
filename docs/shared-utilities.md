@@ -1,9 +1,12 @@
 > [!NOTE]
+> AI-assisted revision by Claude Code (Opus 5.5).
+
+> [!NOTE]
 > AI-assisted revision by Codex (GPT-6).
 
 # Shared utility contracts
 
-`pyproject.toml` resolves `dse-research-utils` from public tag `v0.17.0` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
+`pyproject.toml` resolves `dse-research-utils` from public tag `v0.18.0` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
 
 This package supplies the scientific stack through its core dependencies and the `boosting`, `columnar`, `dependence`, `graphs`, `io`, `jax`, `notebook` and `tuning` extras. Keep repository-only dependencies and development tools in this repository's metadata. The commented local source override points to `../../dseinternational/research/src/python`.
 
@@ -31,6 +34,8 @@ The v0.14 adapter migration changed some edge cases. Interval inputs are convert
 The v0.15 upgrade changed Optuna's default search behaviour. An old tuned parameter set remains usable, but it does not become a result of a new search merely because the dependency changed. Record sampler version and settings when comparing or resuming studies.
 
 The v0.17 adoption uses public diagnostic helpers and the shared file-mode probe. Validation thresholds remain local. Preserve historical manifests and environments; do not rewrite them to look current.
+
+The v0.18 upgrade moves figures to the DSE design-token colours. Series take `CHART_COLOURS`, which is also the default property cycle. Images take the sequential scale, or the diverging scale for signed values. `plot_colours.py` names colours by role, so recorded births, estimated births, reduction and the selection variants keep one colour across figures. `categorical_palette()` now raises for more than six categories. The predicted-analysis groupings with seven to eleven categories therefore name their earlier `tab10` or `viridis` colormaps until they are redesigned. Saved figures change only when their scripts run again.
 
 ## Upgrade evidence
 

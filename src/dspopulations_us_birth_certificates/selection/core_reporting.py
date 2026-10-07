@@ -950,6 +950,7 @@ def _errorbar_plot(
 def _age_year_ppc_residual_plot(df: pd.DataFrame):
     """Heatmap of age-year posterior-predictive standardized residuals."""
     import matplotlib.pyplot as plt
+    from dse_research_utils.plot.styles import DIVERGING_CMAP
 
     years = list(df["year"].drop_duplicates())
     ages = list(df.sort_values("age_idx")["age"].drop_duplicates())
@@ -966,7 +967,7 @@ def _age_year_ppc_residual_plot(df: pd.DataFrame):
         aspect="auto",
         origin="lower",
         interpolation="nearest",
-        cmap="RdBu_r",
+        cmap=DIVERGING_CMAP,
         vmin=-limit,
         vmax=limit,
     )

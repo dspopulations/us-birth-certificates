@@ -16,6 +16,10 @@ format:
 ---
 
 ::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Claude Code (Opus 5.5) on 7 October 2026.
+:::
+
+::: {.callout-note title="AI-assisted"}
 AI-assisted revision by Codex (GPT-6) on 7 October 2026.
 :::
 
@@ -263,7 +267,7 @@ It does not provide an independently validated population rate.
 ## Posterior predictive checks
 
 Observed vs predicted recorded DS counts aggregated by stratum. The
-posterior predictive bars should bracket the observed points (orange
+posterior predictive bars should bracket the observed points (round
 markers); systematic misses in any stratum indicate missing structure.
 
 ```{python}

@@ -87,6 +87,7 @@ backtested
 beeswarm
 sociodemographic
 codings
+colormaps
 cooccurring
 crosswalk
 crosswalks

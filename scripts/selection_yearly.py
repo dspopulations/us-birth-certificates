@@ -25,6 +25,10 @@ import xarray as xr  # noqa: E402
 from dse_research_utils.environment import setup  # noqa: E402
 from dse_research_utils.plot import styles  # noqa: E402
 
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    RECORDED_COLOUR,
+    VARIANT_COLOURS,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     inv_logit,
@@ -32,7 +36,6 @@ from dspopulations_us_birth_certificates.selection import (  # noqa: E402
 )
 
 OUTPUT_DIR = "notes/figures"
-VARIANT_COLOUR = {"A": styles.COLOUR_BLUE, "B": styles.COLOUR_ORANGE, "C": styles.COLOUR_GREEN}
 
 
 def load_year(variant: str) -> dict:
@@ -74,9 +77,9 @@ def main() -> int:
     )
     for v in ("A", "B", "C"):
         df = data[v]["df"]
-        ax1.plot(years, df["true_ds"], "-o", ms=3, color=VARIANT_COLOUR[v], label=f"True DS, variant {v}")
-        ax2.plot(years, df["reduction"], "-o", ms=3, color=VARIANT_COLOUR[v], label=f"Variant {v}")
-    ax1.plot(years, data["C"]["df"]["recorded"], "-s", ms=3, color=styles.COLOUR_RED,
+        ax1.plot(years, df["true_ds"], "-o", ms=3, color=VARIANT_COLOURS[v], label=f"True DS, variant {v}")
+        ax2.plot(years, df["reduction"], "-o", ms=3, color=VARIANT_COLOURS[v], label=f"Variant {v}")
+    ax1.plot(years, data["C"]["df"]["recorded"], "-s", ms=3, color=RECORDED_COLOUR,
              label="Recorded on certificate")
     ax1.set_ylabel("DS livebirths")
     ax1.set_ylim(0, None)

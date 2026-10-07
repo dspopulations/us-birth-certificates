@@ -561,7 +561,7 @@ def section_d_infant(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
     sex["ds_pct_male"] = sex["ds_male"] / sex["ds_total"]
     sex["all_pct_male"] = sex["all_male"] / sex["all_total"]
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
-    ax.axhline(0.5, color=styles.LINE_COLOUR, linewidth=0.8, linestyle="--", label="50%")
+    ax.axhline(0.5, color=styles.MUTED_TEXT_COLOUR, linewidth=0.8, linestyle="--", label="50%")
     ax.plot(sex["year"], sex["ds_pct_male"], marker="o", label="Recorded DS")
     ax.plot(sex["year"], sex["all_pct_male"], marker="s", label="All births (TD)")
     _pct_axis(ax)

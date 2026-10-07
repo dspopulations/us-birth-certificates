@@ -33,6 +33,10 @@ from dse_research_utils.plot import styles  # noqa: E402
 from dspopulations_us_birth_certificates.intervals import (  # noqa: E402
     equal_tail_interval,
 )
+from dspopulations_us_birth_certificates.plot_colours import (  # noqa: E402
+    DECREASE_COLOUR,
+    INCREASE_COLOUR,
+)
 from dspopulations_us_birth_certificates.plot_utils import save_fig  # noqa: E402
 from dspopulations_us_birth_certificates.selection import (  # noqa: E402
     AGE_LEVELS,
@@ -98,9 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_MD)
     x = np.arange(n_age)
     err = np.vstack([tab["extra_rise"] - tab["lo89"], tab["hi89"] - tab["extra_rise"]])
-    colors = [
-        styles.COLOUR_BLUE if v >= 0 else styles.COLOUR_RED for v in tab["extra_rise"]
-    ]
+    colors = [INCREASE_COLOUR if v >= 0 else DECREASE_COLOUR for v in tab["extra_rise"]]
     ax.bar(x, tab["extra_rise"], color=colors, alpha=0.85)
     ax.errorbar(
         x, tab["extra_rise"], yerr=err, fmt="none", ecolor=styles.TEXT_COLOUR, capsize=3

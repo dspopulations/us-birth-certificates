@@ -48,12 +48,20 @@ from dspopulations_us_birth_certificates.intervals import (
     DEFAULT_ETI_PROB,
     interval_label,
 )
+from dspopulations_us_birth_certificates.plot_colours import (
+    POSTERIOR_COLOUR,
+    REFERENCE_COLOUR,
+)
 from dspopulations_us_birth_certificates.selection.data import (
     RACE_MAP,
     RACE_UNKNOWN_IDX,
     case_from_map,
 )
 from dspopulations_us_birth_certificates.selection.priors import RACE_LEVELS
+
+# The second source composition takes the next chart colour after the model
+# (POSTERIOR_COLOUR) and the source rates (REFERENCE_COLOUR).
+SOURCE_POOLED_COLOUR = plot_styles.CHART_COLOURS[1]
 
 DEFAULT_DB_PATH = Path("data/us_births.db")
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -1535,14 +1543,14 @@ def plot_centered_prevalence_comparison(
         yerr=np.vstack((mean - lo, hi - mean)),
         fmt="o",
         capsize=3,
-        color=plot_styles.COLOUR_BLUE,
+        color=POSTERIOR_COLOUR,
         label=f"DSP004 pooled analogue ({interval_label(interval_prob)} ETI)",
     )
     axes[1].scatter(
         x + 0.08,
         frame["surveillance_prev_per10k"],
         marker="s",
-        color=plot_styles.COLOUR_ORANGE,
+        color=REFERENCE_COLOUR,
         label="Raw pooled source ratio",
     )
     label = int(frame["label_year"].iloc[0])
@@ -1603,21 +1611,21 @@ def plot_centered_composition_comparison(
         x - width,
         frame["model_named_case_share_mean"],
         width,
-        color=plot_styles.COLOUR_BLUE,
+        color=POSTERIOR_COLOUR,
         label="DSP004 pooled analogue",
     )
     axes[1].bar(
         x,
         frame["source_standardised_named_case_share"],
         width,
-        color=plot_styles.COLOUR_ORANGE,
+        color=REFERENCE_COLOUR,
         label="Source rates on model births",
     )
     axes[1].bar(
         x + width,
         frame["source_native_named_case_share"],
         width,
-        color=plot_styles.COLOUR_GREEN,
+        color=SOURCE_POOLED_COLOUR,
         label="Source pooled births",
     )
     label = int(frame["label_year"].iloc[0])
