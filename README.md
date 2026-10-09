@@ -73,6 +73,8 @@ pnpm install --frozen-lockfile
 pnpm run spellcheck
 ```
 
+The spellcheck command uses `.cspell.config.yaml`. Keep project words in the separate file `config/spellcheck/allow-en.txt`.
+
 Run `uv run pytest` for code changes. The default suite excludes slow model fits; use `uv run pytest -m slow` when the change requires those checks.
 
 ## Data and licences

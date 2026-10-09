@@ -21,6 +21,6 @@
     "cspell": "10.3.6"
   },
   "scripts": {
-    "spellcheck": "cspell --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
+    "spellcheck": "cspell --config .cspell.config.yaml --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
   }
 }
