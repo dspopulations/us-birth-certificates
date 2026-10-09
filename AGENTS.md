@@ -44,8 +44,8 @@ Use Python 3.14 through uv from the repository root:
 ```bash
 uv sync --locked
 uv run ruff check src tests scripts
-npm ci
-npm run spellcheck
+pnpm install --frozen-lockfile
+pnpm run spellcheck
 uv run pytest
 ```
 
