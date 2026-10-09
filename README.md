@@ -65,12 +65,15 @@ The local `notebook.mplstyle` uses smaller text and narrower fonts than the shar
 
 ## Checks
 
-Install the spellchecker with Node.js 24 and `npm ci`. Before opening a PR, run:
+Install Node.js 24 and [pnpm](https://pnpm.io/installation). Use the pnpm version pinned in `package.json`. Before opening a PR, install the locked spellchecker packages and run:
 
 ```bash
 uv run ruff check src tests scripts
-npm run spellcheck
+pnpm install --frozen-lockfile
+pnpm run spellcheck
 ```
+
+The spellcheck command uses `.cspell.config.yaml`. Keep project words in the separate file `config/spellcheck/allow-en.txt`.
 
 Run `uv run pytest` for code changes. The default suite excludes slow model fits; use `uv run pytest -m slow` when the change requires those checks.
 

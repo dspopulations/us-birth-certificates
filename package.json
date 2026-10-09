@@ -13,6 +13,7 @@
   "license": "AGPL-3.0-or-later",
   "author": "Frank Buckley",
   "private": true,
+  "packageManager": "pnpm@12.10.1",
   "engines": {
     "node": ">=24 <25"
   },
@@ -20,6 +21,6 @@
     "cspell": "10.3.6"
   },
   "scripts": {
-    "spellcheck": "cspell --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
+    "spellcheck": "cspell --config .cspell.config.yaml --show-suggestions --show-context \"**/*.md\" \"docs/**/*.qmd\""
   }
 }
