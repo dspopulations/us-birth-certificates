@@ -65,7 +65,7 @@ The local `notebook.mplstyle` uses smaller text and narrower fonts than the shar
 
 ## Checks
 
-Install Node.js 24 and [pnpm](https://pnpm.io/installation). Use the pnpm version pinned in `package.json`. Before opening a PR, install the locked spellchecker packages and run:
+Install Node.js 26 and [pnpm](https://pnpm.io/installation). Use the pnpm version pinned in `package.json`. Before opening a PR, install the locked spellchecker packages and run:
 
 ```bash
 uv run ruff check src tests scripts
