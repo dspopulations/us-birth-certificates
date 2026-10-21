@@ -34,6 +34,8 @@ uv sync --locked
 
 uv installs Python 3.14 from `.python-version` and the packages in `uv.lock`. It installs this project in editable mode. Run Python commands through `uv run` from the repository root.
 
+The lockfile uses DuckDB 2.0. Existing databases keep their older storage format when DuckDB 2.0 reads or writes them. New databases use a format that older DuckDB versions cannot read. Use the locked environment for every process that opens a newly created database. See the [DuckDB migration guide](https://duckdb.org/docs/2.0/operations_manual/migration).
+
 The configured platforms are Linux x86-64 and arm64, Apple Silicon macOS, and Windows AMD64. Intel macOS is excluded from the lockfile's platform set.
 
 On macOS, install the OpenMP runtime for LightGBM and XGBoost:
