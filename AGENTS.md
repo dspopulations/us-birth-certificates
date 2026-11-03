@@ -61,7 +61,7 @@ The package uses hatchling. Its version is in `src/dspopulations_us_birth_certif
 
 ## Shared utilities and artefacts
 
-`pyproject.toml` selects `dse-research-utils` from public tag `v0.18.0`. Its source block has a commented local override at `../../dseinternational/research/src/python`. See `docs/shared-utilities.md` for adapter contracts.
+`pyproject.toml` selects `dse-research-utils` from public tag `v0.19.3`. Its source block has a commented local override at `../../dseinternational/research/src/python`. See `docs/shared-utilities.md` for adapter contracts.
 
 - Scripts call `dse_research_utils.environment.setup.init_script()` in `main()`.
 - Notebooks use `init_workbook()` and report versions from the project `PACKAGE_LIST`.
