@@ -44,10 +44,10 @@ dependencies = [
 # its base dependencies (pyarrow, rich, scikit-learn) has been dropped from here;
 # joblib moved up to [project.dependencies], since `src` imports it at run time.
 dev = [
-  "ipython>=9.11.0",
+  "ipython>=9.18.1",
   "ipywidgets>=8.1.8",
-  "pytest>=9.1.1",
-  "ruff>=0.16.1",
+  "pytest>=9.2.0",
+  "ruff>=0.17.3",
 ]
 
 [tool.uv]
@@ -65,7 +65,7 @@ environments = [
 
 [tool.uv.sources]
 # dse-research-utils isn't published to PyPI — resolve it from the public git tag.
-dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.18.0" }
+dse-research-utils = { git = "https://github.com/dseinternational/research.git", subdirectory = "src/python", tag = "v0.19.3" }
 # Local-dev override — to develop against a sibling checkout of research (note
 # the ../../ — this repo lives under dspopulations/, not dseinternational/),
 # comment the git line above and uncomment this instead:

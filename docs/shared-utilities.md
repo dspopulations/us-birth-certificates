@@ -6,7 +6,7 @@
 
 # Shared utility contracts
 
-`pyproject.toml` resolves `dse-research-utils` from public tag `v0.18.0` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
+`pyproject.toml` resolves `dse-research-utils` from public tag `v0.19.3` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
 
 This package supplies the scientific stack through its core dependencies and the `boosting`, `columnar`, `dependence`, `graphs`, `io`, `jax`, `notebook` and `tuning` extras. Keep repository-only dependencies and development tools in this repository's metadata. The commented local source override points to `../../dseinternational/research/src/python`.
 
@@ -36,6 +36,12 @@ The v0.15 upgrade changed Optuna's default search behaviour. An old tuned parame
 The v0.17 adoption uses public diagnostic helpers and the shared file-mode probe. Validation thresholds remain local. Preserve historical manifests and environments; do not rewrite them to look current.
 
 The v0.18 upgrade moves figures to the DSE design-token colours. Series take `CHART_COLOURS`, which is also the default property cycle. Images take the sequential scale, or the diverging scale for signed values. `plot_colours.py` names colours by role, so recorded births, estimated births, reduction and the selection variants keep one colour across figures. `categorical_palette()` now raises for more than six categories. The predicted-analysis groupings with seven to eleven categories therefore name their earlier `tab10` or `viridis` colormaps until they are redesigned. Saved figures change only when their scripts run again.
+
+The [v0.19.3 upgrade](https://github.com/dseinternational/research/blob/v0.19.3/docs/migrating-to-0.19.md) raises the pandas and Polars minimums. The resolved environment also updates PyMC, PyTensor and JAX. The selected extras and the shared NumPy and PyTensor compatibility bounds remain in place. DuckDB stays at the already locked version 2.0.0. Its database files are not readable by DuckDB 1.x.
+
+The v0.19.3 palette puts orange before green. With the existing role mapping, estimated counts, external references and selection variant B now use green; termination and variant C use orange. Race-group colours follow the new default order. Recorded counts remain pink. Review legends when comparing newly rendered figures with older outputs.
+
+Pandas 3.1 changes category inference in text readers and numeric date/time resolution. Polars 2.1 rejects mixed string and numeric arithmetic. The repository's Polars path combines Parquet files without such arithmetic. Its data preparation assigns pandas categories after reading SAS data. Pandas also deprecates its `fastparquet` engine, which `scripts/make_all.py` still uses; that path will need to move to PyArrow before pandas removes it. These checks do not establish that every historical data file or saved fit is compatible. Preserve their manifests and environments.
 
 ## Upgrade evidence
 
