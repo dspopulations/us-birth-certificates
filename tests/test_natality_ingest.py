@@ -69,6 +69,7 @@ def record(layout: Layout, *, resident: int = 1) -> bytes:
         283: b"26.6",
         337: b"0",
         456: b"1",
+        504: f"{3000 + resident:04d}".encode(),
         552: b"P",
         558: b"1",
         561: b"9",
@@ -119,9 +120,22 @@ def test_catalogue_covers_all_years_but_only_reviewed_year_imports():
         s["guide_urls"] and s["archive_url"].startswith("https://ftp.cdc.gov/")
         for s in catalogue["sources"]
     )
+    for year in range(1989, 2026):
+        assert load_layout(year).year == year
     with pytest.raises(ValueError, match="No reviewed layout"):
-        load_layout(2023)
-    assert load_layout(2025).year == 2025
+        load_layout(1988)
+
+
+def test_retry_after_empty_build_marker(local_source):
+    layout, cache, output = local_source
+    with duckdb.connect(str(output)) as con:
+        con.execute(
+            "CREATE TABLE __natality_build (id INTEGER PRIMARY KEY, state VARCHAR)"
+        )
+    result = import_year(
+        layout, cache=cache, output=output, with_derivations=False, restart=True
+    )
+    assert result["rows"] == 3 and result["status"] == "source_validated"
 
 
 def test_2024_positions_and_types_are_explicit():
@@ -344,10 +358,8 @@ def test_comparison_explains_losses_and_detects_joint_differences(
 ):
     layout, cache, output = local_source
     import_year(layout, cache=cache, output=output)
-    # Give records different weights so a permutation can preserve every
-    # marginal count while changing the joint record values.
-    with duckdb.connect(str(output)) as con:
-        con.execute("UPDATE us_births SET dbwt = 3000 + restatus")
+    # The synthetic source has different weights by residence, so a
+    # permutation can keep marginal counts while changing joint values.
     baseline = tmp_path / "old.db"
     with duckdb.connect(str(baseline)) as con:
         con.execute(
@@ -525,7 +537,7 @@ def test_changed_lexical_exception_count_does_not_publish(tmp_path):
     data = copy.deepcopy(layout.data)
     field = next(f for f in data["fields"] if f["name"] == "mrace31")
     field["lexical_aliases"]["1 "]["expected_count"] = 2
-    with pytest.raises(ValueError, match="Lexical exception count changed"):
+    with pytest.raises(ValueError, match="Source exception count changed"):
         import_year(
             Layout(data, layout.source, "changed-count"), cache=cache, output=output
         )
@@ -552,3 +564,216 @@ def test_descriptive_report_rejects_2025_before_writing_figures(
     with pytest.raises(ValueError, match="2025"):
         build_all(output, destination)
     assert not list(destination.iterdir())
+
+
+@pytest.fixture
+def validated_annual_inputs(tmp_path, monkeypatch):
+    from dspopulations_us_birth_certificates.ingest import combine
+    from dspopulations_us_birth_certificates.ingest.sources import save_json
+    from dspopulations_us_birth_certificates.ingest.stored_validation import (
+        check_stored_source,
+    )
+
+    layouts, annual = {}, {}
+    for year in (2024, 2025):
+        folder = tmp_path / str(year)
+        folder.mkdir()
+        layout, cache, output = make_local_source(folder, year)
+        build = import_year(layout, cache=cache, output=output)
+        with duckdb.connect(str(output), read_only=True) as con:
+            checks = check_stored_source(con, layout, output, build)
+        assert checks["record_identity_valid"]
+        assert all(checks["stored_fields_match_source_frequencies"].values())
+        # Combination consumes completed validation approvals. Other tests
+        # exercise the full legacy and published validators independently.
+        save_json(
+            output.with_suffix(".validation.json"),
+            {
+                "passed": True,
+                "candidate_sha256": sha256(output),
+                "build_identity": build["identity"],
+            },
+        )
+        layouts[year], annual[year] = layout, output
+    monkeypatch.setattr(combine, "load_layout", lambda year: layouts[year])
+    baseline = tmp_path / "protected.db"
+    with duckdb.connect(str(baseline)) as con:
+        con.execute("CREATE TABLE keep_me AS SELECT 42 AS value")
+    return annual, tmp_path / "combined.db", baseline
+
+
+def test_combined_schema_identity_and_idempotence(validated_annual_inputs):
+    from dspopulations_us_birth_certificates.ingest.combine import combine_years
+
+    annual, output, baseline = validated_annual_inputs
+    before = sha256(baseline)
+    report = combine_years(annual, output, baseline)
+    assert report["passed"] and report["rows"] == 6
+    assert sha256(baseline) == before
+    with duckdb.connect(str(output), read_only=True) as con:
+        assert con.execute(
+            "SELECT count(*),count(DISTINCT id) FROM us_births"
+        ).fetchone() == (6, 6)
+        assert con.execute(
+            "SELECT count(f_mbcntry) FROM us_births WHERE year=2024"
+        ).fetchone() == (0,)
+        assert con.execute(
+            "SELECT count(p_ds_lb_wt) FROM us_births WHERE year=2025"
+        ).fetchone() == (0,)
+        assert con.execute("SELECT count(*) FROM __natality_years").fetchone() == (2,)
+    assert combine_years(annual, output, baseline)["reused"]
+
+
+def test_combination_resumes_committed_years_without_duplicates(
+    validated_annual_inputs, monkeypatch
+):
+    from dspopulations_us_birth_certificates.ingest import combine
+
+    annual, output, baseline = validated_annual_inputs
+    original = combine._state
+
+    def interrupt(con, state):
+        if state["status"] == "checking":
+            raise OSError("Simulated interruption after annual commits")
+        original(con, state)
+
+    monkeypatch.setattr(combine, "_state", interrupt)
+    with pytest.raises(OSError, match="Simulated interruption"):
+        combine.combine_years(annual, output, baseline)
+    assert not output.exists()
+    building = output.with_suffix(".building.db")
+    with duckdb.connect(str(building), read_only=True) as con:
+        assert con.execute("SELECT count(*) FROM __natality_years").fetchone() == (2,)
+    monkeypatch.setattr(combine, "_state", original)
+    assert combine.combine_years(annual, output, baseline)["rows"] == 6
+    assert not building.exists()
+
+
+def test_combination_refuses_changed_inputs_and_unmanaged_outputs(
+    validated_annual_inputs,
+):
+    from dspopulations_us_birth_certificates.ingest.combine import combine_years
+
+    annual, output, baseline = validated_annual_inputs
+    with pytest.raises(ValueError, match="protected"):
+        combine_years(annual, baseline, baseline)
+    with duckdb.connect(str(output)) as con:
+        con.execute("CREATE TABLE keep_me AS SELECT 1 AS value")
+    before = sha256(output)
+    with pytest.raises(ValueError, match="not a managed combined"):
+        combine_years(annual, output, baseline, restart=True)
+    assert sha256(output) == before
+    with duckdb.connect(str(annual[2024])) as con:
+        con.execute("UPDATE us_births SET dbwt=4000")
+    with pytest.raises(ValueError, match="no matching successful validation"):
+        combine_years(annual, output.parent / "new.db", baseline)
+    assert not (output.parent / "new.db").exists()
+
+
+def test_combination_rolls_back_year_if_source_changes(
+    validated_annual_inputs, monkeypatch
+):
+    from dspopulations_us_birth_certificates.ingest import combine
+
+    annual, output, baseline = validated_annual_inputs
+    original = combine.sha256
+    calls = 0
+
+    def changed(path):
+        nonlocal calls
+        if path == annual[2024]:
+            calls += 1
+            if calls == 3:
+                return "changed-during-copy"
+        return original(path)
+
+    monkeypatch.setattr(combine, "sha256", changed)
+    with pytest.raises(ValueError, match="changed while copying"):
+        combine.combine_years(annual, output, baseline)
+    with duckdb.connect(str(output.with_suffix(".building.db")), read_only=True) as con:
+        assert con.execute("SELECT count(*) FROM us_births").fetchone() == (0,)
+        assert con.execute("SELECT count(*) FROM __natality_years").fetchone() == (0,)
+    monkeypatch.setattr(combine, "sha256", original)
+    assert combine.combine_years(annual, output, baseline)["rows"] == 6
+
+
+def test_optional_export_preserves_rows_and_protects_files(validated_annual_inputs):
+    from dspopulations_us_birth_certificates.ingest.combine import combine_years
+    from dspopulations_us_birth_certificates.ingest.export import export_parquet
+    from dspopulations_us_birth_certificates.variables import IMPORTED_VARS
+
+    annual, database, baseline = validated_annual_inputs
+    combine_years(annual, database, baseline)
+    output = database.with_suffix(".parquet")
+    before = sha256(database)
+    assert export_parquet(database, output, [2024]) == 3
+    with duckdb.connect(str(database), read_only=True) as con:
+        assert [
+            r[0]
+            for r in con.execute(
+                "DESCRIBE SELECT * FROM read_parquet(?)", [str(output)]
+            ).fetchall()
+        ] == IMPORTED_VARS
+        names = ", ".join(IMPORTED_VARS)
+        assert con.execute(
+            f"SELECT count(*) FROM ((SELECT {names} FROM us_births WHERE year=2024) EXCEPT ALL (SELECT * FROM read_parquet(?)))",
+            [str(output)],
+        ).fetchone() == (0,)
+    with pytest.raises(FileExistsError):
+        export_parquet(database, output, [2025])
+    saved = sha256(output)
+    with pytest.raises(ValueError, match="missing requested years"):
+        export_parquet(database, output, [1989], overwrite=True)
+    assert sha256(output) == saved
+    with pytest.raises(ValueError, match="protected"):
+        export_parquet(database, database, [2024], overwrite=True)
+    assert (
+        export_parquet(database, output, [2024, 2025], all_columns=True, overwrite=True)
+        == 6
+    )
+    assert sha256(database) == before
+
+
+def test_year_selections():
+    import argparse
+
+    from dspopulations_us_birth_certificates.ingest.years import parse_years
+
+    assert parse_years("1989,2003-2005,2004,2025") == [1989, 2003, 2004, 2005, 2025]
+    for invalid in ("", "1988", "2026", "2005-2003", "1989,", "1989;SELECT 1"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            parse_years(invalid)
+
+
+def test_spss_export_keeps_decimal_bmi_numeric(tmp_path):
+    import importlib.util
+    from decimal import Decimal
+
+    import pandas as pd
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    import pyreadstat
+
+    from dspopulations_us_birth_certificates.ingest.layouts import ROOT
+
+    spec = importlib.util.spec_from_file_location(
+        "export_spss", ROOT / "scripts/export_spss.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    source, target = tmp_path / "values.parquet", tmp_path / "values.sav"
+    pq.write_table(
+        pa.table(
+            {
+                "bmi": pa.array(
+                    [Decimal("23.7"), None, Decimal("99.9")], type=pa.decimal128(3, 1)
+                )
+            }
+        ),
+        source,
+    )
+    pyreadstat.write_sav(module.read_for_spss(source), str(target))
+    restored, metadata = pyreadstat.read_sav(str(target))
+    assert metadata.readstat_variable_types["bmi"] == "double"
+    assert restored.bmi.iloc[0] == 23.7 and pd.isna(restored.bmi.iloc[1])
+    assert restored.bmi.iloc[2] == 99.9

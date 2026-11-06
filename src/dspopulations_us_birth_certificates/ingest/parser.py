@@ -27,7 +27,15 @@ def parse_block(
         )
     count = len(block) // stride
     payload = np.frombuffer(block, dtype=np.uint8).reshape(count, stride)[:, :length]
-    bad_payload = np.any((payload < 32) | (payload > 126), axis=1)
+    invalid_bytes = (payload < 32) | (payload > 126)
+    for exception in layout.data.get("record_byte_exceptions", []):
+        position, value = exception["position"], exception["byte"]
+        matches = payload[:, position - 1] == value
+        frequencies.setdefault("__record_bytes", Counter())[
+            f"{position}:{value:02x}"
+        ] += int(np.count_nonzero(matches))
+        invalid_bytes[matches, position - 1] = False
+    bad_payload = np.any(invalid_bytes, axis=1)
     if bad_payload.any():
         raise ValueError(
             f"Nonprinting source byte at record {first_record + _first_bad(bad_payload)}"
@@ -83,7 +91,10 @@ def parse_block(
         freq = frequencies.setdefault(field["name"], Counter())
         for item in pc.value_counts(tokens).to_pylist():
             freq[item["values"]] += item["counts"]
-        for raw_token, alias in field.get("lexical_aliases", {}).items():
+        for raw_token, alias in {
+            **field.get("lexical_aliases", {}),
+            **field.get("source_code_exceptions", {}),
+        }.items():
             tokens = pc.if_else(pc.equal(tokens, raw_token), alias["canonical"], tokens)
         tokens = pc.if_else(pc.equal(tokens, " " * field["width"]), None, tokens)
         if field["type"] == "integer_string":

@@ -358,7 +358,10 @@ def _set_mrace_c(con: duckdb.DuckDBPyConnection) -> None:
         f"""
         UPDATE us_births
         SET {vars.MRACE_C} = CASE
-            WHEN {vars.MRACE15} IS NOT NULL THEN
+            -- The 2015 source has 2,923 unlisted 99 values. Retain those
+            -- raw codes, but use the bridged race when detailed race is
+            -- unavailable, as the legacy NULL conversion did.
+            WHEN NULLIF({vars.MRACE15}, 99) IS NOT NULL THEN
                 CASE
                     WHEN {vars.MRACE15} IN(1, 2, 3) THEN {vars.MRACE15}
                     WHEN {vars.MRACE15} BETWEEN 4 AND 14 THEN 4

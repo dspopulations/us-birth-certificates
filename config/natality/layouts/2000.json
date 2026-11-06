@@ -1,0 +1,1205 @@
+{
+  "schema_version": 1,
+  "year": 2000,
+  "population": "US occurrences",
+  "guide_sha256": "898584707e3ff8498c775c9376f8cd820951c153e1de86d1aadd56be8999561c",
+  "documented_record_length": 350,
+  "record_length": 350,
+  "separator": "CRLF",
+  "encoding": "ascii",
+  "allow_final_record_without_separator": false,
+  "padding": {
+    "start": 351,
+    "width": 0,
+    "byte": " "
+  },
+  "member": "Natl00us.pb",
+  "compression_method": 8,
+  "year_field": "datayear",
+  "fields": [
+    {
+      "name": "datayear",
+      "type": "uint16",
+      "status": "present",
+      "source_name": "DATAYEAR",
+      "blank": "forbidden",
+      "values": [
+        2000
+      ],
+      "ranges": [],
+      "start": 1,
+      "width": 4,
+      "guide_page": 8,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "biryr",
+      "type": "uint16",
+      "status": "present",
+      "source_name": "BIRYR",
+      "blank": "forbidden",
+      "values": [
+        2000
+      ],
+      "ranges": [],
+      "start": 176,
+      "width": 4,
+      "guide_page": 42,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "dob_yy",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dob_mm",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dob_wk",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dob_tt",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bfacil3",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmage",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DMAGE",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          10,
+          54
+        ]
+      ],
+      "start": 70,
+      "width": 2,
+      "guide_page": 28,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "dmagerpt",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DMAGERPT",
+      "blank": "forbidden",
+      "values": [
+        99
+      ],
+      "ranges": [
+        [
+          10,
+          54
+        ]
+      ],
+      "start": 91,
+      "width": 2,
+      "guide_page": 34,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "mager14",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager9",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mage36",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MAGE36",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "start": 72,
+      "width": 2,
+      "guide_page": 28,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "mager12",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager41",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mbstate_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "restatus",
+      "source_name": "RESTATUS",
+      "status": "present",
+      "start": 6,
+      "width": 1,
+      "guide_page": 8,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          4
+        ]
+      ],
+      "values": [],
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "mbrace",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MRACE",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78
+      ],
+      "ranges": [],
+      "start": 80,
+      "width": 2,
+      "guide_page": 30,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "mracerec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mraceimp",
+      "source_name": "MRACEIMP",
+      "status": "present",
+      "start": 79,
+      "width": 1,
+      "guide_page": 30,
+      "type": "uint8",
+      "blank": "not_imputed",
+      "ranges": [],
+      "values": [
+        1,
+        2
+      ],
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "ormoth",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "ORMOTH",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 77,
+      "width": 1,
+      "guide_page": 30,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "orracem",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "ORRACEM",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "start": 78,
+      "width": 1,
+      "guide_page": 30,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "umhisp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mracehisp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mar",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mar_p",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmar",
+      "source_name": "DMAR",
+      "status": "present",
+      "start": 87,
+      "width": 1,
+      "guide_page": 33,
+      "type": "integer_string",
+      "blank": "forbidden",
+      "ranges": [],
+      "values": [
+        1,
+        2
+      ],
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "dmeduc",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DMEDUC",
+      "blank": "forbidden",
+      "values": [
+        99
+      ],
+      "ranges": [
+        [
+          0,
+          17
+        ]
+      ],
+      "start": 83,
+      "width": 2,
+      "guide_page": 32,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "meduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "umeduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "meduc6",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MEDUC6",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          1,
+          6
+        ]
+      ],
+      "start": 85,
+      "width": 1,
+      "guide_page": 32,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "meduc_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mplbir",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MPLBIR",
+      "blank": "forbidden",
+      "values": [
+        59,
+        99
+      ],
+      "ranges": [
+        [
+          1,
+          57
+        ]
+      ],
+      "start": 88,
+      "width": 2,
+      "guide_page": 33,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "dfage",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DFAGE",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          10,
+          99
+        ]
+      ],
+      "start": 154,
+      "width": 2,
+      "guide_page": 39,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "dfagerpt",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DFAGERPT",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          10,
+          99
+        ]
+      ],
+      "start": 166,
+      "width": 2,
+      "guide_page": 42,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "fage11",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FAGE11",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "start": 156,
+      "width": 2,
+      "guide_page": 39,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "fagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ufagecomb",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fagecomb",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fagerec11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fbrace",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "orfath",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "ORFATH",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 158,
+      "width": 1,
+      "guide_page": 39,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "orracef",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "ORRACEF",
+      "blank": "forbidden",
+      "values": [],
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "start": 159,
+      "width": 1,
+      "guide_page": 40,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "fraceimp",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACEIMP",
+      "blank": "not_imputed",
+      "values": [
+        3
+      ],
+      "ranges": [],
+      "start": 168,
+      "width": 1,
+      "guide_page": 42,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "fracerec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ufhisp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fracehisp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACE",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78,
+        99
+      ],
+      "ranges": [],
+      "start": 160,
+      "width": 2,
+      "guide_page": 40,
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "feduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priorlive",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priordead",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priorterm",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "lbo_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "tbo_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "illb_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ilop_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ilp_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "precare",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "pay",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "pay_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar5",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar5r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar10",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar10r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dplural",
+      "source_name": "DPLURAL",
+      "status": "present",
+      "start": 201,
+      "width": 1,
+      "guide_page": 45,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": [],
+      "guide_section": "Detail natality record, field position and code outline"
+    },
+    {
+      "name": "imp_plural",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "setorder_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "previs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "previs_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "wic",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "sex",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "gestrec10",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dbwt",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dwgt_r",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_aven1",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_aven6",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_nicu",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_surf",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_anti",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_seiz",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_abnorm",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_anen",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_mnsb",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cchd",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cdh",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_omph",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_gast",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_limb",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cleft",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_clpal",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "downs",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "DOWNS",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        8,
+        9
+      ],
+      "ranges": [],
+      "start": 304,
+      "width": 1,
+      "guide_page": 53,
+      "guide_section": "Detail natality record, field position and code outline",
+      "reporting_flag": "f_congan"
+    },
+    {
+      "name": "uca_downs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_down",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_downs",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_disor",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_hypo",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_congen",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bfed",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "m_ht_in",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bmi",
+      "type": "decimal1",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bmi_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "pwgt_r",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "wtgain",
+      "source_name": "WTGAIN",
+      "status": "present",
+      "start": 250,
+      "width": 2,
+      "guide_page": 49,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          0,
+          99
+        ]
+      ],
+      "values": [],
+      "guide_section": "Detail natality record, field position and code outline",
+      "reporting_flag": "f_wtgain"
+    },
+    {
+      "name": "rf_pdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_gdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_phype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ghype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ehype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ppterm",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_inftr",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_fedrg",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_artec",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_cesar",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_cesarn",
+      "type": "integer_string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_risks",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_indl",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_augm",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_anes",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "me_pres",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rdmeth_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmeth_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "attend",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2000; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "f_morigin",
+      "source_name": "ORIGM",
+      "status": "present",
+      "start": 307,
+      "width": 1,
+      "guide_page": 53,
+      "type": "uint8",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_forigin",
+      "source_name": "ORIGF",
+      "status": "present",
+      "start": 308,
+      "width": 1,
+      "guide_page": 53,
+      "type": "uint8",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_meduc",
+      "source_name": "EDUCM",
+      "status": "present",
+      "start": 309,
+      "width": 1,
+      "guide_page": 53,
+      "type": "uint8",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_wtgain",
+      "source_name": "WTGN",
+      "status": "present",
+      "start": 318,
+      "width": 1,
+      "guide_page": 54,
+      "type": "uint8",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_congan",
+      "source_name": "CONGAN",
+      "status": "present",
+      "start": 322,
+      "width": 1,
+      "guide_page": 54,
+      "type": "uint8",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    }
+  ]
+}

@@ -1,0 +1,3449 @@
+{
+  "schema_version": 1,
+  "year": 2012,
+  "population": "US occurrences",
+  "guide_sha256": "f6990fb76c3084376e623a7d191a826c136dc697da9759929fb4dcc692885514",
+  "documented_record_length": 775,
+  "record_length": 775,
+  "separator": "CRLF",
+  "encoding": "ascii",
+  "allow_final_record_without_separator": false,
+  "padding": {
+    "start": 776,
+    "width": 0,
+    "byte": " "
+  },
+  "member": "Nat2012PublicUS.r20131217",
+  "compression_method": 9,
+  "year_field": "dob_yy",
+  "fields": [
+    {
+      "name": "datayear",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "biryr",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dob_yy",
+      "source_name": "DOB_YY",
+      "status": "present",
+      "start": 15,
+      "width": 4,
+      "guide_page": 13,
+      "type": "uint16",
+      "blank": "forbidden",
+      "ranges": [],
+      "values": [
+        2012
+      ]
+    },
+    {
+      "name": "dob_mm",
+      "source_name": "DOB_MM",
+      "status": "present",
+      "start": 19,
+      "width": 2,
+      "guide_page": 13,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "dob_wk",
+      "source_name": "DOB_WK",
+      "status": "present",
+      "start": 29,
+      "width": 1,
+      "guide_page": 13,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "dob_tt",
+      "source_name": "DOB_TT",
+      "status": "present",
+      "start": 25,
+      "width": 4,
+      "guide_page": 13,
+      "type": "uint16",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          2359
+        ]
+      ],
+      "values": [
+        9999
+      ]
+    },
+    {
+      "name": "bfacil3",
+      "source_name": "BFACIL3",
+      "status": "present",
+      "start": 59,
+      "width": 1,
+      "guide_page": 15,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mager",
+      "source_name": "MAGER",
+      "status": "present",
+      "start": 89,
+      "width": 2,
+      "guide_page": 15,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          12,
+          50
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "dmage",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager14",
+      "source_name": "MAGER14",
+      "status": "present",
+      "start": 91,
+      "width": 2,
+      "guide_page": 16,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          3,
+          14
+        ]
+      ],
+      "values": [
+        1
+      ]
+    },
+    {
+      "name": "mager9",
+      "source_name": "MAGER9",
+      "status": "present",
+      "start": 93,
+      "width": 1,
+      "guide_page": 16,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mage36",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager12",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager41",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mbstate_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "restatus",
+      "source_name": "RESTATUS",
+      "status": "present",
+      "start": 138,
+      "width": 1,
+      "guide_page": 18,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          4
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mbrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MBRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        21,
+        22,
+        23,
+        24
+      ],
+      "ranges": [],
+      "start": 139,
+      "width": 2,
+      "guide_page": 19
+    },
+    {
+      "name": "mrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78
+      ],
+      "ranges": [],
+      "start": 141,
+      "width": 2,
+      "guide_page": 19
+    },
+    {
+      "name": "mracerec",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MRACEREC",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "ranges": [],
+      "start": 143,
+      "width": 1,
+      "guide_page": 20
+    },
+    {
+      "name": "mrace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mraceimp",
+      "source_name": "MRACEIMP",
+      "status": "present",
+      "start": 144,
+      "width": 1,
+      "guide_page": 21,
+      "type": "uint8",
+      "blank": "not_imputed",
+      "ranges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "ormoth",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "orracem",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "umhisp",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UMHISP",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 148,
+      "width": 1,
+      "guide_page": 21
+    },
+    {
+      "name": "mhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mracehisp",
+      "source_name": "MRACEHISP",
+      "status": "present",
+      "start": 149,
+      "width": 1,
+      "guide_page": 21,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "mar",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MAR",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        9
+      ],
+      "ranges": [],
+      "start": 153,
+      "width": 1,
+      "guide_page": 21
+    },
+    {
+      "name": "mar_p",
+      "source_name": "MAR_P",
+      "status": "present",
+      "start": 152,
+      "width": 1,
+      "guide_page": 21,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U",
+        "X"
+      ],
+      "reporting_flag": "f_mar_p"
+    },
+    {
+      "name": "dmar",
+      "type": "integer_string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmeduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "meduc",
+      "source_name": "MEDUC",
+      "status": "present",
+      "start": 155,
+      "width": 1,
+      "guide_page": 22,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "umeduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "meduc6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "meduc_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mplbir",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dfage",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dfagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fage11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ufagecomb",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. The guide also lists UFAGECOMB at position 184; it is not silently added to this project column."
+    },
+    {
+      "name": "fagecomb",
+      "source_name": "FAGECOMB",
+      "status": "present",
+      "start": 182,
+      "width": 2,
+      "guide_page": 22,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          9,
+          98
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "fagerec11",
+      "source_name": "FAGEREC11",
+      "status": "present",
+      "start": 186,
+      "width": 2,
+      "guide_page": 22,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "fbrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FBRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        21,
+        22,
+        23,
+        24,
+        99
+      ],
+      "ranges": [],
+      "start": 188,
+      "width": 2,
+      "guide_page": 23
+    },
+    {
+      "name": "orfath",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "orracef",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fraceimp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fracerec",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACEREC",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        9
+      ],
+      "ranges": [],
+      "start": 191,
+      "width": 1,
+      "guide_page": 23
+    },
+    {
+      "name": "ufhisp",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UFHISP",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 195,
+      "width": 1,
+      "guide_page": 24
+    },
+    {
+      "name": "fracehisp",
+      "source_name": "FRACEHISP",
+      "status": "present",
+      "start": 196,
+      "width": 1,
+      "guide_page": 24,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "frace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78,
+        99
+      ],
+      "ranges": [],
+      "start": 199,
+      "width": 2,
+      "guide_page": 25
+    },
+    {
+      "name": "feduc",
+      "source_name": "FEDUC",
+      "status": "present",
+      "start": 197,
+      "width": 1,
+      "guide_page": 24,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_feduc"
+    },
+    {
+      "name": "priorlive",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priordead",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priorterm",
+      "source_name": "PRIORTERM",
+      "status": "present",
+      "start": 208,
+      "width": 2,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          30
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "lbo_rec",
+      "source_name": "LBO_REC",
+      "status": "present",
+      "start": 212,
+      "width": 1,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "tbo_rec",
+      "source_name": "TBO_REC",
+      "status": "present",
+      "start": 217,
+      "width": 1,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "illb_r11",
+      "source_name": "ILLB_R11",
+      "status": "present",
+      "start": 537,
+      "width": 2,
+      "guide_page": 39,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          8
+        ]
+      ],
+      "values": [
+        99,
+        88
+      ],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "ilop_r11",
+      "source_name": "ILOP_R11",
+      "status": "present",
+      "start": 542,
+      "width": 2,
+      "guide_page": 40,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          8
+        ]
+      ],
+      "values": [
+        99,
+        88
+      ],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "ilp_r11",
+      "source_name": "ILP_R11",
+      "status": "present",
+      "start": 547,
+      "width": 2,
+      "guide_page": 40,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          8
+        ]
+      ],
+      "values": [
+        99,
+        88
+      ],
+      "review_note": "Printed 2024 page 21 repeats 00 and 01 then ends at 06. Preserve raw 00-08 codes without assigning category labels; see audit note for supporting adjacent-year evidence.",
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "precare",
+      "source_name": "PRECARE",
+      "status": "present",
+      "start": 245,
+      "width": 2,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_mpcb"
+    },
+    {
+      "name": "pay",
+      "source_name": "PAY",
+      "status": "present",
+      "start": 412,
+      "width": 1,
+      "guide_page": 33,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "reporting_flag": "f_pay"
+    },
+    {
+      "name": "pay_rec",
+      "source_name": "PAY_REC",
+      "status": "present",
+      "start": 413,
+      "width": 1,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          4
+        ]
+      ],
+      "values": [
+        9
+      ],
+      "reporting_flag": "f_pay_rec"
+    },
+    {
+      "name": "apgar5",
+      "source_name": "APGAR5",
+      "status": "present",
+      "start": 415,
+      "width": 2,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_apgar5"
+    },
+    {
+      "name": "apgar5r",
+      "source_name": "APGAR5R",
+      "status": "present",
+      "start": 417,
+      "width": 1,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_apgar5"
+    },
+    {
+      "name": "apgar10",
+      "source_name": "APGAR10",
+      "status": "present",
+      "start": 418,
+      "width": 2,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          10
+        ]
+      ],
+      "values": [
+        99,
+        88
+      ],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "apgar10r",
+      "source_name": "APGAR10R",
+      "status": "present",
+      "start": 420,
+      "width": 1,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "dplural",
+      "source_name": "DPLURAL",
+      "status": "present",
+      "start": 423,
+      "width": 1,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "imp_plural",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "setorder_r",
+      "source_name": "SetOrder_R",
+      "status": "present",
+      "start": 557,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "previs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "previs_rec",
+      "source_name": "PREVIS_REC",
+      "status": "present",
+      "start": 272,
+      "width": 2,
+      "guide_page": 27,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_tpcv"
+    },
+    {
+      "name": "wic",
+      "source_name": "WIC",
+      "status": "present",
+      "start": 281,
+      "width": 1,
+      "guide_page": 28,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_wic"
+    },
+    {
+      "name": "sex",
+      "source_name": "SEX",
+      "status": "present",
+      "start": 436,
+      "width": 1,
+      "guide_page": 35,
+      "type": "string",
+      "blank": "forbidden",
+      "ranges": [],
+      "values": [
+        "M",
+        "F"
+      ]
+    },
+    {
+      "name": "gestrec10",
+      "source_name": "GESTREC10",
+      "status": "present",
+      "start": 453,
+      "width": 2,
+      "guide_page": 36,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "dbwt",
+      "source_name": "DBWT",
+      "status": "present",
+      "start": 463,
+      "width": 4,
+      "guide_page": 36,
+      "type": "uint16",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          227,
+          8165
+        ]
+      ],
+      "values": [
+        9999
+      ]
+    },
+    {
+      "name": "dwgt_r",
+      "source_name": "DWgt_R",
+      "status": "present",
+      "start": 552,
+      "width": 3,
+      "guide_page": 41,
+      "type": "uint16",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          100,
+          400
+        ]
+      ],
+      "values": [
+        999
+      ],
+      "reporting_flag": "f_dwgt"
+    },
+    {
+      "name": "ab_aven1",
+      "source_name": "AB_AVEN1",
+      "status": "present",
+      "start": 476,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_vent"
+    },
+    {
+      "name": "ab_aven6",
+      "source_name": "AB_AVEN6",
+      "status": "present",
+      "start": 477,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_vent6"
+    },
+    {
+      "name": "ab_nicu",
+      "source_name": "AB_NICU",
+      "status": "present",
+      "start": 478,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_niuc"
+    },
+    {
+      "name": "ab_surf",
+      "source_name": "AB_SURF",
+      "status": "present",
+      "start": 479,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_surfac"
+    },
+    {
+      "name": "ab_anti",
+      "source_name": "AB_ANTI",
+      "status": "present",
+      "start": 480,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_antibio"
+    },
+    {
+      "name": "ab_seiz",
+      "source_name": "AB_SEIZ",
+      "status": "present",
+      "start": 481,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ab_seiz"
+    },
+    {
+      "name": "no_abnorm",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_anen",
+      "source_name": "CA_ANEN",
+      "status": "present",
+      "start": 492,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_anen"
+    },
+    {
+      "name": "ca_mnsb",
+      "source_name": "CA_MNSB",
+      "status": "present",
+      "start": 493,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_menin"
+    },
+    {
+      "name": "ca_cchd",
+      "source_name": "CA_CCHD",
+      "status": "present",
+      "start": 494,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_heart"
+    },
+    {
+      "name": "ca_cdh",
+      "source_name": "CA_CDH",
+      "status": "present",
+      "start": 495,
+      "width": 1,
+      "guide_page": 37,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_hernia"
+    },
+    {
+      "name": "ca_omph",
+      "source_name": "CA_OMPH",
+      "status": "present",
+      "start": 496,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_ompha"
+    },
+    {
+      "name": "ca_gast",
+      "source_name": "CA_GAST",
+      "status": "present",
+      "start": 497,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_gastro"
+    },
+    {
+      "name": "ca_limb",
+      "source_name": "CA_LIMB",
+      "status": "present",
+      "start": 498,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_limb"
+    },
+    {
+      "name": "ca_cleft",
+      "source_name": "CA_CLEFT",
+      "status": "present",
+      "start": 499,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_cleftlp"
+    },
+    {
+      "name": "ca_clpal",
+      "source_name": "CA_CLPAL",
+      "status": "present",
+      "start": 500,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_cleft"
+    },
+    {
+      "name": "downs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "uca_downs",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UCA_DOWNS",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        9
+      ],
+      "ranges": [],
+      "start": 523,
+      "width": 1,
+      "guide_page": 39,
+      "reporting_flag": "f_uca_downs"
+    },
+    {
+      "name": "ca_down",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_downs",
+      "type": "string",
+      "status": "present",
+      "source_name": "CA_DOWNS",
+      "blank": "not_on_certificate",
+      "values": [
+        "C",
+        "P",
+        "N",
+        "U"
+      ],
+      "ranges": [],
+      "start": 501,
+      "width": 1,
+      "guide_page": 38,
+      "reporting_flag": "f_ca_downs"
+    },
+    {
+      "name": "ca_disor",
+      "source_name": "CA_DISOR",
+      "status": "present",
+      "start": 502,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "C",
+        "P",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_chrom"
+    },
+    {
+      "name": "ca_hypo",
+      "source_name": "CA_HYPO",
+      "status": "present",
+      "start": 503,
+      "width": 1,
+      "guide_page": 38,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_ca_hypos"
+    },
+    {
+      "name": "no_congen",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bfed",
+      "source_name": "BFED",
+      "status": "present",
+      "start": 528,
+      "width": 1,
+      "guide_page": 39,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_bfed"
+    },
+    {
+      "name": "m_ht_in",
+      "source_name": "M_Ht_In",
+      "status": "present",
+      "start": 555,
+      "width": 2,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          30,
+          78
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_m_ht"
+    },
+    {
+      "name": "bmi",
+      "source_name": "BMI",
+      "status": "present",
+      "start": 529,
+      "width": 4,
+      "guide_page": 39,
+      "type": "decimal1",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          "13.0",
+          "69.9"
+        ]
+      ],
+      "values": [
+        "99.9"
+      ],
+      "reporting_flag": "f_m_ht"
+    },
+    {
+      "name": "bmi_r",
+      "source_name": "BMI_R",
+      "status": "present",
+      "start": 533,
+      "width": 1,
+      "guide_page": 39,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          6
+        ]
+      ],
+      "values": [
+        9
+      ],
+      "reporting_flag": "f_m_ht"
+    },
+    {
+      "name": "pwgt_r",
+      "source_name": "PWgt_R",
+      "status": "present",
+      "start": 549,
+      "width": 3,
+      "guide_page": 41,
+      "type": "uint16",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          75,
+          375
+        ]
+      ],
+      "values": [
+        999
+      ],
+      "reporting_flag": "f_pwgt"
+    },
+    {
+      "name": "wtgain",
+      "source_name": "WTGAIN",
+      "status": "present",
+      "start": 276,
+      "width": 2,
+      "guide_page": 27,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          98
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_wtgain"
+    },
+    {
+      "name": "rf_pdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_gdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_phype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ghype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ehype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ppterm",
+      "source_name": "RF_PPTERM",
+      "status": "present",
+      "start": 318,
+      "width": 1,
+      "guide_page": 29,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_rf_ppb"
+    },
+    {
+      "name": "rf_inftr",
+      "source_name": "RF_INFTR",
+      "status": "present",
+      "start": 321,
+      "width": 1,
+      "guide_page": 29,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_rf_inft"
+    },
+    {
+      "name": "rf_fedrg",
+      "source_name": "RF_FEDRG",
+      "status": "present",
+      "start": 322,
+      "width": 1,
+      "guide_page": 29,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U",
+        "X"
+      ]
+    },
+    {
+      "name": "rf_artec",
+      "source_name": "RF_ARTEC",
+      "status": "present",
+      "start": 323,
+      "width": 1,
+      "guide_page": 29,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U",
+        "X"
+      ],
+      "reporting_flag": "f_rf_inf_art"
+    },
+    {
+      "name": "rf_cesar",
+      "source_name": "RF_CESAR",
+      "status": "present",
+      "start": 324,
+      "width": 1,
+      "guide_page": 29,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ],
+      "reporting_flag": "f_rf_cesar"
+    },
+    {
+      "name": "rf_cesarn",
+      "source_name": "RF_CESARN",
+      "status": "present",
+      "start": 325,
+      "width": 2,
+      "guide_page": 29,
+      "type": "integer_string",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          30
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_rf_ncesar"
+    },
+    {
+      "name": "no_risks",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2012; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_indl",
+      "source_name": "LD_INDL",
+      "status": "present",
+      "start": 365,
+      "width": 1,
+      "guide_page": 31,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ]
+    },
+    {
+      "name": "ld_augm",
+      "source_name": "LD_AUGM",
+      "status": "present",
+      "start": 366,
+      "width": 1,
+      "guide_page": 31,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ]
+    },
+    {
+      "name": "ld_anes",
+      "source_name": "LD_ANES",
+      "status": "present",
+      "start": 373,
+      "width": 1,
+      "guide_page": 31,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        "Y",
+        "N",
+        "U"
+      ]
+    },
+    {
+      "name": "me_pres",
+      "source_name": "ME_PRES",
+      "status": "present",
+      "start": 392,
+      "width": 1,
+      "guide_page": 32,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "values": [
+        9
+      ]
+    },
+    {
+      "name": "rdmeth_rec",
+      "source_name": "RDMETH_REC",
+      "status": "present",
+      "start": 401,
+      "width": 1,
+      "guide_page": 33,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          6
+        ]
+      ],
+      "values": [
+        9
+      ]
+    },
+    {
+      "name": "dmeth_rec",
+      "source_name": "DMETH_REC",
+      "status": "present",
+      "start": 403,
+      "width": 1,
+      "guide_page": 33,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        9
+      ]
+    },
+    {
+      "name": "attend",
+      "source_name": "ATTEND",
+      "status": "present",
+      "start": 410,
+      "width": 1,
+      "guide_page": 33,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ]
+    },
+    {
+      "name": "revision",
+      "source_name": "REVISION",
+      "status": "present",
+      "start": 7,
+      "width": 1,
+      "guide_page": 13,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "values": [
+        "A",
+        "S"
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_morigin",
+      "source_name": "F_MORIGIN",
+      "status": "present",
+      "start": 569,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_forigin",
+      "source_name": "F_FORIGIN",
+      "status": "present",
+      "start": 570,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_meduc",
+      "source_name": "F_MEDUC",
+      "status": "present",
+      "start": 571,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_feduc",
+      "source_name": "F_FEDUC",
+      "status": "present",
+      "start": 572,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_clinest",
+      "source_name": "F_CLINEST",
+      "status": "present",
+      "start": 573,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_apgar5",
+      "source_name": "F_APGAR5",
+      "status": "present",
+      "start": 574,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_tobaco",
+      "source_name": "F_TOBACO",
+      "status": "present",
+      "start": 575,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_m_ht",
+      "source_name": "F_M_HT",
+      "status": "present",
+      "start": 576,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_pwgt",
+      "source_name": "F_PWGT",
+      "status": "present",
+      "start": 577,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_dwgt",
+      "source_name": "F_DWGT",
+      "status": "present",
+      "start": 578,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_wic",
+      "source_name": "F_WIC",
+      "status": "present",
+      "start": 579,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_pay",
+      "source_name": "F_PAY",
+      "status": "present",
+      "start": 580,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_bfed",
+      "source_name": "F_BFED",
+      "status": "present",
+      "start": 581,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_pdiab",
+      "source_name": "F_RF_PDIAB",
+      "status": "present",
+      "start": 582,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_gdiab",
+      "source_name": "F_RF_GDIAB",
+      "status": "present",
+      "start": 583,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_phyper",
+      "source_name": "F_RF_PHYPER",
+      "status": "present",
+      "start": 584,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_ghyper",
+      "source_name": "F_RF_GHYPER",
+      "status": "present",
+      "start": 585,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_eclamp",
+      "source_name": "F_RF_ECLAMP",
+      "status": "present",
+      "start": 586,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_ppb",
+      "source_name": "F_RF_PPB",
+      "status": "present",
+      "start": 587,
+      "width": 1,
+      "guide_page": 41,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_ppo",
+      "source_name": "F_RF_PPO",
+      "status": "present",
+      "start": 588,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_inft",
+      "source_name": "F_RF_INFT",
+      "status": "present",
+      "start": 590,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_inft_drg",
+      "source_name": "F_RF_INFT_DRG",
+      "status": "present",
+      "start": 591,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_inf_art",
+      "source_name": "F_RF_INF_ART",
+      "status": "present",
+      "start": 592,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_cesar",
+      "source_name": "F_RF_CESAR",
+      "status": "present",
+      "start": 593,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rf_ncesar",
+      "source_name": "F_RF_NCESAR",
+      "status": "present",
+      "start": 594,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ip_gonor",
+      "source_name": "F_IP_GONOR",
+      "status": "present",
+      "start": 595,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ip_syph",
+      "source_name": "F_IP_SYPH",
+      "status": "present",
+      "start": 596,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ip_chlam",
+      "source_name": "F_IP_CHLAM",
+      "status": "present",
+      "start": 598,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ip_hepatb",
+      "source_name": "F_IP_HEPATB",
+      "status": "present",
+      "start": 599,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ip_hepatc",
+      "source_name": "F_IP_HEPATC",
+      "status": "present",
+      "start": 600,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ob_cervic",
+      "source_name": "F_OB_CERVIC",
+      "status": "present",
+      "start": 601,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ob_toco",
+      "source_name": "F_OB_TOCO",
+      "status": "present",
+      "start": 602,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ob_succ",
+      "source_name": "F_OB_SUCC",
+      "status": "present",
+      "start": 603,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ob_fail",
+      "source_name": "F_OB_FAIL",
+      "status": "present",
+      "start": 604,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ol_rupture",
+      "source_name": "F_OL_RUPTURE",
+      "status": "present",
+      "start": 605,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ol_precip",
+      "source_name": "F_OL_PRECIP",
+      "status": "present",
+      "start": 606,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ol_prolong",
+      "source_name": "F_OL_PROLONG",
+      "status": "present",
+      "start": 607,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_induct",
+      "source_name": "F_LD_INDUCT",
+      "status": "present",
+      "start": 608,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_augment",
+      "source_name": "F_LD_AUGMENT",
+      "status": "present",
+      "start": 609,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_steriods",
+      "source_name": "F_LD_STERIODS",
+      "status": "present",
+      "start": 611,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_antibio",
+      "source_name": "F_LD_ANTIBIO",
+      "status": "present",
+      "start": 612,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_chorio",
+      "source_name": "F_LD_CHORIO",
+      "status": "present",
+      "start": 613,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_mecon",
+      "source_name": "F_LD_MECON",
+      "status": "present",
+      "start": 614,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_fintol",
+      "source_name": "F_LD_FINTOL",
+      "status": "present",
+      "start": 615,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ld_anesth",
+      "source_name": "F_LD_ANESTH",
+      "status": "present",
+      "start": 616,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_md_present",
+      "source_name": "F_MD_PRESENT",
+      "status": "present",
+      "start": 619,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_md_route",
+      "source_name": "F_MD_ROUTE",
+      "status": "present",
+      "start": 620,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_md_trial",
+      "source_name": "F_MD_TRIAL",
+      "status": "present",
+      "start": 621,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_mtrans",
+      "source_name": "F_MM_MTRANS",
+      "status": "present",
+      "start": 622,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_lacer",
+      "source_name": "F_MM_LACER",
+      "status": "present",
+      "start": 623,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_ruptur",
+      "source_name": "F_MM_RUPTUR",
+      "status": "present",
+      "start": 624,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_uhystr",
+      "source_name": "F_MM_UHYSTR",
+      "status": "present",
+      "start": 625,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_icu",
+      "source_name": "F_MM_ICU",
+      "status": "present",
+      "start": 626,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mm_or",
+      "source_name": "F_MM_OR",
+      "status": "present",
+      "start": 627,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_vent",
+      "source_name": "F_AB_VENT",
+      "status": "present",
+      "start": 628,
+      "width": 1,
+      "guide_page": 42,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_vent6",
+      "source_name": "F_AB_VENT6",
+      "status": "present",
+      "start": 629,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_niuc",
+      "source_name": "F_AB_NIUC",
+      "status": "present",
+      "start": 630,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_surfac",
+      "source_name": "F_AB_SURFAC",
+      "status": "present",
+      "start": 631,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_antibio",
+      "source_name": "F_AB_ANTIBIO",
+      "status": "present",
+      "start": 632,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_seiz",
+      "source_name": "F_AB_SEIZ",
+      "status": "present",
+      "start": 633,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ab_inj",
+      "source_name": "F_AB_INJ",
+      "status": "present",
+      "start": 634,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_anen",
+      "source_name": "F_CA_ANEN",
+      "status": "present",
+      "start": 635,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_menin",
+      "source_name": "F_CA_MENIN",
+      "status": "present",
+      "start": 636,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_heart",
+      "source_name": "F_CA_HEART",
+      "status": "present",
+      "start": 637,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_hernia",
+      "source_name": "F_CA_HERNIA",
+      "status": "present",
+      "start": 638,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_ompha",
+      "source_name": "F_CA_OMPHA",
+      "status": "present",
+      "start": 639,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_gastro",
+      "source_name": "F_CA_GASTRO",
+      "status": "present",
+      "start": 640,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_limb",
+      "source_name": "F_CA_LIMB",
+      "status": "present",
+      "start": 641,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_cleftlp",
+      "source_name": "F_CA_CLEFTLP",
+      "status": "present",
+      "start": 642,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_cleft",
+      "source_name": "F_CA_CLEFT",
+      "status": "present",
+      "start": 643,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_downs",
+      "source_name": "F_CA_DOWNS",
+      "status": "present",
+      "start": 644,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_chrom",
+      "source_name": "F_CA_CHROM",
+      "status": "present",
+      "start": 645,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_ca_hypos",
+      "source_name": "F_CA_HYPOS",
+      "status": "present",
+      "start": 646,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_wtgain",
+      "source_name": "F_WTGAIN",
+      "status": "present",
+      "start": 648,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_api",
+      "source_name": "F_API",
+      "status": "present",
+      "start": 650,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mar_g",
+      "source_name": "F_MAR_G",
+      "status": "present",
+      "start": 652,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mar_p",
+      "source_name": "F_MAR_P",
+      "status": "present",
+      "start": 653,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mpcb",
+      "source_name": "F_MPCB",
+      "status": "present",
+      "start": 668,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_tpcv",
+      "source_name": "F_TPCV",
+      "status": "present",
+      "start": 671,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_cigs_0",
+      "source_name": "F_CIGS_0",
+      "status": "present",
+      "start": 672,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_cigs_1",
+      "source_name": "F_CIGS_1",
+      "status": "present",
+      "start": 673,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_cigs_2",
+      "source_name": "F_CIGS_2",
+      "status": "present",
+      "start": 674,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_cigs_3",
+      "source_name": "F_CIGS_3",
+      "status": "present",
+      "start": 675,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_facility",
+      "source_name": "F_FACILITY",
+      "status": "present",
+      "start": 676,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_pay_rec",
+      "source_name": "F_PAY_REC",
+      "status": "present",
+      "start": 678,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_rdmeth_rec",
+      "source_name": "F_RDMETH_REC",
+      "status": "present",
+      "start": 679,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_urf_diabetes",
+      "source_name": "F_URF_DIABETES",
+      "status": "present",
+      "start": 684,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_urf_chyper",
+      "source_name": "F_URF_CHYPER",
+      "status": "present",
+      "start": 688,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_urf_phyper",
+      "source_name": "F_URF_PHYPER",
+      "status": "present",
+      "start": 689,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_urf_eclamp",
+      "source_name": "F_URF_ECLAMP",
+      "status": "present",
+      "start": 690,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uob_induct",
+      "source_name": "F_UOB_INDUCT",
+      "status": "present",
+      "start": 703,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uob_tocol",
+      "source_name": "F_UOB_TOCOL",
+      "status": "present",
+      "start": 705,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uld_meconium",
+      "source_name": "F_ULD_MECONIUM",
+      "status": "present",
+      "start": 712,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uld_precip",
+      "source_name": "F_ULD_PRECIP",
+      "status": "present",
+      "start": 718,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uld_breech",
+      "source_name": "F_ULD_BREECH",
+      "status": "present",
+      "start": 721,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_u_forcep",
+      "source_name": "F_U_FORCEP",
+      "status": "present",
+      "start": 734,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_u_vacuum",
+      "source_name": "F_U_VACUUM",
+      "status": "present",
+      "start": 735,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_anen",
+      "source_name": "F_UCA_ANEN",
+      "status": "present",
+      "start": 752,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_spina",
+      "source_name": "F_UCA_SPINA",
+      "status": "present",
+      "start": 753,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_omphalo",
+      "source_name": "F_UCA_OMPHALO",
+      "status": "present",
+      "start": 761,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_cleftlp",
+      "source_name": "F_UCA_CLEFTLP",
+      "status": "present",
+      "start": 766,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_hernia",
+      "source_name": "F_UCA_HERNIA",
+      "status": "present",
+      "start": 769,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_uca_downs",
+      "source_name": "F_UCA_DOWNS",
+      "status": "present",
+      "start": 771,
+      "width": 1,
+      "guide_page": 44,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    }
+  ]
+}

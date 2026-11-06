@@ -37,7 +37,10 @@ def protect_output(output: Path, baseline: Path | None = None) -> None:
 
 def code_digest() -> str:
     files = (
-        sorted(Path(__file__).parent.glob("*.py"))
+        [
+            Path(__file__).parent / name
+            for name in ("database.py", "layouts.py", "parser.py", "sources.py")
+        ]
         + [
             ROOT / "src/dspopulations_us_birth_certificates" / name
             for name in (
@@ -127,6 +130,11 @@ def import_year(
         source["archive_url"], archive, source["archive_sha256"]
     )
     guide_metadata = download(source["guide_urls"][0], guide, source["guide_sha256"])
+    supporting_guides = [
+        download(url, cache / Path(url).name, digest)
+        for url, digest in source.get("guide_sha256_by_url", {}).items()
+        if url != source["guide_urls"][0]
+    ]
     reference_hashes = (
         {p.name: sha256(p) for p in sorted(reference_dir.glob("us-births-*.csv"))}
         if with_derivations
@@ -166,10 +174,13 @@ def import_year(
                 raise ValueError(
                     "Existing output is not a managed natality pilot; refusing to modify it"
                 )
-            previous = json.loads(
-                con.execute("SELECT state FROM __natality_build WHERE id=1").fetchone()[
-                    0
-                ]
+            saved_state = con.execute(
+                "SELECT state FROM __natality_build WHERE id=1"
+            ).fetchone()
+            previous = (
+                json.loads(saved_state[0])
+                if saved_state
+                else {"identity": {"year": layout.year}, "status": "incomplete"}
             )
             if previous["identity"]["year"] != layout.year:
                 raise ValueError("The pilot output must contain only the selected year")
@@ -222,11 +233,14 @@ def import_year(
             # The member context has checked EOF, byte count, CRC and child exit status.
             exceptions = []
             for field in layout.fields:
-                for token, alias in field.get("lexical_aliases", {}).items():
+                for token, alias in {
+                    **field.get("lexical_aliases", {}),
+                    **field.get("source_code_exceptions", {}),
+                }.items():
                     observed = frequencies[field["name"]].get(token, 0)
                     if observed != alias["expected_count"]:
                         raise ValueError(
-                            f"Lexical exception count changed for {field['name']}: {observed}"
+                            f"Source exception count changed for {field['name']}: {observed}"
                         )
                     exceptions.append(
                         {
@@ -236,10 +250,19 @@ def import_year(
                             "observed_count": observed,
                         }
                     )
-            actual = con.execute("""
+            for exception in layout.data.get("record_byte_exceptions", []):
+                token = f"{exception['position']}:{exception['byte']:02x}"
+                observed = frequencies.get("__record_bytes", {}).get(token, 0)
+                if observed != exception["expected_count"]:
+                    raise ValueError(f"Record byte exception count changed: {token}")
+                exceptions.append(
+                    {"record_byte": token, **exception, "observed_count": observed}
+                )
+            year_field = identifier(layout.data.get("year_field", "dob_yy"))
+            actual = con.execute(f"""
                 SELECT count(*), count(*) FILTER (WHERE restatus IN (1,2,3)),
-                    count(*) FILTER (WHERE restatus=4), min(dob_yy), max(dob_yy),
-                    count(dob_yy), min(source_record), max(source_record)
+                    count(*) FILTER (WHERE restatus=4), min({year_field}), max({year_field}),
+                    count({year_field}), min(source_record), max(source_record)
                 FROM __incoming
             """).fetchone()
             expected = source["expected_counts"]
@@ -270,6 +293,7 @@ def import_year(
                 load_seconds=time.monotonic() - started,
                 archive=archive_metadata,
                 guide=guide_metadata,
+                supporting_guides=supporting_guides,
                 source_exceptions=exceptions,
             )
             # Save the frequency evidence before marking the database accepted.

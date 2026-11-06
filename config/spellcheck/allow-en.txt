@@ -142,6 +142,7 @@ preliz
 pymc
 pyproject
 pytensor
+readback
 reframing
 recomputation
 reparameterise

@@ -1,102 +1,92 @@
 > [!NOTE]
 > AI-assisted revision by Codex (GPT-6).
 
-# CDC text import pilot
+# CDC text import
 
-The CDC import reads the annual ZIP into a separate DuckDB database. It does not write an expanded text file or intermediate Parquet files. The supported years are 2024 and 2025. The source catalogue lists 1989-2025, but the command rejects years whose layouts have not been reviewed.
+The importer supports the 37 US natality files for 1989–2025. It streams each compressed text member into typed Arrow batches and writes them directly to DuckDB. It does not create expanded text files or require Parquet. Territories are outside this import.
 
-The live database at `data/us_births.db` remains the analysis source. The pilot command has no database replacement step. It refuses that path, `data/us_births_temp.db`, the selected comparison database, and symbolic or hard links to those files.
+The annual [source catalogue](../config/natality/sources.json) pins the archive, guide and addendum hashes. Each [layout](../config/natality/layouts/) records positions, widths, code domains, blank meanings, reporting flags and guide pages. Every project import column has an explicit presence or absence decision. Equal record lengths do not establish equal layouts.
 
-## Run the 2024 pilot
+The live database at `data/us_births.db` remains unchanged. Import and combination refuse that path, `data/us_births_temp.db`, the selected comparison database, and symbolic or hard links to those files. There is no automatic replacement step.
 
-Use Python 3.14 through the locked project environment, from the repository root:
+## Build the candidate
+
+Use Python 3.14 through the locked environment, from the repository root. Historical validation needs the saved SAS-derived database as its comparison source.
 
 ```bash
 uv sync --locked
-uv run python scripts/import_natality.py --year 2024
+uv run python scripts/import_natality.py --years 1989-2025
 ```
 
-The defaults are 50,000 records per batch, two DuckDB threads and a 2 GB DuckDB memory limit. Python, Arrow and the decompressor also use memory. The run measures resident memory, which is the memory the operating system holds for the process. Its report states whether it could also measure child processes.
+The command downloads each archive and its documentation into `data/raw/natality/<year>/`. Existing cache files must match the audited hashes. A changed release requires a new source and layout review. Downloads use temporary files, retries and hash checks.
 
-Both reviewed archives use Deflate64 compression. Python's standard ZIP module cannot decode that method. Install 7-Zip with its `7zz` or `7z` command, or use an `unzip` build that reports both `USE_DEFLATE64` and `ZIP64_SUPPORT` when run with `unzip -v`. The importer detects these tools. It streams the selected member to Python and checks the decompressor's exit status, the byte count and the ZIP CRC checksum. It uses Python directly for supported ZIP methods.
+Each year is imported and validated under `data/staging/natality/<year>/`. After every annual validation passes, the command combines the annual databases into `data/staging/natality/us_births.db`. A comma-separated selection such as `--years 1989,2003-2005,2025` also works.
 
-The command downloads the archive and guide into `data/raw/natality/2024/`. A download must match the hash recorded during the source audit. An existing file with a different hash causes an error. It is not silently accepted or overwritten. New source releases need a new audit and recorded hash.
+The defaults are 50,000 records per batch, two DuckDB threads and a 2 GB DuckDB memory limit. Python, Arrow and decompression use memory in addition to the DuckDB limit. Reports give elapsed time and measured resident memory, with a flag stating whether child processes were included.
 
-The default outputs are:
+Most archives use compression supported by Python. Deflate64 archives need `7zz`, `7z`, or an `unzip` build with both `USE_DEFLATE64` and `ZIP64_SUPPORT`. The 2015 archive uses PPMd and needs `7zz`, `7z`, or `bsdtar`. The importer checks the external command's exit status, the expanded byte count and the ZIP CRC checksum. It never extracts an archive into the working directory.
 
-| Path under `data/staging/natality/2024/` | Contents |
+## Outputs and validation
+
+| Annual output | Contents |
 | --- | --- |
-| `us_births.db` | Imported columns, reporting flags, study derivations, reference tables and build metadata. |
-| `us_births.import.json` | Source controls, file and code hashes, package versions, timing and memory measurements. |
-| `us_births.frequencies.json` | Counts of each source code, including blanks, before conversion. |
-| `us_births.validation.json` | Read-only comparison with the existing database, including differences and its unchanged-file check. |
+| `us_births.db` | Source columns, reporting flags, study derivations, reference tables and build metadata |
+| `us_births.import.json` | Source controls, hashes, package versions, timings and memory measurements |
+| `us_births.frequencies.json` | Counts of raw field tokens, including blanks, before conversion |
+| `us_births.validation.json` | Validation result tied to the exact candidate database hash |
+| `us_births.coverage.json` | Additional reference-coverage report for 2025 |
 
-These directories are ignored by Git. The database and detailed local reports are not publication outputs.
+These paths are ignored by Git. They contain local data and audit artefacts, not publication outputs.
 
-Use an explicit baseline or resource settings if needed:
+Source checks cover every record's length, separator, padding, selected fields and embedded year. They check occurrence and residence counts against the guide. A small number of source exceptions have explicit positions or tokens and exact expected counts. A changed count fails the import. The [historical audit](../notes/20261106-cdc-historical-import-audit.md) explains them.
 
-```bash
-uv run python scripts/import_natality.py --year 2024 \
-  --baseline data/us_births.db \
-  --output data/staging/natality/2024/us_births.db \
-  --batch-size 50000 --memory-limit 2GB --threads 2
-```
+The validator checks each stored source column against its raw token frequencies, checks unique source-record numbers and deterministic IDs, and checks derived values against available reference tables. Fields deliberately absent from an annual layout must remain NULL.
 
-## Validation and retries
+For 1989–2024, it also compares every imported column's distribution and complete rows across imported and derived study columns. The comparison preserves duplicate counts and does not assume shared row order. Thirteen age partitions, including missing age, limit memory use. Analysis counts by age, race/origin and recorded status provide a further check.
 
-The reader checks record boundaries, padding, field domains, embedded years, source integrity and the guide's occurrence and residence counts. It holds incomplete rows in a staging table. Failed imports do not become accepted analysis tables.
+Comparison expressions account for documented losses in the old route, while the new database retains the source values. These include birth times above 255, risk and anomaly codes, BMI precision, the plurality flag alias, historical race/origin code 9, 2015 race code 99 and marital-status strings ending in `.0`. The saved baseline also lacks five year-labelled records in 2005 and 27 each in 2018 and 2019. Those allowances apply only to its exact pinned hash. Every valid-year baseline row must still match, and only the specified additional source records are allowed.
 
-The importer then calculates the existing study definitions. It uses the shared functions in [preparation.py](../src/dspopulations_us_birth_certificates/preparation.py), also used by the legacy preparation script. The pilot skips the legacy type conversions and compaction routine. Missing reference years remain missing. Duplicate reference keys cause an error.
+For 2025, the saved baseline has no records. Validation instead checks forty [published controls](../config/natality/controls/2025.json), stored source fields, IDs, independent derivations and reference coverage. Each control retains its published population and reporting-flag exclusions. See the [2025 audit](../notes/20261106-cdc-2025-import-audit.md).
 
-For 2024, the comparison opens both databases read-only. It compares every imported column's distribution, then compares complete rows across all imported columns and the derived study variables. It preserves duplicate counts and does not depend on row order. It divides this work by month to limit memory use. It also compares age, race/origin and recorded-status analysis cells.
+A `source_validated` build has passed source checks. Its separate validation report must also have `passed: true`. Numerical agreement does not establish diagnostic accuracy or validate the external assumptions used in prevalence estimates.
 
-The comparison accounts for five documented differences from the legacy route. Birth times above 255, `NO_RISKS=0` and `NO_CONGEN=9` were converted to missing values. BMI passed through a 16-bit floating-point value. The old importer did not map `IMP_PLUR` to `imp_plural`. The new database retains these values. Only the comparison expressions reproduce the old losses or restore the source precision. Any unexplained difference fails the comparison.
+## Combination and retries
 
-The source check and the later validation have separate results. A database marked `source_validated` has passed the source checks. The validation report must also contain `passed: true` before the pilot can be accepted. Successful import does not change the live database.
+The combined build accepts only annual databases with matching successful validation reports, source layouts and reference hashes. It fills flags absent in particular years with NULL. It copies each year and its provenance in one transaction. Counts and two aggregate row checksums cover every copied column and are checked again after reopening the combined file.
 
-An unchanged completed import can be reused. Source, layout, code or reference changes require an explicit restart. The pilot currently holds one year per output database.
+The build uses `us_births.building.db` until these checks pass. It then replaces only the separate candidate output. `us_births.build.json` records the combined result and every annual input. An interrupted combination resumes already committed years without inserting them twice. A changed input requires `--restart`; an unmanaged database is refused even with that option.
 
 ```bash
-# Restart an incomplete or changed pilot in its separate database.
-uv run python scripts/import_natality.py --year 2024 --restart
+# Import or validate one year, with explicit paths if needed.
+uv run python scripts/import_natality.py --year 2004 --baseline data/us_births.db
 
-# Repeat the comparison without importing again.
-uv run python scripts/import_natality.py --year 2024 --validate-only
+# Rebuild an incomplete or changed annual candidate from the cached archive.
+uv run python scripts/import_natality.py --year 2004 --restart
+
+# Repeat validation of all annual candidates, then combine them.
+uv run python scripts/import_natality.py --years 1989-2025 --validate-only
+
+# Combine annual candidates whose exact files already passed validation.
+uv run python scripts/import_natality.py --years 1989-2025 --combine-only
 ```
 
-A restart rereads the cached archive from its beginning. It does not resume at an arbitrary compressed byte offset. The importer replaces an earlier accepted pilot table only inside a transaction after the new source checks pass. It refuses to modify an existing database that lacks its pilot metadata.
+`--staging-dir` changes the annual-output root. For a range, `--output` selects the combined database and `--cache` selects a root with annual subdirectories. For one year, both options refer directly to that year's output or cache. `--batch-size`, `--memory-limit` and `--threads` set resource limits.
 
-The numeric `id` is `year * 1000000000 + source_record`. This is deterministic within the exact source release. It is not a permanent birth identifier. Neither these IDs nor old prediction IDs justify joining records across releases. The build metadata records the source hash.
+An unchanged annual build can be reused. Changes to its source, layout, import code or references require a restart. A restart reads the archive from the beginning; it does not seek to a compressed byte offset. The previous accepted annual table remains until the replacement passes source checks and commits.
 
-## Run and validate 2025
+The numeric `id` is `year * 1000000000 + source_record`. It identifies a record within the exact source release, not a person across releases. Old prediction IDs cannot be used to transfer predictions. Regenerate predictions against the new build in a separate analysis copy. Changing a validated candidate invalidates its file hash.
+
+## Optional exports and analysis
+
+Parquet is now an explicit export. By default it contains the 133 project import columns. Add `--all-columns` for study derivations, source-record IDs and reporting flags. DuckDB writes the export without loading a whole year into pandas. The writer checks its row count before replacing the destination.
 
 ```bash
-uv run python scripts/import_natality.py --year 2025
+uv run python scripts/export_natality.py --years 2014-2024 --annual-dir data
+uv run python scripts/export_natality.py --years 2014-2024 --output data/us_births_all.parquet
 ```
 
-This uses `data/raw/natality/2025/` and writes a separate candidate and reports under `data/staging/natality/2025/`. It has the same resource settings and path protections as the 2024 command.
+Existing files require `--overwrite`. `--database` selects another read-only source. `scripts/make_all.py` keeps its established 2014–2024 output name and now exports from the combined CDC candidate. `scripts/export_spss.py` can consume these optional annual and combined Parquet files. The SPSS reader converts decimal BMI values to numeric values so SPSS does not treat BMI as text. Its pandas/SPSS step still needs memory for a whole input file. Record-level exports remain subject to the NCHS data restrictions.
 
-The current database has no 2025 records. The reviewed source catalogue selects validation against published controls for this year. It does not treat a skipped SAS comparison as a match. The validator checks:
+All five external reference tables lack 2025 rows. The importer leaves unsupported year-specific probabilities and case weights NULL. It does not carry 2024 values forward. The age-risk formula remains available, but it is not an observed prevalence estimate. Expected-count reports reject missing inputs. Existing fitting defaults retain their original year ranges.
 
-- All 190 stored source columns against frequencies recorded before conversion, including 34 columns absent from the 2025 source.
-- Unique source-record numbers, deterministic IDs, year and row counts.
-- Forty [published controls](../config/natality/controls/2025.json) transcribed from the guide, including residence, race/origin, maternal age and congenital-anomaly counts. The controls retain the published population and reporting-flag exclusions.
-- Study derivations, including pending versus confirmed status, age, race/origin and the existing age-risk formula.
-- Every external lookup's year and key coverage, and agreement between the available references and derived values.
-- The live database's unchanged hash, size and modification time.
-
-The extra `us_births.coverage.json` report lists all five imported reference tables. None has 2025 rows. The importer leaves `p_ds_lb_wt`, `p_ds_lb_wt_mage`, `p_ds_lb_nt_reduc` and `ds_case_weight` NULL for 2025. Three existing probability placeholders also remain NULL. The age-based `p_ds_lb_nt` calculation is available because its formula does not require a year-specific lookup. This does not make it an observed prevalence estimate.
-
-Import acceptance and model-input coverage are separate results. A passing validation report does not authorise filling missing references or extending fitted models. The expected-count section of the descriptive report now fails with the affected years when inputs are missing. The core reduction model already rejects years absent from its reduction-prior CSV. Existing fitting defaults and frozen analyses retain their original year ranges.
-
-Use `--validate-only` to repeat these checks. Use `--restart` after reviewed source, layout, code or reference changes. The command has no promotion step.
-
-## Review another year
-
-The catalogue is [sources.json](../config/natality/sources.json). Its links were taken from the US column of the CDC portal, separately from the territory column. A listed URL does not imply that its file has been validated.
-
-The [2024 specification](../config/natality/layouts/2024.json) and [2025 specification](../config/natality/layouts/2025.json) record field positions, types, code domains, blank meanings, reporting flags and guide pages. Each gives every current import column an explicit presence or absence decision. They also distinguish the guide's record length from the observed blank padding in each exact archive. The 2025 specification adds seven reporting flags and updates field-to-flag links after a comparison of all layout pages.
-
-Before enabling another year, review its guide, archive member, framing and code meanings. Add a separate specification and synthetic tests. Do not set `layout_status` to `reviewed` based on equal record lengths or a copied layout. The 2024 specification includes a note about the guide's inconsistent `ILP_R11` code list. It retains the source codes without assigning labels to the disputed categories.
-
-See the [migration plan](../plans/2026-11-06-cdc-text-import-migration.md) for the remaining historical imports, research decisions on missing external inputs and eventual database replacement. No performance result from the pilot establishes diagnostic accuracy or validates the model's external assumptions.
+Keep the live database and saved comparison sources until a separate replacement decision. For checks against the candidate, pass its path explicitly to analysis commands that accept a database path. The [workflow guide](modelling-workflow.md) describes the analysis commands. The [migration record](../plans/2026-11-06-cdc-text-import-migration.md) distinguishes the completed import work from database replacement and reference-data research.

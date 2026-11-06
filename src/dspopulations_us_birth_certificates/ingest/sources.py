@@ -107,11 +107,17 @@ def inspect_archive(path: Path, layout: Layout) -> zipfile.ZipInfo:
     return member
 
 
-def decompressor_command(path: Path, member: str) -> list[str]:
-    """Use a system tool for method 9. Never extract an intermediate text file."""
+def decompressor_command(path: Path, member: str, method: int = 9) -> list[str]:
+    """Stream Deflate64 or PPMd using a system tool."""
     for name in ("7zz", "7z"):
         if executable := shutil.which(name):
             return [executable, "x", "-so", "-bd", "-y", str(path.resolve()), member]
+    if method == 98:
+        if executable := shutil.which("bsdtar"):
+            return [executable, "-xOf", str(path.resolve()), member]
+        raise RuntimeError(
+            "This ZIP uses PPMd. Install 7-Zip (7zz/7z), or bsdtar with PPMd support."
+        )
     if executable := shutil.which("unzip"):
         info = subprocess.run(
             [executable, "-v"], capture_output=True, text=True, check=True
@@ -153,13 +159,13 @@ class CheckedReader:
 @contextmanager
 def open_member(path: Path, layout: Layout):
     member = inspect_archive(path, layout)
-    if member.compress_type != 9:
+    if member.compress_type not in (9, 98):
         with zipfile.ZipFile(path) as archive, archive.open(member) as stream:
             reader = CheckedReader(stream, member)
             yield reader, "python.zipfile"
             reader.verify()
         return
-    command = decompressor_command(path, member.filename)
+    command = decompressor_command(path, member.filename, member.compress_type)
     # A file for stderr prevents a full pipe from stopping the decompressor.
     with tempfile.TemporaryFile() as errors:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors)

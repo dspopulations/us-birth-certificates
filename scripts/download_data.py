@@ -1,4 +1,6 @@
-"""Downloads source data and user guides from CDC.
+"""Legacy NBER SAS downloader, retained for reproducing old builds.
+
+Use scripts/import_natality.py for the reviewed CDC ZIP import.
 
 Refer to terms at: https://www.cdc.gov/nchs/data_access/restrictions.htm
 """
@@ -81,6 +83,7 @@ us_data_files_sas = [
     "https://data.nber.org/nvss/natality/sas/2023/natality2023us.sas7bdat",
     "https://data.nber.org/nvss/natality/sas/2024/natality2024us.sas7bdat",
 ]
+
 
 def download_if_absent(urls: list[str]) -> None:
     """Download each URL into ``data/`` unless a same-named file already exists."""

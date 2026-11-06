@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 import time
-from collections import Counter
-from decimal import Decimal
 from pathlib import Path
 
 import duckdb
@@ -16,6 +14,7 @@ from dspopulations_us_birth_certificates.reference_data import reference_coverag
 from .database import MemoryMonitor, protect_output
 from .layouts import CONFIG, Layout, identifier, sha256
 from .sources import save_json
+from .stored_validation import check_stored_source
 
 
 def load_controls(layout: Layout) -> dict:
@@ -33,18 +32,6 @@ def load_controls(layout: Layout) -> dict:
     ):
         raise ValueError("Published controls must match this year and guide")
     return controls
-
-
-def _source_value(token: str, kind: str):
-    if not token.strip():
-        return None
-    if kind == "string":
-        return token
-    if kind == "integer_string":
-        return str(int(token))
-    if kind == "decimal1":
-        return Decimal(token)
-    return int(token)
 
 
 def validate_published(
@@ -71,6 +58,7 @@ def validate_published(
     started = time.monotonic()
     before_stat = baseline.stat()
     before_hash = sha256(baseline)
+    candidate_before = sha256(candidate)
     report = {
         "year": layout.year,
         "validation_mode": "published_controls",
@@ -99,42 +87,8 @@ def validate_published(
                 "Candidate has not passed source validation with this reviewed layout and source"
             )
         report["build_identity"] = build["identity"]
-        frequencies_path = candidate.with_suffix(".frequencies.json")
-        if sha256(frequencies_path) != build.get("frequencies_sha256"):
-            raise ValueError("Source frequency report is missing or changed")
-        frequencies = json.loads(frequencies_path.read_text())
-        count, distinct, low, high, bad_ids, bad_year = con.execute("""
-            SELECT count(*), count(DISTINCT source_record), min(source_record), max(source_record),
-                count(*) FILTER (WHERE id IS DISTINCT FROM 2025000000000 + source_record),
-                count(*) FILTER (WHERE dob_yy IS DISTINCT FROM 2025)
-            FROM us_births
-        """).fetchone()
-        expected = layout.source["expected_counts"]["occurrence"]
-        report["rows"] = count
-        report["record_identity_valid"] = (
-            count == distinct == high == expected
-            and low == 1
-            and not bad_ids
-            and not bad_year
-        )
-        field_checks = {}
-        for field in layout.fields:
-            name = identifier(field["name"])
-            actual = dict(
-                con.execute(
-                    f"SELECT {name},count(*) FROM us_births GROUP BY {name}"
-                ).fetchall()
-            )
-            if field["status"] == "absent":
-                desired = {None: count}
-            else:
-                desired = Counter()
-                for token, n in frequencies[field["name"]].items():
-                    desired[_source_value(token, field["type"])] += n
-            field_checks[field["name"]] = (
-                actual == desired and sum(desired.values()) == count
-            )
-        report["stored_fields_match_source_frequencies"] = field_checks
+        report.update(check_stored_source(con, layout, candidate, build))
+        field_checks = report["stored_fields_match_source_frequencies"]
         report["published_controls"] = []
         for control in controls["controls"]:
             actual = con.execute(
@@ -195,6 +149,7 @@ def validate_published(
         }
     after_stat = baseline.stat()
     report["baseline_sha256_after"] = sha256(baseline)
+    report["candidate_sha256"] = sha256(candidate)
     report["baseline_unchanged"] = (
         before_hash == report["baseline_sha256_after"]
         and before_stat.st_size == after_stat.st_size
@@ -202,6 +157,7 @@ def validate_published(
     )
     report["passed"] = bool(
         report["baseline_unchanged"]
+        and candidate_before == report["candidate_sha256"]
         and report["record_identity_valid"]
         and all(field_checks.values())
         and all(c["passed"] for c in report["published_controls"])

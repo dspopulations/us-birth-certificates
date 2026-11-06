@@ -75,6 +75,7 @@ def allowed_tokens(field: dict) -> list[str]:
     if field["blank"] != "forbidden":
         values.add(" " * width)
     values.update(field.get("lexical_aliases", {}))
+    values.update(field.get("source_code_exceptions", {}))
     return sorted(values)
 
 
@@ -95,6 +96,11 @@ def validate_layout(data: dict, source: dict) -> None:
         )
     if "source_record" in names:
         raise ValueError("Reserved source_record column")
+    year_field = data.get("year_field", "dob_yy")
+    if year_field not in ("dob_yy", "datayear") or not any(
+        f["name"] == year_field and f["status"] == "present" for f in data["fields"]
+    ):
+        raise ValueError("The embedded year needs a present, recognised source field")
     used: set[int] = set()
     for field in data["fields"]:
         identifier(field["name"])
@@ -126,7 +132,11 @@ def validate_layout(data: dict, source: dict) -> None:
         if not tokens or any(len(v) != width or not v.isascii() for v in tokens):
             raise ValueError(f"Invalid domain: {field['name']}")
         canonical = allowed_tokens(
-            {k: v for k, v in field.items() if k != "lexical_aliases"}
+            {
+                k: v
+                for k, v in field.items()
+                if k not in ("lexical_aliases", "source_code_exceptions")
+            }
         )
         for raw, alias in field.get("lexical_aliases", {}).items():
             if (
@@ -140,8 +150,41 @@ def validate_layout(data: dict, source: dict) -> None:
                 or not alias.get("reason")
             ):
                 raise ValueError(f"Invalid lexical exception: {field['name']}")
+        for raw, exception in field.get("source_code_exceptions", {}).items():
+            target = exception["canonical"]
+            if (
+                field["type"] not in ("uint8", "uint16", "integer_string")
+                or raw in canonical
+                or raw in field.get("lexical_aliases", {})
+                or not raw.strip().isdigit()
+                or not target.isascii()
+                or not target.isdigit()
+                or len(target) != width
+                or int(raw) != int(target)
+                or int(target) > (255 if field["type"] == "uint8" else 65535)
+                or not isinstance(exception["expected_count"], int)
+                or exception["expected_count"] < 1
+                or not exception.get("reason")
+            ):
+                raise ValueError(f"Invalid source code exception: {field['name']}")
         if field.get("reporting_flag") not in (None, *names):
             raise ValueError("Reporting flag is missing from layout")
+    positions = set()
+    for exception in data.get("record_byte_exceptions", []):
+        position = exception["position"]
+        if (
+            position in used
+            or position in positions
+            or not 1 <= position <= data["documented_record_length"]
+            or not 0 <= exception["byte"] < 32
+            or not isinstance(exception["expected_count"], int)
+            or exception["expected_count"] < 1
+            or not exception.get("reason")
+        ):
+            raise ValueError(
+                "Record byte exceptions must be counted and outside selected fields"
+            )
+        positions.add(position)
     padding = data["padding"]
     if (
         padding["start"] != data["documented_record_length"] + 1

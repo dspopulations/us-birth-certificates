@@ -9,6 +9,8 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Sources and preparation
 
+- [CDC historical layout review and complete 1989–2025 import](20261106-cdc-historical-import-audit.md).
+
 - [CDC source audit and 2024 import pilot](20261106-cdc-2024-import-audit.md).
 - [CDC 2025 layout, reference coverage and validated import](20261106-cdc-2025-import-audit.md).
 - [Race and Hispanic-origin audit](202604201112-mracehisp-error.md) and [multi-race grouping](20260628-multi-race-selection-group-scoping.md).

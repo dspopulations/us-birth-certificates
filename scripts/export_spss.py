@@ -5,6 +5,17 @@ from datetime import datetime
 
 import pandas as pd
 import pyreadstat as stats
+from dse_research_utils.environment.setup import init_script
+
+
+def read_for_spss(source):
+    """Keep the CDC decimal BMI column numeric in the SPSS output."""
+    df = pd.read_parquet(source)
+    if "bmi" in df:
+        # pandas reads DuckDB DECIMAL as Python Decimal objects. Without this
+        # conversion, pyreadstat writes BMI as a string variable in SPSS.
+        df["bmi"] = df["bmi"].astype("float64")
+    return df
 
 
 def export_spss():
@@ -31,7 +42,7 @@ def export_spss():
 
         print(f"Reading {source}...")
 
-        df = pd.read_parquet(source)
+        df = read_for_spss(source)
 
         print(f"Exporting to {dest}...")
 
@@ -45,5 +56,10 @@ def export_spss():
             myzip.write(dest)
 
 
-if __name__ == "__main__":
+def main():
+    init_script()
     export_spss()
+
+
+if __name__ == "__main__":
+    main()
