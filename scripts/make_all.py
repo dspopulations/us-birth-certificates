@@ -1,49 +1,26 @@
-"""Merge annual data files into one."""
+"""Export the historical 2014-2024 modelling subset from the CDC database."""
 
-import pandas as pd
+from pathlib import Path
 
-from dspopulations_us_birth_certificates import variables
+from dse_research_utils.environment.setup import init_script
 
-PARQUET_ENGINE = "fastparquet"
+from dspopulations_us_birth_certificates.ingest.export import export_parquet
 
 
 def merge_years():
-    "Merge annual data files into one."
+    """Keep the established output name without loading whole years into pandas."""
+    return export_parquet(
+        Path("data/staging/natality/us_births.db"),
+        Path("data/us_births_all.parquet"),
+        list(range(2014, 2025)),
+        overwrite=True,
+    )
 
-    sources = [
-        "data/us_births_2014.parquet",
-        "data/us_births_2015.parquet",
-        "data/us_births_2016.parquet",
-        "data/us_births_2017.parquet",
-        "data/us_births_2018.parquet",
-        "data/us_births_2019.parquet",
-        "data/us_births_2020.parquet",
-        "data/us_births_2021.parquet",
-        "data/us_births_2022.parquet",
-        "data/us_births_2023.parquet",
-        "data/us_births_2024.parquet",
-    ]
 
-    dataframes = []
-
-    for source in sources:
-        print(f"Reading {source}...")
-
-        df = pd.read_parquet(source)
-
-        # Annual parquets carry only ``IMPORTED_VARS`` (reindexed by
-        # ``import_parquet.py``); the COMPUTED columns are derived later
-        # in the DuckDB stage. ``set_all_column_types`` would index every
-        # COMPUTED entry with df[col] and KeyError on the first missing
-        # one — only the imported dtypes apply at this stage.
-        df = variables.set_imported_column_types(df)
-
-        dataframes.append(df)
-
-    data_all = pd.concat(dataframes)
-
-    data_all.to_parquet("data/us_births_all.parquet", engine=PARQUET_ENGINE)
+def main():
+    init_script()
+    merge_years()
 
 
 if __name__ == "__main__":
-    merge_years()
+    main()

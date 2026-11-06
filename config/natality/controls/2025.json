@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "year": 2025,
+  "guide_sha256": "6bebb300e2ab0e3fec7293c468e44f8f187233833e4962fa1d824745c79430d8",
+  "guide_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2025.pdf",
+  "reviewed_on": "2026-11-06",
+  "notes": [
+    "All controls use births to US residents except the occurrence and foreign-resident controls.",
+    "Table 32 uses reporting flags and combines C/P as stated on guide page 69. The spina bifida control excludes Virginia through its reporting flag.",
+    "PDF page 156 is Table 32, although the contents list gives page 155. Suppressed cells and rounded rates are not used as exact controls."
+  ],
+  "controls": [
+    {
+      "name": "occurrence",
+      "where": "TRUE",
+      "expected": 3619990,
+      "pdf_page": 9,
+      "table": "Control count"
+    },
+    {
+      "name": "resident",
+      "where": "restatus IN (1,2,3)",
+      "expected": 3612012,
+      "pdf_page": 9,
+      "table": "Control count"
+    },
+    {
+      "name": "foreign_resident",
+      "where": "restatus=4",
+      "expected": 7978,
+      "pdf_page": 9,
+      "table": "Control count"
+    },
+    {
+      "name": "race6_1",
+      "where": "restatus IN (1,2,3) AND mrace6=1",
+      "expected": 2690786,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_1",
+      "where": "restatus IN (1,2,3) AND mrace6=1 AND mhisp_r=0",
+      "expected": 1795300,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "race6_2",
+      "where": "restatus IN (1,2,3) AND mrace6=2",
+      "expected": 521534,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_2",
+      "where": "restatus IN (1,2,3) AND mrace6=2 AND mhisp_r=0",
+      "expected": 457016,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "race6_3",
+      "where": "restatus IN (1,2,3) AND mrace6=3",
+      "expected": 34258,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_3",
+      "where": "restatus IN (1,2,3) AND mrace6=3 AND mhisp_r=0",
+      "expected": 23296,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "race6_4",
+      "where": "restatus IN (1,2,3) AND mrace6=4",
+      "expected": 237991,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_4",
+      "where": "restatus IN (1,2,3) AND mrace6=4 AND mhisp_r=0",
+      "expected": 223892,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "race6_5",
+      "where": "restatus IN (1,2,3) AND mrace6=5",
+      "expected": 14281,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_5",
+      "where": "restatus IN (1,2,3) AND mrace6=5 AND mhisp_r=0",
+      "expected": 10208,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "race6_6",
+      "where": "restatus IN (1,2,3) AND mrace6=6",
+      "expected": 113162,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "non_hispanic_race6_6",
+      "where": "restatus IN (1,2,3) AND mrace6=6 AND mhisp_r=0",
+      "expected": 94943,
+      "pdf_page": 98,
+      "table": "4"
+    },
+    {
+      "name": "hispanic",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5",
+      "expected": 971688,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_1",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=1",
+      "expected": 616,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_2",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=2",
+      "expected": 50777,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_3",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=3",
+      "expected": 205061,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_4",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=4",
+      "expected": 282943,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_5",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=5",
+      "expected": 256842,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_6",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=6",
+      "expected": 138597,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_7",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=7",
+      "expected": 34535,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_8",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=8",
+      "expected": 2158,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "hispanic_age9_9",
+      "where": "restatus IN (1,2,3) AND mhisp_r BETWEEN 1 AND 5 AND mager9=9",
+      "expected": 159,
+      "pdf_page": 99,
+      "table": "5"
+    },
+    {
+      "name": "ca_anen_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_anen=1 AND ca_anen IN ('Y')",
+      "expected": 316,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_mnsb_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_menin=1 AND ca_mnsb IN ('Y')",
+      "expected": 398,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_cchd_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_heart=1 AND ca_cchd IN ('Y')",
+      "expected": 2568,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_cdh_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_hernia=1 AND ca_cdh IN ('Y')",
+      "expected": 486,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_omph_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_ompha=1 AND ca_omph IN ('Y')",
+      "expected": 316,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_gast_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_gastro=1 AND ca_gast IN ('Y')",
+      "expected": 481,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_limb_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_limb=1 AND ca_limb IN ('Y')",
+      "expected": 386,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_cleft_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_cleftlp=1 AND ca_cleft IN ('Y')",
+      "expected": 1801,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_clpal_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_cleft=1 AND ca_clpal IN ('Y')",
+      "expected": 743,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_down_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_downs=1 AND ca_down IN ('C','P')",
+      "expected": 1789,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_disor_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_chrom=1 AND ca_disor IN ('C','P')",
+      "expected": 1804,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "ca_hypo_reported",
+      "where": "restatus IN (1,2,3) AND f_ca_hypos=1 AND ca_hypo IN ('Y')",
+      "expected": 1835,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "down_not_stated",
+      "where": "restatus IN (1,2,3) AND f_ca_downs=1 AND (ca_down='U' OR ca_down IS NULL)",
+      "expected": 11622,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "spina_bifida_population",
+      "where": "restatus IN (1,2,3) AND f_ca_menin=1",
+      "expected": 3518689,
+      "pdf_page": 156,
+      "table": "32"
+    },
+    {
+      "name": "resident_male",
+      "where": "restatus IN (1,2,3) AND sex='M'",
+      "expected": 1845551,
+      "pdf_page": 156,
+      "table": "32"
+    }
+  ]
+}

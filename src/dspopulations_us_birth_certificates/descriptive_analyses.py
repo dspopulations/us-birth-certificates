@@ -26,6 +26,9 @@ import pandas as pd
 from dse_research_utils.plot import styles
 
 from dspopulations_us_birth_certificates.plot_utils import save_fig
+from dspopulations_us_birth_certificates.reference_data import (
+    require_complete_estimates,
+)
 
 # ---------------------------------------------------------------------------
 # Shared constants / helpers
@@ -169,6 +172,7 @@ def section_a_counts(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
 
 
 def section_b_recording_rate(con: duckdb.DuckDBPyConnection, out: Path) -> dict:
+    require_complete_estimates(con, ["p_ds_lb_nt", "p_ds_lb_nt_reduc", "p_ds_lb_wt"])
     df = _q(
         con,
         """
@@ -768,6 +772,9 @@ def build_all(db_path: str | Path, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(db_path), read_only=True)
     try:
+        require_complete_estimates(
+            con, ["p_ds_lb_nt", "p_ds_lb_nt_reduc", "p_ds_lb_wt"]
+        )
         summary: dict = {"duckdb_path": str(db_path)}
         summary.update(section_a_counts(con, out))
         summary.update(section_b_recording_rate(con, out))

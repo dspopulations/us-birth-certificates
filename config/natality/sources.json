@@ -1,0 +1,840 @@
+{
+  "schema_version": 1,
+  "portal_url": "https://www.cdc.gov/nchs/data_access/VitalStatsOnline.htm",
+  "checked_on": "2026-11-06",
+  "portal_sha256": "f6851c04d64f9bd8c8a3c5f994f9b9d8fd73b7f267b258d1ca1503656a7abb4a",
+  "sources": [
+    {
+      "year": 1989,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1989.ZIP",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1989doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1989.json",
+      "archive_sha256": "21e39c8040981148d1ea2bb7236f14ca499c1651d30032f7507de0a959630ed3",
+      "archive_size": 141007082,
+      "guide_sha256": "92dab8115baec71eec3633239cbd042b2079ad6b80bd1b3a3a43c3276ac3a7cb",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1989doc.pdf": "92dab8115baec71eec3633239cbd042b2079ad6b80bd1b3a3a43c3276ac3a7cb"
+      },
+      "expected_counts": {
+        "occurrence": 4045693,
+        "resident": 4040958,
+        "foreign_resident": 4735
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 1990,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1990.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1990doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1990.json",
+      "archive_sha256": "c27320794b267d0745d16a427a2928a709890811556bffe0ba06c37e0004d59b",
+      "archive_size": 137694304,
+      "guide_sha256": "459fabe2e9cb6c0d96b64b1fdf0219b773bbda12c6254fbd2c30ab9498a603fd",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1990doc.pdf": "459fabe2e9cb6c0d96b64b1fdf0219b773bbda12c6254fbd2c30ab9498a603fd"
+      },
+      "expected_counts": {
+        "occurrence": 4162917,
+        "resident": 4158212,
+        "foreign_resident": 4705
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 1991,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1991.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1991doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1991.json",
+      "archive_sha256": "c4081fbc546489aff8a31418a627b0caaf50d94ff4c61302ee806a4b7a53bd68",
+      "archive_size": 136995806,
+      "guide_sha256": "0e5b3dbf962b4cd6a0c27dedf1a868e4afa577934f7731d512e62055f7920324",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1991doc.pdf": "0e5b3dbf962b4cd6a0c27dedf1a868e4afa577934f7731d512e62055f7920324"
+      },
+      "expected_counts": {
+        "occurrence": 4115342,
+        "resident": 4110907,
+        "foreign_resident": 4435
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 1992,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1992.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1992doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1992.json",
+      "archive_sha256": "75fe64963335998113dbe48d75312812b4c1fcac81905dc32af4545a30ac550c",
+      "archive_size": 144948036,
+      "guide_sha256": "184ccecb9c4e208365eeb56e455ac95b02ed254ab48ce2a26e20e1fbe5448cba",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1992doc.pdf": "184ccecb9c4e208365eeb56e455ac95b02ed254ab48ce2a26e20e1fbe5448cba"
+      },
+      "expected_counts": {
+        "occurrence": 4069428,
+        "resident": 4065014,
+        "foreign_resident": 4414
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 1993,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1993.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1993doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1993.json",
+      "archive_sha256": "01ae9492260cba7f1cad57db1315b23eb73028e56961fb071099aa7797c1c5f3",
+      "archive_size": 142617272,
+      "guide_sha256": "40f8f5f8ae01636b83273db916bad39296ce17dca42bfe1c7babb585f1e5864c",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1993doc.pdf": "40f8f5f8ae01636b83273db916bad39296ce17dca42bfe1c7babb585f1e5864c"
+      },
+      "expected_counts": {
+        "occurrence": 4004523,
+        "resident": 4000240,
+        "foreign_resident": 4283
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 1994,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1994us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1994doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1994.json",
+      "archive_sha256": "b211aaf88a3f4c5c17859f0ae3c39dd64603abf5c34384522e7cfedc8e4fb475",
+      "archive_size": 120943300,
+      "guide_sha256": "99109b5ef7fee97cfc4f5e643d93446d8f96afa84ec6b054240684fef26d4e03",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1994doc.pdf": "99109b5ef7fee97cfc4f5e643d93446d8f96afa84ec6b054240684fef26d4e03"
+      },
+      "expected_counts": {
+        "occurrence": 3956925,
+        "resident": 3952767,
+        "foreign_resident": 4158
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 1995,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1995us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1995doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1995.json",
+      "archive_sha256": "2c59cbbaeeff2d9448c4644f06870bca02a23f02811467e4c2a1ad3317606075",
+      "archive_size": 134062041,
+      "guide_sha256": "86cc15ae731e3dccd48a3a4f05295c7dbd75d3959e4e96b2bd4d601f37dccf16",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1995doc.pdf": "86cc15ae731e3dccd48a3a4f05295c7dbd75d3959e4e96b2bd4d601f37dccf16"
+      },
+      "expected_counts": {
+        "occurrence": 3903012,
+        "resident": 3899589,
+        "foreign_resident": 3423
+      },
+      "control_count_page": 10
+    },
+    {
+      "year": 1996,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1996us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1996doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1996.json",
+      "archive_sha256": "4ce8c4095022c6c4c7424afdd840f4bcbc52bb7473e523427ce24229f1f7beb3",
+      "archive_size": 113932303,
+      "guide_sha256": "a2d52d713890014ef8d63d07c440662fc2acebd43d14b020d55522c9282461f1",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1996doc.pdf": "a2d52d713890014ef8d63d07c440662fc2acebd43d14b020d55522c9282461f1"
+      },
+      "expected_counts": {
+        "occurrence": 3894874,
+        "resident": 3891494,
+        "foreign_resident": 3380
+      },
+      "control_count_page": 10
+    },
+    {
+      "year": 1997,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1997us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1997doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1997.json",
+      "archive_sha256": "00431699e8ce46a226b7d49ff8ce4260e6400a7af9b79cc1998b3e838ec7b9c0",
+      "archive_size": 114017115,
+      "guide_sha256": "20ec13157493e611de7091ac9e061cff37e1a58291485cfe35ed1befbbce9a1a",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1997doc.pdf": "20ec13157493e611de7091ac9e061cff37e1a58291485cfe35ed1befbbce9a1a"
+      },
+      "expected_counts": {
+        "occurrence": 3884329,
+        "resident": 3880894,
+        "foreign_resident": 3435
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 1998,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1998us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1998doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1998.json",
+      "archive_sha256": "4e6b831c3739d3d31c4e2b475e3b90c44c156a6c70f4eee4d4b64fad9b0f1e9c",
+      "archive_size": 116538376,
+      "guide_sha256": "c42750abe715e47097f96a3b2d930e1e72af477729f86f8cdca5b859887d834f",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1998doc.pdf": "c42750abe715e47097f96a3b2d930e1e72af477729f86f8cdca5b859887d834f"
+      },
+      "expected_counts": {
+        "occurrence": 3945192,
+        "resident": 3941553,
+        "foreign_resident": 3639
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 1999,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat1999us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1999doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/1999.json",
+      "archive_sha256": "3467f1709bea69dde194f9419e9542e65423c96e863faf86e90a542c94dfbec4",
+      "archive_size": 117886988,
+      "guide_sha256": "079c84f789e1e6585e29a6bb96c00b64193e5795ade65254937bd9ef602b4425",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat1999doc.pdf": "079c84f789e1e6585e29a6bb96c00b64193e5795ade65254937bd9ef602b4425"
+      },
+      "expected_counts": {
+        "occurrence": 3963465,
+        "resident": 3959417,
+        "foreign_resident": 4048
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 2000,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2000us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2000doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2000.json",
+      "archive_sha256": "b7d359a1927f84b229879c054e28353b1ae188e5f287d5b0fa41bbc198925e2b",
+      "archive_size": 120794394,
+      "guide_sha256": "898584707e3ff8498c775c9376f8cd820951c153e1de86d1aadd56be8999561c",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2000doc.pdf": "898584707e3ff8498c775c9376f8cd820951c153e1de86d1aadd56be8999561c"
+      },
+      "expected_counts": {
+        "occurrence": 4063823,
+        "resident": 4058814,
+        "foreign_resident": 5009
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2001,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2001us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2001doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2001.json",
+      "archive_sha256": "af582bcf89cc00891f5cfc2ccd9668a48de855499408552cc8bbc85dc513a49d",
+      "archive_size": 129225841,
+      "guide_sha256": "47cf327a7d1d5642ec2a635025ea37f3702f4938a8dfc30c4c79548895cacb45",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2001doc.pdf": "47cf327a7d1d5642ec2a635025ea37f3702f4938a8dfc30c4c79548895cacb45"
+      },
+      "expected_counts": {
+        "occurrence": 4031531,
+        "resident": 4025933,
+        "foreign_resident": 5598
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2002,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2002us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2002doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2002.json",
+      "archive_sha256": "4dcaf60a86e1b1281bc52c91d5d5aeba785d9c6c5d1d59d892a8a6384847bfe7",
+      "archive_size": 129293255,
+      "guide_sha256": "46c316c65b91a2c96144ecdfdd8fb285fab951f7a280d0dd7f9b8c421e47d202",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2002doc.pdf": "46c316c65b91a2c96144ecdfdd8fb285fab951f7a280d0dd7f9b8c421e47d202"
+      },
+      "expected_counts": {
+        "occurrence": 4027376,
+        "resident": 4021726,
+        "foreign_resident": 5650
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2003,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2003us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2003doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2003.json",
+      "archive_sha256": "13f592e7fa3d3691d34814a2483de23f1dd8f669c7a513f300916d5090110abc",
+      "archive_size": 202861993,
+      "guide_sha256": "82246197e30d54c56a69314bfdcb8f553e6ca0a0d509f8ce8112c2e996b5b2f5",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2003doc.pdf": "82246197e30d54c56a69314bfdcb8f553e6ca0a0d509f8ce8112c2e996b5b2f5"
+      },
+      "expected_counts": {
+        "occurrence": 4096092,
+        "resident": 4089950,
+        "foreign_resident": 6142
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 2004,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2004us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2004doc.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2004.json",
+      "archive_sha256": "c92cc74866884c8b108bc7e2bb7025b19d9a63e6be0d27540c45a99cf2144105",
+      "archive_size": 235029625,
+      "guide_sha256": "e726d1838411f154201c2a4ae3f9c8fd5b1a6d71db8d25311b7a6b8762db1620",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/Nat2004doc.pdf": "e726d1838411f154201c2a4ae3f9c8fd5b1a6d71db8d25311b7a6b8762db1620"
+      },
+      "expected_counts": {
+        "occurrence": 4118907,
+        "resident": 4112052,
+        "foreign_resident": 6855
+      },
+      "control_count_page": 10
+    },
+    {
+      "year": 2005,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2005us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2005.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2005.json",
+      "archive_sha256": "071a08505f8571bbd8949ca32863b4d455ab6cc7add742033fe3a29f5e389cc8",
+      "archive_size": 225539189,
+      "guide_sha256": "ef19c57d38c43c9c46577d05f54db99a9261d263688c577dfebc1f4701cf53f3",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2005.pdf": "ef19c57d38c43c9c46577d05f54db99a9261d263688c577dfebc1f4701cf53f3"
+      },
+      "expected_counts": {
+        "occurrence": 4145619,
+        "resident": 4138349,
+        "foreign_resident": 7270
+      },
+      "control_count_page": 8,
+      "legacy_missing_records": {
+        "count": 5,
+        "baseline_sha256": "9a40368c72ec54a87687d622914d326797d2daf487127d1f025427e170b360ec",
+        "reason": "The saved SAS-derived database has this many fewer records in its year group than the source archive and published occurrence count. Acceptance requires every baseline row to match a source row, with exactly this many additional source rows, plus stored-field, identity and reference checks."
+      }
+    },
+    {
+      "year": 2006,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2006us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2006.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2006.json",
+      "archive_sha256": "269704e673d57d7c87801953499ae2ebbf8d6efd4cd551fc201a60a3f241cd1b",
+      "archive_size": 183619216,
+      "guide_sha256": "37feb9980b1f89ecd6be6f3b3068d46c7d99525036531eee0eb034da93d1538c",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2006.pdf": "37feb9980b1f89ecd6be6f3b3068d46c7d99525036531eee0eb034da93d1538c"
+      },
+      "expected_counts": {
+        "occurrence": 4273225,
+        "resident": 4265555,
+        "foreign_resident": 7670
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2007,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2007us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2007.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2007.json",
+      "archive_sha256": "150bf64964f281bb9cc3a251cfc3d8da82de3d12efa7ad79f06526a29fadc0e7",
+      "archive_size": 148476086,
+      "guide_sha256": "a66792bfb189ee88f1d0a68aff3f8126e2ea49476cf21a23556d3353973775c7",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2007.pdf": "a66792bfb189ee88f1d0a68aff3f8126e2ea49476cf21a23556d3353973775c7"
+      },
+      "expected_counts": {
+        "occurrence": 4324008,
+        "resident": 4316233,
+        "foreign_resident": 7775
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 2008,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2008us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2008.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2008.json",
+      "archive_sha256": "3422acc844bfb05648abbe1385756928b68582bd1a63d1a10e6d743966c23748",
+      "archive_size": 160113622,
+      "guide_sha256": "d7f27b38f0f2e99c126f9e6c5964285548bbda9e3ae6b1b850751a71405faeb5",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2008.pdf": "d7f27b38f0f2e99c126f9e6c5964285548bbda9e3ae6b1b850751a71405faeb5"
+      },
+      "expected_counts": {
+        "occurrence": 4255156,
+        "resident": 4247694,
+        "foreign_resident": 7462
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 2009,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2009us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2009.pdf",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2009_Addendum.pdf",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2009.json",
+      "archive_sha256": "b3c4e08c97a1e3c469524d46b27573ad9b21d0e76845accf1049aacedad8f30e",
+      "archive_size": 215982618,
+      "guide_sha256": "21417bb9cdb3b76622c3d139a9560866f4025b489e185125b2780bf5b313397e",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2009.pdf": "21417bb9cdb3b76622c3d139a9560866f4025b489e185125b2780bf5b313397e",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2009_Addendum.pdf": "99d96791bab34b8c5e3cd677de10405a5ecf4305801a674a984cd7b1fcf52a66",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf": "89fb3604fe817c1516c5d9748180ce7e01989913d9e7cd5105f903790e95359d"
+      },
+      "expected_counts": {
+        "occurrence": 4137836,
+        "resident": 4130665,
+        "foreign_resident": 7171
+      },
+      "control_count_page": 8
+    },
+    {
+      "year": 2010,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2010us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2010.pdf",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2010_Addendum.pdf",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2010.json",
+      "archive_sha256": "4554673b65b259df8f639ad960e077b3b83d13973b84aa8b2415d8bd76f677da",
+      "archive_size": 219590308,
+      "guide_sha256": "50477955a01e00c9d3bede8b4eee1bb60bf79b92f7cdcab28808e82f0cfdbe07",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2010.pdf": "50477955a01e00c9d3bede8b4eee1bb60bf79b92f7cdcab28808e82f0cfdbe07",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2010_Addendum.pdf": "9d64858d3fff67e89f296b076ba96a4fcbc6d523e5f571c777d2072003731982",
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf": "89fb3604fe817c1516c5d9748180ce7e01989913d9e7cd5105f903790e95359d"
+      },
+      "expected_counts": {
+        "occurrence": 4007105,
+        "resident": 3999386,
+        "foreign_resident": 7719
+      },
+      "control_count_page": 11
+    },
+    {
+      "year": 2011,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2011us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2011.json",
+      "archive_sha256": "9d9f38999a8a4d3bb5ff6174439e6379e0ccf005e81c8826365062bd5fd2c2f2",
+      "archive_size": 226145771,
+      "guide_sha256": "89fb3604fe817c1516c5d9748180ce7e01989913d9e7cd5105f903790e95359d",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2011.pdf": "89fb3604fe817c1516c5d9748180ce7e01989913d9e7cd5105f903790e95359d"
+      },
+      "expected_counts": {
+        "occurrence": 3961220,
+        "resident": 3953590,
+        "foreign_resident": 7630
+      },
+      "control_count_page": 10
+    },
+    {
+      "year": 2012,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2012us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2012.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2012.json",
+      "archive_sha256": "d96cd2d523055020ee038618566cfd86de5fb8866cbd534969abb189a4c969a6",
+      "archive_size": 228799759,
+      "guide_sha256": "f6990fb76c3084376e623a7d191a826c136dc697da9759929fb4dcc692885514",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2012.pdf": "f6990fb76c3084376e623a7d191a826c136dc697da9759929fb4dcc692885514"
+      },
+      "expected_counts": {
+        "occurrence": 3960796,
+        "resident": 3952841,
+        "foreign_resident": 7955
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 2013,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2013us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2013.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2013.json",
+      "archive_sha256": "1479de693e61b1aadd04458a2961046f263dd81a2a0ad5acf72802091a366bdb",
+      "archive_size": 229975980,
+      "guide_sha256": "176d20195ad88552614bbef2a79e7eaf1dd60a95d004295c2f362f9489875ac9",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2013.pdf": "176d20195ad88552614bbef2a79e7eaf1dd60a95d004295c2f362f9489875ac9"
+      },
+      "expected_counts": {
+        "occurrence": 3940764,
+        "resident": 3932181,
+        "foreign_resident": 8583
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2014,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2014us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2014.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2014.json",
+      "archive_sha256": "38d009deb578ec93f95b29c2c6cac668c89bbc51d5c7e0a6e2e268876163e55d",
+      "archive_size": 239978878,
+      "guide_sha256": "b9beb4043e93167be4ec6c91f6ea28be1fb53c400f1338be77de5d2bec959654",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2014.pdf": "b9beb4043e93167be4ec6c91f6ea28be1fb53c400f1338be77de5d2bec959654"
+      },
+      "expected_counts": {
+        "occurrence": 3998175,
+        "resident": 3988076,
+        "foreign_resident": 10099
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2015,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2015us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2015.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2015.json",
+      "archive_sha256": "b2de4b43a836f2ffafdf6a49c08204d0da836f8887d92a9e0fd88fc24ba4ec00",
+      "archive_size": 138246233,
+      "guide_sha256": "156ab8d2889801f3173266e097ce506c298893a6b5223688e6dd5bd403eb8448",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2015.pdf": "156ab8d2889801f3173266e097ce506c298893a6b5223688e6dd5bd403eb8448"
+      },
+      "expected_counts": {
+        "occurrence": 3988733,
+        "resident": 3978497,
+        "foreign_resident": 10236
+      },
+      "control_count_page": 39
+    },
+    {
+      "year": 2016,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2016us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2016.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2016.json",
+      "archive_sha256": "fc7103274263e97d0103bd125562ac98fadae6d17f5992123290f41b27eff01e",
+      "archive_size": 248367974,
+      "guide_sha256": "d8b58a0e422fdd364b93a2a523293673db2e3dea90e526141e5e91a8d91655ff",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2016.pdf": "d8b58a0e422fdd364b93a2a523293673db2e3dea90e526141e5e91a8d91655ff"
+      },
+      "expected_counts": {
+        "occurrence": 3956112,
+        "resident": 3945875,
+        "foreign_resident": 10237
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2017,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2017us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2017.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2017.json",
+      "archive_sha256": "24a19e1137cd44468e198300c729b7c40f4b88f8da0c08502934e463a0b9444d",
+      "archive_size": 242776873,
+      "guide_sha256": "be30837777af096f008f38a5949b2f115731ab1c9f6e2ad34884fea0af59b604",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2017.pdf": "be30837777af096f008f38a5949b2f115731ab1c9f6e2ad34884fea0af59b604"
+      },
+      "expected_counts": {
+        "occurrence": 3864754,
+        "resident": 3855500,
+        "foreign_resident": 9254
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2018,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2018us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2018-508.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2018.json",
+      "archive_sha256": "d1cba3693416697f16f55c0a032e50ce0f7a256afd80690afded06ebd295a1c6",
+      "archive_size": 228246064,
+      "guide_sha256": "98723925cb412301bed96d78e6de03ea4a3be6802a3f1061962dbf796ca5a595",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2018-508.pdf": "98723925cb412301bed96d78e6de03ea4a3be6802a3f1061962dbf796ca5a595"
+      },
+      "expected_counts": {
+        "occurrence": 3801534,
+        "resident": 3791712,
+        "foreign_resident": 9822
+      },
+      "control_count_page": 7,
+      "legacy_missing_records": {
+        "count": 27,
+        "baseline_sha256": "9a40368c72ec54a87687d622914d326797d2daf487127d1f025427e170b360ec",
+        "reason": "The saved SAS-derived database has this many fewer records in its year group than the source archive and published occurrence count. Acceptance requires every baseline row to match a source row, with exactly this many additional source rows, plus stored-field, identity and reference checks."
+      }
+    },
+    {
+      "year": 2019,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2019us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2019-508.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2019.json",
+      "archive_sha256": "453080600d044766d4549d7ade90b06ae03d6f415844288dbbfd66f7765312b1",
+      "archive_size": 226407903,
+      "guide_sha256": "780fdc49088976934f520f06f61549f4a0dc38c830735abbf3e9f4796b4a868f",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2019-508.pdf": "780fdc49088976934f520f06f61549f4a0dc38c830735abbf3e9f4796b4a868f"
+      },
+      "expected_counts": {
+        "occurrence": 3757582,
+        "resident": 3747540,
+        "foreign_resident": 10042
+      },
+      "control_count_page": 7,
+      "legacy_missing_records": {
+        "count": 27,
+        "baseline_sha256": "9a40368c72ec54a87687d622914d326797d2daf487127d1f025427e170b360ec",
+        "reason": "The saved SAS-derived database has this many fewer records in its year group than the source archive and published occurrence count. Acceptance requires every baseline row to match a source row, with exactly this many additional source rows, plus stored-field, identity and reference checks."
+      }
+    },
+    {
+      "year": 2020,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2020us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2020.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2020.json",
+      "archive_sha256": "0a4d0b50c89a65e83dd94086480ad32150da31be3a67fe528eb9fbb426b92a97",
+      "archive_size": 229997676,
+      "guide_sha256": "52494052020cb8e28a6794b9087b2848ce180e5c5240a9e0146ed157a0fda245",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2020.pdf": "52494052020cb8e28a6794b9087b2848ce180e5c5240a9e0146ed157a0fda245"
+      },
+      "expected_counts": {
+        "occurrence": 3619826,
+        "resident": 3613647,
+        "foreign_resident": 6179
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2021,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2021us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2021.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2021.json",
+      "archive_sha256": "3dea777017a63afce07f9da1b022142b94067b752ebd2d16af4da07291b2ae19",
+      "archive_size": 232756903,
+      "guide_sha256": "eebabdc2ce679de0ccea1b69aa41786979b9e8b99491bb64281a6f2d3565158f",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2021.pdf": "eebabdc2ce679de0ccea1b69aa41786979b9e8b99491bb64281a6f2d3565158f"
+      },
+      "expected_counts": {
+        "occurrence": 3669928,
+        "resident": 3664292,
+        "foreign_resident": 5636
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2022,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2022us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2022.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2022.json",
+      "archive_sha256": "d0b5c283e695e928c51f94aa55b02ed70c6a319bfb09eb95a994728d48416adc",
+      "archive_size": 222103574,
+      "guide_sha256": "fa92a64befb4fa404e24b8c56548a0687b0b65a64cb4812073408d43afa8dec6",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2022.pdf": "fa92a64befb4fa404e24b8c56548a0687b0b65a64cb4812073408d43afa8dec6"
+      },
+      "expected_counts": {
+        "occurrence": 3676029,
+        "resident": 3667758,
+        "foreign_resident": 8271
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2023,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2023us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2023.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2023.json",
+      "archive_sha256": "4474daab3475af096397e26ed5fdb541b1df59ee9b555fc0b31db84c44d83663",
+      "archive_size": 229522736,
+      "guide_sha256": "1b6bde59483c1fc0c34391c1a4e28ad6b48e182663b06854d06319fbd55efa76",
+      "guide_sha256_by_url": {
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2023.pdf": "1b6bde59483c1fc0c34391c1a4e28ad6b48e182663b06854d06319fbd55efa76"
+      },
+      "expected_counts": {
+        "occurrence": 3605081,
+        "resident": 3596017,
+        "foreign_resident": 9064
+      },
+      "control_count_page": 7
+    },
+    {
+      "year": 2024,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2024us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2024.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2024.json",
+      "archive_sha256": "8ce1c61bc055b3327311985f918db5387ea6a1ed7d34b367afe30f468b92225a",
+      "archive_size": 231829759,
+      "guide_sha256": "7fb7ad1831c5021fc0b87b86d3713a00f733cc9d6ce183a597c9a63536d2fd88",
+      "expected_counts": {
+        "occurrence": 3638436,
+        "resident": 3628934,
+        "foreign_resident": 9502
+      },
+      "control_count_page": 9
+    },
+    {
+      "year": 2025,
+      "population": "US occurrences",
+      "archive_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2025us.zip",
+      "guide_urls": [
+        "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2025.pdf"
+      ],
+      "layout_status": "reviewed",
+      "layout_file": "layouts/2025.json",
+      "archive_sha256": "f5de5435144780919d00d73f508bfb2d5ac1589817a7e6f9173e6a5065368d88",
+      "guide_sha256": "6bebb300e2ab0e3fec7293c468e44f8f187233833e4962fa1d824745c79430d8",
+      "expected_counts": {
+        "occurrence": 3619990,
+        "resident": 3612012,
+        "foreign_resident": 7978
+      },
+      "validation_mode": "published_controls",
+      "controls_file": "controls/2025.json",
+      "controls_sha256": "7ac737b610efa40c52a1f8dcc8fb30e3796b17f36aaaae421a5153df9493c44a"
+    }
+  ]
+}

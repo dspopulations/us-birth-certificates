@@ -1,0 +1,1654 @@
+{
+  "schema_version": 1,
+  "year": 2003,
+  "population": "US occurrences",
+  "guide_sha256": "82246197e30d54c56a69314bfdcb8f553e6ca0a0d509f8ce8112c2e996b5b2f5",
+  "documented_record_length": 1350,
+  "record_length": 1350,
+  "separator": "CRLF",
+  "encoding": "ascii",
+  "allow_final_record_without_separator": false,
+  "padding": {
+    "start": 1351,
+    "width": 0,
+    "byte": " "
+  },
+  "member": "Nat03us.dat",
+  "compression_method": 8,
+  "year_field": "dob_yy",
+  "fields": [
+    {
+      "name": "datayear",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "biryr",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dob_yy",
+      "source_name": "DOB_YY",
+      "status": "present",
+      "start": 15,
+      "width": 4,
+      "guide_page": 10,
+      "type": "uint16",
+      "blank": "forbidden",
+      "ranges": [],
+      "values": [
+        2003
+      ]
+    },
+    {
+      "name": "dob_mm",
+      "source_name": "DOB_MM",
+      "status": "present",
+      "start": 19,
+      "width": 2,
+      "guide_page": 10,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "dob_wk",
+      "source_name": "DOB_WK",
+      "status": "present",
+      "start": 29,
+      "width": 1,
+      "guide_page": 10,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "dob_tt",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bfacil3",
+      "source_name": "BFACIL3",
+      "status": "present",
+      "start": 59,
+      "width": 1,
+      "guide_page": 14,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mager",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmage",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager14",
+      "source_name": "MAGER14",
+      "status": "present",
+      "start": 91,
+      "width": 2,
+      "guide_page": 16,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          3,
+          14
+        ]
+      ],
+      "values": [
+        1
+      ]
+    },
+    {
+      "name": "mager9",
+      "source_name": "MAGER9",
+      "status": "present",
+      "start": 93,
+      "width": 1,
+      "guide_page": 16,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mage36",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager12",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mager41",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MAGER41",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ],
+      "ranges": [],
+      "start": 89,
+      "width": 2,
+      "guide_page": 15
+    },
+    {
+      "name": "mbstate_rec",
+      "source_name": "MBSTATE_REC",
+      "status": "present",
+      "start": 100,
+      "width": 1,
+      "guide_page": 18,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "restatus",
+      "source_name": "RESTATUS",
+      "status": "present",
+      "start": 138,
+      "width": 1,
+      "guide_page": 23,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          4
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "mbrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MBRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        21,
+        22,
+        23,
+        24
+      ],
+      "ranges": [],
+      "start": 139,
+      "width": 2,
+      "guide_page": 24
+    },
+    {
+      "name": "mrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78
+      ],
+      "ranges": [],
+      "start": 141,
+      "width": 2,
+      "guide_page": 25
+    },
+    {
+      "name": "mracerec",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MRACEREC",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "ranges": [],
+      "start": 143,
+      "width": 1,
+      "guide_page": 26
+    },
+    {
+      "name": "mrace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mrace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mraceimp",
+      "source_name": "MRACEIMP",
+      "status": "present",
+      "start": 144,
+      "width": 1,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_imputed",
+      "ranges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "ormoth",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "orracem",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "umhisp",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UMHISP",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 148,
+      "width": 1,
+      "guide_page": 26
+    },
+    {
+      "name": "mhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "mracehisp",
+      "source_name": "MRACEHISP",
+      "status": "present",
+      "start": 149,
+      "width": 1,
+      "guide_page": 26,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "name": "mar",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MAR",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        9
+      ],
+      "ranges": [],
+      "start": 153,
+      "width": 1,
+      "guide_page": 27
+    },
+    {
+      "name": "mar_p",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmar",
+      "type": "integer_string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmeduc",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UMEDUC",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        99
+      ],
+      "ranges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "start": 156,
+      "width": 2,
+      "guide_page": 27,
+      "mapping_note": "CDC UMEDUC maps to the existing project column dmeduc."
+    },
+    {
+      "name": "meduc",
+      "source_name": "MEDUC",
+      "status": "present",
+      "start": 155,
+      "width": 1,
+      "guide_page": 27,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_meduc"
+    },
+    {
+      "name": "umeduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. The guide also lists UMEDUC at position 156; it is not silently added to this project column."
+    },
+    {
+      "name": "meduc6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "meduc_rec",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "MEDUC_REC",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "ranges": [],
+      "start": 158,
+      "width": 1,
+      "guide_page": 28
+    },
+    {
+      "name": "mplbir",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dfage",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dfagerpt",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fage11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fagerpt",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FAGERPT",
+      "blank": "forbidden",
+      "values": [
+        99
+      ],
+      "ranges": [
+        [
+          9,
+          98
+        ]
+      ],
+      "start": 176,
+      "width": 2,
+      "guide_page": 28
+    },
+    {
+      "name": "ufagecomb",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UFAGECOMB",
+      "blank": "not_on_certificate",
+      "values": [
+        99
+      ],
+      "ranges": [
+        [
+          10,
+          98
+        ]
+      ],
+      "start": 184,
+      "width": 2,
+      "guide_page": 28
+    },
+    {
+      "name": "fagecomb",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fagerec11",
+      "source_name": "FAGEREC11",
+      "status": "present",
+      "start": 186,
+      "width": 2,
+      "guide_page": 28,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "fbrace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FBRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        21,
+        22,
+        23,
+        24,
+        99
+      ],
+      "ranges": [],
+      "start": 188,
+      "width": 2,
+      "guide_page": 29
+    },
+    {
+      "name": "orfath",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "orracef",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fraceimp",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. The guide also lists FRACEIMP at position 190; it is not silently added to this project column."
+    },
+    {
+      "name": "fracerec",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACEREC",
+      "blank": "forbidden",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        9
+      ],
+      "ranges": [],
+      "start": 191,
+      "width": 1,
+      "guide_page": 29
+    },
+    {
+      "name": "ufhisp",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UFHISP",
+      "blank": "forbidden",
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ],
+      "ranges": [],
+      "start": 195,
+      "width": 1,
+      "guide_page": 30
+    },
+    {
+      "name": "fracehisp",
+      "source_name": "FRACEHISP",
+      "status": "present",
+      "start": 196,
+      "width": 1,
+      "guide_page": 30,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "frace31",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace6",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace15",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhispx",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "fhisp_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "frace",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "FRACE",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        18,
+        28,
+        38,
+        48,
+        58,
+        68,
+        78,
+        99
+      ],
+      "ranges": [],
+      "start": 199,
+      "width": 2,
+      "guide_page": 30
+    },
+    {
+      "name": "feduc",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "priorlive",
+      "source_name": "PRIORLIVE",
+      "status": "present",
+      "start": 204,
+      "width": 2,
+      "guide_page": 31,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          30
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "priordead",
+      "source_name": "PRIORDEAD",
+      "status": "present",
+      "start": 206,
+      "width": 2,
+      "guide_page": 31,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          30
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "priorterm",
+      "source_name": "PRIORTERM",
+      "status": "present",
+      "start": 208,
+      "width": 2,
+      "guide_page": 32,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          30
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "lbo_rec",
+      "source_name": "LBO_REC",
+      "status": "present",
+      "start": 212,
+      "width": 1,
+      "guide_page": 32,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "tbo_rec",
+      "source_name": "TBO_REC",
+      "status": "present",
+      "start": 217,
+      "width": 1,
+      "guide_page": 32,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "illb_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ilop_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ilp_r11",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "precare",
+      "source_name": "PRECARE",
+      "status": "present",
+      "start": 245,
+      "width": 2,
+      "guide_page": 33,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_mpcb"
+    },
+    {
+      "name": "pay",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "pay_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar5",
+      "source_name": "APGAR5",
+      "status": "present",
+      "start": 415,
+      "width": 2,
+      "guide_page": 39,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_apgar5"
+    },
+    {
+      "name": "apgar5r",
+      "source_name": "APGAR5R",
+      "status": "present",
+      "start": 417,
+      "width": 1,
+      "guide_page": 39,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": [],
+      "reporting_flag": "f_apgar5"
+    },
+    {
+      "name": "apgar10",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "apgar10r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dplural",
+      "source_name": "DPLURAL",
+      "status": "present",
+      "start": 423,
+      "width": 1,
+      "guide_page": 39,
+      "type": "uint8",
+      "blank": "forbidden",
+      "ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "imp_plural",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "setorder_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "previs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "previs_rec",
+      "source_name": "PREVIS_REC",
+      "status": "present",
+      "start": 272,
+      "width": 2,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          12
+        ]
+      ],
+      "values": []
+    },
+    {
+      "name": "wic",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "sex",
+      "source_name": "SEX",
+      "status": "present",
+      "start": 436,
+      "width": 1,
+      "guide_page": 39,
+      "type": "string",
+      "blank": "forbidden",
+      "ranges": [],
+      "values": [
+        "M",
+        "F"
+      ]
+    },
+    {
+      "name": "gestrec10",
+      "source_name": "GESTREC10",
+      "status": "present",
+      "start": 453,
+      "width": 2,
+      "guide_page": 40,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "values": [
+        99
+      ]
+    },
+    {
+      "name": "dbwt",
+      "source_name": "DBWT",
+      "status": "present",
+      "start": 463,
+      "width": 4,
+      "guide_page": 41,
+      "type": "uint16",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          227,
+          8165
+        ]
+      ],
+      "values": [
+        9999
+      ]
+    },
+    {
+      "name": "dwgt_r",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_aven1",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_aven6",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_nicu",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_surf",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_anti",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ab_seiz",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_abnorm",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_anen",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_mnsb",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cchd",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cdh",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_omph",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_gast",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_limb",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_cleft",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_clpal",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "downs",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "uca_downs",
+      "type": "uint8",
+      "status": "present",
+      "source_name": "UCA_DOWNS",
+      "blank": "not_on_certificate",
+      "values": [
+        1,
+        2,
+        8,
+        9
+      ],
+      "ranges": [],
+      "start": 523,
+      "width": 1,
+      "guide_page": 42
+    },
+    {
+      "name": "ca_down",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_downs",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_disor",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ca_hypo",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_congen",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bfed",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "m_ht_in",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bmi",
+      "type": "decimal1",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "bmi_r",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "pwgt_r",
+      "type": "uint16",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "wtgain",
+      "source_name": "WTGAIN",
+      "status": "present",
+      "start": 276,
+      "width": 2,
+      "guide_page": 34,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [
+        [
+          0,
+          98
+        ]
+      ],
+      "values": [
+        99
+      ],
+      "reporting_flag": "f_wtgain"
+    },
+    {
+      "name": "rf_pdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_gdiab",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_phype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ghype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ehype",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_ppterm",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_inftr",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_fedrg",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_artec",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_cesar",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rf_cesarn",
+      "type": "integer_string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "no_risks",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_indl",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_augm",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "ld_anes",
+      "type": "string",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "me_pres",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "rdmeth_rec",
+      "type": "uint8",
+      "status": "absent",
+      "reason": "Column not populated in the historical project extract for 2003; historical feature coverage is retained. No same-name selected source field is mapped."
+    },
+    {
+      "name": "dmeth_rec",
+      "source_name": "DMETH_REC",
+      "status": "present",
+      "start": 401,
+      "width": 1,
+      "guide_page": 38,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "name": "attend",
+      "source_name": "ATTEND",
+      "status": "present",
+      "start": 408,
+      "width": 1,
+      "guide_page": 38,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "ranges": [],
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        9
+      ]
+    },
+    {
+      "name": "revision",
+      "source_name": "REVISION",
+      "status": "present",
+      "start": 7,
+      "width": 1,
+      "guide_page": 10,
+      "type": "string",
+      "blank": "not_on_certificate",
+      "values": [
+        "A",
+        "S"
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_morigin",
+      "source_name": "F_MORIGIN",
+      "status": "present",
+      "start": 569,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_forigin",
+      "source_name": "F_FORIGIN",
+      "status": "present",
+      "start": 570,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_meduc",
+      "source_name": "F_MEDUC",
+      "status": "present",
+      "start": 571,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_clinest",
+      "source_name": "F_CLINEST",
+      "status": "present",
+      "start": 573,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_apgar5",
+      "source_name": "F_APGAR5",
+      "status": "present",
+      "start": 574,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_tobaco",
+      "source_name": "F_TOBACO",
+      "status": "present",
+      "start": 575,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_med",
+      "source_name": "F_MED",
+      "status": "present",
+      "start": 647,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_wtgain",
+      "source_name": "F_WTGAIN",
+      "status": "present",
+      "start": 648,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_alcol",
+      "source_name": "F_ALCOL",
+      "status": "present",
+      "start": 649,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_api",
+      "source_name": "F_API",
+      "status": "present",
+      "start": 650,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_tobac",
+      "source_name": "F_TOBAC",
+      "status": "present",
+      "start": 667,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mpcb",
+      "source_name": "F_MPCB",
+      "status": "present",
+      "start": 668,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    },
+    {
+      "name": "f_mpcb_u",
+      "source_name": "F_MPCB_U",
+      "status": "present",
+      "start": 669,
+      "width": 1,
+      "guide_page": 43,
+      "type": "uint8",
+      "blank": "not_on_certificate",
+      "values": [
+        0,
+        1
+      ],
+      "ranges": []
+    }
+  ]
+}

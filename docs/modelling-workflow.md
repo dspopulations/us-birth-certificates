@@ -5,6 +5,8 @@
 
 Run commands from the repository root after `uv sync --locked`. Prepare `data/us_births.db` as described in [data preparation](data-preparation.md). These commands can require large amounts of memory and time; profiles set defaults, not guarantees of convergence.
 
+The [CDC text import](cdc-text-import.md) builds annual candidates and a combined 1989–2025 database at `data/staging/natality/us_births.db`. It does not change the database used by the commands below. The 2025 records have missing year-specific model inputs; review the annual coverage report before extending an analysis. For candidate checks, use `--duckdb-path data/staging/natality/us_births.db` with `fit_model.py`. Use a separate analysis copy when writing predictions, since a write invalidates the accepted candidate hash.
+
 ## Recorded-status classifiers
 
 LightGBM model definitions live in `src/dspopulations_us_birth_certificates/models/`. The `usbc10` family includes demographic and clinical features; `usbc11` uses clinical features and maternal age. Variants with `_cn` train on confirmed cases and omit pending cases. Other variants count confirmed and pending as positive.
