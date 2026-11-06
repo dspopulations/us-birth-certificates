@@ -9,6 +9,8 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Sources and preparation
 
+- [CDC source audit and 2024 import pilot](20261106-cdc-2024-import-audit.md).
+- [CDC 2025 layout, reference coverage and validated import](20261106-cdc-2025-import-audit.md).
 - [Race and Hispanic-origin audit](202604201112-mracehisp-error.md) and [multi-race grouping](20260628-multi-race-selection-group-scoping.md).
 - [Apgar correction and retuning](20260422-1132-retune-afterapgar-fix.md).
 - [Corrected prevalence extraction](20260628-degraaf-corrected-prevalence-extraction.md) and [five-year workbook windows](20260803-degraaf-surveillance-workbook-extraction.md).

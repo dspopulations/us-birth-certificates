@@ -26,6 +26,8 @@ The microdata used here has no state identifier. Demographic associations may th
 
 ## Current work
 
+The [CDC text import migration](2026-11-06-cdc-text-import-migration.md) describes a staged replacement of the SAS source. The [2024 pilot audit](../notes/20261106-cdc-2024-import-audit.md) and [2025 import audit](../notes/20261106-cdc-2025-import-audit.md) record validated imports into separate databases. The 2025 audit also identifies missing model references. The live database remains unchanged.
+
 Use the [model inventory](../docs/models/README.md) for model roles and the [workflow](../docs/modelling-workflow.md) for commands. The [September code-review note](../notes/20260905-dsp-code-review-fixes.md) records changes that require refitting older DSP analyses. Review their surveillance weighting, observation-error assumptions, validation and provenance before reporting new estimates.
 
 The [research-note index](../notes/readme.md) identifies the supporting source checks and historical fits. Earlier proposed aims and completed implementation tasks are not the current work plan.

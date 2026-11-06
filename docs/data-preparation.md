@@ -6,6 +6,8 @@
 
 # Data preparation
 
+The [CDC text import pilot](cdc-text-import.md) provides separate 2024 and 2025 imports. It compares 2024 with the saved SAS-derived database and validates 2025 against published controls and reference coverage. It leaves the live database intact. The SAS pipeline below remains available while the historical migration is in progress.
+
 The pipeline converts annual NCHS/NVSS natality SAS files for 1989–2024 into Parquet files and a DuckDB database. Stage 3 writes the type-constrained imported columns to `data/us_births.parquet`. Stage 5 adds harmonised and calculated columns to `data/us_births.db`. **The Parquet file does not contain the final database's derived columns.**
 
 ## Setup and source data
@@ -55,7 +57,7 @@ The full dataset has about 143 million rows. Runtime depends on hardware, storag
 
 ## Derived columns (stage 5)
 
-Derivations run in order because later columns use earlier ones. `scripts/duckdb_prepare.py` defines the SQL. `variables.py` defines column names and source codes. The [coding reference](../previous/us-birth-certificates/data-preparation.md) lists historical race and origin codes.
+Derivations run in order because later columns use earlier ones. `preparation.py` defines the shared SQL called by `scripts/duckdb_prepare.py` and the CDC pilot. `variables.py` defines column names and source codes. The [coding reference](../previous/us-birth-certificates/data-preparation.md) lists historical race and origin codes.
 
 - **`id`** (`BIGINT`): `row_number() OVER ()::BIGINT` keyed on `rowid`, populated just before the `year` derivation.
 - **`year`**: `COALESCE(dob_yy, datayear)` - `dob_yy` (2003 revision) preferred, `datayear` (1989 revision) fallback.
@@ -89,6 +91,7 @@ Notes:
 - The two `p_ds_lb_nt_*` columns in the maternal-age CSV are loaded but never joined (the `_nt` reduction path uses `us_births.p_ds_lb_nt` directly).
 - In the ethnicity CSV, years **2015 and 2017** have blank `prevalence` values for all five codes, which pandas reads as NA.
 - Year-coverage mismatch: the maternal-age and ethnicity tables stop at 2018, while reduction and rec-weights run to 2024. For 2019-2024 rows, `p_ds_lb_wt_mage` stays NULL while `p_ds_lb_nt_reduc` and `ds_case_weight` are populated.
+- None of these five tables has a 2025 row. The CDC import writes a coverage report and keeps unsupported estimates NULL, including case weights for non-cases. It does not copy 2024 values forward. Expected-count reporting rejects missing inputs before summing them.
 
 ## External estimates and their limits
 

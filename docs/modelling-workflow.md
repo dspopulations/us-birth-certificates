@@ -5,6 +5,8 @@
 
 Run commands from the repository root after `uv sync --locked`. Prepare `data/us_births.db` as described in [data preparation](data-preparation.md). These commands can require large amounts of memory and time; profiles set defaults, not guarantees of convergence.
 
+The [CDC text import pilot](cdc-text-import.md) writes separate 2024 and 2025 candidate databases. It does not change the database used by the commands below. The 2025 candidate has missing year-specific model inputs; review its coverage report before extending an analysis.
+
 ## Recorded-status classifiers
 
 LightGBM model definitions live in `src/dspopulations_us_birth_certificates/models/`. The `usbc10` family includes demographic and clinical features; `usbc11` uses clinical features and maternal age. Variants with `_cn` train on confirmed cases and omit pending cases. Other variants count confirmed and pending as positive.

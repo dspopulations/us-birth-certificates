@@ -185,6 +185,7 @@ Optuna
 pytest
 resumable
 ruff
+seekable
 venv
 zstd
 
@@ -259,7 +260,9 @@ unmodelled
 
 # Clinical terms
 Apgars
+bifida
 gastroschisis
 preimplantation
+spina
 cutoff
 cutoffs
