@@ -9,7 +9,7 @@
 The study has five aims:
 
 1. Describe the numbers and characteristics of births recorded with Down syndrome from 1989 to 2024. Compare recorded counts with surveillance-based estimates.
-2. Model the recorded Down syndrome checkbox for 2016–2024. Compare feature sets and label definitions, and describe associations with recorded status.
+2. Model the recorded Down syndrome checkbox for 2016–2025. Compare feature sets and label definitions, and describe associations with recorded status.
 3. Estimate expected Down syndrome livebirth counts and expected missed counts for 2016–2024 with Bayesian population models. Report uncertainty and sensitivity to external calibration, false positives and recording assumptions.
 4. Describe co-occurring conditions among recorded cases. Explore population estimates only where assumptions about recording within each condition stratum can be stated and tested through sensitivity analyses.
 5. Explore age, year and demographic patterns in recorded births and modelled expected counts. Report associations and distinguish them from causal claims.
@@ -26,7 +26,7 @@ The microdata used here has no state identifier. Demographic associations may th
 
 ## Current work
 
-The [CDC text import migration](2026-11-06-cdc-text-import-migration.md) records the replacement of the SAS import with reviewed CDC layouts for 1989–2025. The [historical audit](../notes/20261106-cdc-historical-import-audit.md), [2024 pilot audit](../notes/20261106-cdc-2024-import-audit.md) and [2025 audit](../notes/20261106-cdc-2025-import-audit.md) record validation in separate databases. The live database remains unchanged. Model-reference coverage for 2025 still needs research.
+The [CDC text import migration](2026-11-06-cdc-text-import-migration.md) records the replacement of the SAS import with reviewed CDC layouts for 1989–2025. The [historical audit](../notes/20261106-cdc-historical-import-audit.md), [2024 pilot audit](../notes/20261106-cdc-2024-import-audit.md) and [2025 audit](../notes/20261106-cdc-2025-import-audit.md) record validation before publication. The validated import is now the live database, with the SAS baseline preserved separately. The [2025 reference review and classifier extension](../notes/20261106-2025-reference-review-and-classifiers.md) extends the recorded-status models while retaining missing external inputs for population estimates.
 
 Use the [model inventory](../docs/models/README.md) for model roles and the [workflow](../docs/modelling-workflow.md) for commands. The [September code-review note](../notes/20260905-dsp-code-review-fixes.md) records changes that require refitting older DSP analyses. Review their surveillance weighting, observation-error assumptions, validation and provenance before reporting new estimates.
 
