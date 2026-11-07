@@ -17,7 +17,7 @@ uv sync --locked
 uv run python scripts/import_natality.py --years 1989-2025
 ```
 
-This builds and validates annual databases, then combines them into `data/staging/natality/us_births.db`. The saved SAS-derived `data/us_births.db` supplies the historical comparison and remains intact. The importer has no promotion step. The combined candidate contains imported columns, reporting flags, harmonised fields, calculated probabilities, reference tables and source metadata.
+This builds and validates annual databases, then combines them into `data/staging/natality/us_births.db`. The importer has no promotion step. The combined candidate contains imported columns, reporting flags, harmonised fields, calculated probabilities, reference tables and source metadata. The live database was switched to the validated CDC import on 6 November 2026. Its original SAS baseline is preserved under `data/backups/before-cdc-20261106T164938Z/`. Use that saved baseline for historical SAS comparisons.
 
 Natality microdata uses the [NCHS Data Use Agreement](https://www.cdc.gov/nchs/data_access/restrictions.htm). Raw files, guide PDFs, Parquet files and DuckDB databases are gitignored. Do not commit or publish raw or derived record-level data. Small aggregate and reference CSVs may be tracked.
 
@@ -27,7 +27,7 @@ The importer uses bounded batches. It checks each source record and the complete
 
 The command's DuckDB memory limit does not include all Python and decompressor memory. The default is 2 GB per process with two threads. Import and validation reports measure elapsed time and resident memory. There is no required expanded text or intermediate Parquet file.
 
-Rebuilding changes record IDs relative to the SAS route. The new IDs are stable only within the pinned CDC release. Regenerate predictions in an analysis copy; do not transfer them by old ID. Analysis commands still use `data/us_births.db` by default until a separate replacement decision.
+Rebuilding changes record IDs relative to the SAS route. The new IDs are stable only within the pinned CDC release. Regenerate predictions in an analysis copy; do not transfer them by old ID. Analysis commands use `data/us_births.db` by default. Keep the validated import candidate unchanged when fitting and writing predictions.
 
 ## Legacy reproduction
 
@@ -47,7 +47,7 @@ Derivations run in order because later columns use earlier ones. `preparation.py
 - **`mrace_c`** (1-5): `mrace15` (1,2,3 keep; 4-14 -> 4; **15 "More than one race" -> 5**) -> else `mracerec` (1-4 keep) -> else `mbrace` (1-digit 1-4 keep; 2-digit 01-03 -> 1/2/3, 04-14 -> 4, **bridged-multiple 21-24 -> 5**; Puerto Rico 0 -> NULL) -> else `mrace` (1,2,3 keep; 4-78 -> 4) -> else NULL. Category **5 "More than one race"** is only identifiable from MRACE15=15 (2014+) and MBRACE 21-24 (2003-2013, unreachable); MRACEREC and the 1989-cert MRACE carry no multi-race code, so 1989-2013 multi-race is folded into single-race categories. Unmatched values within a selected source branch resolve to NULL. MRACEREC/MRACE15 precede MBRACE. The 2015 CDC archive also contains 2,923 unlisted MRACE15=99 values. The importer preserves 99, and this one code permits the valid MBRACE fallback. This preserves the legacy derived race, which used MBRACE after the old range check lost 99 to NULL. It does not assign an official meaning to the unlisted source code.
 - **`mhisp_c`** (0-5): `mhisp_r` (0,1,2,3 keep; 4-5 -> 4; 9 -> 5) -> else `mhispx` (0,1,2,3 keep; 4-6 -> 4; 9 -> 5) -> else `umhisp` (0,1,2,3 keep; 4-5 -> 4; 9 -> 5) -> else `orracem` (1,2,3 keep; 6-8 -> 0 non-Hispanic; 4-5 -> 4; 9 -> 5) -> else NULL.
 - **`mracehisp_c`** (1-6 or NULL): **reconstructed from `mhisp_c` + `mrace_c`** - deliberately not the raw NCHS `mracehisp` field, which is dual-coded across eras and absent pre-2003. `mhisp_c BETWEEN 1 AND 4` -> 5 (Hispanic); `mhisp_c = 5` (origin unknown) -> NULL (the row's race is discarded); non-Hispanic multi-race (`mrace_c = 5`) -> **6 (NH more than one race)**; `mhisp_c = 0` or NULL -> `mrace_c` (non-Hispanic race 1-4). Note the asymmetry: explicit "origin unknown" (5) drops to NULL, whereas *absent* origin (NULL) keeps the race as non-Hispanic. The selection model and `derive_recording_rates` now give code 6 (NH multi-race) its own race group (`race_idx` 6); only NULL/other races fall to the "Unknown" cell (idx 5). De Graaf has no multi-race anchor, so idx 6 carries the same weak `s(race, year)` fallback as Unknown.
-- **`p_ds_lb_wt_mage`**: from `us_births_est_prevalence_age` (maternal-age CSV) joined on `year`; per row `mage_c < 35` -> `p_ds_lb_wt_lt35_sv` else `p_ds_lb_wt_gte35_sv`. The CSV covers 1989-2018, so 2019-2024 rows stay NULL.
+- **`p_ds_lb_wt_mage`**: from `us_births_est_prevalence_age` (maternal-age CSV) joined on `year`; per row `mage_c < 35` -> `p_ds_lb_wt_lt35_sv` else `p_ds_lb_wt_gte35_sv`. The CSV covers 1989-2018, so 2019-2025 rows stay NULL.
 - **`p_ds_lb_nt_reduc`**: `p_ds_lb_nt * (1 - r.reduction)` from `reduction_rate_year` joined on `year` (renamed from `p_ds_lb_wt_mage_reduc`; the multiplicand is `p_ds_lb_nt`, the Morris no-terminations risk - the old `_mage` suffix was a misnomer).
 - **`ds_case_weight`** (`DOUBLE`): from `ds_case_weights` joined on `year`. When `down_ind=1`, selected by `mracehisp_c`: 1 -> `nhw`, 2 -> `nhb`, 3 -> `ai_an`, 4 -> `as_pi`, 5 -> `his`, else (`down_ind=1` with `mracehisp_c` NULL/other) -> `total`; otherwise 0 (non-cases and `down_ind != 1` get weight 0). Rows with `mracehisp_c=NULL` (origin unknown) fall to the `total` branch.
 
@@ -70,6 +70,8 @@ Notes:
 - In the ethnicity CSV, years **2015 and 2017** have blank `prevalence` values for all five codes, which pandas reads as NA.
 - Year-coverage mismatch: the maternal-age and ethnicity tables stop at 2018, while reduction and rec-weights run to 2024. For 2019-2024 rows, `p_ds_lb_wt_mage` stays NULL while `p_ds_lb_nt_reduc` and `ds_case_weight` are populated.
 - None of these five tables has a 2025 row. The CDC import writes a coverage report and keeps unsupported estimates NULL, including case weights for non-cases. It does not copy 2024 values forward. Expected-count reporting rejects missing inputs before summing them.
+
+The [6 November 2026 reference review](../notes/20261106-2025-reference-review-and-classifiers.md) retains this policy. It adds a separate CDC/NBDPN 2018–2022 source extraction with explicit period and measure metadata. That source does not supply annual 2025 live-birth probabilities. The four current classifiers can include 2025 because their features and labels do not depend on these lookup tables.
 
 ## External estimates and their limits
 
@@ -96,7 +98,7 @@ Consult the source guides, `variables.py` and the [historical coding reference](
 - Maternal education uses different schemes across certificate eras. Maternal marital status uses `mar` in 2003–2013 and `dmar` in the surrounding years.
 - The extract does not import the old `CSEX`, `DBIRWT`, `FMAPS` or `GESTAT10` fields. Later sex, birthweight, Apgar and gestation variables therefore cannot simply be extended backwards. `DMETH_REC` also changes coding across years.
 
-The saved database contains 59 rows with no year and partially populated source fields. The CDC imports match every valid-year baseline row after the documented comparison adjustments. They add five records in 2005 and 27 each in 2018 and 2019, which restores the annual guide totals. The [historical import audit](../notes/20261106-cdc-historical-import-audit.md) records these checks. Missing-year rows from the old database are not copied into the new candidate.
+The saved SAS baseline contains 59 rows with no year and partially populated source fields. The CDC imports match every valid-year baseline row after the documented comparison adjustments. They add five records in 2005 and 27 each in 2018 and 2019, which restores the annual guide totals. The [historical import audit](../notes/20261106-cdc-historical-import-audit.md) records these checks. Missing-year rows from the old database are not copied into the new candidate.
 
 ## Side outputs
 

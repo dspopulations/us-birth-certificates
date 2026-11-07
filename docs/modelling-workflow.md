@@ -5,11 +5,15 @@
 
 Run commands from the repository root after `uv sync --locked`. Prepare `data/us_births.db` as described in [data preparation](data-preparation.md). These commands can require large amounts of memory and time; profiles set defaults, not guarantees of convergence.
 
-The [CDC text import](cdc-text-import.md) builds annual candidates and a combined 1989–2025 database at `data/staging/natality/us_births.db`. It does not change the database used by the commands below. The 2025 records have missing year-specific model inputs; review the annual coverage report before extending an analysis. For candidate checks, use `--duckdb-path data/staging/natality/us_births.db` with `fit_model.py`. Use a separate analysis copy when writing predictions, since a write invalidates the accepted candidate hash.
+The [CDC text import](cdc-text-import.md) builds annual candidates and a combined 1989–2025 database at `data/staging/natality/us_births.db`. The importer does not publish that candidate. Use a separate analysis copy when writing predictions, since a write invalidates the accepted candidate hash. For read-only candidate checks, use `--duckdb-path data/staging/natality/us_births.db` with `fit_model.py` without `--write-predictions`.
+
+The [2025 reference review](../notes/20261106-2025-reference-review-and-classifiers.md) distinguishes classifier inputs from external population-model inputs. Missing 2025 surveillance, reduction and recording references still prevent complete expected-count analyses. The recorded-status classifiers do not use those references.
 
 ## Recorded-status classifiers
 
 LightGBM model definitions live in `src/dspopulations_us_birth_certificates/models/`. The `usbc10` family includes demographic and clinical features; `usbc11` uses clinical features and maternal age. Variants with `_cn` train on confirmed cases and omit pending cases. Other variants count confirmed and pending as positive.
+
+The four current variants (`usbc10_m1`, `usbc11_m1` and their `_cn` counterparts) use 2016–2025. Historical variants retain 2016–2024. Named models take their year range from the definition; `--start-year` and `--end-year` apply only to fits without `--model-id`.
 
 ```bash
 uv run python scripts/fit_model.py --model-id usbc10_m1 --profile reporting --render
@@ -20,6 +24,8 @@ uv run python scripts/compare_variants.py --help
 The fit script uses a deterministic stratified training/validation split. When tuning is enabled, tuning, early stopping and reported validation metrics use the same split. Those metrics are tuning diagnostics, not performance on an untouched test set. The old refactor proposal for five-fold cross-validation is not implemented.
 
 The CLI writes to `output/fit_model_<profile>/<timestamp>/` by default when a profile is supplied, or `output/fit_model/<timestamp>/` otherwise. `--output-dir` overrides the location. Outputs include configuration, a manifest, metrics, the fitted model, diagnostic tables and plots, and a copied Quarto template.
+
+To refit with saved parameters, pass `--no-optimize --prior-best-params <params.json>` and the intended `--model-id`. The parameters file must match that model. The 2025 refit retains the existing features and parameters while expanding the fitted cohort; it does not reuse the earlier fitted trees.
 
 `--write-predictions` changes the DuckDB database. It writes scores and quota-based `ds_pred_missing*` flags for the selected model. A flag identifies a selected high-scoring birth, not a validated missed diagnosis. The quota makes the selected count depend on the recorded count.
 

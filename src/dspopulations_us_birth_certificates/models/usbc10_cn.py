@@ -144,6 +144,7 @@ class USBC10_M1_CN(USBC10_M0_CN):
     """``M0_CN`` minus 31 predictors (post-PR-#26 re-derivation, 2026-04-24)."""
 
     model_id = "usbc10_m1_cn"
+    year_range = (2016, 2025)
     variant_of = "usbc10_m0_cn"
     numeric_features = _M1_CN_NUMERIC
     categorical_features = _M1_CN_CATEGORICAL

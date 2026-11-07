@@ -131,9 +131,7 @@ _M1_FEATURES_REMOVED: tuple[str, ...] = (
 )
 
 _M1_NUMERIC: tuple[str, ...] = prune_features(_M0_NUMERIC, _M1_FEATURES_REMOVED)
-_M1_CATEGORICAL: tuple[str, ...] = prune_features(
-    _M0_CATEGORICAL, _M1_FEATURES_REMOVED
-)
+_M1_CATEGORICAL: tuple[str, ...] = prune_features(_M0_CATEGORICAL, _M1_FEATURES_REMOVED)
 
 
 class USBC11_M0(USBC10_M0):
@@ -211,6 +209,7 @@ class USBC11_M1(USBC11_M0):
     """``USBC11_M0`` minus 19 predictors with near-zero permutation importance."""
 
     model_id = "usbc11_m1"
+    year_range = (2016, 2025)
     variant_of = "usbc11_m0"
     numeric_features = _M1_NUMERIC
     categorical_features = _M1_CATEGORICAL
