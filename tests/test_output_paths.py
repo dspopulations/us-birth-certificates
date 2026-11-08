@@ -121,14 +121,14 @@ def test_selection_discovery_honours_environment_and_explicit_root(
     monkeypatch.chdir(tmp_path)
     local = _completed_fit(Path("output/selection"))
     assert latest_fit_dir("C") == local
-    scratch = tmp_path / "scratch"
+    scratch = tmp_path / "scratch [1]"
     remote = _completed_fit(scratch / "selection")
     monkeypatch.setenv("DSPOP_OUTPUT_ROOT", str(scratch))
     assert latest_fit_dir("C") == remote
     assert latest_fit_dir("C", root="output/selection") == local
     # Environment discovery retains validation filtering.
     (remote / "validation.json").write_text('{"status": "failed"}')
-    with pytest.raises(FileNotFoundError, match=str(scratch / "selection")):
+    with pytest.raises(FileNotFoundError, match=re.escape(str(scratch / "selection"))):
         latest_fit_dir("C")
 
 
