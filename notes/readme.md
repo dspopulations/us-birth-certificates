@@ -9,6 +9,7 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Sources and preparation
 
+- [2025 reference review and classifier extension](20261106-2025-reference-review-and-classifiers.md).
 - [CDC historical layout review and complete 1989–2025 import](20261106-cdc-historical-import-audit.md).
 
 - [CDC source audit and 2024 import pilot](20261106-cdc-2024-import-audit.md).

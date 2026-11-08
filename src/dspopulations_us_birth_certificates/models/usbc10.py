@@ -194,6 +194,7 @@ class USBC10_M1(USBC10_M0):
     """``M0`` minus 24 predictors (post-PR-#26 re-derivation, 2026-04-23)."""
 
     model_id = "usbc10_m1"
+    year_range = (2016, 2025)
     variant_of = "usbc10_m0"
     numeric_features = _M1_NUMERIC
     categorical_features = _M1_CATEGORICAL
@@ -227,6 +228,8 @@ class USBC10_M2(USBC10_M1):
     """Stable feature set from M1 — a second-look evaluation."""
 
     model_id = "usbc10_m2"
+    # Retain the historical comparison variant's original period.
+    year_range = (2016, 2024)
     variant_of = "usbc10_m1"
     # Same features as M1 for now; the selection_steps records that this
     # was a deliberate "hold" rather than a forgotten edit.

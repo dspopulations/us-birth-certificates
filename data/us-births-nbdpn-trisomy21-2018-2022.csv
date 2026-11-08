@@ -1,0 +1,7 @@
+period_start,period_end,estimate_type,prevalence_per_10000,ci95_lower,ci95_upper,estimated_us_annual_cases,cases_ci95_lower,cases_ci95_upper,pdf_page
+2018,2022,pooled_period,16.1,15.8,16.5,5952,5841,6100,13
+2018,2018,annual,16.4,,,,,,14
+2019,2019,annual,16.5,,,,,,14
+2020,2020,annual,16.1,,,,,,14
+2021,2021,annual,16.3,,,,,,14
+2022,2022,annual,15.3,,,,,,14
