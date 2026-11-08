@@ -59,6 +59,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output, data_utils
+from dspopulations_us_birth_certificates.file_io import write_text_atomically
 from dspopulations_us_birth_certificates.models import (
     MODELS,
     ModelConfig,
@@ -67,6 +68,7 @@ from dspopulations_us_birth_certificates.models import (
 from dspopulations_us_birth_certificates.models.lgbm_pipeline import (
     LGBMClassifierPipeline,
 )
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -186,7 +188,9 @@ class FitConfig:
     select_hyperparameters: bool = True
     random_seed: int = 47
     num_threads: int | None = None
-    output_dir: Path = field(default_factory=lambda: Path("output/fit_model"))
+    output_dir: Path = field(
+        default_factory=lambda: resolve_output_root() / "fit_model"
+    )
     drop_features: list[str] = field(default_factory=list)
     prior_best_params_path: Path | None = None
     save_plots: bool = True
@@ -286,7 +290,13 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
         "--output-dir",
         type=Path,
         default=None,
-        help="Output directory (default: output/fit_model/<timestamp>).",
+        help="Exact run directory; overrides --output-root and DSPOP_OUTPUT_ROOT.",
+    )
+    p.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Root for timestamped runs (default: DSPOP_OUTPUT_ROOT or output/).",
     )
     p.add_argument("--plots", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument(
@@ -337,7 +347,8 @@ def parse_args(argv: list[str] | None = None) -> FitConfig:
     ns = p.parse_args(argv)
 
     out_dir = ns.output_dir or (
-        Path(f"output/fit_model_{ns.profile}" if ns.profile else "output/fit_model")
+        resolve_output_root(ns.output_root)
+        / (f"fit_model_{ns.profile}" if ns.profile else "fit_model")
         / datetime.now().strftime("%Y%m%d-%H%M%S")
     )
 
@@ -882,16 +893,19 @@ def main(argv: list[str] | None = None) -> int:
     _run_post_fit_steps(pipeline, config, model_config, df)
 
     # Persist the full resolved config alongside artefacts for reproducibility.
-    (config.output_dir / "run_config.json").write_text(
+    write_text_atomically(
+        config.output_dir / "run_config.json",
         json.dumps(
             {
                 **{
                     k: (str(v) if isinstance(v, Path) else v)
                     for k, v in config.__dict__.items()
                 },
+                "output_dir": str(config.output_dir.resolve()),
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
 
     cli_output.section("Done")

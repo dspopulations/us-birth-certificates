@@ -14,6 +14,7 @@ import duckdb
 import numpy as np
 
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 from dspopulations_us_birth_certificates.selection import (
     FitContext,
     copy_docs_template,
@@ -368,10 +369,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--output-dir",
         type=Path,
         default=None,
-        help=(
-            "Output directory (default: output/selection_core_reduction/"
-            "<DSPnnn>/<timestamp>)."
-        ),
+        help="Exact run directory; overrides --output-root and DSPOP_OUTPUT_ROOT.",
+    )
+    p.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Root containing selection_core_reduction/ (default: DSPOP_OUTPUT_ROOT or output/).",
     )
     p.add_argument("--prior-only", action="store_true")
     p.add_argument(
@@ -427,7 +431,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "confirmed_only" if ns.confirmed_only else "confirmed_or_pending"
     )
     ns.output_dir = ns.output_dir or (
-        Path("output")
+        resolve_output_root(ns.output_root)
         / CORE_REDUCTION_MODEL_ID
         / ns.model_definition.model_id
         / datetime.now().strftime("%Y%m%d-%H%M%S")

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import pickle
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from dspopulations_us_birth_certificates import cli_output, data_utils
+from dspopulations_us_birth_certificates.file_io import write_text_atomically
 from dspopulations_us_birth_certificates.models.base_model import ModelDefinition
 from dspopulations_us_birth_certificates.models.common import RunConfig
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +87,7 @@ def run_optuna_study(
     *,
     n_trials: int | None = None,
     timeout: int | None = None,
-    output_root: Path = Path("output/tuning"),
+    output_root: Path | None = None,
     db_path: str | None = None,
 ) -> optuna.Study:
     """Run an Optuna study and persist its artefacts.
@@ -92,14 +95,17 @@ def run_optuna_study(
     Returns the completed ``optuna.Study``. ``best_params`` is written to
     ``output_root/<model_id>/best_params.json`` for manual copy into the
     definition. ``trials.csv`` and ``study.pkl`` are written alongside.
+    An explicit root is the tuning directory itself. Otherwise use
+    ``tuning/`` under DSPOP_OUTPUT_ROOT or the local ``output/`` default.
 
     ``n_trials`` defaults to ``run_config.n_trials``; pass an explicit
     value to override. ``timeout`` (seconds) is an optional budget cap.
     """
+    if output_root is None:
+        output_root = resolve_output_root() / "tuning"
     out_dir = output_root / definition.model_id
     out_dir.mkdir(parents=True, exist_ok=True)
     n_trials = n_trials if n_trials is not None else run_config.n_trials
-
     cli_output.section("Optuna hyperparameter search")
     cli_output.info(
         f"Model: [bold]{definition.model_id}[/bold]; "
@@ -206,6 +212,21 @@ def run_optuna_study(
     study.trials_dataframe().to_csv(out_dir / "trials.csv", index=False)
     with (out_dir / "study.pkl").open("wb") as f:
         pickle.dump(study, f)
+    write_text_atomically(
+        out_dir / "run_config.json",
+        json.dumps(
+            {
+                **asdict(run_config),
+                "model_id": definition.model_id,
+                "n_trials": n_trials,
+                "timeout": timeout,
+                "output_root": str(output_root.resolve()),
+                "output_dir": str(out_dir.resolve()),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     cli_output.section("Tuning complete")
     cli_output.print_optuna_summary(study)

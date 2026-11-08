@@ -46,6 +46,7 @@ from dspopulations_us_birth_certificates.intervals import (
     interval_label,
     posterior_mean_eti,
 )
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 from dspopulations_us_birth_certificates.selection import (
     AGE_LEVELS,
     RACE_LEVELS,
@@ -53,7 +54,6 @@ from dspopulations_us_birth_certificates.selection import (
     latest_fit_dir,
 )
 
-DEFAULT_ROOT = Path("output/selection")
 VARIANTS: tuple[str, ...] = ("A", "B", "C", "D")
 
 
@@ -94,8 +94,14 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
     p.add_argument(
         "--root",
         type=Path,
-        default=DEFAULT_ROOT,
-        help="Root for auto-discovery when --fit-dirs is omitted.",
+        default=None,
+        help="Selection directory for discovery and comparison output; overrides --output-root.",
+    )
+    p.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Root containing selection/ (default: DSPOP_OUTPUT_ROOT or output/).",
     )
     p.add_argument(
         "--output-dir",
@@ -104,6 +110,8 @@ def _parse_args(argv: list[str] | None) -> CompareCliConfig:
         help="Where to write comparison.csv and comparison_forest.png.",
     )
     ns = p.parse_args(argv)
+    if ns.root is None:
+        ns.root = resolve_output_root(ns.output_root) / "selection"
 
     fit_dirs: dict[str, Path] = {}
     if ns.fit_dirs:

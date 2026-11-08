@@ -29,6 +29,7 @@ import dse_research_utils.metadata.packages as package_metadata
 
 from dspopulations_us_birth_certificates import PACKAGE_LIST, cli_output, tuning
 from dspopulations_us_birth_certificates.models import MODELS, RunConfig
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -75,11 +76,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--output-root",
         type=Path,
-        default=Path("output/tuning"),
-        help="Root directory for tuning artefacts.",
+        default=None,
+        help="Tuning directory (default: <DSPOP_OUTPUT_ROOT or output>/tuning). Appends only the model ID.",
     )
     p.add_argument("--duckdb-path", type=Path, default=Path("data/us_births.db"))
-    return p.parse_args(argv)
+    ns = p.parse_args(argv)
+    if ns.output_root is None:
+        ns.output_root = resolve_output_root() / "tuning"
+    return ns
 
 
 def main(argv: list[str] | None = None) -> int:
