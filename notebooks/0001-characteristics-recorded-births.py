@@ -26,8 +26,6 @@ from datetime import datetime
 from dspopulations_us_birth_certificates import repl_utils
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
-plt.style.use("../notebook.mplstyle")
-
 START_TIME = datetime.now()
 OUTPUT_DIR = f"output/0001-characteristics-recorded-births/{START_TIME:%Y%m%d-%H%M%S}"
 
@@ -36,6 +34,8 @@ SAVE_PLOTS = True
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -103,7 +103,7 @@ df = con.execute(
 df
 
 # %%
-plt.figure(figsize=(7,4))
+plt.figure(figsize=(7, 4))
 # plt.fill_between(range(2003, 2015), 2250, color="#d8f0ff", alpha=0.4)
 plt.bar(df["year"], df["pending"], bottom=df["confirmed"], label="DS diagnosis pending")
 plt.bar(df["year"], df["confirmed"], label="DS diagnosis confirmed")
@@ -114,19 +114,33 @@ plt.ylabel("Number of Births")
 # plt.title("Live births of babies with Down syndrome recorded as confirmed or pending")
 plt.legend(bbox_to_anchor=(0.03, 0.2), loc="center left")
 if SAVE_PLOTS:
-    plt.savefig(os.path.join(OUTPUT_DIR, "births_confirmed_pending.png"), dpi=300, bbox_inches="tight")
-    plt.savefig(os.path.join(OUTPUT_DIR, "births_confirmed_pending.svg"), bbox_inches="tight")
+    plt.savefig(
+        os.path.join(OUTPUT_DIR, "births_confirmed_pending.png"),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.savefig(
+        os.path.join(OUTPUT_DIR, "births_confirmed_pending.svg"), bbox_inches="tight"
+    )
 plt.show()
 
 # %%
 plt.figure(figsize=(10, 5))
 plt.fill_between(range(2003, 2015), 0.36, 0.43, color="#d8f0ff", alpha=0.4)
-plt.plot(df["year"], ((df["pending"] + df["confirmed"]) / df["ds_lb_est"]), marker="o", color="#33a066", label="40% of estimated live births (annual reduction rates)")
+plt.plot(
+    df["year"],
+    ((df["pending"] + df["confirmed"]) / df["ds_lb_est"]),
+    marker="o",
+    color="#33a066",
+    label="40% of estimated live births (annual reduction rates)",
+)
 plt.xlim(1988.2, 2024.8)
 plt.xticks(range(1989, 2025), rotation=45)
 plt.xlabel("Year")
 plt.ylabel("Proportion of births")
-plt.title("Proportion of expected live births of babies with Down syndrome recorded as confirmed or pending")
+plt.title(
+    "Proportion of expected live births of babies with Down syndrome recorded as confirmed or pending"
+)
 plt.legend()
 plt.show()
 
@@ -157,7 +171,7 @@ plt.legend()
 plt.show()
 
 # %%
-plt.figure(figsize=(7,4))
+plt.figure(figsize=(7, 4))
 # plt.fill_between(range(2003, 2015), 2250, color="#d8f0ff", alpha=0.4)
 plt.bar(df["year"], df["pending"], bottom=df["confirmed"], label="DS diagnosis pending")
 plt.bar(df["year"], df["confirmed"], label="DS diagnosis confirmed")
@@ -170,11 +184,17 @@ plt.legend(bbox_to_anchor=(0.35, 0.25))
 plt.show()
 
 # %%
-plt.figure(figsize=(7,4))
+plt.figure(figsize=(7, 4))
 # plt.fill_between(range(2003, 2015), 2250, color="#d8f0ff", alpha=0.4)
 plt.bar(df["year"], df["pending"], bottom=df["confirmed"], label="DS diagnosis pending")
 plt.bar(df["year"], df["confirmed"], label="DS diagnosis confirmed")
-plt.plot(df["year"], (df["ds_lb_est"] * 0.4), marker="o", color="#33a066", label="40% of estimated live births (annual reduction rates)")
+plt.plot(
+    df["year"],
+    (df["ds_lb_est"] * 0.4),
+    marker="o",
+    color="#33a066",
+    label="40% of estimated live births (annual reduction rates)",
+)
 plt.xlim(1988.2, 2024.8)
 plt.xticks(range(1990, 2025, 2), rotation=45)
 plt.xlabel("Year")

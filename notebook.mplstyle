@@ -4,7 +4,8 @@ figure.facecolor: white
 figure.constrained_layout.use: True
 
 font.family: sans-serif, DejaVu Sans
-font.sans-serif: "Aptos Narrow", "Noto Sans Condensed", Aptos, "Helvetica Neue", Arial, Helvetica, DejaVu Sans
+# Font names are comma-separated; quotes would become part of the names.
+font.sans-serif: Aptos Narrow, Noto Sans Condensed, Aptos, Helvetica Neue, Arial, Helvetica, DejaVu Sans
 font.size: 9
 
 text.color: "#202020"

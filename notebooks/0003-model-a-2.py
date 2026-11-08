@@ -39,8 +39,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = repl_utils.RANDOM_SEED
@@ -56,6 +54,8 @@ OUTPUT_DIR = f"output/0002-predictors/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 

@@ -49,8 +49,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = 47
@@ -66,6 +64,8 @@ OUTPUT_DIR = f"output/0008-predictors-6/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -240,7 +240,7 @@ base_params = {
     "verbosity": 1,
 }
 
-last_best_params = {    
+last_best_params = {
     "learning_rate": 0.02876437855047539,
     "num_leaves": 93,
     "min_data_in_leaf": 536,
@@ -256,6 +256,7 @@ last_best_params = {
 # %% [markdown]
 # ## Hyperparameter tuning
 #
+
 
 # %%
 def objective(trial):
@@ -800,7 +801,6 @@ features_to_remove_1 = [
     "pwgt_r",
     "feduc",
     "fracehisp",
-
     "rf_pdiab",
     "apgar5",
     "ld_indl",
@@ -1062,6 +1062,7 @@ calibrator.fit(s_cal.reshape(-1, 1), y_cal)
 
 # %%
 
+
 # %%
 def predict_proba_calibrated(gbm, calibrator, X_new, num_iteration=None):
     p_raw = gbm.predict(X_new, num_iteration=num_iteration, raw_score=True)
@@ -1190,8 +1191,6 @@ p_full_cal = predict_proba_calibrated(
 )
 
 
-
-
 # %%
 p_full = gbm.predict(X_full, num_iteration=gbm.best_iteration)  # P(S=1|X)
 
@@ -1202,7 +1201,9 @@ df["p_ds_lb_pred_01"] = p_full_cal
 df["p_ds_lb_pred_01b"] = p_full
 
 # %%
-df[["year", "p_ds_lb_pred_01", "p_ds_lb_pred_01b", "ca_down_c_p_n"]].groupby("year").sum().reset_index()
+df[["year", "p_ds_lb_pred_01", "p_ds_lb_pred_01b", "ca_down_c_p_n"]].groupby(
+    "year"
+).sum().reset_index()
 
 # %%
 import duckdb

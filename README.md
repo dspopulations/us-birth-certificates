@@ -63,7 +63,7 @@ On Windows, install [Noto Sans](https://fonts.google.com/noto/specimen/Noto+Sans
 uv run python -c "import matplotlib; print(matplotlib.get_cachedir())"
 ```
 
-The local `notebook.mplstyle` uses smaller text and narrower fonts than the shared script style.
+The local `notebook.mplstyle` uses smaller text and narrower fonts than the shared script style. Apply it after `init_workbook()` or the older `repl_utils.print_environment_info()`, since both apply the shared style. The local style retains DejaVu Sans for missing symbols. Notebook model graphs use the shared Noto Sans font. See the [notebook guide](notebooks/readme.md) for the setup order.
 
 ## Checks
 
