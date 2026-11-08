@@ -54,8 +54,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 RANDOM_SEED = 47
 np.random.seed(RANDOM_SEED)
 rng = np.random.default_rng(RANDOM_SEED)
@@ -69,6 +67,8 @@ OUTPUT_DIR = f"output/0014-predictors-12/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -302,6 +302,7 @@ for k, v in params.items():
 # `explain/calibration.py` and `explain/shap_analysis.py`).
 #
 
+
 # %%
 def run_model_analysis(
     model_idx: int,
@@ -382,9 +383,7 @@ def run_model_analysis(
     )
 
     if show_pr_at_k:
-        pr_valid = calibration.precision_recall_at_k(
-            y_valid.to_numpy(), p_valid, ks=KS
-        )
+        pr_valid = calibration.precision_recall_at_k(y_valid.to_numpy(), p_valid, ks=KS)
         pr_valid.to_csv(
             f"{OUTPUT_DIR}/model_{model_idx}_precision_recall_at_k.csv", index=False
         )
@@ -399,7 +398,10 @@ def run_model_analysis(
 
     # Built-in gain importance
     df_imp_gain = pd.DataFrame(
-        {"feature": features, "importance_gain": gbm.feature_importance(importance_type="gain")}
+        {
+            "feature": features,
+            "importance_gain": gbm.feature_importance(importance_type="gain"),
+        }
     ).sort_values("importance_gain", ascending=False)
     df_imp_gain.to_csv(
         f"{OUTPUT_DIR}/model_{model_idx}_feature_importance_gain.csv", index=False
@@ -581,8 +583,12 @@ gbm_1, p_valid_1 = run_model_analysis(
 # %%
 features_to_remove_2: list[str] = []
 
-X_train = X_train.drop(columns=features_to_remove_2) if features_to_remove_2 else X_train
-X_valid = X_valid.drop(columns=features_to_remove_2) if features_to_remove_2 else X_valid
+X_train = (
+    X_train.drop(columns=features_to_remove_2) if features_to_remove_2 else X_train
+)
+X_valid = (
+    X_valid.drop(columns=features_to_remove_2) if features_to_remove_2 else X_valid
+)
 categorical_2 = [c for c in categorical_1 if c not in features_to_remove_2]
 
 print(
@@ -633,9 +639,7 @@ calibration_table.to_csv(
 calibration_table
 
 # %%
-gbm.save_model(
-    f"{OUTPUT_DIR}/final_model_2.txt", num_iteration=gbm.best_iteration
-)
+gbm.save_model(f"{OUTPUT_DIR}/final_model_2.txt", num_iteration=gbm.best_iteration)
 
 # %%
 final_features = X_valid.columns.to_list()

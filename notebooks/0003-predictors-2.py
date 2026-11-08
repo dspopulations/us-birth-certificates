@@ -49,8 +49,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = 47
@@ -66,6 +64,8 @@ OUTPUT_DIR = f"output/0003-predictors-2/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -97,7 +97,9 @@ SAVE_PLOTS = True
 #
 
 # %%
-df = data_utils.load_predictors_data(from_year=START_YEAR, to_year=END_YEAR, include_unknown=False)
+df = data_utils.load_predictors_data(
+    from_year=START_YEAR, to_year=END_YEAR, include_unknown=False
+)
 
 # %% [markdown]
 # ### Define initial feature set
@@ -241,7 +243,7 @@ base_params = {
     "verbosity": 1,
 }
 
-last_best_params = {    
+last_best_params = {
     "learning_rate": 0.030669458443353795,
     "num_leaves": 377,
     "min_data_in_leaf": 888,
@@ -257,6 +259,7 @@ last_best_params = {
 # %% [markdown]
 # ## Hyperparameter tuning
 #
+
 
 # %%
 def objective(trial):

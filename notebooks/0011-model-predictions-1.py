@@ -26,8 +26,6 @@ from datetime import datetime
 from dspopulations_us_birth_certificates import repl_utils
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
-plt.style.use("../notebook.mplstyle")
-
 START_TIME = datetime.now()
 OUTPUT_DIR = f"output/0011-model-predictions-1/{START_TIME:%Y%m%d-%H%M%S}"
 
@@ -36,6 +34,8 @@ SAVE_PLOTS = True
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -223,7 +223,12 @@ plt.plot(
     marker="o",
     label="DS estimated (given age and reduction)",
 )
-plt.plot(df["mage_c"], df["ds_births_recorded"] * 2.5, marker="o", label="DS recorded x 2.5 (+ 150%)")
+plt.plot(
+    df["mage_c"],
+    df["ds_births_recorded"] * 2.5,
+    marker="o",
+    label="DS recorded x 2.5 (+ 150%)",
+)
 
 plt.xlabel("Maternal Age (years)")
 plt.ylabel("Number of Births")
@@ -306,10 +311,16 @@ plt.bar(
     label="Births predicted missing",
 )
 plt.bar(
-    df["mracehisp"] + 0.3, df["ds_lb_est_reduc"], width=0.3, label="DS estimated (given age and reduction)"
+    df["mracehisp"] + 0.3,
+    df["ds_lb_est_reduc"],
+    width=0.3,
+    label="DS estimated (given age and reduction)",
 )
 plt.bar(
-    df["mracehisp"], df["ds_births_recorded"] * 2.5, width=0.3, label="Births recorded x 2.5 (+ 150%)"
+    df["mracehisp"],
+    df["ds_births_recorded"] * 2.5,
+    width=0.3,
+    label="Births recorded x 2.5 (+ 150%)",
 )
 
 plt.xlabel("mracehisp")
@@ -392,9 +403,7 @@ x_labels = {
 }
 
 plt.figure(figsize=(9, 6))
-plt.bar(
-    df["meduc"] - 0.3, df["ds_births_recorded"], width=0.3, label="Births recorded"
-)
+plt.bar(df["meduc"] - 0.3, df["ds_births_recorded"], width=0.3, label="Births recorded")
 plt.bar(
     df["meduc"] - 0.3,
     df["ds_births_missing"],
@@ -403,10 +412,16 @@ plt.bar(
     label="Births predicted missing",
 )
 plt.bar(
-    df["meduc"] + 0.3, df["ds_lb_est_reduc"], width=0.3, label="DS estimated (given age and reduction)"
+    df["meduc"] + 0.3,
+    df["ds_lb_est_reduc"],
+    width=0.3,
+    label="DS estimated (given age and reduction)",
 )
 plt.bar(
-    df["meduc"], df["ds_births_recorded"] * 2.5, width=0.3, label="Births recorded x 2.5 (+ 150%)"
+    df["meduc"],
+    df["ds_births_recorded"] * 2.5,
+    width=0.3,
+    label="Births recorded x 2.5 (+ 150%)",
 )
 
 plt.xlabel("meduc")
@@ -461,7 +476,9 @@ plt.bar(bins_df["p_left"], bins_df["n"], width=0.001, align="edge")
 plt.yscale("log")
 plt.xlabel("Predicted probability (binned to 0.001)")
 plt.ylabel("Count (log scale)")
-plt.title("Distribution of p_ds_lb_pred_01 (year >= 2016; non-recorded DS births; log-count y-axis)")
+plt.title(
+    "Distribution of p_ds_lb_pred_01 (year >= 2016; non-recorded DS births; log-count y-axis)"
+)
 plt.tight_layout()
 plt.show()
 

@@ -25,6 +25,10 @@ import pytensor.tensor as pt
 import arviz as az
 import pandas as pd
 import matplotlib.pyplot as plt
+from dse_research_utils.environment.setup import init_workbook
+from dse_research_utils.metadata.packages import report_package_versions
+from dse_research_utils.statistics.models.pymc_utils import model_to_graphviz
+from dspopulations_us_birth_certificates import PACKAGE_LIST
 from dspopulations_us_birth_certificates.chance import get_ds_lb_nt_probability_array
 from dspopulations_us_birth_certificates.intervals import DEFAULT_HPDI_PROB
 from graphviz import Digraph
@@ -32,6 +36,9 @@ from sympy.physics.units import magnetic_density
 
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
+init_workbook()
+report_package_versions(list(PACKAGE_LIST))
+# Apply local notebook settings after the shared style.
 plt.style.use("../notebook.mplstyle")
 
 os.makedirs("./output", exist_ok=True)
@@ -83,7 +90,7 @@ with pm.Model() as model:
     beta1 = pm.Normal("beta1", mu=4.211, sigma=2.0)
 
     eta = beta0 + beta1 * inner
-    r   = pm.Deterministic("r", pm.math.sigmoid(eta))
+    r = pm.Deterministic("r", pm.math.sigmoid(eta))
 
     y_obs = pm.Binomial("y_obs", n=observed, p=r, observed=ds_recorded)
 
@@ -91,12 +98,7 @@ with pm.Model() as model:
 print(f"Free random variables: {model.free_RVs}")
 print(f"Observed random variables: {model.observed_RVs}")
 
-# set font for model graph
-
-graph = pm.model_to_graphviz(model)
-graph.graph_attr["fontname"] = "Helvetica"
-graph.node_attr["fontname"] = "Helvetica"
-graph.edge_attr["fontname"] = "Helvetica"
+graph = model_to_graphviz(model)
 graph
 
 # %%
@@ -109,7 +111,7 @@ with model:
 # %%
 r_prior = idata_prior.prior["r"]
 r_mean = r_prior.mean()
-r_hdi  = az.hdi(r_prior)
+r_hdi = az.hdi(r_prior)
 r_prior
 
 # %%
@@ -120,7 +122,9 @@ for i in range(50):
 
 # mean and 90% band
 plt.plot(age, r_mean, lw=2, label="prior mean r(age)")
-plt.fill_between(age, r_hdi["higher"], r_hdi["lower"], alpha=0.3, label="90% prior band")
+plt.fill_between(
+    age, r_hdi["higher"], r_hdi["lower"], alpha=0.3, label="90% prior band"
+)
 
 plt.xlabel("Age")
 plt.ylabel("Probability r(age)")
@@ -170,9 +174,7 @@ az.plot_ppc(
 az.plot_trace(idata, var_names=["c", "k", "beta0", "beta1"], figsize=(6, 6))
 
 # %%
-az.plot_posterior(
-    idata, var_names=["c", "k", "beta0", "beta1"], figsize=(12, 4)
-)
+az.plot_posterior(idata, var_names=["c", "k", "beta0", "beta1"], figsize=(12, 4))
 
 # %%
 az.plot_energy(idata, figsize=(6, 3))
@@ -185,7 +187,9 @@ with model:
 az.plot_ppc(ppc, num_pp_samples=400, random_seed=RANDOM_SEED, figsize=(8, 6))
 
 # %%
-az.plot_ppc(ppc, num_pp_samples=200, kind="cumulative", random_seed=RANDOM_SEED, figsize=(6, 4))
+az.plot_ppc(
+    ppc, num_pp_samples=200, kind="cumulative", random_seed=RANDOM_SEED, figsize=(6, 4)
+)
 
 # %%
 # Posterior predictive draws: shape (chain, draw, obs)
@@ -212,7 +216,7 @@ upper_sorted = upper["y_obs"][order]
 m_post = idata.posterior["m"]
 
 # Convert to latent expected *score* (mean of Y given parameters)
-score_post = m_post * n_max   # broadcast over chain/draw/obs
+score_post = m_post * n_max  # broadcast over chain/draw/obs
 
 # Posterior mean latent score per observation
 score_mean = score_post.mean(dim=("chain", "draw"))
@@ -223,6 +227,6 @@ score_hdi = az.hdi(score_post, hdi_prob=DEFAULT_HPDI_PROB)
 m_lower = score_hdi.sel(hdi="lower")
 m_upper = score_hdi.sel(hdi="higher")
 
-score_mean_sorted  = score_mean.values[order]
+score_mean_sorted = score_mean.values[order]
 m_lower_sorted = m_lower["m"][order]
 m_upper_sorted = m_upper["m"][order]

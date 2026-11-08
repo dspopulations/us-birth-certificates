@@ -49,8 +49,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = 47
@@ -66,6 +64,8 @@ OUTPUT_DIR = f"output/0010-predictors-10/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -180,7 +180,7 @@ X[categorical] = X[categorical].astype("category")
 
 # %%
 X_train, X_valid, y_train, y_valid = train_test_split(
-    X, y, test_size=(1-TRAINING_SPLIT), stratify=y, random_state=RANDOM_SEED
+    X, y, test_size=(1 - TRAINING_SPLIT), stratify=y, random_state=RANDOM_SEED
 )
 
 train_data = lgb.Dataset(
@@ -233,13 +233,14 @@ last_best_params = {
     "bagging_fraction": 0.9185684081749333,
     "bagging_freq": 2,
     "lambda_l1": 0.0005836073944757167,
-    "lambda_l2": 0.6142323696066677
+    "lambda_l2": 0.6142323696066677,
 }
 
 
 # %% [markdown]
 # ## Hyperparameter tuning
 #
+
 
 # %%
 def objective(trial):
@@ -335,8 +336,8 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
-    y_valid, p_valid, K=10000, thr=0.01
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = (
+    ml_utils.get_metrics(y_valid, p_valid, K=10000, thr=0.01)
 )
 
 metrics_df.to_csv(
@@ -372,6 +373,7 @@ plot_utils.plot_precision_recall_curve(
 # -----------------------------
 # Precision@K / Recall@K curves
 # -----------------------------
+
 
 def precision_recall_at_k(
     y_true: np.ndarray,
@@ -448,7 +450,6 @@ def plot_precision_recall_at_k(pr_df: pd.DataFrame, title_prefix: str = "Validat
     plt.title(f"{title_prefix}: Recall@K")
     plt.grid(True, which="both", linestyle="--", linewidth=0.5)
     plt.show()
-
 
 
 # %%
@@ -632,7 +633,7 @@ features_to_remove_0 = [
     "ca_omph",
     "ca_clpal",
     "wic",
-    "ca_limb"
+    "ca_limb",
 ]
 
 X_train = X_train.drop(columns=features_to_remove_0)
@@ -685,8 +686,8 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
-    y_valid, p_valid, K=10000, thr=0.01
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = (
+    ml_utils.get_metrics(y_valid, p_valid, K=10000, thr=0.01)
 )
 
 metrics_df.to_csv(
@@ -853,7 +854,7 @@ with plt.rc_context({"axes.titlesize": 12}):
 
 # %%
 shap.plots.scatter(explanation[:, "year"], color=explanation[:, "mage_c"])
-#plt.title(f"Model {model_idx}: SHAP values for year vs maternal age")
+# plt.title(f"Model {model_idx}: SHAP values for year vs maternal age")
 if SAVE_PLOTS:
     plt.savefig(
         f"{OUTPUT_DIR}/model_{model_idx}_shap_year_vs_maternal_age.png",
@@ -934,8 +935,8 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
-    y_valid, p_valid, K=10000, thr=0.01
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = (
+    ml_utils.get_metrics(y_valid, p_valid, K=10000, thr=0.01)
 )
 
 metrics_df.to_csv(
@@ -1265,9 +1266,7 @@ p_full = gbm.predict(X_full, num_iteration=gbm.best_iteration)  # P(S=1|X)
 df["p_ds_lb_pred_01"] = p_full
 
 # %%
-df[["year", "p_ds_lb_pred_01", "ca_down_c_p_n"]].groupby(
-    "year"
-).sum().reset_index()
+df[["year", "p_ds_lb_pred_01", "ca_down_c_p_n"]].groupby("year").sum().reset_index()
 
 # %%
 import duckdb

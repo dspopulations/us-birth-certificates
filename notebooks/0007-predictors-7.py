@@ -52,8 +52,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = 47
@@ -69,6 +67,8 @@ OUTPUT_DIR = f"output/0008-predictors-6/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -244,6 +244,7 @@ last_best_params = {
 # ## Hyperparameter tuning
 #
 
+
 # %%
 def objective(trial):
     trial_params = {
@@ -338,8 +339,8 @@ gbm.save_model(
 p_valid = gbm.predict(X_valid, num_iteration=best_iter)
 
 # %%
-metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = ml_utils.get_metrics(
-    y_valid, p_valid, K=10000, thr=0.01
+metrics_df, p_valid_fpr, p_valid_tpr, p_valid_thresholds, tp, fp, n_pos = (
+    ml_utils.get_metrics(y_valid, p_valid, K=10000, thr=0.01)
 )
 
 metrics_df.to_csv(
@@ -544,7 +545,6 @@ features_to_remove_0 = [
     "ab_seiz",
     "wic",
     "fagecomb",
-    
     "pwgt_r",
     "feduc",
     "fracehisp",
@@ -778,7 +778,7 @@ with plt.rc_context({"axes.titlesize": 12}):
 
 # %%
 shap.plots.scatter(explanation[:, "year"], color=explanation[:, "mage_c"])
-#plt.title(f"Model {model_idx}: SHAP values for year vs maternal age")
+# plt.title(f"Model {model_idx}: SHAP values for year vs maternal age")
 if SAVE_PLOTS:
     plt.savefig(
         f"{OUTPUT_DIR}/model_{model_idx}_shap_year_vs_maternal_age.png",
@@ -796,12 +796,7 @@ plt.show()
 #
 
 # %%
-features_to_remove_1 = [
-    "rf_artec",
-    "rf_phype",
-    "ca_cleft",
-    "ca_clpal"
-]
+features_to_remove_1 = ["rf_artec", "rf_phype", "ca_cleft", "ca_clpal"]
 
 X_train = X_train.drop(columns=features_to_remove_1)
 X_valid = X_valid.drop(columns=features_to_remove_1)
@@ -1137,9 +1132,7 @@ p_full = gbm.predict(X_full, num_iteration=gbm.best_iteration)  # P(S=1|X)
 df["p_ds_lb_pred_01"] = p_full
 
 # %%
-df[["year", "p_ds_lb_pred_01", "ca_down_c_p_n"]].groupby(
-    "year"
-).sum().reset_index()
+df[["year", "p_ds_lb_pred_01", "ca_down_c_p_n"]].groupby("year").sum().reset_index()
 
 # %%
 import duckdb

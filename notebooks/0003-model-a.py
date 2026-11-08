@@ -39,8 +39,6 @@ from dspopulations_us_birth_certificates.variables import Variables as vars
 
 pd.options.mode.copy_on_write = True
 
-plt.style.use("../notebook.mplstyle")
-
 os.makedirs("./output", exist_ok=True)
 
 RANDOM_SEED = repl_utils.RANDOM_SEED
@@ -56,6 +54,8 @@ OUTPUT_DIR = f"output/0002-predictors/{START_TIME:%Y%m%d-%H%M%S}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 repl_utils.print_environment_info()
+# Apply local notebook settings after the shared style.
+plt.style.use("../notebook.mplstyle")
 
 print(f"\n--------------------\nOutput directory: {OUTPUT_DIR}\n--------------------\n")
 
@@ -137,13 +137,17 @@ X[categorical] = X[categorical].astype("category")
 
 # %%
 gbm = lgb.Booster(model_file="output/0002-predictors/20251223-101917/final_model_2.txt")
-calibrator = joblib.load("output/0002-predictors/20251223-101917/final_calibrator.joblib")
+calibrator = joblib.load(
+    "output/0002-predictors/20251223-101917/final_calibrator.joblib"
+)
 meta = joblib.load("output/0002-predictors/20251223-101917/final_model_meta.joblib")
 best_iter = meta["best_iteration"] or None
+
 
 def predict_calibrated_proba(gbm, calibrator, X, best_iter=None):
     s = gbm.predict(X, num_iteration=best_iter, raw_score=True)
     return calibrator.predict_proba(s.reshape(-1, 1))[:, 1]
+
 
 # Ensure column order matches training
 X_full = X[meta["features"]]
@@ -158,6 +162,7 @@ df[["year", "p_ds_lb_pred_01"]].groupby("year").sum().reset_index()
 
 # %%
 import duckdb
+
 con = duckdb.connect("../data/us_births.db")
 
 # %%
