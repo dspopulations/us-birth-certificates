@@ -6,7 +6,7 @@
 
 # Shared utility contracts
 
-`pyproject.toml` resolves `dse-research-utils` from public tag `v0.19.3` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
+`pyproject.toml` resolves `dse-research-utils` from public tag `v0.19.4` in the [research repository](https://github.com/dseinternational/research). `uv.lock` records the release commit and transitive versions. Install with `uv sync --locked`.
 
 This package supplies the scientific stack through its core dependencies and the `boosting`, `columnar`, `dependence`, `graphs`, `io`, `jax`, `notebook` and `tuning` extras. Keep repository-only dependencies and development tools in this repository's metadata. The commented local source override points to `../../dseinternational/research/src/python`.
 
@@ -43,9 +43,15 @@ The v0.19.3 palette puts orange before green. With the existing role mapping, es
 
 Pandas 3.1 changes category inference in text readers and numeric date/time resolution. Polars 2.1 rejects mixed string and numeric arithmetic. The repository's Polars path combines Parquet files without such arithmetic. Its data preparation assigns pandas categories after reading SAS data. Pandas also deprecates its `fastparquet` engine, which `scripts/make_all.py` still uses; that path will need to move to PyArrow before pandas removes it. These checks do not establish that every historical data file or saved fit is compatible. Preserve their manifests and environments.
 
+The [v0.19.4 upgrade](https://github.com/dseinternational/research/blob/v0.19.4/docs/migrating-to-0.19.md) changes only two versions in this repository's lock: `dse-research-utils` from 0.19.3 to 0.19.4 and pandas from 3.1.0 to 3.1.1. The shared release resolves to `bd916566081579e19031cabb637475a26cbd62aa`. PyMC 6.4.0, PyTensor 3.3.7, Numba 0.68.0, PyArrow 26.0.1 and h5netcdf 1.8.2 were already installed. The selected extras, compatibility bounds and plot colours are unchanged.
+
+Pandas 3.1.1 fixes missing datetime values in Arrow timestamp conversion and unintended data sharing after forward or backward fill. The synthetic comparison on 8 November 2026 retained source codes, missing values, schemas, annual counts and all 98 grouped selection counts across the upgrade. It covered the Polars Parquet combination path, PyArrow and DuckDB reads, and a legacy fastparquet round trip. This checks the tested inputs, not every historical file.
+
+The [PyMC 6.4 release](https://github.com/pymc-devs/pymc/releases/tag/v6.4.0) fixes LKJ correlation and covariance sampling and density calculations. The review found no LKJ distributions in current or historical tracked project code. The core model's multivariate normal observation uses a supplied correlation matrix, not an LKJ distribution. No stored fit was identified as needing a refit for that specific fix. The compatibility check opened a historical PyMC 6.0.1 trace and read three stored posterior values with the current netCDF reader. File readability does not establish that a fit meets current model or validation requirements; the [September refit guidance](../notes/20260905-dsp-code-review-fixes.md) still applies.
+
 ## Upgrade evidence
 
-The superseded release-specific guides are available in Git history. Their checks were run at the time of each upgrade, not as part of the current documentation review.
+The superseded release-specific guides are available in Git history. Checks apply to the versions and inputs tested at each upgrade.
 
 | Release | Recorded work |
 | --- | --- |
@@ -54,5 +60,6 @@ The superseded release-specific guides are available in Git history. Their check
 | v0.15.0 | Numerical-stack upgrade and fast/slow tests; [issue 115](https://github.com/dspopulations/us-birth-certificates/issues/115) |
 | v0.17.0 | Public diagnostic and permission helpers; [PR 130](https://github.com/dspopulations/us-birth-certificates/pull/130) |
 | v0.18.0 | Design-token plot colours and role colours; [PR 133](https://github.com/dspopulations/us-birth-certificates/pull/133) |
+| v0.19.4 | Synthetic data comparison, nutpie sampling, trace save/load and copied report render; [issue 139](https://github.com/dspopulations/us-birth-certificates/issues/139) |
 
 For future upgrades, read the tagged upstream migration guide, check actual consumers and run checks appropriate to the changed paths. Dependency compatibility alone does not validate saved research fits or establish that new outputs match old ones.

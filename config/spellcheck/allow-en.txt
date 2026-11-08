@@ -173,6 +173,7 @@ bdat
 cachedir
 duckdb
 elif
+fastparquet
 getsize
 Graphviz
 hatchling
