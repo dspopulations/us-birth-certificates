@@ -1,15 +1,16 @@
 """Render the figures used in the plain-language summary.
 
-Self-contained off the converged reporting fits (variants C and B). Produces,
+Uses saved reporting fits (variants C and B). Inspect their validation before
+using these figures. Produces,
 into ``notes/figures/`` (PNG + SVG + companion CSV per figure):
 
-  1. ascertainment_funnel   -- natural -> born-alive (C..B bound) -> recorded.
+  1. ascertainment_funnel   -- baseline -> expected (C/B range) -> recorded.
   2. age_termination_reduction -- termination share by maternal-age band (C, B).
-  3. ds_rate_by_ethnicity   -- recorded vs true DS livebirth rate /10k, C..B bound.
+  3. ds_rate_by_ethnicity   -- recorded vs expected DS livebirth rate /10k.
   4. education_termination_gradient -- eta_term_edu posterior (mean + 89% ETI) vs prior.
 
-Variant C pins recording (~0.40); variant B frees it (~0.32). The C..B spread is
-the recording-vs-termination sensitivity bound, not sampling noise.
+The C/B range compares posterior means under two prior configurations. It is
+neither a credible interval nor an exhaustive sensitivity bound.
 
 Usage:
     python scripts/summary_figures.py
@@ -64,7 +65,7 @@ RACE_SHORT = [RACE_SHORT_BY_LEVEL[level] for level in RACE_LEVELS]
 
 
 def load_variant(variant: str) -> dict:
-    """Posterior-mean per-cell quantities + aggregates for one converged fit."""
+    """Posterior means from saved draws, without asserting fit validation."""
     fit_dir = latest_fit_dir(variant)
     cells = pd.read_parquet(fit_dir / "cells.parquet")
     n = cells["N_cell"].to_numpy(float)
@@ -76,24 +77,25 @@ def load_variant(variant: str) -> dict:
     fpr = float(config["priors"]["false_positive_rate"])
 
     with xr.open_dataset(fit_dir / "idata.nc", group="posterior") as post:
-        p = post["p_ds_lb"].values.reshape(-1, len(cells)).mean(0)
-        theta = inv_logit(
-            post["theta_lb_age"].values.reshape(-1, len(AGE_LEVELS)).mean(0)
-        )
+        p_draws = post["p_ds_lb"].values.reshape(-1, len(cells))
+        p = p_draws.mean(0)
+        theta = inv_logit(post["theta_lb_age"].values.reshape(-1, len(AGE_LEVELS)))
         ete = post["eta_term_edu"].values.reshape(-1, len(EDU_LEVELS))
         ete_lo, ete_hi = equal_tail_interval(ete, axis=0)
 
-    theta_cell = theta[age]
+    theta_cell = theta[:, age]
     # Per maternal-age termination reduction (1 - eta).
     age_red = np.array(
         [
             1.0
-            - (p[age == a] * n[age == a]).sum()
-            / (theta_cell[age == a] * n[age == a]).sum()
+            - (
+                (p_draws[:, age == a] * n[age == a]).sum(axis=1)
+                / (theta_cell[:, age == a] * n[age == a]).sum(axis=1)
+            ).mean()
             for a in range(len(AGE_LEVELS))
         ]
     )
-    # Per ethnicity recorded / true rate per 10k.
+    # Per ethnicity recorded / expected rate per 10k. Keep existing CSV names.
     rec10k = np.array(
         [r[race == j].sum() / n[race == j].sum() * 1e4 for j in range(len(RACE_LEVELS))]
     )
@@ -106,7 +108,7 @@ def load_variant(variant: str) -> dict:
     return {
         "variant": variant,
         "fit_dir": fit_dir,
-        "natural": float((theta_cell * n).sum()),
+        "natural": float((theta_cell * n).sum(axis=1).mean()),
         "total_true": float((p * n).sum()),
         "recorded_corrected": float(r.sum() - fpr * ((1.0 - p) * n).sum()),
         "recorded_raw": float(r.sum()),
@@ -123,19 +125,19 @@ def load_variant(variant: str) -> dict:
 def fig_funnel(c: dict, b: dict) -> None:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     stages = [
-        "Natural\n(no screening)",
-        "Born alive\nwith DS",
-        "Recorded on\ncertificate",
+        "Baseline expected\n(no prenatal reduction, C)",
+        "Expected livebirths\nwith DS (C/B)",
+        "Recorded, adjusted\nfor assumed false positives (C)",
     ]
     y = [2, 1, 0]
     natural = c["natural"]
     ax.barh(y[0], natural, color=NATURAL_COLOUR, height=0.6)
-    # Born: solid to C (lower), hatched extension to B (upper bound).
-    ax.barh(y[1], c["total_true"], color=ESTIMATED_COLOUR, height=0.6)
+    lo, hi = sorted([c["total_true"], b["total_true"]])
+    ax.barh(y[1], lo, color=ESTIMATED_COLOUR, height=0.6)
     ax.barh(
         y[1],
-        b["total_true"] - c["total_true"],
-        left=c["total_true"],
+        hi - lo,
+        left=lo,
         color=ESTIMATED_COLOUR,
         alpha=0.35,
         hatch="//",
@@ -145,34 +147,15 @@ def fig_funnel(c: dict, b: dict) -> None:
     ax.set_yticks(y)
     ax.set_yticklabels(stages)
     ax.set_xlabel("DS livebirths, 2016-2024")
-    ax.set_title(
-        "Ascertainment funnel: most true DS births never reach the certificate"
-    )
+    ax.set_title("Expected and recorded counts under model assumptions")
     for yi, val in [(y[0], natural), (y[2], c["recorded_corrected"])]:
         ax.text(val + natural * 0.01, yi, f"{val:,.0f}", va="center", fontsize=9)
     ax.text(
-        b["total_true"] + natural * 0.01,
+        hi + natural * 0.01,
         y[1],
-        f"{c['total_true']:,.0f}-{b['total_true']:,.0f}",
+        f"{lo:,.0f}-{hi:,.0f}",
         va="center",
         fontsize=9,
-    )
-    ax.annotate(
-        f"-{(1 - b['total_true'] / natural) * 100:.0f}% to "
-        f"-{(1 - c['total_true'] / natural) * 100:.0f}%\nterminated",
-        xy=(natural * 0.5, 1.5),
-        ha="center",
-        va="center",
-        fontsize=8,
-        color=styles.TEXT_COLOUR,
-    )
-    ax.annotate(
-        "only ~32-38% recorded\n=> ~62-68% missed",
-        xy=(c["total_true"] * 0.4, 0.5),
-        ha="center",
-        va="center",
-        fontsize=8,
-        color=styles.TEXT_COLOUR,
     )
     ax.margins(x=0.18)
     data = pd.DataFrame(
@@ -205,22 +188,20 @@ def fig_age_reduction(c: dict, b: dict) -> None:
         c["age_reduction"],
         "-o",
         color=VARIANT_COLOURS["C"],
-        label="Variant C (pin recording)",
+        label="Variant C",
     )
     ax.plot(
         x,
         b["age_reduction"],
         "--s",
         color=VARIANT_COLOURS["B"],
-        label="Variant B (free recording)",
+        label="Variant B",
     )
     ax.set_xticks(x)
     ax.set_xticklabels(AGE_LEVELS, rotation=45, ha="right")
     ax.set_xlabel("Maternal age band")
-    ax.set_ylabel("Reduction: DS pregnancies not born alive")
-    ax.set_title(
-        "Elective termination of DS pregnancies rises steeply with maternal age"
-    )
+    ax.set_ylabel("Modelled share of baseline livebirths reduced")
+    ax.set_title("Prior-conditional prenatal reduction by maternal age")
     ax.set_ylim(0, 1)
     ax.legend(fontsize=8)
     data = pd.DataFrame(
@@ -237,7 +218,7 @@ def fig_age_reduction(c: dict, b: dict) -> None:
 def fig_ethnicity(c: dict, b: dict) -> None:
     fig, ax = plt.subplots(figsize=styles.FIGSIZE_LG)
     x = np.arange(len(RACE_LEVELS))
-    # True-rate bound C..B drawn as a vertical range bar; recorded as a marker.
+    # Range of posterior means across C and B, not an uncertainty interval.
     lo = np.minimum(c["true10k"], b["true10k"])
     hi = np.maximum(c["true10k"], b["true10k"])
     ax.bar(
@@ -247,13 +228,13 @@ def fig_ethnicity(c: dict, b: dict) -> None:
         width=0.5,
         color=ESTIMATED_COLOUR,
         alpha=0.55,
-        label="True (model, C..B)",
+        label="Expected (C/B means)",
     )
     ax.plot(x, c["rec10k"], "o", color=RECORDED_COLOUR, label="Recorded (certificate)")
     ax.set_xticks(x)
     ax.set_xticklabels(RACE_SHORT, rotation=30, ha="right")
     ax.set_ylabel("DS livebirths per 10,000")
-    ax.set_title("True vs recorded DS livebirth rate by ethnicity")
+    ax.set_title("Expected and recorded DS livebirth rates by race and origin")
     ax.legend(fontsize=8)
     data = pd.DataFrame(
         {
@@ -278,16 +259,14 @@ def fig_education(c: dict) -> None:
         fmt="o",
         color=POSTERIOR_COLOUR,
         capsize=3,
-        label="Posterior (data)",
+        label="Posterior (prior and data)",
     )
     ax.plot(x, c["ete_prior"], "x", color=styles.TEXT_COLOUR, alpha=0.6, label="Prior")
     ax.axhline(0, color=styles.TEXT_COLOUR, lw=0.6)
     ax.set_xticks(x)
     ax.set_xticklabels(EDU_LEVELS, rotation=45, ha="right")
     ax.set_ylabel("Termination log-odds offset")
-    ax.set_title(
-        "Higher education -> much higher termination (data overrides the prior)"
-    )
+    ax.set_title("Prior and posterior education offsets for termination")
     ax.legend(fontsize=8)
     data = pd.DataFrame(
         {

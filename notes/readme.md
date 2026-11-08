@@ -22,6 +22,7 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Interpretation and model checks
 
+- [Nested classifier evaluation and isolated selection-model sensitivities](20261108-model-review-evidence.md).
 - [Classifier scores and prevalence estimation](20260622-predictors-bayesian-model.md).
 - [Recording-anchor dependence and diagnostic limits](20260707-s-anchor-and-identifiability-diagnostic.md).
 - [Core model review](20260803-dsp-core-model-family-review.md), [false-positive channels](20260803-false-positive-channel-identification.md) and [subgroup ratios](20260803-group-reduction-recording-identification.md).

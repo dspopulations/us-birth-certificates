@@ -1,0 +1,3 @@
+label,n,n_positive,recorded_fraction,average_precision,roc_auc,log_loss,brier_score,mean_predicted_probability,evaluation,test_used_for_tuning,test_used_for_early_stopping,saved_tuned_parameters_reused,target
+confirmed-pending,3619990,1797,0.0004964102110779311,0.018950924137539526,0.8760266262931067,0.003509608758812498,0.0004914829278622993,0.0004963778713022531,nested_cross_validation,False,False,False,recorded_checkbox
+confirmed,3619027,834,0.00023044868137209255,0.007835964980699201,0.886679650399121,0.0018102449954580982,0.00022951011672104384,0.00022205991141948002,nested_cross_validation,False,False,False,recorded_checkbox
