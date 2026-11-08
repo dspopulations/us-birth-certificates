@@ -1,9 +1,19 @@
 > [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
+
+> [!NOTE]
 > Drafted by Codex (GPT-6).
 
-# Historical figure inputs
+# Research figures and historical inputs
 
-The CSVs here retain aggregate evidence from earlier exploratory analyses. They
+`20261108-recorded-ds-trends/` contains the reviewed age-dependent analysis of
+confirmed and pending certificate records for 2018–2025. The [research note](../20261108-recorded-ds-age-dependent-trends.md)
+states the model, uncertainty and limits. Its reproducible command is
+`scripts/analyse_recorded_ds_trends.py`.
+
+## Historical inputs
+
+The older CSVs here retain aggregate evidence from earlier exploratory analyses. They
 are not current results, and this documentation review did not regenerate them.
 Their originating scripts are in `scripts/`, and the [research notes](../readme.md)
 describe the assumptions and corrections.

@@ -1,4 +1,7 @@
 > [!NOTE]
+> AI-assisted revision by Codex (GPT-6).
+
+> [!NOTE]
 > Drafted by Codex (GPT-6).
 
 # Research notes
@@ -22,6 +25,7 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Interpretation and model checks
 
+- [Recorded Down syndrome trends by maternal age and race and ethnicity](20261108-recorded-ds-age-dependent-trends.md), with separate confirmed and pending analyses for 2018–2025.
 - [Nested classifier evaluation and isolated selection-model sensitivities](20261108-model-review-evidence.md).
 - [Classifier scores and prevalence estimation](20260622-predictors-bayesian-model.md).
 - [Recording-anchor dependence and diagnostic limits](20260707-s-anchor-and-identifiability-diagnostic.md).

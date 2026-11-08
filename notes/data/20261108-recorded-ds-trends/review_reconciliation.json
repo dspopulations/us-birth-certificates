@@ -1,0 +1,25 @@
+{
+  "reviewed_prior_run": "output/recorded_ds_review/20261108T162942",
+  "prior_review_sha256": "a8af797e4f88bf648317e8663eaad5b620762e878b210027564e9544728f72c1",
+  "fresh_aggregate_cells_match_review": 1728,
+  "direct_estimates_and_intervals_match_review": 128,
+  "pairwise_estimates_and_tests_match_review": 42,
+  "bootstrap_tests_match_review": 4,
+  "code_and_output_hashes_verified": true,
+  "aggregate_reproduction_exact_tables": [
+    "fitted_standardised_proportions.csv",
+    "aggregate_counts.csv",
+    "pairwise_trend_tests.csv",
+    "fitted_endpoint_changes.csv",
+    "sensitivity_tests.csv",
+    "national_counts_and_crude_proportions.csv",
+    "age_weights.csv",
+    "age_band_trends_95ci.csv",
+    "model_diagnostics.csv",
+    "independent_glm_validation.csv",
+    "direct_proportions_95ci.csv"
+  ],
+  "aggregate_reproduction_bootstrap_repetitions": 19,
+  "aggregate_reproduction_scope": "All non-simulation tables reproduce exactly. The short run checks the CSV input route; the retained primary tests use 19999 repetitions.",
+  "verification": "552 tests passed; 12 slow tests excluded. Ruff and repository spellcheck passed. All local note links resolve. All five PNG figures inspected."
+}

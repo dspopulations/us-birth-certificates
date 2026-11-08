@@ -1,0 +1,113 @@
+status,race_code,group,year,per_10000
+confirmed,1,Non-Hispanic White,2018,2.5245591179496425
+confirmed,1,Non-Hispanic White,2019,2.4621637939200505
+confirmed,1,Non-Hispanic White,2020,2.4020754069882924
+confirmed,1,Non-Hispanic White,2021,2.344200554645304
+confirmed,1,Non-Hispanic White,2022,2.2884499924533426
+confirmed,1,Non-Hispanic White,2023,2.234738441060335
+confirmed,1,Non-Hispanic White,2024,2.182984402564776
+confirmed,1,Non-Hispanic White,2025,2.133109985764598
+confirmed,2,Non-Hispanic Black,2018,2.234932168236378
+confirmed,2,Non-Hispanic Black,2019,2.15600577137131
+confirmed,2,Non-Hispanic Black,2020,2.0805075635356842
+confirmed,2,Non-Hispanic Black,2021,2.008272939001356
+confirmed,2,Non-Hispanic Black,2022,1.9391457416336055
+confirmed,2,Non-Hispanic Black,2023,1.8729778114419737
+confirmed,2,Non-Hispanic Black,2024,1.8096285563033396
+confirmed,2,Non-Hispanic Black,2025,1.7489645474214726
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2018,4.71355845539325
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2019,4.1820488858449405
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2020,3.7116639825308853
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2021,3.295242063919274
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2022,2.926475240235896
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2023,2.5998059930471347
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2024,2.3103364644004216
+confirmed,3,Non-Hispanic American Indian or Alaska Native,2025,2.0537488732345723
+confirmed,4,Non-Hispanic Asian,2018,1.0305714867857956
+confirmed,4,Non-Hispanic Asian,2019,0.9990803430479888
+confirmed,4,Non-Hispanic Asian,2020,0.9688378776568292
+confirmed,4,Non-Hispanic Asian,2021,0.9397868866349599
+confirmed,4,Non-Hispanic Asian,2022,0.9118730078811407
+confirmed,4,Non-Hispanic Asian,2023,0.8850445724474292
+confirmed,4,Non-Hispanic Asian,2024,0.8592524638975458
+confirmed,4,Non-Hispanic Asian,2025,0.8344499852942636
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2018,1.5348579036386818
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2019,1.6371222467694546
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2020,1.7467529519385339
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2021,1.8643115692296703
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2022,1.9904042502122286
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2023,2.1256853996054774
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2024,2.2708616328965814
+confirmed,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2025,2.4266960660127066
+confirmed,6,Non-Hispanic more than one race,2018,2.7410235727178036
+confirmed,6,Non-Hispanic more than one race,2019,2.603707306495656
+confirmed,6,Non-Hispanic more than one race,2020,2.4739227365519083
+confirmed,6,Non-Hispanic more than one race,2021,2.3512294735687087
+confirmed,6,Non-Hispanic more than one race,2022,2.235214101254116
+confirmed,6,Non-Hispanic more than one race,2023,2.125488466596572
+confirmed,6,Non-Hispanic more than one race,2024,2.021688081375104
+confirmed,6,Non-Hispanic more than one race,2025,1.9234706275340039
+confirmed,7,"Hispanic, any race",2018,2.8853034763278775
+confirmed,7,"Hispanic, any race",2019,2.837632047186481
+confirmed,7,"Hispanic, any race",2020,2.7916888395549537
+confirmed,7,"Hispanic, any race",2021,2.747415836181565
+confirmed,7,"Hispanic, any race",2022,2.704757346161276
+confirmed,7,"Hispanic, any race",2023,2.663659912691449
+confirmed,7,"Hispanic, any race",2024,2.624072224832442
+confirmed,7,"Hispanic, any race",2025,2.585945033099358
+pending,1,Non-Hispanic White,2018,3.317399328548448
+pending,1,Non-Hispanic White,2019,3.176284042407097
+pending,1,Non-Hispanic White,2020,3.0424858464398317
+pending,1,Non-Hispanic White,2021,2.9156374076642377
+pending,1,Non-Hispanic White,2022,2.7953906252103407
+pending,1,Non-Hispanic White,2023,2.681415605819759
+pending,1,Non-Hispanic White,2024,2.5733996951617857
+pending,1,Non-Hispanic White,2025,2.4710465618700117
+pending,2,Non-Hispanic Black,2018,2.1275103050111706
+pending,2,Non-Hispanic Black,2019,2.1482438717419665
+pending,2,Non-Hispanic Black,2020,2.169969411781468
+pending,2,Non-Hispanic Black,2021,2.1927491751118047
+pending,2,Non-Hispanic Black,2022,2.2166498855735877
+pending,2,Non-Hispanic Black,2023,2.241743066689047
+pending,2,Non-Hispanic Black,2024,2.268105391295554
+pending,2,Non-Hispanic Black,2025,2.2958190567305365
+pending,3,Non-Hispanic American Indian or Alaska Native,2018,5.071363651395151
+pending,3,Non-Hispanic American Indian or Alaska Native,2019,5.167126751113046
+pending,3,Non-Hispanic American Indian or Alaska Native,2020,5.266507466146507
+pending,3,Non-Hispanic American Indian or Alaska Native,2021,5.36972526700941
+pending,3,Non-Hispanic American Indian or Alaska Native,2022,5.477016195217985
+pending,3,Non-Hispanic American Indian or Alaska Native,2023,5.5886342018206125
+pending,3,Non-Hispanic American Indian or Alaska Native,2024,5.704852596027338
+pending,3,Non-Hispanic American Indian or Alaska Native,2025,5.82596561303939
+pending,4,Non-Hispanic Asian,2018,1.6644558343018496
+pending,4,Non-Hispanic Asian,2019,1.5917563055031116
+pending,4,Non-Hispanic Asian,2020,1.5232083718198808
+pending,4,Non-Hispanic Asian,2021,1.4585799202246343
+pending,4,Non-Hispanic Asian,2022,1.397652205599946
+pending,4,Non-Hispanic Asian,2023,1.3402190655009034
+pending,4,Non-Hispanic Asian,2024,1.2860861819449134
+pending,4,Non-Hispanic Asian,2025,1.235070387363688
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2018,3.5188936929204577
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2019,3.516637905064684
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2020,3.5149060246694512
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2021,3.513717082859709
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2022,3.5130915362854465
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2023,3.5130513585084886
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2024,3.513620137444917
+pending,5,Non-Hispanic Native Hawaiian or Other Pacific Islander,2025,3.514823179261592
+pending,6,Non-Hispanic more than one race,2018,2.902504588965428
+pending,6,Non-Hispanic more than one race,2019,2.9036597071084156
+pending,6,Non-Hispanic more than one race,2020,2.906050663012198
+pending,6,Non-Hispanic more than one race,2021,2.9097343485270484
+pending,6,Non-Hispanic more than one race,2022,2.914771534826414
+pending,6,Non-Hispanic more than one race,2023,2.9212271096498093
+pending,6,Non-Hispanic more than one race,2024,2.9291703294883704
+pending,6,Non-Hispanic more than one race,2025,2.9386750876468253
+pending,7,"Hispanic, any race",2018,3.6547258197712815
+pending,7,"Hispanic, any race",2019,3.5305397521888806
+pending,7,"Hispanic, any race",2020,3.4118231666547336
+pending,7,"Hispanic, any race",2021,3.298360865561322
+pending,7,"Hispanic, any race",2022,3.1899472410215823
+pending,7,"Hispanic, any race",2023,3.086385857926465
+pending,7,"Hispanic, any race",2024,2.9874890562567282
+pending,7,"Hispanic, any race",2025,2.8930775717551733

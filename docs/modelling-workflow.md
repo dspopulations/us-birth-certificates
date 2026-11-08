@@ -103,6 +103,23 @@ Each case saves numerical validation, annual and total estimates, replicated-cou
 
 ## Descriptive and classifier comparisons
 
+For the reviewed 2018–2025 trends in confirmed and pending Down syndrome
+records by maternal age and race and ethnicity, run:
+
+```bash
+uv run python scripts/analyse_recorded_ds_trends.py
+```
+
+The command reads the database without changing it and writes a new run under
+`output/recorded_ds_age_dependent/`. It fits separate age-dependent models for
+the two statuses, simulates the group-difference tests, and saves aggregate
+tables and PNG/SVG figures. `--counts-csv` accepts the retained aggregate
+counts in `notes/data/20261108-recorded-ds-trends/aggregate_counts.csv` instead
+of querying the database. `--output-dir` selects an exact new directory.
+Read the [research note](../notes/20261108-recorded-ds-age-dependent-trends.md)
+for the exploratory findings and limits. These models describe recorded
+status, not true prevalence or recording sensitivity.
+
 ```bash
 uv run python scripts/analyse_descriptive.py --render
 uv run python scripts/analyse_predicted.py --years 2016-2024 --render

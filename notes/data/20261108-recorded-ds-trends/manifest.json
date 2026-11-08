@@ -1,0 +1,72 @@
+{
+  "ai_assisted": "Codex (GPT-6)",
+  "generated_at": "2026-11-08T17:03:08.996423+00:00",
+  "source": "/Users/frankbuckley/dev/dspopulations/us-birth-certificates/data/us_births.db",
+  "source_sha256": "76c155a9c5ace6c7fcce4cb62bafa847e434d4f36aca1546432edcae353b8e01",
+  "source_type": "duckdb",
+  "source_stat_unchanged": true,
+  "git_commit": "1fc5245e88b3b64de24178b0be27b4e5a0c80f23",
+  "git_dirty": true,
+  "python": "3.14.10",
+  "packages": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scipy": "1.18.1",
+    "statsmodels": "0.15.0",
+    "matplotlib": "3.11.2",
+    "duckdb": "2.0.0"
+  },
+  "code_sha256": {
+    "scripts/analyse_recorded_ds_trends.py": "4e42653166598e1ba837e95485fcc35fe90352bdb43e157ebae156b168185c98",
+    "src/dspopulations_us_birth_certificates/recorded_trends.py": "9197f217ad3144d61e59581800c76dc3104981d2705c55c3666b6ebfdb84c3bb",
+    "src/dspopulations_us_birth_certificates/plot_colours.py": "46a5b037508b36d4fd7d2a7368d64196c70a37e37fde801b7af3e26a904056e1"
+  },
+  "primary_model": "Separate C and P Poisson models: mean = births * exp(alpha[race,27-age-stratum] + (year-2021.5)*(age_band_slope[7 bands]+race_slope[race])). White race slope fixed at zero. The race deviation is constant across age bands; band slopes differ.",
+  "primary_test": "Six race deviations equal zero after allowing age-specific trends. Two status-specific tests, Holm adjusted. Conditional parametric bootstrap, fixed race-age case totals and birth denominators, plus-one p-values.",
+  "bootstrap_repetitions": 19999,
+  "group_coding": {
+    "1": "Non-Hispanic White",
+    "2": "Non-Hispanic Black",
+    "3": "Non-Hispanic American Indian or Alaska Native",
+    "4": "Non-Hispanic Asian",
+    "5": "Non-Hispanic Native Hawaiian or Other Pacific Islander",
+    "6": "Non-Hispanic more than one race",
+    "7": "Hispanic, any race",
+    "8": "Hispanic origin unknown or not stated"
+  },
+  "standard": "All US occurrence births in 2018, including origin unknown; 27 age strata (under 20, each age 20-44, 45+).",
+  "denominator": "All births occurring in the 50 states and DC, including unknown status and foreign residents. Origin unknown is descriptive only and excluded from trend fits.",
+  "intervals": "Direct rates: pointwise 95% Fay-Feuer gamma. Slopes and pairwise annual factor ratios: pointwise 95% profile likelihood, chi-square(1) cutoff. Neither interval family is simultaneous. No confidence bands for fitted standardised curves are claimed.",
+  "multiplicity": "Holm across two primary tests. All 42 pairs corrected together. Age-assumption tests form a separate two-status diagnostic family; each sensitivity also adjusts across two statuses. These adjustments do not cover data-driven period or model selection.",
+  "fitted_curves": "Recover race-age intercepts from case totals and fitted slopes, then standardise to common 2018 age weights. Zero-total strata have fitted mean zero. Curves are point estimates, not true-prevalence estimates. No single constant annual multiplier for a group is assumed.",
+  "limitations": [
+    "Exploratory selection of 2018 and the age-dependent model after seeing data.",
+    "Relative-scale trends, constant within age bands and constant race differences across those bands.",
+    "Count variation conditional on fixed births and weights; does not include diagnostic error, under-recording, imputation uncertainty, geographic recording differences or dependence between births.",
+    "Sparse groups and pooled age tails limit precision and adjustment. Confirmed and pending are separate marginal models of mutually exclusive recorded statuses; no within-birth status transition is observed."
+  ],
+  "artefact_sha256": {
+    "age_band_trends_95ci.csv": "fee31fd35c7f427aee5ad2c48c1775dd12023608bb426ed54e0320b1506f31c1",
+    "age_weights.csv": "6b08a8c0704651cc8bdc6f518d2ddd93b76f5dcffa0328be79f16ef7d5139be4",
+    "aggregate_counts.csv": "d8e1280b78650733dd4f86d63573c853a4b1ae199260a6dd5f6e4650792c6d5d",
+    "confirmed_age_band_changes.png": "35566e88c0fd29231ca2f06560c0964e6ca9cf96aa207d8dad94d472aabd56b6",
+    "confirmed_age_band_changes.svg": "ad6401a37dfcb5ec7b3e59dd48679af9b36df6a4c239cc4e782fe49fd13aacf9",
+    "confirmed_standardised_trends.png": "b85edcda2d7dff848693db6929fe67476a38eba049eef79a55021657ab97e733",
+    "confirmed_standardised_trends.svg": "1beace6179b52801fe7e6ef6e83eead633ab97d3b16cd93b22789721c7fda9be",
+    "direct_proportions_95ci.csv": "cb434dc099ac9133a1a410fb4642d74bcc0bb87a28b8754f133007d069aef6f7",
+    "fitted_endpoint_changes.csv": "52418c6ae2294091552a826e43dc310093091afa2eea9323f5012bc0fa311042",
+    "fitted_standardised_proportions.csv": "b90d1a66d2f073562e16419e07daeeacee737d8ef775967bbdf4e885da1d84d7",
+    "global_tests.csv": "c794d3f22c3d50d95eae60bff91de62e4d2ecbf530611d56e735501ae3f5e778",
+    "independent_glm_validation.csv": "bad6bca081dbc9c58f287cdffc282bf9ae721793066d5412fb4fc56daea8702f",
+    "model_diagnostics.csv": "cf3ee361c8cb88da83ace1d60c15bb36c87ecaad584608bc51903c561b053e11",
+    "national_counts_and_crude_proportions.csv": "9b2c0039593b00530d2e7f083ebc26cebd6eabb85b97942d3557b88de128ee9e",
+    "pairwise_trend_tests.csv": "80cd17098a488fc0b869adfcd32d80f1aedeb96033ff784de0d2f11586dfb12d",
+    "pending_age_band_changes.png": "84c5832d567ab27974e5c266f79b29ddf8c74cdbb3a32c341edd8f054d3633bc",
+    "pending_age_band_changes.svg": "c807efa7c26ddf70712fb1aebc1f8cf4f5a20d36d9f4ad52251b633d895c4927",
+    "pending_standardised_trends.png": "b96b746b803222165ed08d873e5969f44fb104a338a8f48a154d89b6552b84e9",
+    "pending_standardised_trends.svg": "82aa0f700b10c890f4bf6c6d8a6bdff5ad37711369045eea309ac94893254161",
+    "race_trend_contrasts.png": "7ba93a47041261f0e01dc3fcae770c18eed898128ccee9d8e00fe0a90600096b",
+    "race_trend_contrasts.svg": "8930cd7cbbe9e87a03657b8fcf67ba4a0df7fc8137d7fcc192c8c520861bdcda",
+    "sensitivity_tests.csv": "78ede907a77e2d3374d43cfb3503a064c9cfbfbbafcfc689eca1bd1dd6362097"
+  }
+}
