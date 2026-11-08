@@ -9,6 +9,33 @@ The [CDC text import](cdc-text-import.md) builds annual candidates and a combine
 
 The [2025 reference review](../notes/20261106-2025-reference-review-and-classifiers.md) distinguishes classifier inputs from external population-model inputs. Missing 2025 surveillance, reduction and recording references still prevent complete expected-count analyses. The recorded-status classifiers do not use those references.
 
+## Output locations
+
+Set `DSPOP_OUTPUT_ROOT` to move model outputs to a scratch disk:
+
+```bash
+export DSPOP_OUTPUT_ROOT=/mnt/scratch/usbc-output
+uv run python scripts/fit_selection_model.py --variant C --spec full --profile reporting
+```
+
+This writes the run to `/mnt/scratch/usbc-output/selection/C/full/<timestamp>/`. An unset or empty variable keeps the existing `output/` default. Relative roots are relative to the working directory. The resolver expands `~` in the environment variable and in the new root options.
+
+The fitting commands (`fit_model.py`, `fit_selection_model.py` and `fit_core_reduction_model.py`) accept `--output-root` to override the environment variable. Their `--output-dir` option still selects an exact run directory and takes precedence over both. Subdirectories remain the same:
+
+| Command | Path below the resolved root |
+| --- | --- |
+| `fit_model.py` | `fit_model/<timestamp>/`, or `fit_model_<profile>/<timestamp>/` with a profile |
+| `tune_model.py` | `tuning/<model_id>/` |
+| `fit_selection_model.py` | `selection/<variant>/<spec>/<timestamp>/` |
+| `fit_core_reduction_model.py` | `selection_core_reduction/<model_id>/<timestamp>/` |
+| `run_all_selection_variants.py` | Selection runs as above, with logs in `selection/_run_logs/` |
+
+The batch command accepts `--output-root` and checks that same root when using `--skip-existing`. Selection analysis scripts that call `latest_fit_dir()` also discover runs under the environment root. An explicit `latest_fit_dir(root=...)` still names the selection directory itself.
+
+Existing command-specific options retain their meanings. For `tune_model.py`, `--output-root` is the tuning directory itself, so the command appends only `<model_id>/`. For `compare_selection_variants.py`, `--root` is the selection directory itself; otherwise `--output-root` or the environment root supplies its `selection/` directory. Comparison results go alongside those fits unless `--output-dir` selects an exact directory. For `compare_variants.py --by-model-id`, `--models-root` takes precedence over `<resolved root>/models/`; `--output` continues to select the comparison CSV, with `comparison.csv` in the working directory as its default.
+
+Commands print the selected locations. Fit manifests or run configurations record the absolute run directory; tuning also records its absolute root. Copied Quarto reports read their artefacts relative to the run directory, so they can be rendered outside the repository's `output/` tree.
+
 ## Recorded-status classifiers
 
 LightGBM model definitions live in `src/dspopulations_us_birth_certificates/models/`. The `usbc10` family includes demographic and clinical features; `usbc11` uses clinical features and maternal age. Variants with `_cn` train on confirmed cases and omit pending cases. Other variants count confirmed and pending as positive.

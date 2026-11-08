@@ -12,8 +12,14 @@ format:
     toc: true
     toc-depth: 2
     code-links:
-      - repo
+      - text: GitHub repository
+        icon: github
+        href: https://github.com/dspopulations/us-birth-certificates
 ---
+
+::: {.callout-note title="AI-assisted"}
+AI-assisted revision by Codex (GPT-6).
+:::
 
 ::: {.callout-note title="AI-assisted"}
 AI-assisted revision by Claude Code (Opus 5.5) on 7 October 2026.

@@ -17,6 +17,7 @@ from dspopulations_us_birth_certificates.file_io import (
     write_atomically,
     write_text_atomically,
 )
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 from dspopulations_us_birth_certificates.selection.config import FitContext
 
 DOCS_TEMPLATE_ROOT = Path("docs/models")
@@ -110,6 +111,7 @@ def fit_manifest(context: FitContext, output_dir: Path) -> dict:
     attrs = getattr(context.idata, "attrs", {})
     return {
         "schema_version": 1,
+        "output_dir": str(output_dir.resolve()),
         "code_revision": git("rev-parse", "HEAD"),
         "worktree_changes": git("status", "--porcelain"),
         "python": platform.python_version(),
@@ -140,13 +142,15 @@ def latest_fit_dir(
     variant: str,
     *,
     spec: str = "full",
-    root: Path | str = "output/selection",
+    root: Path | str | None = None,
     require_validated: bool = False,
 ) -> Path:
     """Return the most recently modified completed fit dir for ``variant``/``spec``.
 
     Looks under ``<root>/<variant>/<spec>/*`` for run directories written by
-    ``scripts/fit_selection_model.py``; a run is "completed" if it has an
+    ``scripts/fit_selection_model.py``. An explicit ``root`` is the selection
+    directory itself; otherwise use ``selection/`` under DSPOP_OUTPUT_ROOT
+    or the local ``output/`` default. A run is "completed" if it has an
     ``idata.nc``. A saved validation status must be "passed". Legacy fits with
     no status remain discoverable unless ``require_validated`` is True; their
     absence of validation must not be interpreted as a pass.
@@ -157,7 +161,10 @@ def latest_fit_dir(
     Raises:
         FileNotFoundError: if no completed fit dir exists.
     """
-    parent = Path(root) / variant / spec
+    selection_root = (
+        Path(root) if root is not None else resolve_output_root() / "selection"
+    )
+    parent = selection_root / variant / spec
     candidates = (
         [p for p in parent.iterdir() if p.is_dir() and (p / "idata.nc").is_file()]
         if parent.is_dir()

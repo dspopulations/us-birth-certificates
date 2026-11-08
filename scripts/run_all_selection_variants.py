@@ -43,10 +43,8 @@ from pathlib import Path
 import dse_research_utils.environment.setup as setup
 
 from dspopulations_us_birth_certificates import cli_output
+from dspopulations_us_birth_certificates.paths import resolve_output_root
 from dspopulations_us_birth_certificates.selection import SPECS, VARIANTS, preset_names
-
-LOG_ROOT = Path("output/selection/_run_logs")
-OUTPUT_ROOT = Path("output/selection")
 
 
 @dataclass
@@ -58,6 +56,7 @@ class RunnerCliConfig:
     render: bool
     skip_existing: bool
     extra_args: tuple[str, ...]
+    output_root: Path
 
 
 def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
@@ -101,7 +100,7 @@ def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
         "--skip-existing",
         action="store_true",
         help=(
-            "Skip a variant when output/selection/<V>/<spec>/ already "
+            "Skip a variant when <root>/selection/<V>/<spec>/ already "
             "contains a run with an idata.nc on disk."
         ),
     )
@@ -110,9 +109,15 @@ def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
         default="",
         help=(
             "Quoted string of extra flags passed verbatim to each "
-            'fit_selection_model.py invocation (e.g. --extra-args '
+            "fit_selection_model.py invocation (e.g. --extra-args "
             "'--target-accept 0.98 --draws 2000')."
         ),
+    )
+    p.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Root for fits and logs (default: DSPOP_OUTPUT_ROOT or output/).",
     )
     ns = p.parse_args(argv)
     return RunnerCliConfig(
@@ -123,12 +128,13 @@ def _parse_args(argv: list[str] | None) -> RunnerCliConfig:
         render=ns.render,
         skip_existing=ns.skip_existing,
         extra_args=tuple(shlex.split(ns.extra_args)),
+        output_root=resolve_output_root(ns.output_root),
     )
 
 
-def _has_completed_fit(variant: str, spec: str) -> bool:
+def _has_completed_fit(variant: str, spec: str, root: Path) -> bool:
     """True when at least one run dir under <root>/<variant>/<spec>/ has idata.nc."""
-    parent = OUTPUT_ROOT / variant / spec
+    parent = root / variant / spec
     if not parent.exists():
         return False
     for run_dir in parent.iterdir():
@@ -170,7 +176,7 @@ def _run_one(
 ) -> tuple[str, int, Path]:
     """Run fit_selection_model.py for one variant; return (variant, rc, log)."""
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = OUTPUT_ROOT / variant / cli.spec / ts
+    output_dir = cli.output_root / "selection" / variant / cli.spec / ts
     output_dir.mkdir(parents=True, exist_ok=True)
     cmd = _build_cmd(variant, cli, output_dir)
 
@@ -197,10 +203,11 @@ def _iter_variants_to_run(
     cli: RunnerCliConfig,
 ) -> Iterable[str]:
     for v in cli.variants:
-        if cli.skip_existing and _has_completed_fit(v, cli.spec):
+        root = cli.output_root / "selection"
+        if cli.skip_existing and _has_completed_fit(v, cli.spec, root):
             cli_output.info(
                 f"[variant {v}] skipping — existing idata.nc under "
-                f"{OUTPUT_ROOT / v / cli.spec}/"
+                f"{root / v / cli.spec}/"
             )
             continue
         yield v
@@ -214,6 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         "run_all_selection_variants",
         f"variants={','.join(cli.variants)}  spec={cli.spec}  profile={cli.profile}",
     )
+    cli_output.info(f"Output root: {cli.output_root}")
 
     if shutil.which("quarto") is None and cli.render:
         cli_output.warning(
@@ -221,18 +229,17 @@ def main(argv: list[str] | None = None) -> int:
             "fits will still run, rendering will emit a warning per variant."
         )
 
-    LOG_ROOT.mkdir(parents=True, exist_ok=True)
+    log_root = cli.output_root / "selection" / "_run_logs"
+    log_root.mkdir(parents=True, exist_ok=True)
     batch_ts = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     results: list[tuple[str, int, Path]] = []
     for variant in _iter_variants_to_run(cli):
-        log_path = LOG_ROOT / f"{batch_ts}_{variant}.log"
+        log_path = log_root / f"{batch_ts}_{variant}.log"
         result = _run_one(variant, cli, log_path)
         results.append(result)
         status = "ok" if result[1] == 0 else f"FAILED(rc={result[1]})"
-        cli_output.info(
-            f"[variant {variant}] {status}  output -> {result[2]}"
-        )
+        cli_output.info(f"[variant {variant}] {status}  output -> {result[2]}")
 
     cli_output.section("Summary")
     if not results:
@@ -247,8 +254,11 @@ def main(argv: list[str] | None = None) -> int:
             ("profile", cli.profile),
             ("spec", cli.spec),
             ("variants ok", ", ".join(ok) or "(none)"),
-            ("variants failed", ", ".join(f"{v}(rc={rc})" for v, rc in failed) or "(none)"),
-            ("logs", str(LOG_ROOT / f"{batch_ts}_*.log")),
+            (
+                "variants failed",
+                ", ".join(f"{v}(rc={rc})" for v, rc in failed) or "(none)",
+            ),
+            ("logs", str(log_root / f"{batch_ts}_*.log")),
         ],
     )
     return 0 if not failed else 1

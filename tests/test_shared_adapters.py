@@ -556,6 +556,7 @@ def test_selection_artefacts_are_replaced_atomically(tmp_path: Path) -> None:
     manifest_payload = json.loads(
         (run_dir / "manifest.json").read_text(encoding="utf-8")
     )
+    assert manifest_payload["output_dir"] == str(run_dir.resolve())
     assert set(manifest_payload["artefact_sha256"]) == {
         "config.json",
         "run_config.json",

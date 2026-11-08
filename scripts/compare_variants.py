@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from dspopulations_us_birth_certificates.paths import resolve_output_root
+
 METRIC_COLUMNS: tuple[str, ...] = (
     "average_precision",
     "roc_auc",
@@ -116,8 +118,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--models-root",
         type=Path,
-        default=Path("output/models"),
-        help="Root where per-model runs live (used with --by-model-id).",
+        default=None,
+        help="Directory containing per-model runs; overrides --output-root for --by-model-id.",
+    )
+    p.add_argument(
+        "--output-root",
+        type=Path,
+        default=None,
+        help="Root containing models/ (default: DSPOP_OUTPUT_ROOT or output/).",
     )
     p.add_argument(
         "--output",
@@ -125,13 +133,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=Path("comparison.csv"),
         help="Destination CSV.",
     )
-    return p.parse_args(argv)
+    ns = p.parse_args(argv)
+    if ns.models_root is None:
+        ns.models_root = resolve_output_root(ns.output_root) / "models"
+    return ns
 
 
 def main(argv: list[str] | None = None) -> int:
     ns = parse_args(argv)
 
     if ns.by_model_id:
+        print(f"Discovering model runs under {ns.models_root}")
         run_dirs: list[Path] = []
         for model_id in ns.by_model_id:
             run = _latest_run_for_model(ns.models_root, model_id)
