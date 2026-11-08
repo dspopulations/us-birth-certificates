@@ -7,15 +7,16 @@ The importer supports the 37 US natality files for 1989–2025. It streams each 
 
 The annual [source catalogue](../config/natality/sources.json) pins the archive, guide and addendum hashes. Each [layout](../config/natality/layouts/) records positions, widths, code domains, blank meanings, reporting flags and guide pages. Every project import column has an explicit presence or absence decision. Equal record lengths do not establish equal layouts.
 
-The live database at `data/us_births.db` remains unchanged. Import and combination refuse that path, `data/us_births_temp.db`, the selected comparison database, and symbolic or hard links to those files. There is no automatic replacement step.
+The importer leaves the live analysis database at `data/us_births.db` unchanged. Import and combination refuse that path, `data/us_births_temp.db`, the selected comparison database, and symbolic or hard links to those files. There is no automatic replacement step.
 
 ## Build the candidate
 
-Use Python 3.14 through the locked environment, from the repository root. Historical validation needs the saved SAS-derived database as its comparison source.
+Use Python 3.14 through the locked environment, from the repository root. `--baseline` is required. For historical validation, select the saved pre-CDC DuckDB database. The local backup is shown below; use its actual path if stored elsewhere. The importer reads no SAS files.
 
 ```bash
 uv sync --locked
-uv run python scripts/import_natality.py --years 1989-2025
+uv run python scripts/import_natality.py --years 1989-2025 \
+  --baseline data/backups/before-cdc-20261106T164938Z/us_births.db
 ```
 
 The command downloads each archive and its documentation into `data/raw/natality/<year>/`. Existing cache files must match the audited hashes. A changed release requires a new source and layout review. Downloads use temporary files, retries and hash checks.
@@ -57,17 +58,23 @@ The combined build accepts only annual databases with matching successful valida
 The build uses `us_births.building.db` until these checks pass. It then replaces only the separate candidate output. `us_births.build.json` records the combined result and every annual input. An interrupted combination resumes already committed years without inserting them twice. A changed input requires `--restart`; an unmanaged database is refused even with that option.
 
 ```bash
-# Import or validate one year, with explicit paths if needed.
-uv run python scripts/import_natality.py --year 2004 --baseline data/us_births.db
+# Select the saved comparison database for these commands.
+natality_baseline=data/backups/before-cdc-20261106T164938Z/us_births.db
+
+# Import and validate one year.
+uv run python scripts/import_natality.py --year 2004 --baseline "$natality_baseline"
 
 # Rebuild an incomplete or changed annual candidate from the cached archive.
-uv run python scripts/import_natality.py --year 2004 --restart
+uv run python scripts/import_natality.py --year 2004 --restart \
+  --baseline "$natality_baseline"
 
 # Repeat validation of all annual candidates, then combine them.
-uv run python scripts/import_natality.py --years 1989-2025 --validate-only
+uv run python scripts/import_natality.py --years 1989-2025 --validate-only \
+  --baseline "$natality_baseline"
 
 # Combine annual candidates whose exact files already passed validation.
-uv run python scripts/import_natality.py --years 1989-2025 --combine-only
+uv run python scripts/import_natality.py --years 1989-2025 --combine-only \
+  --baseline "$natality_baseline"
 ```
 
 `--staging-dir` changes the annual-output root. For a range, `--output` selects the combined database and `--cache` selects a root with annual subdirectories. For one year, both options refer directly to that year's output or cache. `--batch-size`, `--memory-limit` and `--threads` set resource limits.
@@ -87,6 +94,6 @@ uv run python scripts/export_natality.py --years 2014-2024 --output data/us_birt
 
 Existing files require `--overwrite`. `--database` selects another read-only source. `scripts/make_all.py` keeps its established 2014–2024 output name and now exports from the combined CDC candidate. `scripts/export_spss.py` can consume these optional annual and combined Parquet files. The SPSS reader converts decimal BMI values to numeric values so SPSS does not treat BMI as text. Its pandas/SPSS step still needs memory for a whole input file. Record-level exports remain subject to the NCHS data restrictions.
 
-All five external reference tables lack 2025 rows. The importer leaves unsupported year-specific probabilities and case weights NULL. It does not carry 2024 values forward. The age-risk formula remains available, but it is not an observed prevalence estimate. Expected-count reports reject missing inputs. Existing fitting defaults retain their original year ranges.
+All five external reference tables lack 2025 rows. The importer leaves unsupported year-specific probabilities and case weights NULL. It does not carry 2024 values forward. The age-risk formula remains available, but it is not an observed prevalence estimate. Expected-count reports reject missing inputs. The current recorded-status classifiers include 2025; population estimates still require the missing external inputs. See the [workflow guide](modelling-workflow.md) for model year ranges.
 
-Keep the live database and saved comparison sources until a separate replacement decision. For checks against the candidate, pass its path explicitly to analysis commands that accept a database path. The [workflow guide](modelling-workflow.md) describes the analysis commands. The [migration record](../plans/2026-11-06-cdc-text-import-migration.md) distinguishes the completed import work from database replacement and reference-data research.
+The live analysis database was replaced with a copy of the accepted CDC candidate on 6 November 2026. Keep the saved pre-CDC database for historical validation and the accepted candidate for read-only checks. Pass the candidate path explicitly to analysis commands that accept a database path. The [migration record](../plans/2026-11-06-cdc-text-import-migration.md) records the completed import work and remaining reference-data research.

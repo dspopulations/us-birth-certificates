@@ -6,7 +6,7 @@
 
 # Data preparation
 
-The primary import reads the CDC's annual US natality ZIP files for 1989–2025 directly into DuckDB. The [import guide](cdc-text-import.md) explains source review, validation, retries and optional exports. Each year has a reviewed layout; the importer does not infer positions from a neighbouring year.
+The import reads the CDC's annual US natality ZIP files for 1989–2025 directly into DuckDB. The [import guide](cdc-text-import.md) explains source review, validation, retries and optional exports. Each year has a reviewed layout; the importer does not infer positions from a neighbouring year.
 
 ## Setup and import
 
@@ -14,7 +14,8 @@ Run from the repository root:
 
 ```bash
 uv sync --locked
-uv run python scripts/import_natality.py --years 1989-2025
+uv run python scripts/import_natality.py --years 1989-2025 \
+  --baseline data/backups/before-cdc-20261106T164938Z/us_births.db
 ```
 
 This builds and validates annual databases, then combines them into `data/staging/natality/us_births.db`. The importer has no promotion step. The combined candidate contains imported columns, reporting flags, harmonised fields, calculated probabilities, reference tables and source metadata. The live database was switched to the validated CDC import on 6 November 2026. Its original SAS baseline is preserved under `data/backups/before-cdc-20261106T164938Z/`. Use that saved baseline for historical SAS comparisons.
@@ -29,13 +30,15 @@ The command's DuckDB memory limit does not include all Python and decompressor m
 
 Rebuilding changes record IDs relative to the SAS route. The new IDs are stable only within the pinned CDC release. Regenerate predictions in an analysis copy; do not transfer them by old ID. Analysis commands use `data/us_births.db` by default. Keep the validated import candidate unchanged when fitting and writing predictions.
 
-## Legacy reproduction
+## Supported inputs
 
-`scripts/download_data.py`, `import_parquet.py`, `combine_parquet.py`, `prepare_parquet.py`, `duckdb_create.py` and `duckdb_prepare.py` remain available to investigate old builds. They are not steps in the CDC import. The old downloader skips existing files without hashes, and the old compaction step replaces the live database. Do not run that chain against the protected baseline during this migration.
+The CDC text importer is the supported ingestion route. The SAS downloader, SAS-to-Parquet conversion and intermediate Parquet-to-DuckDB preparation scripts have been removed. Their source remains in Git history. Parquet and SPSS remain optional exports.
+
+Historical validation reads the saved comparison database directly. It does not read SAS files or rebuild the old pipeline. Pass that database explicitly with `--baseline`; the live CDC database is not the historical comparison source.
 
 ## Derived columns
 
-Derivations run in order because later columns use earlier ones. `preparation.py` defines the shared SQL called by `scripts/duckdb_prepare.py` and the CDC importer. `variables.py` defines column names and source codes. The [coding reference](../previous/us-birth-certificates/data-preparation.md) lists historical race and origin codes.
+Derivations run in order because later columns use earlier ones. `preparation.py` defines the SQL derivations called by the CDC importer. The annual layouts define source-column types, and the importer assigns source-based IDs. `variables.py` defines column names and source codes. The [coding reference](../previous/us-birth-certificates/data-preparation.md) lists historical race and origin codes.
 
 - **`id`** (`BIGINT`): `year * 1000000000 + source_record` in the CDC import. The legacy route used `row_number() OVER ()` keyed on `rowid`. These identifiers are not interchangeable.
 - **`year`**: `COALESCE(dob_yy, datayear)` - `dob_yy` (2003 revision) preferred, `datayear` (1989 revision) fallback.

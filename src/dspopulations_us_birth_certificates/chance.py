@@ -7,7 +7,7 @@ import pandas as pd
 
 # Morris et al. maternal-age-specific Down-syndrome live-birth risk (absent
 # terminations), corrected double-logistic. Held as a single source of truth so
-# the Python and SQL (scripts/duckdb_prepare.py) implementations cannot drift.
+# the Python and SQL (preparation.py) implementations cannot drift.
 MORRIS_PARAMS: tuple[float, float, float, float] = (7.33, 4.211, 0.2815, 37.23)
 
 

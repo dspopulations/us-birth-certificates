@@ -6,8 +6,10 @@ All records here are synthetic. No natality microdata is committed in fixtures.
 from __future__ import annotations
 
 import copy
+import importlib.util
 import io
 import json
+import sys
 import zipfile
 
 import duckdb
@@ -111,6 +113,68 @@ def make_local_source(tmp_path, year):
 @pytest.fixture
 def local_source(tmp_path):
     return make_local_source(tmp_path, 2024)
+
+
+@pytest.fixture
+def import_command(monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "import_natality", ROOT / "scripts/import_natality.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "init_script", lambda: None)
+    return module
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--year", "2024"],
+        ["--year", "2025", "--validate-only"],
+        ["--years", "2024-2025", "--combine-only"],
+    ],
+)
+def test_import_command_requires_comparison_database(
+    import_command, monkeypatch, capsys, args
+):
+    monkeypatch.setattr(sys, "argv", ["import_natality.py", *args])
+    monkeypatch.setattr(
+        import_command,
+        "load_layout",
+        lambda _: pytest.fail("Missing baseline must fail before reading inputs"),
+    )
+    with pytest.raises(SystemExit) as error:
+        import_command.main()
+    assert error.value.code == 2
+    assert "required: --baseline" in capsys.readouterr().err
+
+
+def test_import_command_validates_against_explicit_database(
+    published_pilot, import_command, monkeypatch
+):
+    layout, output, baseline, controls = published_pilot
+    before = sha256(baseline)
+    monkeypatch.setattr(import_command, "load_layout", lambda _: layout)
+    monkeypatch.setattr(import_command, "load_controls", lambda _: controls)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "import_natality.py",
+            "--year",
+            "2025",
+            "--validate-only",
+            "--output",
+            str(output),
+            "--baseline",
+            str(baseline),
+        ],
+    )
+    assert import_command.main() == 0
+    report = json.loads(output.with_suffix(".validation.json").read_text())
+    assert report["passed"]
+    assert report["baseline_path"] == str(baseline.resolve())
+    assert sha256(baseline) == before
 
 
 def test_catalogue_covers_all_years_but_only_reviewed_year_imports():

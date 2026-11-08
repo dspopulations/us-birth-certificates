@@ -54,7 +54,7 @@ def inv_logit(x):
 
 AGE_LEVELS = ["<20", "20-24", "25-29", "30-34", "35-39", "40-44", "45+"]
 # Race vocabulary, aligned to the mracehisp_c coding produced by
-# duckdb_prepare.py and consumed by selection.data.RACE_MAP. The codes
+# preparation.py and consumed by selection.data.RACE_MAP. The codes
 # are: 1=NH White (idx 0), 2=NH Black (1), 3=NH AIAN only (2), 4=NH
 # Asian/Pacific Islander (broad bucket — Asian + NHOPI + Other; 3),
 # 5=Hispanic (4), NULL=Unknown (5), 6=NH more than one race (idx 6).
