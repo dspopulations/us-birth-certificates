@@ -76,7 +76,7 @@ The package uses hatchling. Its version is in `src/dspopulations_us_birth_certif
 
 Read `docs/data-preparation.md`, `previous/us-birth-certificates/data-preparation.md` and `variables.py` before changing derivations. Variable names and codes change across years. Check source user guides and tests at those boundaries.
 
-Run preparation scripts from the repository root. Raw SAS files, user-guide PDFs, Parquet files and DuckDB databases are gitignored and must not be committed. Small aggregate and reference CSVs may be tracked. Do not publish raw or derived record-level natality data; the NCHS Data Use Agreement applies.
+Run preparation scripts from the repository root. Raw natality files, user-guide PDFs, Parquet files and DuckDB databases are gitignored and must not be committed. Small aggregate and reference CSVs may be tracked. Do not publish raw or derived record-level natality data; the NCHS Data Use Agreement applies.
 
 ## Notebooks and reports
 

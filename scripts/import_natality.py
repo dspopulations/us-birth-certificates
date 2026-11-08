@@ -31,7 +31,12 @@ def main() -> int:
     parser.add_argument(
         "--staging-dir", type=Path, default=ROOT / "data/staging/natality"
     )
-    parser.add_argument("--baseline", type=Path, default=ROOT / "data/us_births.db")
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        required=True,
+        help="Saved comparison DuckDB database; use the pre-CDC backup for historical years",
+    )
     parser.add_argument("--batch-size", type=int, default=50_000)
     parser.add_argument("--memory-limit", default="2GB")
     parser.add_argument("--threads", type=int, default=2)

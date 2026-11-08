@@ -1,8 +1,6 @@
-"""Column utilities."""
+"""Study variable definitions and ordered feature lists."""
 
 from enum import StrEnum
-
-import pandas as pd
 
 
 class Variables(StrEnum):
@@ -390,264 +388,149 @@ class Variables(StrEnum):
     toward estimated true counts. For down_ind=1 it is selected by mracehisp_c (1 nhw, 2 nhb,
     3 ai_an, 4 as_pi, 5 his) from us-births-ds-rec-weights.csv, falling back to the year's pooled
     `total` weight when mracehisp_c is NULL/other; 0 for non-cases. Materialised in
-    scripts/duckdb_prepare.py.
+    preparation.py.
     """
 
 
-COMPUTED: dict[
-    str, pd.UInt16Dtype | pd.Float64Dtype | pd.CategoricalDtype | pd.CategoricalDtype
-] = {
-    str(Variables.YEAR): pd.UInt16Dtype(),
-    str(Variables.MAGE_C): pd.UInt16Dtype(),
-    str(Variables.DS): pd.CategoricalDtype(),
-    str(Variables.P_DS_LB_NT): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_WT): pd.Float64Dtype(),
-    str(Variables.CA_DOWN_C): pd.CategoricalDtype(
-        categories=["C", "P", "N", "U"], ordered=False
-    ),
-    str(Variables.DOWN_IND): pd.CategoricalDtype(),
-    str(Variables.DS_C): pd.CategoricalDtype(),
-    str(Variables.DS_P): pd.CategoricalDtype(),
-    str(Variables.DS_N): pd.CategoricalDtype(),
-    str(Variables.DS_U): pd.CategoricalDtype(),
-    str(Variables.DS_CORP): pd.CategoricalDtype(),
-    str(Variables.P_DS_LB_WT_MAGE): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_NT_MAGE): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_WT_ETHN): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_NT_ETHN): pd.Float64Dtype(),
-    str(Variables.P_DS_LB_NT_REDUC): pd.Float64Dtype(),
-}
+IMPORTED_VARS: list[str] = [
+    str(Variables.DATAYEAR),
+    str(Variables.BIRYR),
+    str(Variables.DOB_YY),
+    str(Variables.DOB_MM),
+    str(Variables.DOB_WK),
+    str(Variables.DOB_TT),
+    str(Variables.BFACIL3),
+    str(Variables.MAGER),
+    str(Variables.DMAGE),
+    str(Variables.DMAGERPT),
+    str(Variables.MAGER14),
+    str(Variables.MAGER9),
+    str(Variables.MAGE36),
+    str(Variables.MAGER12),
+    str(Variables.MAGER41),
+    str(Variables.MBSTATE_REC),
+    str(Variables.RESTATUS),
+    str(Variables.MBRACE),
+    str(Variables.MRACE),
+    str(Variables.MRACEREC),
+    str(Variables.MRACE31),
+    str(Variables.MRACE6),
+    str(Variables.MRACE15),
+    str(Variables.MRACEIMP),
+    str(Variables.ORMOTH),
+    str(Variables.ORRACEM),
+    str(Variables.UMHISP),
+    str(Variables.MHISPX),
+    str(Variables.MHISP_R),
+    str(Variables.MRACEHISP),
+    str(Variables.MAR),
+    str(Variables.MAR_P),
+    str(Variables.DMAR),
+    str(Variables.DMEDUC),
+    str(Variables.MEDUC),
+    str(Variables.UMEDUC),
+    str(Variables.MEDUC6),
+    str(Variables.MEDUC_REC),
+    str(Variables.MPLBIR),
+    str(Variables.DFAGE),
+    str(Variables.DFAGERPT),
+    str(Variables.FAGE11),
+    str(Variables.FAGERPT),
+    str(Variables.UFAGECOMB),
+    str(Variables.FAGECOMB),
+    str(Variables.FAGEREC11),
+    str(Variables.FBRACE),
+    str(Variables.ORFATH),
+    str(Variables.ORRACEF),
+    str(Variables.FRACEIMP),
+    str(Variables.FRACEREC),
+    str(Variables.UFHISP),
+    str(Variables.FRACEHISP),
+    str(Variables.FRACE31),
+    str(Variables.FRACE6),
+    str(Variables.FRACE15),
+    str(Variables.FHISPX),
+    str(Variables.FHISP_R),
+    str(Variables.FRACE),
+    str(Variables.FEDUC),
+    str(Variables.PRIORLIVE),
+    str(Variables.PRIORDEAD),
+    str(Variables.PRIORTERM),
+    str(Variables.LBO_REC),
+    str(Variables.TBO_REC),
+    str(Variables.ILLB_R11),
+    str(Variables.ILOP_R11),
+    str(Variables.ILP_R11),
+    str(Variables.PRECARE),
+    str(Variables.PAY),
+    str(Variables.PAY_REC),
+    str(Variables.APGAR5),
+    str(Variables.APGAR5R),
+    str(Variables.APGAR10),
+    str(Variables.APGAR10R),
+    str(Variables.DPLURAL),
+    str(Variables.IMP_PLURAL),
+    str(Variables.SETORDER_R),
+    str(Variables.PREVIS),
+    str(Variables.PREVIS_REC),
+    str(Variables.WIC),
+    str(Variables.SEX),
+    str(Variables.GESTREC10),
+    str(Variables.DBWT),
+    str(Variables.DWGT_R),
+    str(Variables.AB_AVEN1),
+    str(Variables.AB_AVEN6),
+    str(Variables.AB_NICU),
+    str(Variables.AB_SURF),
+    str(Variables.AB_ANTI),
+    str(Variables.AB_SEIZ),
+    str(Variables.NO_ABNORM),
+    str(Variables.CA_ANEN),
+    str(Variables.CA_MNSB),
+    str(Variables.CA_CCHD),
+    str(Variables.CA_CDH),
+    str(Variables.CA_OMPH),
+    str(Variables.CA_GAST),
+    str(Variables.CA_LIMB),
+    str(Variables.CA_CLEFT),
+    str(Variables.CA_CLPAL),
+    str(Variables.DOWNS),
+    str(Variables.UCA_DOWNS),
+    str(Variables.CA_DOWN),
+    str(Variables.CA_DOWNS),
+    str(Variables.CA_DISOR),
+    str(Variables.CA_HYPO),
+    str(Variables.NO_CONGEN),
+    str(Variables.BFED),
+    str(Variables.M_HT_IN),
+    str(Variables.BMI),
+    str(Variables.BMI_R),
+    str(Variables.PWGT_R),
+    str(Variables.WTGAIN),
+    str(Variables.RF_PDIAB),
+    str(Variables.RF_GDIAB),
+    str(Variables.RF_PHYPE),
+    str(Variables.RF_GHYPE),
+    str(Variables.RF_EHYPE),
+    str(Variables.RF_PPTERM),
+    str(Variables.RF_INFTR),
+    str(Variables.RF_FEDRG),
+    str(Variables.RF_ARTEC),
+    str(Variables.RF_CESAR),
+    str(Variables.RF_CESARN),
+    str(Variables.NO_RISKS),
+    str(Variables.LD_INDL),
+    str(Variables.LD_AUGM),
+    str(Variables.LD_ANES),
+    str(Variables.ME_PRES),
+    str(Variables.RDMETH_REC),
+    str(Variables.DMETH_REC),
+    str(Variables.ATTEND),
+]
+"""Ordered source columns used by the annual layouts, validation and exports.
 
-IMPORTED: dict[
-    str,
-    pd.Float32Dtype
-    | pd.Float64Dtype
-    | pd.CategoricalDtype
-    | pd.UInt16Dtype
-    | pd.UInt32Dtype
-    | pd.UInt64Dtype
-    | pd.Int16Dtype
-    | pd.Int32Dtype
-    | pd.Int64Dtype
-    | pd.CategoricalDtype,
-] = {
-    str(Variables.DATAYEAR): pd.UInt16Dtype(),
-    str(Variables.BIRYR): pd.UInt16Dtype(),
-    str(Variables.DOB_YY): pd.UInt16Dtype(),
-    str(Variables.DOB_MM): pd.CategoricalDtype(),
-    str(Variables.DOB_WK): pd.CategoricalDtype(),
-    str(Variables.DOB_TT): pd.CategoricalDtype(),
-    str(Variables.BFACIL3): pd.CategoricalDtype(),
-    str(Variables.MAGER): pd.CategoricalDtype(),
-    str(Variables.DMAGE): pd.CategoricalDtype(),
-    str(Variables.DMAGERPT): pd.CategoricalDtype(),
-    str(Variables.MAGER14): pd.CategoricalDtype(),
-    str(Variables.MAGER9): pd.CategoricalDtype(),
-    str(Variables.MAGE36): pd.CategoricalDtype(),
-    str(Variables.MAGER12): pd.CategoricalDtype(),
-    str(Variables.MAGER41): pd.CategoricalDtype(),
-    str(Variables.MBSTATE_REC): pd.CategoricalDtype(),
-    str(Variables.RESTATUS): pd.CategoricalDtype(),
-    str(Variables.MBRACE): pd.CategoricalDtype(),
-    str(Variables.MRACE): pd.CategoricalDtype(),
-    str(Variables.MRACEREC): pd.CategoricalDtype(),
-    str(Variables.MRACE31): pd.CategoricalDtype(),
-    str(Variables.MRACE6): pd.CategoricalDtype(),
-    str(Variables.MRACE15): pd.CategoricalDtype(),
-    str(Variables.MRACEIMP): pd.CategoricalDtype(),
-    str(Variables.ORMOTH): pd.CategoricalDtype(),
-    str(Variables.ORRACEM): pd.CategoricalDtype(),
-    str(Variables.UMHISP): pd.CategoricalDtype(),
-    str(Variables.MHISPX): pd.CategoricalDtype(),
-    str(Variables.MHISP_R): pd.CategoricalDtype(),
-    str(Variables.MRACEHISP): pd.CategoricalDtype(),
-    str(Variables.MAR): pd.CategoricalDtype(),
-    str(Variables.MAR_P): pd.CategoricalDtype(),
-    str(Variables.DMAR): pd.CategoricalDtype(),
-    str(Variables.DMEDUC): pd.CategoricalDtype(),
-    str(Variables.MEDUC): pd.CategoricalDtype(),
-    str(Variables.UMEDUC): pd.CategoricalDtype(),
-    str(Variables.MEDUC6): pd.CategoricalDtype(),
-    str(Variables.MEDUC_REC): pd.CategoricalDtype(),
-    str(Variables.MPLBIR): pd.CategoricalDtype(),
-    str(Variables.DFAGE): pd.CategoricalDtype(),
-    str(Variables.DFAGERPT): pd.CategoricalDtype(),
-    str(Variables.FAGE11): pd.CategoricalDtype(),
-    str(Variables.FAGERPT): pd.CategoricalDtype(),
-    str(Variables.UFAGECOMB): pd.CategoricalDtype(),
-    str(Variables.FAGECOMB): pd.CategoricalDtype(),
-    str(Variables.FAGEREC11): pd.CategoricalDtype(),
-    str(Variables.FBRACE): pd.CategoricalDtype(),
-    str(Variables.ORFATH): pd.CategoricalDtype(),
-    str(Variables.ORRACEF): pd.CategoricalDtype(),
-    str(Variables.FRACEIMP): pd.CategoricalDtype(),
-    str(Variables.FRACEREC): pd.CategoricalDtype(),
-    str(Variables.UFHISP): pd.CategoricalDtype(),
-    str(Variables.FRACEHISP): pd.CategoricalDtype(),
-    str(Variables.FRACE31): pd.CategoricalDtype(),
-    str(Variables.FRACE6): pd.CategoricalDtype(),
-    str(Variables.FRACE15): pd.CategoricalDtype(),
-    str(Variables.FHISPX): pd.CategoricalDtype(),
-    str(Variables.FHISP_R): pd.CategoricalDtype(),
-    str(Variables.FRACE): pd.CategoricalDtype(),
-    str(Variables.FEDUC): pd.CategoricalDtype(),
-    str(Variables.PRIORLIVE): pd.CategoricalDtype(),
-    str(Variables.PRIORDEAD): pd.CategoricalDtype(),
-    str(Variables.PRIORTERM): pd.CategoricalDtype(),
-    str(Variables.LBO_REC): pd.CategoricalDtype(),
-    str(Variables.TBO_REC): pd.CategoricalDtype(),
-    str(Variables.ILLB_R11): pd.CategoricalDtype(),
-    str(Variables.ILOP_R11): pd.CategoricalDtype(),
-    str(Variables.ILP_R11): pd.CategoricalDtype(),
-    str(Variables.PRECARE): pd.CategoricalDtype(),
-    str(Variables.PAY): pd.CategoricalDtype(),
-    str(Variables.PAY_REC): pd.CategoricalDtype(),
-    str(Variables.APGAR5): pd.CategoricalDtype(),
-    str(Variables.APGAR5R): pd.CategoricalDtype(),
-    str(Variables.APGAR10): pd.CategoricalDtype(),
-    str(Variables.APGAR10R): pd.CategoricalDtype(),
-    str(Variables.DPLURAL): pd.CategoricalDtype(),
-    str(Variables.IMP_PLURAL): pd.CategoricalDtype(),
-    str(Variables.SETORDER_R): pd.CategoricalDtype(),
-    str(Variables.PREVIS): pd.CategoricalDtype(),
-    str(Variables.PREVIS_REC): pd.CategoricalDtype(),
-    str(Variables.WIC): pd.CategoricalDtype(),
-    str(Variables.SEX): pd.CategoricalDtype(),
-    str(Variables.GESTREC10): pd.CategoricalDtype(),
-    str(Variables.DBWT): pd.CategoricalDtype(),
-    str(Variables.DWGT_R): pd.CategoricalDtype(),
-    str(Variables.AB_AVEN1): pd.CategoricalDtype(),
-    str(Variables.AB_AVEN6): pd.CategoricalDtype(),
-    str(Variables.AB_NICU): pd.CategoricalDtype(),
-    str(Variables.AB_SURF): pd.CategoricalDtype(),
-    str(Variables.AB_ANTI): pd.CategoricalDtype(),
-    str(Variables.AB_SEIZ): pd.CategoricalDtype(),
-    str(Variables.NO_ABNORM): pd.CategoricalDtype(),
-    str(Variables.CA_ANEN): pd.CategoricalDtype(),
-    str(Variables.CA_MNSB): pd.CategoricalDtype(),
-    str(Variables.CA_CCHD): pd.CategoricalDtype(),
-    str(Variables.CA_CDH): pd.CategoricalDtype(),
-    str(Variables.CA_OMPH): pd.CategoricalDtype(),
-    str(Variables.CA_GAST): pd.CategoricalDtype(),
-    str(Variables.CA_LIMB): pd.CategoricalDtype(),
-    str(Variables.CA_CLEFT): pd.CategoricalDtype(),
-    str(Variables.CA_CLPAL): pd.CategoricalDtype(),
-    str(Variables.DOWNS): pd.CategoricalDtype(),
-    str(Variables.UCA_DOWNS): pd.CategoricalDtype(),
-    str(Variables.CA_DOWN): pd.CategoricalDtype(
-        categories=["C", "P", "N", "U"], ordered=False
-    ),
-    str(Variables.CA_DOWNS): pd.CategoricalDtype(
-        categories=["C", "P", "N", "U"], ordered=False
-    ),
-    str(Variables.CA_DISOR): pd.CategoricalDtype(),
-    str(Variables.CA_HYPO): pd.CategoricalDtype(),
-    str(Variables.NO_CONGEN): pd.CategoricalDtype(),
-    str(Variables.BFED): pd.CategoricalDtype(),
-    str(Variables.M_HT_IN): pd.CategoricalDtype(),
-    str(Variables.BMI): pd.Float32Dtype(),
-    str(Variables.BMI_R): pd.CategoricalDtype(),
-    str(Variables.PWGT_R): pd.CategoricalDtype(),
-    str(Variables.WTGAIN): pd.CategoricalDtype(),
-    str(Variables.RF_PDIAB): pd.CategoricalDtype(),
-    str(Variables.RF_GDIAB): pd.CategoricalDtype(),
-    str(Variables.RF_PHYPE): pd.CategoricalDtype(),
-    str(Variables.RF_GHYPE): pd.CategoricalDtype(),
-    str(Variables.RF_EHYPE): pd.CategoricalDtype(),
-    str(Variables.RF_PPTERM): pd.CategoricalDtype(),
-    str(Variables.RF_INFTR): pd.CategoricalDtype(),
-    str(Variables.RF_FEDRG): pd.CategoricalDtype(),
-    str(Variables.RF_ARTEC): pd.CategoricalDtype(),
-    str(Variables.RF_CESAR): pd.CategoricalDtype(),
-    str(Variables.RF_CESARN): pd.CategoricalDtype(),
-    str(Variables.NO_RISKS): pd.CategoricalDtype(),
-    str(Variables.LD_INDL): pd.CategoricalDtype(),
-    str(Variables.LD_AUGM): pd.CategoricalDtype(),
-    str(Variables.LD_ANES): pd.CategoricalDtype(),
-    str(Variables.ME_PRES): pd.CategoricalDtype(),
-    str(Variables.RDMETH_REC): pd.CategoricalDtype(),
-    str(Variables.DMETH_REC): pd.CategoricalDtype(),
-    str(Variables.ATTEND): pd.CategoricalDtype(),
-}
-
-COMPUTED_VARS = list(COMPUTED.keys())
-IMPORTED_VARS = list(IMPORTED.keys())
-
-
-def set_all_column_types(df: pd.DataFrame) -> pd.DataFrame:
-    """Sets all (standard + computed) column types for the dataframe."""
-
-    return set_computed_column_types(set_imported_column_types(df))
-
-
-def ensure_imported_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Ensures all imported columns exist in the dataframe."""
-
-    for col in IMPORTED_VARS:
-        if col not in df.columns:
-            df[col] = pd.NA
-
-    return df
-
-
-def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Ensures all imported columns exist in the dataframe."""
-
-    for col in IMPORTED_VARS:
-        if col not in df.columns:
-            df[col] = pd.NA
-
-    for col in COMPUTED_VARS:
-        if col not in df.columns:
-            df[col] = pd.NA
-
-    return df
-
-
-def set_imported_column_types(df: pd.DataFrame) -> pd.DataFrame:
-    """Sets imported column types for the dataframe."""
-
-    for col, dtype in IMPORTED.items():
-        try:
-            # importing 2005: TypeError: Cannot cast array data from dtype('float64') to dtype('uint16')
-            if (
-                dtype == pd.UInt8Dtype()
-                or dtype == pd.UInt16Dtype()
-                or dtype == pd.UInt32Dtype()
-                or dtype == pd.UInt64Dtype()
-                or dtype == pd.Int16Dtype()
-                or dtype == pd.Int32Dtype()
-                or dtype == pd.Int64Dtype()
-            ):
-                df[col] = pd.to_numeric(df[col], downcast="unsigned").astype(
-                    dtype, errors="raise"
-                )
-            else:
-                df[col] = df[col].astype(dtype, errors="raise")
-        except ValueError as e:
-            print(f"Warning: Could not convert column {col} to type {dtype}.")
-            raise e
-        except TypeError as e:
-            print(f"Warning: Could not convert column {col} to type {dtype}.")
-            raise e
-
-    return df
-
-
-def set_computed_column_types(df: pd.DataFrame) -> pd.DataFrame:
-    """Sets computed column types for the dataframe."""
-
-    for col, dtype in COMPUTED.items():
-        try:
-            df[col] = df[col].astype(dtype)
-        except ValueError as e:
-            print(f"Warning: Could not convert column {col} to type {dtype}.")
-            raise e
-        except TypeError as e:
-            print(f"Warning: Could not convert column {col} to type {dtype}.")
-            raise e
-
-    return df
+Each reviewed CDC layout defines its own storage types and source-code domains.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -709,5 +592,3 @@ CATEGORICAL_BASE: list[str] = [
     Variables.WIC,
 ]
 """Categorical features common to predictor experiments 0009-0011."""
-
-

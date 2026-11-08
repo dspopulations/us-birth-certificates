@@ -1,4 +1,4 @@
-"""Shared study derivations used by legacy preparation and the CDC pilot."""
+"""Study derivations for the CDC text import."""
 
 import pathlib
 
@@ -9,28 +9,6 @@ from dspopulations_us_birth_certificates import chance
 from dspopulations_us_birth_certificates.variables import Variables as vars
 
 
-def alter_column_type(col: str, new_type: str, con: duckdb.DuckDBPyConnection) -> None:
-    print(f"Altering column {col} to {new_type} in us_births...")
-    con.execute(
-        f"""
-        ALTER TABLE us_births
-            ALTER {col} TYPE {new_type};
-        """
-    )
-
-
-def alter_try_cast_column_type(
-    col: str, new_type: str, con: duckdb.DuckDBPyConnection
-) -> None:
-    print(f"Altering column {col} to {new_type} with try cast in us_births...")
-    con.execute(
-        f"""
-        ALTER TABLE us_births
-            ALTER {col} TYPE {new_type} USING TRY_CAST({col} AS {new_type});
-        """
-    )
-
-
 def add_column(col: str, col_type: str, con: duckdb.DuckDBPyConnection) -> None:
     print(f"Adding column {col} to us_births...")
     con.execute(
@@ -39,140 +17,6 @@ def add_column(col: str, col_type: str, con: duckdb.DuckDBPyConnection) -> None:
             ADD COLUMN IF NOT EXISTS {col} {col_type};
         """
     )
-
-
-def _retype_columns(con: duckdb.DuckDBPyConnection) -> None:
-    """Narrow every raw NVSS column to its DuckDB storage type."""
-    alter_column_type(vars.DATAYEAR, "USMALLINT", con)
-    alter_column_type(vars.BIRYR, "USMALLINT", con)
-    alter_column_type(vars.DOB_YY, "USMALLINT", con)
-    alter_try_cast_column_type(vars.DOB_MM, "UTINYINT", con)
-    alter_try_cast_column_type(vars.DOB_WK, "UTINYINT", con)
-    alter_try_cast_column_type(vars.DOB_TT, "UTINYINT", con)
-    alter_column_type(vars.BFACIL3, "UTINYINT", con)
-    alter_column_type(vars.MAGER, "UTINYINT", con)
-    alter_column_type(vars.DMAGE, "UTINYINT", con)
-    alter_column_type(vars.DMAGERPT, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MAGER14, "UTINYINT", con)
-    alter_column_type(vars.MAGER9, "UTINYINT", con)
-    alter_column_type(vars.MAGE36, "UTINYINT", con)
-    alter_column_type(vars.MAGER12, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MAGER41, "UTINYINT", con)
-    alter_column_type(vars.MBSTATE_REC, "UTINYINT", con)
-    alter_column_type(vars.RESTATUS, "UTINYINT", con)
-    alter_column_type(vars.MBRACE, "UTINYINT", con)
-    alter_column_type(vars.MRACE, "UTINYINT", con)
-    alter_column_type(vars.MRACEREC, "UTINYINT", con)
-    alter_column_type(vars.MRACE31, "UTINYINT", con)
-    alter_column_type(vars.MRACE6, "UTINYINT", con)
-    alter_column_type(vars.MRACE15, "UTINYINT", con)
-    alter_column_type(vars.MRACEIMP, "UTINYINT", con)
-    alter_column_type(vars.ORMOTH, "UTINYINT", con)
-    alter_column_type(vars.ORRACEM, "UTINYINT", con)
-    alter_column_type(vars.UMHISP, "UTINYINT", con)
-    alter_column_type(vars.MHISPX, "UTINYINT", con)
-    alter_column_type(vars.MHISP_R, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MRACEHISP, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MAR, "UTINYINT", con)
-    alter_column_type(vars.MAR_P, "VARCHAR", con)
-    alter_column_type(vars.DMAR, "VARCHAR", con)
-    alter_try_cast_column_type(vars.DMEDUC, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MEDUC, "UTINYINT", con)
-    alter_column_type(vars.UMEDUC, "UTINYINT", con)
-    alter_column_type(vars.MEDUC6, "UTINYINT", con)
-    alter_try_cast_column_type(vars.MEDUC_REC, "UTINYINT", con)
-    alter_column_type(vars.MPLBIR, "UTINYINT", con)
-    alter_column_type(vars.DFAGE, "UTINYINT", con)
-    alter_column_type(vars.DFAGERPT, "UTINYINT", con)
-    alter_column_type(vars.FAGE11, "UTINYINT", con)
-    alter_try_cast_column_type(vars.FAGERPT, "UTINYINT", con)
-    alter_try_cast_column_type(vars.UFAGECOMB, "UTINYINT", con)
-    alter_try_cast_column_type(vars.FAGECOMB, "UTINYINT", con)
-    alter_column_type(vars.FAGEREC11, "UTINYINT", con)
-    alter_column_type(vars.FBRACE, "UTINYINT", con)
-    alter_column_type(vars.ORFATH, "UTINYINT", con)
-    alter_column_type(vars.ORRACEF, "UTINYINT", con)
-    alter_column_type(vars.FRACE, "UTINYINT", con)
-    alter_column_type(vars.FRACEIMP, "UTINYINT", con)
-    alter_column_type(vars.FRACEREC, "UTINYINT", con)
-    alter_column_type(vars.UFHISP, "UTINYINT", con)
-    alter_column_type(vars.FRACEHISP, "UTINYINT", con)
-    alter_try_cast_column_type(vars.FRACE31, "UTINYINT", con)
-    alter_column_type(vars.FRACE6, "UTINYINT", con)
-    alter_column_type(vars.FRACE15, "UTINYINT", con)
-    alter_column_type(vars.FHISPX, "UTINYINT", con)
-    alter_column_type(vars.FHISP_R, "UTINYINT", con)
-    alter_column_type(vars.FEDUC, "UTINYINT", con)
-    alter_column_type(vars.PRIORLIVE, "UTINYINT", con)
-    alter_column_type(vars.PRIORDEAD, "UTINYINT", con)
-    alter_column_type(vars.PRIORTERM, "UTINYINT", con)
-    alter_column_type(vars.LBO_REC, "UTINYINT", con)
-    alter_try_cast_column_type(vars.TBO_REC, "UTINYINT", con)
-    alter_try_cast_column_type(vars.ILLB_R11, "UTINYINT", con)
-    alter_column_type(vars.PRECARE, "UTINYINT", con)
-    alter_column_type(vars.PAY, "UTINYINT", con)
-    alter_column_type(vars.PAY_REC, "UTINYINT", con)
-    alter_column_type(vars.APGAR5, "UTINYINT", con)
-    alter_try_cast_column_type(vars.APGAR5R, "UTINYINT", con)
-    alter_column_type(vars.APGAR10, "UTINYINT", con)
-    alter_try_cast_column_type(vars.DPLURAL, "UTINYINT", con)
-    alter_column_type(vars.IMP_PLURAL, "UTINYINT", con)
-    alter_try_cast_column_type(vars.SETORDER_R, "UTINYINT", con)
-    alter_column_type(vars.SEX, "VARCHAR", con)
-    alter_try_cast_column_type(vars.GESTREC10, "UTINYINT", con)
-    alter_try_cast_column_type(vars.DBWT, "USMALLINT", con)
-    alter_try_cast_column_type(vars.DWGT_R, "USMALLINT", con)
-    alter_column_type(vars.AB_AVEN1, "VARCHAR", con)
-    alter_column_type(vars.AB_AVEN6, "VARCHAR", con)
-    alter_column_type(vars.AB_NICU, "VARCHAR", con)
-    alter_column_type(vars.AB_SURF, "VARCHAR", con)
-    alter_column_type(vars.AB_ANTI, "VARCHAR", con)
-    alter_column_type(vars.AB_SEIZ, "VARCHAR", con)
-    alter_column_type(vars.NO_ABNORM, "UTINYINT", con)
-    alter_column_type(vars.CA_ANEN, "VARCHAR", con)
-    alter_column_type(vars.CA_MNSB, "VARCHAR", con)
-    alter_column_type(vars.CA_CCHD, "VARCHAR", con)
-    alter_column_type(vars.CA_CDH, "VARCHAR", con)
-    alter_column_type(vars.CA_OMPH, "VARCHAR", con)
-    alter_column_type(vars.CA_GAST, "VARCHAR", con)
-    alter_column_type(vars.CA_LIMB, "VARCHAR", con)
-    alter_column_type(vars.CA_CLEFT, "VARCHAR", con)
-    alter_column_type(vars.CA_CLPAL, "VARCHAR", con)
-    alter_column_type(vars.DOWNS, "UTINYINT", con)
-    alter_column_type(vars.UCA_DOWNS, "UTINYINT", con)
-    alter_column_type(vars.CA_DOWN, "VARCHAR", con)
-    alter_column_type(vars.CA_DOWNS, "VARCHAR", con)
-    alter_column_type(vars.CA_DISOR, "VARCHAR", con)
-    alter_column_type(vars.CA_HYPO, "VARCHAR", con)
-    alter_try_cast_column_type(vars.NO_CONGEN, "UTINYINT", con)
-    alter_column_type(vars.BFED, "VARCHAR", con)
-    alter_column_type(vars.PREVIS, "UTINYINT", con)
-    alter_try_cast_column_type(vars.PREVIS_REC, "UTINYINT", con)
-    alter_column_type(vars.WIC, "VARCHAR", con)
-    alter_column_type(vars.M_HT_IN, "UTINYINT", con)
-    alter_column_type(vars.BMI, "FLOAT", con)
-    alter_column_type(vars.BMI_R, "USMALLINT", con)
-    alter_column_type(vars.PWGT_R, "USMALLINT", con)
-    alter_column_type(vars.WTGAIN, "UTINYINT", con)
-    alter_column_type(vars.RF_PDIAB, "VARCHAR", con)
-    alter_column_type(vars.RF_GDIAB, "VARCHAR", con)
-    alter_column_type(vars.RF_PHYPE, "VARCHAR", con)
-    alter_column_type(vars.RF_GHYPE, "VARCHAR", con)
-    alter_column_type(vars.RF_EHYPE, "VARCHAR", con)
-    alter_column_type(vars.RF_PPTERM, "VARCHAR", con)
-    alter_column_type(vars.RF_INFTR, "VARCHAR", con)
-    alter_column_type(vars.RF_FEDRG, "VARCHAR", con)
-    alter_column_type(vars.RF_ARTEC, "VARCHAR", con)
-    alter_column_type(vars.RF_CESAR, "VARCHAR", con)
-    alter_column_type(vars.RF_CESARN, "VARCHAR", con)
-    alter_column_type(vars.NO_RISKS, "UTINYINT", con)
-    alter_column_type(vars.LD_INDL, "VARCHAR", con)
-    alter_column_type(vars.LD_AUGM, "VARCHAR", con)
-    alter_column_type(vars.LD_ANES, "VARCHAR", con)
-    alter_column_type(vars.ME_PRES, "UTINYINT", con)
-    alter_column_type(vars.RDMETH_REC, "UTINYINT", con)
-    alter_column_type(vars.DMETH_REC, "UTINYINT", con)
-    alter_column_type(vars.ATTEND, "UTINYINT", con)
 
 
 def _add_derived_columns(con: duckdb.DuckDBPyConnection) -> None:
@@ -191,28 +35,6 @@ def _add_derived_columns(con: duckdb.DuckDBPyConnection) -> None:
     add_column(vars.P_DS_LB_WT_ETHN, "DOUBLE", con)
     add_column(vars.P_DS_LB_NT_ETHN, "DOUBLE", con)
     add_column(vars.P_DS_LB_NT_REDUC, "DOUBLE", con)
-
-
-def _add_id_column(con: duckdb.DuckDBPyConnection) -> None:
-    print("Adding id column...")
-
-    con.execute("""
-        ALTER TABLE us_births ADD COLUMN id BIGINT;
-        """)
-
-    con.execute(
-        """
-        UPDATE us_births
-        SET id = s.id
-        FROM (
-        SELECT
-            rowid,
-            row_number() OVER ()::BIGINT AS id
-        FROM us_births
-        ) s
-        WHERE us_births.rowid = s.rowid;
-        """
-    )
 
 
 def _set_year(con: duckdb.DuckDBPyConnection) -> None:

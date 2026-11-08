@@ -31,9 +31,8 @@ authors = [{ name = "Frank Buckley" }]
 # (h5netcdf, h5py) moved into that package's core dependencies.
 dependencies = [
   "dse-research-utils[boosting,columnar,dependence,graphs,io,jax,notebook,tuning]",
-  "fastparquet",     # scripts/make_all.py writes parquet with engine="fastparquet"; no extra carries it
   "joblib>=1.4.0",   # imported at module top by tuning/training/models.lgbm_pipeline, so a runtime dep
-  "truststore",      # scripts/download_data.py calls truststore.inject_into_ssl() at import
+  "truststore",      # CDC source downloads use the operating system's trusted certificates
 ]
 
 [dependency-groups]
@@ -99,10 +98,6 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# DuckDB's Python API resolves DataFrame names from the enclosing scope when
-# they appear in SQL (e.g. ``SELECT * FROM prevalence_df``). Ruff can't see
-# those references and flags the assignments as F841 "local variable unused".
-"scripts/duckdb_prepare.py" = ["F841"]
 # This script sets MKL/OpenMP/matplotlib env vars before importing numpy/
 # matplotlib (the import-time MKL crash workaround), which necessarily places
 # imports after module-level statements and splits the import block.
