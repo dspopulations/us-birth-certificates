@@ -48,7 +48,16 @@ uv run python scripts/tune_model.py --help
 uv run python scripts/compare_variants.py --help
 ```
 
-The fit script uses a deterministic stratified training/validation split. When tuning is enabled, tuning, early stopping and reported validation metrics use the same split. Those metrics are tuning diagnostics, not performance on an untouched test set. The old refactor proposal for five-fold cross-validation is not implemented.
+The fit script uses a deterministic stratified training/validation split. When tuning is enabled, tuning, early stopping and reported validation metrics use the same split. Those metrics are tuning diagnostics, not performance on an untouched test set.
+
+Use the separate nested evaluation command for a fresh training procedure. It starts with all original USBC10 candidate features and ignores saved tuned parameters and historical feature pruning. Each outer test fold stays out of parameter tuning, early stopping and category learning. Inner folds choose the parameters and number of boosting rounds. The final model in each outer fold uses all its training rows and that fixed number of rounds.
+
+```bash
+uv run python scripts/evaluate_classifier.py --start-year 2025 --end-year 2025
+uv run python scripts/evaluate_classifier.py --label confirmed --start-year 2025 --end-year 2025
+```
+
+The defaults use five outer folds, three inner folds and 20 fresh trials per outer fold. Outputs go to `nested_classifier/<label>/<timestamp>/` under the resolved output root. `--output-dir` selects an exact new directory. The command saves settings, trial histories and aggregate metrics without writing predictions to the database. Random folds estimate performance within the selected period. They do not assess transport to future years or validate past M1 fits. See the [November evaluation and sensitivity evidence](../notes/20261108-model-review-evidence.md) for the completed, smaller search on 2025 records.
 
 The CLI writes to `output/fit_model_<profile>/<timestamp>/` by default when a profile is supplied, or `output/fit_model/<timestamp>/` otherwise. `--output-dir` overrides the location. Outputs include configuration, a manifest, metrics, the fitted model, diagnostic tables and plots, and a copied Quarto template.
 
@@ -85,7 +94,12 @@ This is a separate model family in the same package, not a DSP identifier. It sp
 ```bash
 uv run python scripts/fit_selection_model.py --variant C --spec full --profile reporting --render
 uv run python scripts/compare_selection_variants.py --help
+uv run python scripts/run_selection_sensitivity.py
 ```
+
+The sensitivity command fits the full three-stage model against the same recorded counts in every scenario. It changes baseline prevalence, recording, termination or false positives one family at a time. These stress tests are specified in `selection/sensitivity.py`; they are not confidence ranges from external studies. Defaults use four chains with 1,500 tuning and 1,500 retained draws per chain. Results go to `selection_sensitivity/<timestamp>/` under the resolved output root. `--scenarios` selects named cases and `--output-dir` selects an exact new directory.
+
+Each case saves numerical validation, annual and total estimates, replicated-count checks and recording-anchor diagnostics. The command combines cells with identical model probabilities, which leaves the posterior unchanged. Clinical-stratum checks need the original cells and are not part of this study. A failed numerical check remains visible and gives a non-zero exit status after all cases finish. Read the [evidence note](../notes/20261108-model-review-evidence.md) before interpreting the estimates.
 
 ## Descriptive and classifier comparisons
 
