@@ -1,0 +1,5 @@
+status,test,lrt,df,repetitions,exceedances,seed,bootstrap_p,mc_se,holm_p_two_statuses
+confirmed,Race differences allowing age-specific trends,5.186395735901897,6,19999,10431,81011,0.5216,0.003532321597022734,0.5216
+confirmed,Age-specific versus constant-age trends,11.451153153699124,6,19999,1567,91011,0.0784,0.0019007505471871188,0.0784
+pending,Race differences allowing age-specific trends,15.239356208192476,6,19999,383,81012,0.0192,0.0009703685283200592,0.0384
+pending,Age-specific versus constant-age trends,18.223286453081528,6,19999,108,91012,0.00545,0.0005206039054994892,0.0109

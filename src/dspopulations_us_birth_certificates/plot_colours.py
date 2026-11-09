@@ -31,6 +31,12 @@ RECORDED_COLOUR = CHART_COLOURS[5]
 """DS births recorded on the birth certificate, including the observed recorded
 counts in posterior predictive checks."""
 
+CONFIRMED_COLOUR = CHART_COLOURS[0]
+"""Down syndrome recorded as confirmed on the birth certificate."""
+
+PENDING_COLOUR = CHART_COLOURS[1]
+"""Down syndrome recorded as pending on the birth certificate."""
+
 ESTIMATED_COLOUR = CHART_COLOURS[2]
 """Estimated true DS live births from a model."""
 
