@@ -7,7 +7,7 @@ Analysis dated 25 November 2026, covering births in 1989–2025.
 
 ## Summary
 
-After adjusting for maternal age, the rate of births recorded with Down syndrome has had three phases:
+After [adjusting for maternal age](#age-adjustment), the rate of births recorded with Down syndrome has had three phases:
 
 - **1989–1995:** a fall of 5.9% a year, while many births still lacked a usable status.
 - **1996–2015:** roughly flat, at 5.2 to 5.7 per 10,000 births.
@@ -40,13 +40,18 @@ The long-run denominator leaves out unknown status because it is common before 1
 
 ### Age adjustment
 
-Maternal age is the project's harmonised `mage_c` column. We use 27 strata: under 20, each age from 20 to 44, and 45 or older. The top stratum absorbs changes in the top age code: 49 before 1997, 54 in 1997–2003 and 50 from 2004. Standardised rates apply the 2018 age distribution of all births. Their 95% intervals use the [Fay–Feuer method](https://wonder.cdc.gov/controller/pdf/FayFeuerConfidenceIntervals.pdf).
+The chance of a baby with Down syndrome rises steeply with maternal age, and mothers became older over the period. A crude rate can therefore change only because the mix of maternal ages changed. "Adjusting for maternal age" means removing that effect. This note does so in two ways:
+
+- **Standardised rates.** A standardised rate is a weighted average of the recorded rates in each age group, with the weights fixed at the 2018 age distribution of all births. A change in mothers' ages therefore cannot change it. Recorded rates per 10,000 in this note are standardised unless they are called crude. Their 95% intervals use the [Fay–Feuer method](https://wonder.cdc.gov/controller/pdf/FayFeuerConfidenceIntervals.pdf).
+- **Trends per year.** Each percentage change per year comes from a model that gives every age group its own baseline rate, described under [trend models](#trend-models). The trend therefore measures change within age groups, not change caused by a shift between them.
+
+Both use 27 age groups: under 20, each age from 20 to 44, and 45 or older. Maternal age is the project's harmonised `mage_c` column. The top group absorbs changes in the top age code: 49 before 1997, 54 in 1997–2003 and 50 from 2004.
 
 The expected rate applies the [Morris maternal-age curve](https://doi.org/10.1258/096914105775220679), the project's `p_ds_lb_nt`, to each birth. It shows what maternal age alone would do to the rate if no affected pregnancies were ended. It is not an estimate of true prevalence. Below, the "recorded-to-expected ratio" is recorded births divided by these expected births.
 
 ### Trend models
 
-Each trend is a Poisson model of recorded counts by year and age stratum. Each stratum has its own baseline. One log-linear year term gives a common relative change, reported as a percentage per year with a 95% Wald interval. We also report:
+Each trend is a Poisson model of recorded counts by year and age group. Each age group has its own baseline, which is what adjusts the trend for maternal age. One log-linear year term gives the change, reported as a percentage per year with a 95% Wald interval. The model assumes the same relative change in every age group. The age-band fits below relax that. We also report:
 
 - an interval widened by the Pearson dispersion, where that exceeds 1;
 - a likelihood-ratio test of the straight line against a separate level for each year, where a low p-value would suggest a break or curve;
@@ -150,7 +155,7 @@ The band trends differ (likelihood ratio 18.2 on 4 degrees of freedom, approxima
 
 ### Unknown status
 
-Births with unknown status rose from 6,107 (16.1 per 10,000) in 2018 to 11,763 (32.5 per 10,000) in 2025. To test their effect, we gave them recorded cases at a multiple of the known-status rate in the same year and stratum.
+Births with unknown status rose from 6,107 (16.1 per 10,000) in 2018 to 11,763 (32.5 per 10,000) in 2025. To test their effect, we gave them recorded cases at a multiple of the known-status rate in the same year and age group.
 
 | Multiple of known-status rate | Cases added, 2018 | Cases added, 2025 | Change per year | 95% interval |
 | ---: | ---: | ---: | ---: | ---: |
