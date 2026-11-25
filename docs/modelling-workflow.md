@@ -1,4 +1,7 @@
 > [!NOTE]
+> AI-assisted revision by Claude Code (Opus 5.5).
+
+> [!NOTE]
 > AI-assisted revision by Codex (GPT-6).
 
 # Modelling and report workflow
@@ -119,6 +122,26 @@ of querying the database. `--output-dir` selects an exact new directory.
 Read the [research note](../notes/20261108-recorded-ds-age-dependent-trends.md)
 for the exploratory findings and limits. These models describe recorded
 status, not true prevalence or recording sensitivity.
+
+For national age-adjusted trends in recorded Down syndrome births, run:
+
+```bash
+uv run python scripts/analyse_national_recorded_ds_trend.py
+```
+
+The command reads the database without changing it and writes a new run under
+`output/recorded_ds_national_trend/`. For 2018–2025 it combines confirmed and
+pending records, standardises to 2018 maternal ages, fits age-adjusted Poisson
+trends overall and by maternal-age band, tests the effect of unknown status and
+lines up CDC WONDER and NBDPN figures. For 1989–2025 it uses the item that is
+comparable across certificate revisions, with births of known status as the
+denominator. It fits trends within periods set by certificate changes and
+unknown-status shares, and tests the gap between certificate types in
+2004–2015.
+`--counts-csv` accepts the retained counts in
+`notes/data/20261125-national-recorded-ds-trend/year_age_certificate_counts.csv`.
+Read the [research note](../notes/20261125-national-recorded-ds-trend.md) for
+the findings and limits.
 
 ```bash
 uv run python scripts/analyse_descriptive.py --render
