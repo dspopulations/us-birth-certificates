@@ -1,4 +1,7 @@
 > [!NOTE]
+> AI-assisted revision by Claude Code (Opus 5.5).
+
+> [!NOTE]
 > AI-assisted revision by Codex (GPT-6).
 
 > [!NOTE]
@@ -25,6 +28,7 @@ The October documentation review removed completed task lists, duplicate instruc
 
 ## Interpretation and model checks
 
+- [National trends in recorded Down syndrome births](20261125-national-recorded-ds-trend.md), with age-adjusted trends for 1989–2025, certificate-transition checks and a detailed 2018–2025 analysis.
 - [Recorded Down syndrome trends by maternal age and race and ethnicity](20261108-recorded-ds-age-dependent-trends.md), with separate confirmed and pending analyses for 2018–2025.
 - [Nested classifier evaluation and isolated selection-model sensitivities](20261108-model-review-evidence.md).
 - [Classifier scores and prevalence estimation](20260622-predictors-bayesian-model.md).

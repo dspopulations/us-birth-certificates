@@ -1,0 +1,91 @@
+{
+  "ai_assisted": "Claude Code (Opus 5.5)",
+  "generated_at": "2026-11-25T10:43:18.605179+00:00",
+  "source": "/Users/frankbuckley/dev/dspopulations/us-birth-certificates/data/us_births.db",
+  "source_sha256": "76c155a9c5ace6c7fcce4cb62bafa847e434d4f36aca1546432edcae353b8e01",
+  "source_type": "duckdb",
+  "source_stat_unchanged": true,
+  "reference_sha256": {
+    "data/us-births-nbdpn-trisomy21-2018-2022.csv": "a01ad38f94a724ecf1b55b343d447ec804a301321724901a2cf028692d81d9d5",
+    "data/us-births-wonder-national-year-2016-2024.csv": "6b7322e79c5efe2faa4335729a0c3c85370a74d519546107c00ef3d159529866"
+  },
+  "git_commit": "32fac781a4f3f9ee2f14088db58fa30db56b44ef",
+  "git_dirty": true,
+  "python": "3.14.10",
+  "packages": {
+    "numpy": "2.5.5",
+    "pandas": "3.1.1",
+    "scipy": "1.18.1",
+    "statsmodels": "0.15.0",
+    "matplotlib": "3.11.2",
+    "duckdb": "2.0.0"
+  },
+  "code_sha256": {
+    "scripts/analyse_national_recorded_ds_trend.py": "965dff2a0e11d6c7b57c546d9484c2116506df22f9bc2ec3a40a18afc54c4065",
+    "src/dspopulations_us_birth_certificates/recorded_trends.py": "9197f217ad3144d61e59581800c76dc3104981d2705c55c3666b6ebfdb84c3bb",
+    "src/dspopulations_us_birth_certificates/chance.py": "d821ebb9a4ca6d163cb2a490dd7e819c5e2bb1406060202c30a63b9b000f6cef",
+    "src/dspopulations_us_birth_certificates/plot_colours.py": "46a5b037508b36d4fd7d2a7368d64196c70a37e37fde801b7af3e26a904056e1"
+  },
+  "recorded_recent": "2018-2025: confirmed or pending on the revised item (COALESCE(ca_down, ca_downs) in C or P).",
+  "recorded_long_run": "1989-2025: revised item C or P, or 1989 item code 1 (COALESCE(uca_downs, downs) = 1) where the revised item is absent. Agrees with down_ind in every record. In 2003 revised-certificate births carry only the 1989-style item and count with it.",
+  "denominator_recent": "All births occurring in the 50 states and DC in each year, including unknown status and foreign residents.",
+  "denominator_long_run": "Births with a known status: recorded or not recorded. Excludes revised U, 1989-item codes 8 and 9, and records with no item.",
+  "standard": "All 2018 occurrence births over 27 maternal-age strata (mage_c): under 20, each age 20-44, 45 and over.",
+  "primary_model": "Poisson GLM: log mean = log(exposure) + stratum intercept + slope * centred year. Year-indicator model checks departures from a straight line.",
+  "periods": {
+    "1989\u20131995": [
+      1989,
+      1995
+    ],
+    "1996\u20132003": [
+      1996,
+      2003
+    ],
+    "2004\u20132015": [
+      2004,
+      2015
+    ],
+    "2016\u20132025": [
+      2016,
+      2025
+    ]
+  },
+  "certificate_term": "2004-2015 all ages only: indicator for the revised certificate item within year and stratum. Its rate ratio compares certificate types, which also differ by state. certificate_gap_test checks whether one constant ratio fits all transition years.",
+  "morris_expected": "Sum over births of the Morris maternal-age live-birth probability without terminations (chance.MORRIS_PARAMS). Describes age composition only.",
+  "intervals": "Standardised rates: pointwise 95% Fay-Feuer gamma. Trends: pointwise 95% Wald, also scaled by Pearson dispersion when above one. None are simultaneous.",
+  "unknown_sensitivity": "2018-2025 only. Unknown-status births assigned the known-status recorded rate of their year and stratum, times 1, 5 or 10.",
+  "limitations": [
+    "Exploratory national summary; periods follow certificate and reporting changes, but the analysis was planned after inspecting these data.",
+    "Describes certificate recording. Cannot separate true prevalence, prenatal reduction and recording completeness.",
+    "Count variation conditional on fixed births; no allowance for diagnostic error, status changes after registration, state clustering or imputed age.",
+    "No state identifier. Unknown-status shares fall sharply before 1996 and certificate type changes by state in 2004-2015; changes in which areas report or which states use each item can shift rates without any change in recording within a state.",
+    "Maternal age top-coding differs by period (49 before 1997, 54 in 1997-2003, 50 from 2004); the pooled 45+ stratum absorbs this."
+  ],
+  "artefact_sha256": {
+    "age_adjusted_trends.csv": "8fa0d055aa49b966384f9ef959595f866686974d63a398b447dfb0ae932da7a0",
+    "age_adjusted_year_ratios.csv": "d7945de77c909a59d8426f733a80c9b1523bf833c10b8d698d0e207f09d3fdb4",
+    "age_band_rates.csv": "a21ad98c3cee83f68b19aa3dc9b287c0890cfe15931637163c0e3bad975b04dd",
+    "age_band_recorded_trend.png": "733dffcddc545822da9df878e654a26c56a2adf5230058d06c5fd239a3caba85",
+    "age_band_recorded_trend.svg": "27137a2525a0003275fd91bc0c47f556cc666d6f1ea292ebb8abe7e6396ca34f",
+    "age_band_slope_test.csv": "369ba1ae3e29486ab1db9c2b5a5eb712b0ff1b32226530a5a1c1483873978b7b",
+    "age_weights.csv": "69bebd518f2815f7d17c95e0b6e05710aa4f6b55e81387ce4d4645d21b884049",
+    "certificate_gap_by_year.csv": "d4a07b204728392691379d5e6152583455e9b0541ef71cce58620b69ad68d223",
+    "certificate_gap_test.csv": "b0d9b80ecaf9b76dba426b4c0f3a5badf988320a21e633c9794339a5db478008",
+    "certificate_transition.png": "0755a1df73622f6c8bb55e7a14710922fe48e09999229c4a6bf8cfe04cbe3262",
+    "certificate_transition.svg": "89aa65a061544f8c8bba5611915ac4f80fbdda6f00744b1272080ec53e3d02a7",
+    "external_comparison.csv": "4d67e51b6afad4a738d05ad92094c7e7f8ab7b7682a25e19ca55778b358f61e6",
+    "long_run_age_band_rates.csv": "f3b68f5b66a80ecf5908eb2f57ea760f8607264b711ae066988a632da9d4a2b8",
+    "long_run_period_band_tests.csv": "b57a66e5089056052803565cf1232ee47e4def744d7f05b13c902911001cbd58",
+    "long_run_period_trends.csv": "988f7afabb3357a08343da791b37af5322aed3e75d73d99feb36f088406dca33",
+    "long_run_recorded_trend.png": "fd13e9c4d1f536d78e8038503dd4358dd99541efdcbc556c52e907d78a72d2b0",
+    "long_run_recorded_trend.svg": "b65cafe739932e09e6566933ccaf5cb5c1c45cabcecd7fc260a54a2e57882fb5",
+    "long_run_standardised_rates_95ci.csv": "6d15b3ce345549d3ccfc1c35df7204d8bbd2f2aea125e2b2c15217e40c2ebcd6",
+    "long_run_summary.csv": "c62ce5ac6345697f5f4541df0614cb677d48d9883d5c4e949c11d92fa511122c",
+    "national_recorded_trend.png": "8007cf2a1766c0bbc186a7bfcbcfae57ce70f9926995633684d3c7ca0d655507",
+    "national_recorded_trend.svg": "eac4ce6b875875301f66655e566f080677d094a6220bd7eb5b205d24a6299634",
+    "national_summary.csv": "18b9d902af7316c6851d40fa680b78ca070149a38f79b0596c9f4ae2868447d9",
+    "standardised_rates_95ci.csv": "72ee045ce184eed8cc35cb7bd9b87827358cfdd670c82f611257901d673606db",
+    "unknown_status_sensitivity.csv": "ba89833c5946ba19be25e1cc4f47002c337c1529d6df0f359753935007e99d96",
+    "year_age_certificate_counts.csv": "f89bc6c1120b25da1cfb45d54d6f0fb2e78ddc0803e645745dfe6e5cc75c7188"
+  }
+}
